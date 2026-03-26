@@ -262,32 +262,78 @@ docker compose -f docker-compose.prod.yml logs -f app
 ## O QUE FOI IMPLEMENTADO
 
 ### Fase 0 — Bloco 1: Setup do Projeto (2026-03-26)
-
 - [x] Next.js 16.2.1 + TypeScript strict + Tailwind v4 + App Router
-- [x] ESLint configurado (next/core-web-vitals + typescript)
-- [x] Prettier com prettier-plugin-tailwindcss
-- [x] shadcn/ui 4.x inicializado (Tailwind v4 compatible)
-- [x] Dependências: TanStack Query, Zustand, @ducanh2912/next-pwa, lucide-react, sonner, @supabase/supabase-js, @supabase/ssr
-- [x] `.env.example` com todas as variáveis
-- [x] `.gitignore` completo (inclui GITHUB_CREDENTIALS.MD, HOSTINGER_CREDENTIALS.MD)
-- [x] `globals.css` com tokens Design System + cores da marca (oklch)
-- [x] `next.config.ts` com PWA + headers de segurança
-- [x] Estrutura de pastas (src/types, src/hooks, src/stores, src/components/*, src/lib/*)
-- [x] `src/types/permissions.ts` — types de roles e permissões
-- [x] `src/lib/constants/index.ts` — constantes globais
-- [x] `src/lib/utils/index.ts` — helpers (formatDate, getInitials, etc.)
+- [x] ESLint, Prettier, shadcn/ui 4.x, TanStack Query, Zustand, @ducanh2912/next-pwa, lucide-react, sonner, @supabase/ssr
+- [x] `.env.example`, `.gitignore`, `globals.css`, `next.config.ts`
+- [x] `src/types/permissions.ts`, `src/lib/constants/index.ts`, `src/lib/utils.ts`
+
+### Fase 0 — Bloco 2: Docker + Supabase Self-Hosted (2026-03-26)
+- [x] `docker-compose.yml` (dev): supabase-db, auth, rest, realtime, storage, imgproxy, kong, studio, meta, analytics, app
+- [x] `docker-compose.prod.yml`: + nginx + certbot
+- [x] `docker/kong.yml`: API Gateway routing
+- [x] `.env.example` atualizado com todas variáveis Supabase
+
+### Fase 0 — Bloco 3: Banco de Dados (2026-03-26)
+- [x] `supabase/migrations/001_initial_schema.sql`: 13 tabelas, extensões uuid-ossp + pg_trgm + unaccent
+- [x] `supabase/migrations/002_rls_policies.sql`: RLS em todas tabelas, check_permission(), auth_user_id()
+- [x] `supabase/migrations/003_functions.sql`: handle_new_user() trigger, reload_user_permissions(), audit_log_trigger()
+- [x] `supabase/migrations/004_seed.sql`: permissões padrão por role, system_config
+
+### Fase 0 — Bloco 4: Autenticação (2026-03-26)
+- [x] `src/lib/supabase/client.ts` + `server.ts` (createClient, createAdminClient)
+- [x] `src/middleware.ts`: session refresh, redirects, route protection por role
+- [x] `src/hooks/use-auth.ts`: useAuth() — profile, signIn, signOut, resetPassword
+- [x] `src/app/(public)/login/page.tsx`: form mobile-first, show/hide senha
+- [x] `src/app/(public)/recuperar-senha/page.tsx`: form + success state
+
+### Fase 0 — Bloco 5: Layout Base (2026-03-26)
+- [x] `src/lib/providers.tsx`: QueryClientProvider + TooltipProvider + Sonner + ReactQueryDevtools
+- [x] `src/components/layout/sidebar.tsx`: fixed desktop / drawer mobile, nav items
+- [x] `src/components/layout/navbar.tsx`: hamburguer, breadcrumbs, NotificationBell, avatar + dropdown
+- [x] `src/components/layout/breadcrumbs.tsx`: geração automática por rota
+- [x] `src/app/(auth)/layout.tsx` + `src/components/layout/app-layout.tsx`
+- [x] `src/app/(auth)/dashboard/page.tsx`: placeholder
+
+### Fase 0 — Bloco 6: Módulo de Usuários (2026-03-26)
+- [x] `src/types/database.types.ts`: convertido interface → type (fix Supabase GenericTable compatibility); UserInsert/Update, UserPermissionInsert/Update, AppNotification, Relationships:[] em todas tabelas
+- [x] `src/hooks/use-users.ts`: useUsers, useUser, useUpdateUser, useDeactivateUser, useReactivateUser
+- [x] `src/hooks/use-permissions.ts`: useUserPermissions, useUpdatePermission
+- [x] `src/components/shared/user-avatar.tsx`: avatar + initials fallback
+- [x] `src/components/shared/status-badge.tsx`: badge Ativo/Inativo
+- [x] `src/app/(auth)/admin/usuarios/page.tsx`: lista com busca e filtros
+- [x] `src/app/(auth)/admin/usuarios/[id]/page.tsx`: editar + ativar/desativar
+- [x] `src/app/(auth)/admin/usuarios/[id]/permissoes/page.tsx`: matriz 8×5
+- [x] `src/app/(auth)/admin/usuarios/novo/page.tsx`: formulário de criação
+- [x] `src/app/api/admin/users/route.ts`: POST cria usuário via Auth Admin API
+- [x] `src/app/(auth)/perfil/page.tsx`: editar perfil + preferências de notificação
+- [x] shadcn/ui: avatar, badge, dialog, dropdown-menu, input, label, separator, sheet, switch, table, tooltip
+
+### Fase 0 — Bloco 7: PWA + Auditoria (2026-03-26)
+- [x] `public/manifest.json`: PWA manifest completo
+- [x] `public/icons/icon-192.png` + `icon-512.png`: ícones placeholder
+- [x] `src/lib/audit.ts`: logAudit() helper para registrar no audit_logs
+- [x] `src/app/layout.tsx`: icon paths corrigidos
+
+### Fase 0 — Bloco 8: GitHub + CI/CD (2026-03-26)
+- [x] Git configurado, branches main + develop criadas e pushadas
+- [x] `.github/workflows/ci.yml`: TypeScript check + ESLint em push/PR
+- [x] Repositório: `suportedrk/cacholaapp`
 
 ---
 
-## PROXIMOS PASSOS
+## PROXIMOS PASSOS — FASE 1
 
-- [ ] Bloco 2: Docker + Supabase Self-Hosted
-- [ ] Bloco 3: Schema banco + migrations + RLS + seed
-- [ ] Bloco 4: Autenticação
-- [ ] Bloco 5: Layout base
-- [ ] Bloco 6: Módulo de usuários
-- [ ] Bloco 7: PWA + Audit logs
-- [ ] Bloco 8: GitHub + CI/CD
+- [ ] Módulo de Eventos (CRUD completo + integração Ploomes)
+- [ ] Módulo de Checklists (templates + instâncias + itens)
+- [ ] Módulo de Manutenção (ordens + fotos before/after)
+- [ ] Dashboard com métricas reais
+- [ ] Notificações (in-app + email)
+- [ ] Relatórios e exportação
+
+> **NOTA:** Após subir o Supabase com `docker compose up -d`, regenerar os tipos com:
+> ```bash
+> npx supabase gen types typescript --local > src/types/database.types.ts
+> ```
 
 ---
 
@@ -300,3 +346,5 @@ docker compose -f docker-compose.prod.yml logs -f app
 | Next.js 16.2.1 | Versão atual do create-next-app. Compatível com toda a stack + React 19. |
 | oklch para cores | Tailwind v4 e shadcn/ui v4 usam oklch internamente. Conversão dos hex da marca para oklch. |
 | Supabase self-hosted dev e prod | Decisão do Bruno: sem Supabase Cloud. Total controle de dados. Dev === Prod em termos de infra. |
+| `type` ao invés de `interface` em database.types.ts | TypeScript interfaces NÃO satisfazem `Record<string, unknown>` em conditional types (Supabase GenericTable constraint). Type aliases SIM. Regra: sempre usar `type = {}` para tipos de entidades do banco. |
+| `AppNotification` ao invés de `Notification` | `Notification` conflita com a interface DOM global do browser. Renomeada para `AppNotification`. |
