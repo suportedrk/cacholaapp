@@ -7,6 +7,39 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
 // ─────────────────────────────────────────────────────────────
+// DATABASE TYPE (para uso com @supabase/ssr)
+// ─────────────────────────────────────────────────────────────
+export interface Database {
+  public: {
+    Tables: {
+      users: { Row: User; Insert: Partial<User>; Update: Partial<User> }
+      user_permissions: { Row: UserPermission; Insert: Partial<UserPermission>; Update: Partial<UserPermission> }
+      role_default_perms: { Row: RoleDefaultPerm; Insert: Partial<RoleDefaultPerm>; Update: Partial<RoleDefaultPerm> }
+      events: { Row: Event; Insert: Partial<Event>; Update: Partial<Event> }
+      event_staff: { Row: EventStaff; Insert: Partial<EventStaff>; Update: Partial<EventStaff> }
+      checklist_templates: { Row: ChecklistTemplate; Insert: Partial<ChecklistTemplate>; Update: Partial<ChecklistTemplate> }
+      template_items: { Row: TemplateItem; Insert: Partial<TemplateItem>; Update: Partial<TemplateItem> }
+      checklists: { Row: Checklist; Insert: Partial<Checklist>; Update: Partial<Checklist> }
+      checklist_items: { Row: ChecklistItem; Insert: Partial<ChecklistItem>; Update: Partial<ChecklistItem> }
+      maintenance_orders: { Row: MaintenanceOrder; Insert: Partial<MaintenanceOrder>; Update: Partial<MaintenanceOrder> }
+      maintenance_photos: { Row: MaintenancePhoto; Insert: Partial<MaintenancePhoto>; Update: Partial<MaintenancePhoto> }
+      notifications: { Row: Notification; Insert: Partial<Notification>; Update: Partial<Notification> }
+      audit_logs: { Row: AuditLog; Insert: Partial<AuditLog>; Update: Partial<AuditLog> }
+      system_config: { Row: SystemConfig; Insert: Partial<SystemConfig>; Update: Partial<SystemConfig> }
+    }
+    Views: Record<string, never>
+    Functions: {
+      check_permission: { Args: { p_user_id: string; p_module: string; p_action: string }; Returns: boolean }
+      get_user_permissions: { Args: { p_user_id: string }; Returns: Json }
+      get_unread_notifications_count: { Args: { p_user_id: string }; Returns: number }
+      reload_user_permissions: { Args: { p_user_id: string }; Returns: void }
+      mark_all_notifications_read: { Args: { p_user_id: string }; Returns: void }
+    }
+    Enums: Record<string, never>
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
 // ENUMS
 // ─────────────────────────────────────────────────────────────
 export type UserRole =
