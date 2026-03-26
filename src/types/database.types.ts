@@ -12,20 +12,20 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 export interface Database {
   public: {
     Tables: {
-      users: { Row: User; Insert: Partial<User>; Update: Partial<User> }
-      user_permissions: { Row: UserPermission; Insert: Partial<UserPermission>; Update: Partial<UserPermission> }
-      role_default_perms: { Row: RoleDefaultPerm; Insert: Partial<RoleDefaultPerm>; Update: Partial<RoleDefaultPerm> }
-      events: { Row: Event; Insert: Partial<Event>; Update: Partial<Event> }
-      event_staff: { Row: EventStaff; Insert: Partial<EventStaff>; Update: Partial<EventStaff> }
-      checklist_templates: { Row: ChecklistTemplate; Insert: Partial<ChecklistTemplate>; Update: Partial<ChecklistTemplate> }
-      template_items: { Row: TemplateItem; Insert: Partial<TemplateItem>; Update: Partial<TemplateItem> }
-      checklists: { Row: Checklist; Insert: Partial<Checklist>; Update: Partial<Checklist> }
-      checklist_items: { Row: ChecklistItem; Insert: Partial<ChecklistItem>; Update: Partial<ChecklistItem> }
-      maintenance_orders: { Row: MaintenanceOrder; Insert: Partial<MaintenanceOrder>; Update: Partial<MaintenanceOrder> }
-      maintenance_photos: { Row: MaintenancePhoto; Insert: Partial<MaintenancePhoto>; Update: Partial<MaintenancePhoto> }
-      notifications: { Row: Notification; Insert: Partial<Notification>; Update: Partial<Notification> }
-      audit_logs: { Row: AuditLog; Insert: Partial<AuditLog>; Update: Partial<AuditLog> }
-      system_config: { Row: SystemConfig; Insert: Partial<SystemConfig>; Update: Partial<SystemConfig> }
+      users: { Row: User; Insert: UserInsert; Update: UserUpdate; Relationships: [] }
+      user_permissions: { Row: UserPermission; Insert: UserPermissionInsert; Update: UserPermissionUpdate; Relationships: [] }
+      role_default_perms: { Row: RoleDefaultPerm; Insert: Partial<RoleDefaultPerm>; Update: Partial<RoleDefaultPerm>; Relationships: [] }
+      events: { Row: Event; Insert: Partial<Event>; Update: Partial<Event>; Relationships: [] }
+      event_staff: { Row: EventStaff; Insert: Partial<EventStaff>; Update: Partial<EventStaff>; Relationships: [] }
+      checklist_templates: { Row: ChecklistTemplate; Insert: Partial<ChecklistTemplate>; Update: Partial<ChecklistTemplate>; Relationships: [] }
+      template_items: { Row: TemplateItem; Insert: Partial<TemplateItem>; Update: Partial<TemplateItem>; Relationships: [] }
+      checklists: { Row: Checklist; Insert: Partial<Checklist>; Update: Partial<Checklist>; Relationships: [] }
+      checklist_items: { Row: ChecklistItem; Insert: Partial<ChecklistItem>; Update: Partial<ChecklistItem>; Relationships: [] }
+      maintenance_orders: { Row: MaintenanceOrder; Insert: Partial<MaintenanceOrder>; Update: Partial<MaintenanceOrder>; Relationships: [] }
+      maintenance_photos: { Row: MaintenancePhoto; Insert: Partial<MaintenancePhoto>; Update: Partial<MaintenancePhoto>; Relationships: [] }
+      notifications: { Row: AppNotification; Insert: Partial<AppNotification>; Update: Partial<AppNotification>; Relationships: [] }
+      audit_logs: { Row: AuditLog; Insert: Partial<AuditLog>; Update: Partial<AuditLog>; Relationships: [] }
+      system_config: { Row: SystemConfig; Insert: Partial<SystemConfig>; Update: Partial<SystemConfig>; Relationships: [] }
     }
     Views: Record<string, never>
     Functions: {
@@ -57,7 +57,7 @@ export type PhotoType = 'before' | 'after' | 'during'
 // ─────────────────────────────────────────────────────────────
 // TABELAS
 // ─────────────────────────────────────────────────────────────
-export interface User {
+export type User = {
   id: string
   email: string
   name: string
@@ -78,7 +78,10 @@ export interface User {
   updated_at: string
 }
 
-export interface UserPermission {
+export type UserInsert = Omit<Partial<User>, 'preferences'> & { preferences?: Json }
+export type UserUpdate = Omit<Partial<User>, 'preferences'> & { preferences?: Json }
+
+export type UserPermission = {
   id: string
   user_id: string
   module: string
@@ -86,7 +89,10 @@ export interface UserPermission {
   granted: boolean
 }
 
-export interface RoleDefaultPerm {
+export type UserPermissionInsert = Partial<UserPermission>
+export type UserPermissionUpdate = Partial<UserPermission>
+
+export type RoleDefaultPerm = {
   id: string
   role: UserRole
   module: string
@@ -94,7 +100,7 @@ export interface RoleDefaultPerm {
   granted: boolean
 }
 
-export interface Event {
+export type Event = {
   id: string
   ploomes_deal_id: string | null
   title: string
@@ -115,14 +121,14 @@ export interface Event {
   updated_at: string
 }
 
-export interface EventStaff {
+export type EventStaff = {
   id: string
   event_id: string
   user_id: string
   role_in_event: string
 }
 
-export interface ChecklistTemplate {
+export type ChecklistTemplate = {
   id: string
   title: string
   category: string
@@ -132,14 +138,14 @@ export interface ChecklistTemplate {
   updated_at: string
 }
 
-export interface TemplateItem {
+export type TemplateItem = {
   id: string
   template_id: string
   description: string
   sort_order: number
 }
 
-export interface Checklist {
+export type Checklist = {
   id: string
   title: string
   template_id: string | null
@@ -151,7 +157,7 @@ export interface Checklist {
   updated_at: string
 }
 
-export interface ChecklistItem {
+export type ChecklistItem = {
   id: string
   checklist_id: string
   description: string
@@ -163,7 +169,7 @@ export interface ChecklistItem {
   sort_order: number
 }
 
-export interface MaintenanceOrder {
+export type MaintenanceOrder = {
   id: string
   title: string
   description: string | null
@@ -181,7 +187,7 @@ export interface MaintenanceOrder {
   updated_at: string
 }
 
-export interface MaintenancePhoto {
+export type MaintenancePhoto = {
   id: string
   order_id: string
   url: string
@@ -190,7 +196,7 @@ export interface MaintenancePhoto {
   created_at: string
 }
 
-export interface Notification {
+export type AppNotification = {
   id: string
   user_id: string
   type: string
@@ -201,7 +207,7 @@ export interface Notification {
   created_at: string
 }
 
-export interface AuditLog {
+export type AuditLog = {
   id: string
   user_id: string | null
   action: string
@@ -214,7 +220,7 @@ export interface AuditLog {
   created_at: string
 }
 
-export interface SystemConfig {
+export type SystemConfig = {
   id: string
   category: string
   key: string
@@ -226,16 +232,16 @@ export interface SystemConfig {
 // ─────────────────────────────────────────────────────────────
 // TIPOS COM RELACIONAMENTOS (para queries com join)
 // ─────────────────────────────────────────────────────────────
-export interface EventWithStaff extends Event {
+export type EventWithStaff = Event & {
   event_staff: (EventStaff & { user: Pick<User, 'id' | 'name' | 'avatar_url'> })[]
 }
 
-export interface ChecklistWithItems extends Checklist {
+export type ChecklistWithItems = Checklist & {
   checklist_items: ChecklistItem[]
   assigned_user: Pick<User, 'id' | 'name' | 'avatar_url'> | null
 }
 
-export interface MaintenanceOrderWithPhotos extends MaintenanceOrder {
+export type MaintenanceOrderWithPhotos = MaintenanceOrder & {
   maintenance_photos: MaintenancePhoto[]
   assigned_user: Pick<User, 'id' | 'name' | 'avatar_url'> | null
 }

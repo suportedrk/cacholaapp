@@ -1,0 +1,150 @@
+'use client'
+
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { ArrowLeft, Loader2, UserPlus } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { ROLE_LABELS, ROUTES } from '@/lib/constants'
+import type { UserRole } from '@/types/database.types'
+import { toast } from 'sonner'
+
+const ROLES = Object.keys(ROLE_LABELS) as UserRole[]
+
+export default function NovoUsuarioPage() {
+  const router = useRouter()
+
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [phone, setPhone] = useState('')
+  const [role, setRole] = useState<UserRole>('vendedora')
+  const [isPending, setIsPending] = useState(false)
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setIsPending(true)
+
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: name.trim(),
+          email: email.trim().toLowerCase(),
+          phone: phone.trim() || null,
+          role,
+        }),
+      })
+
+      const json = await res.json()
+
+      if (!res.ok) {
+        toast.error(json.error ?? 'Erro ao criar usuário.')
+        return
+      }
+
+      toast.success('Usuário criado com sucesso! Um e-mail de boas-vindas foi enviado.')
+      router.push(ROUTES.users)
+    } catch {
+      toast.error('Erro inesperado. Tente novamente.')
+    } finally {
+      setIsPending(false)
+    }
+  }
+
+  return (
+    <div className="max-w-2xl space-y-6">
+      {/* Cabeçalho */}
+      <div className="flex items-center gap-3">
+        <Link
+          href={ROUTES.users}
+          className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+          aria-label="Voltar"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </Link>
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground tracking-tight">Novo Usuário</h1>
+          <p className="mt-0.5 text-sm text-muted-foreground">
+            Um e-mail de convite será enviado ao usuário
+          </p>
+        </div>
+      </div>
+
+      {/* Formulário */}
+      <form onSubmit={handleSubmit} className="bg-card rounded-2xl border border-border p-6 space-y-4">
+        <div className="space-y-1.5">
+          <Label htmlFor="name">Nome completo *</Label>
+          <Input
+            id="name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Nome do usuário"
+            required
+            autoFocus
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="email">E-mail *</Label>
+          <Input
+            id="email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="usuario@exemplo.com"
+            required
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="phone">Telefone / WhatsApp</Label>
+          <Input
+            id="phone"
+            type="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="(11) 99999-9999"
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="role">Cargo *</Label>
+          <select
+            id="role"
+            value={role}
+            onChange={(e) => setRole(e.target.value as UserRole)}
+            className="flex h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            required
+          >
+            {ROLES.map((r) => (
+              <option key={r} value={r}>
+                {ROLE_LABELS[r]}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex flex-wrap gap-3 pt-2">
+          <Button type="submit" disabled={isPending}>
+            {isPending ? (
+              <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Criando...</>
+            ) : (
+              <><UserPlus className="w-4 h-4 mr-2" />Criar Usuário</>
+            )}
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => router.push(ROUTES.users)}
+            disabled={isPending}
+          >
+            Cancelar
+          </Button>
+        </div>
+      </form>
+    </div>
+  )
+}
