@@ -1,0 +1,271 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+/* ============================================================
+   FONTE — Inter
+   ============================================================ */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+
+@custom-variant dark (&:is(.dark *));
+
+/* ============================================================
+   TAILWIND THEME — mapeia CSS vars para utilities
+   ============================================================ */
+@theme inline {
+  /* Shadcn base */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+
+  /* Radius */
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* Cachola brand extras para utility classes */
+  --color-brand-primary: var(--brand-primary);
+  --color-brand-primary-dark: var(--brand-primary-dark);
+  --color-brand-primary-light: var(--brand-primary-light);
+  --color-brand-secondary: var(--brand-secondary);
+  --color-surface-primary: var(--surface-primary);
+  --color-surface-secondary: var(--surface-secondary);
+  --color-surface-tertiary: var(--surface-tertiary);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+  --color-status-success: var(--status-success);
+  --color-status-warning: var(--status-warning);
+  --color-status-danger: var(--status-danger);
+  --color-status-info: var(--status-info);
+}
+
+/* ============================================================
+   LIGHT MODE — Cachola OS Brand Colors
+   ============================================================
+   Verde sálvia (#7C8D78) → oklch(0.567 0.044 144)
+   Bege quente  (#E3DAD1) → oklch(0.876 0.026 65)
+   Background   (#FAFAF8) → oklch(0.981 0.004 106)
+   ============================================================ */
+:root {
+  /* — Raio global — */
+  --radius: 0.625rem;
+
+  /* — Fontes — */
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+
+  /* — Shadcn/UI overrides com cores Cachola — */
+  --background: oklch(0.981 0.004 106);        /* #FAFAF8 — fundo geral */
+  --foreground: oklch(0.131 0 0);              /* #1A1A1A — texto principal */
+
+  --card: oklch(1 0 0);                        /* #FFFFFF — cards */
+  --card-foreground: oklch(0.131 0 0);
+
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.131 0 0);
+
+  --primary: oklch(0.567 0.044 144);           /* #7C8D78 — verde sálvia */
+  --primary-foreground: oklch(1 0 0);          /* branco */
+
+  --secondary: oklch(0.876 0.026 65);          /* #E3DAD1 — bege quente */
+  --secondary-foreground: oklch(0.131 0 0);
+
+  --muted: oklch(0.946 0.006 65);              /* bege mais suave */
+  --muted-foreground: oklch(0.487 0.018 264);  /* #6B7280 */
+
+  --accent: oklch(0.876 0.026 65);             /* bege quente (accent = secondary) */
+  --accent-foreground: oklch(0.131 0 0);
+
+  --destructive: oklch(0.577 0.245 27.325);    /* vermelho padrão */
+
+  --border: oklch(0.897 0.012 65);             /* borda suave bege */
+  --input: oklch(0.897 0.012 65);
+  --ring: oklch(0.567 0.044 144);              /* verde sálvia no focus */
+
+  /* — Sidebar — */
+  --sidebar: oklch(0.946 0.006 65);            /* fundo sidebar — bege muito suave */
+  --sidebar-foreground: oklch(0.131 0 0);
+  --sidebar-primary: oklch(0.567 0.044 144);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.876 0.026 65);
+  --sidebar-accent-foreground: oklch(0.131 0 0);
+  --sidebar-border: oklch(0.897 0.012 65);
+  --sidebar-ring: oklch(0.567 0.044 144);
+
+  /* ============================================================
+     TOKENS CACHOLA (Design System)
+     ============================================================ */
+
+  /* — Brand — */
+  --brand-primary: oklch(0.567 0.044 144);      /* #7C8D78 verde sálvia */
+  --brand-primary-dark: oklch(0.487 0.044 144); /* ~15% mais escuro */
+  --brand-primary-light: oklch(0.667 0.038 144); /* ~15% mais claro */
+  --brand-secondary: oklch(0.876 0.026 65);      /* #E3DAD1 bege quente */
+  --brand-secondary-dark: oklch(0.797 0.03 65);
+  --brand-secondary-light: oklch(0.942 0.015 65);
+
+  /* — Superfícies — */
+  --surface-primary: oklch(0.981 0.004 106);    /* #FAFAF8 */
+  --surface-secondary: oklch(1 0 0);            /* #FFFFFF */
+  --surface-tertiary: oklch(0.946 0.006 65);    /* bege suave */
+  --surface-inverse: oklch(0.131 0 0);          /* escuro */
+
+  /* — Texto — */
+  --text-primary: oklch(0.131 0 0);             /* #1A1A1A */
+  --text-secondary: oklch(0.487 0.018 264);     /* #6B7280 */
+  --text-tertiary: oklch(0.633 0.012 264);      /* placeholder */
+  --text-inverse: oklch(1 0 0);
+  --text-link: oklch(0.567 0.044 144);
+  --text-link-hover: oklch(0.487 0.044 144);
+
+  /* — Status — */
+  --status-success: oklch(0.548 0.186 142);     /* #22C55E */
+  --status-warning: oklch(0.723 0.157 78);      /* #F59E0B */
+  --status-danger: oklch(0.577 0.245 27);       /* #EF4444 */
+  --status-info: oklch(0.546 0.243 264);        /* #3B82F6 */
+}
+
+/* ============================================================
+   DARK MODE
+   ============================================================ */
+.dark {
+  --background: oklch(0.095 0 0);
+  --foreground: oklch(0.985 0 0);
+
+  --card: oklch(0.145 0 0);
+  --card-foreground: oklch(0.985 0 0);
+
+  --popover: oklch(0.145 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+
+  --primary: oklch(0.667 0.038 144);           /* verde sálvia mais claro no dark */
+  --primary-foreground: oklch(0.095 0 0);
+
+  --secondary: oklch(0.2 0.012 65);
+  --secondary-foreground: oklch(0.985 0 0);
+
+  --muted: oklch(0.2 0.012 65);
+  --muted-foreground: oklch(0.633 0.012 264);
+
+  --accent: oklch(0.2 0.012 65);
+  --accent-foreground: oklch(0.985 0 0);
+
+  --destructive: oklch(0.704 0.191 22.216);
+
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.667 0.038 144);
+
+  --sidebar: oklch(0.145 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.667 0.038 144);
+  --sidebar-primary-foreground: oklch(0.095 0 0);
+  --sidebar-accent: oklch(0.2 0.012 65);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.667 0.038 144);
+
+  /* Design System tokens — dark */
+  --brand-primary: oklch(0.667 0.038 144);
+  --surface-primary: oklch(0.095 0 0);
+  --surface-secondary: oklch(0.145 0 0);
+  --surface-tertiary: oklch(0.2 0.012 65);
+  --surface-inverse: oklch(0.985 0 0);
+  --text-primary: oklch(0.985 0 0);
+  --text-secondary: oklch(0.633 0.012 264);
+  --text-tertiary: oklch(0.45 0.012 264);
+  --text-inverse: oklch(0.095 0 0);
+  --text-link: oklch(0.667 0.038 144);
+  --text-link-hover: oklch(0.72 0.035 144);
+}
+
+/* ============================================================
+   BASE STYLES
+   ============================================================ */
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html {
+    @apply font-sans;
+    font-size: 16px;
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    min-height: 100svh;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  /* Área de toque mínima 44px (acessibilidade mobile) */
+  button,
+  [role="button"],
+  a {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Scrollbar sutil */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply rounded-full;
+    background-color: oklch(0.897 0.012 65);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: oklch(0.567 0.044 144 / 50%);
+  }
+}
+
+/* ============================================================
+   UTILITÁRIOS GLOBAIS
+   ============================================================ */
+@layer utilities {
+  /* Transições suaves padrão */
+  .transition-default {
+    @apply transition-all duration-200 ease-in-out;
+  }
+
+  /* Focus ring padrão acessível */
+  .focus-ring {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
+  }
+}
