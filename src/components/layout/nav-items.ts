@@ -1,0 +1,72 @@
+import type { LucideIcon } from 'lucide-react'
+import {
+  LayoutDashboard,
+  CalendarDays,
+  ClipboardList,
+  Wrench,
+  Users,
+  BarChart3,
+  Settings,
+  ScrollText,
+} from 'lucide-react'
+import { ROUTES } from '@/lib/constants'
+import type { Module } from '@/types/permissions'
+
+export interface NavItem {
+  label: string
+  href: string
+  icon: LucideIcon
+  module?: Module
+  badge?: number
+  children?: NavItem[]
+}
+
+export const NAV_ITEMS: NavItem[] = [
+  {
+    label: 'Dashboard',
+    href: ROUTES.dashboard,
+    icon: LayoutDashboard,
+  },
+  {
+    label: 'Eventos',
+    href: ROUTES.events,
+    icon: CalendarDays,
+    module: 'events',
+  },
+  {
+    label: 'Checklists',
+    href: ROUTES.checklists,
+    icon: ClipboardList,
+    module: 'checklists',
+  },
+  {
+    label: 'Manutenção',
+    href: ROUTES.maintenance,
+    icon: Wrench,
+    module: 'maintenance',
+  },
+  {
+    label: 'Relatórios',
+    href: ROUTES.reports,
+    icon: BarChart3,
+    module: 'reports',
+  },
+  {
+    label: 'Usuários',
+    href: ROUTES.users,
+    icon: Users,
+    module: 'users',
+  },
+  {
+    label: 'Logs',
+    href: ROUTES.auditLogs,
+    icon: ScrollText,
+    module: 'audit_logs',
+  },
+  {
+    label: 'Configurações',
+    href: ROUTES.settings,
+    icon: Settings,
+    module: 'settings',
+  },
+]
