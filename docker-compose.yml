@@ -1,0 +1,324 @@
+# ============================================================
+# CACHOLA OS — Docker Compose (Desenvolvimento Local)
+# ============================================================
+# Supabase Self-Hosted Community Edition
+# Documentação: https://supabase.com/docs/guides/self-hosting/docker
+#
+# Como usar:
+#   1. Copie .env.example para .env e preencha as variáveis
+#   2. docker compose up -d
+#   3. Acesse: http://localhost:3000 (app)
+#              http://localhost:8000 (Supabase API)
+#              http://localhost:3001 (Supabase Studio)
+# ============================================================
+
+name: cacholaos-dev
+
+services:
+
+  # ──────────────────────────────────────────────────────────
+  # PostgreSQL — Banco de dados principal
+  # ──────────────────────────────────────────────────────────
+  supabase-db:
+    image: supabase/postgres:15.8.1.084
+    container_name: cacholaos-db
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXP: 3600
+    volumes:
+      - ./docker/volumes/db:/var/lib/postgresql/data
+      - ./supabase/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - cacholaos-net
+
+  # ──────────────────────────────────────────────────────────
+  # Supabase Auth (GoTrue)
+  # ──────────────────────────────────────────────────────────
+  supabase-auth:
+    image: supabase/gotrue:v2.170.0
+    container_name: cacholaos-auth
+    restart: unless-stopped
+    depends_on:
+      supabase-db:
+        condition: service_healthy
+    environment:
+      GOTRUE_API_HOST: 0.0.0.0
+      GOTRUE_API_PORT: 9999
+      API_EXTERNAL_URL: ${NEXT_PUBLIC_SUPABASE_URL:-http://localhost:8000}
+
+      GOTRUE_DB_DRIVER: postgres
+      GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:${POSTGRES_PASSWORD}@supabase-db:5432/postgres?sslmode=disable
+
+      GOTRUE_SITE_URL: ${NEXTAUTH_URL:-http://localhost:3000}
+      GOTRUE_URI_ALLOW_LIST: ""
+      GOTRUE_DISABLE_SIGNUP: "false"
+
+      GOTRUE_JWT_ADMIN_ROLES: service_role
+      GOTRUE_JWT_AUD: authenticated
+      GOTRUE_JWT_DEFAULT_GROUP_NAME: authenticated
+      GOTRUE_JWT_EXP: 3600
+      GOTRUE_JWT_SECRET: ${JWT_SECRET}
+
+      GOTRUE_EXTERNAL_EMAIL_ENABLED: "true"
+      GOTRUE_MAILER_AUTOCONFIRM: "true"
+      GOTRUE_SMTP_ADMIN_EMAIL: ${SMTP_ADMIN_EMAIL:-admin@cacholaos.com.br}
+      GOTRUE_SMTP_HOST: ${SMTP_HOST:-}
+      GOTRUE_SMTP_PORT: ${SMTP_PORT:-587}
+      GOTRUE_SMTP_USER: ${SMTP_USER:-}
+      GOTRUE_SMTP_PASS: ${SMTP_PASS:-}
+      GOTRUE_SMTP_SENDER_NAME: ${SMTP_SENDER_NAME:-Cachola OS}
+      GOTRUE_MAILER_URLPATHS_INVITE: /auth/v1/verify
+      GOTRUE_MAILER_URLPATHS_CONFIRMATION: /auth/v1/verify
+      GOTRUE_MAILER_URLPATHS_RECOVERY: /auth/v1/verify
+      GOTRUE_MAILER_URLPATHS_EMAIL_CHANGE: /auth/v1/verify
+    networks:
+      - cacholaos-net
+
+  # ──────────────────────────────────────────────────────────
+  # PostgREST — API REST automática do PostgreSQL
+  # ──────────────────────────────────────────────────────────
+  supabase-rest:
+    image: postgrest/postgrest:v12.2.3
+    container_name: cacholaos-rest
+    restart: unless-stopped
+    depends_on:
+      supabase-db:
+        condition: service_healthy
+    environment:
+      PGRST_DB_URI: postgres://authenticator:${POSTGRES_PASSWORD}@supabase-db:5432/postgres?sslmode=disable
+      PGRST_DB_SCHEMAS: public,storage,graphql_public
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: ${JWT_SECRET}
+      PGRST_DB_USE_LEGACY_GUCS: "false"
+      PGRST_APP_SETTINGS_JWT_SECRET: ${JWT_SECRET}
+      PGRST_APP_SETTINGS_JWT_EXP: 3600
+    networks:
+      - cacholaos-net
+
+  # ──────────────────────────────────────────────────────────
+  # Realtime — WebSockets para updates em tempo real
+  # ──────────────────────────────────────────────────────────
+  supabase-realtime:
+    image: supabase/realtime:v2.34.47
+    container_name: cacholaos-realtime
+    restart: unless-stopped
+    depends_on:
+      supabase-db:
+        condition: service_healthy
+    environment:
+      PORT: 4000
+      DB_HOST: supabase-db
+      DB_PORT: 5432
+      DB_USER: supabase_admin
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_NAME: postgres
+      DB_AFTER_CONNECT_QUERY: SET search_path TO _realtime
+      DB_ENC_KEY: supabaserealtime
+      API_JWT_SECRET: ${JWT_SECRET}
+      FLY_ALLOC_ID: fly123
+      FLY_APP_NAME: realtime
+      SECRET_KEY_BASE: UpNVntn3cDxHJpq99YMc1T1AQgQpc8kfYTuRgBiYa15BLrx8etQoXz3bhZAKlR38
+      ERL_AFLAGS: -proto_dist inet_tcp
+      ENABLE_TAILSCALE: "false"
+      DNS_NODES: "''"
+    networks:
+      - cacholaos-net
+
+  # ──────────────────────────────────────────────────────────
+  # Storage — Upload de arquivos (avatares, fotos, etc.)
+  # ──────────────────────────────────────────────────────────
+  supabase-storage:
+    image: supabase/storage-api:v1.22.8
+    container_name: cacholaos-storage
+    restart: unless-stopped
+    depends_on:
+      supabase-db:
+        condition: service_healthy
+      supabase-rest:
+        condition: service_started
+    environment:
+      ANON_KEY: ${ANON_KEY}
+      SERVICE_KEY: ${SERVICE_ROLE_KEY}
+      POSTGREST_URL: http://supabase-rest:3000
+      PGRST_JWT_SECRET: ${JWT_SECRET}
+      DATABASE_URL: postgres://supabase_storage_admin:${POSTGRES_PASSWORD}@supabase-db:5432/postgres?sslmode=disable
+      FILE_SIZE_LIMIT: 52428800
+      STORAGE_BACKEND: file
+      FILE_STORAGE_BACKEND_PATH: /var/lib/storage
+      TENANT_ID: stub
+      REGION: local
+      GLOBAL_S3_BUCKET: stub
+      ENABLE_IMAGE_TRANSFORMATION: "true"
+      IMGPROXY_URL: http://supabase-imgproxy:5001
+    volumes:
+      - ./docker/volumes/storage:/var/lib/storage
+    networks:
+      - cacholaos-net
+
+  # ──────────────────────────────────────────────────────────
+  # Imgproxy — Transformação de imagens
+  # ──────────────────────────────────────────────────────────
+  supabase-imgproxy:
+    image: darthsim/imgproxy:v3.8.0
+    container_name: cacholaos-imgproxy
+    restart: unless-stopped
+    environment:
+      IMGPROXY_BIND: ":5001"
+      IMGPROXY_LOCAL_FILESYSTEM_ROOT: /
+      IMGPROXY_USE_ETAG: "true"
+      IMGPROXY_ENABLE_WEBP_DETECTION: "true"
+    volumes:
+      - ./docker/volumes/storage:/var/lib/storage
+    networks:
+      - cacholaos-net
+
+  # ──────────────────────────────────────────────────────────
+  # Kong — API Gateway (ponto de entrada único para Supabase)
+  # ──────────────────────────────────────────────────────────
+  supabase-kong:
+    image: kong:2.8.1
+    container_name: cacholaos-kong
+    restart: unless-stopped
+    depends_on:
+      supabase-db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"    # HTTP — API Supabase
+      - "8443:8443"    # HTTPS
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /var/lib/kong/kong.yml
+      KONG_DNS_ORDER: LAST,A,CNAME
+      KONG_PLUGINS: request-transformer,cors,key-auth,acl,basic-auth
+      KONG_NGINX_PROXY_PROXY_BUFFER_SIZE: 160k
+      KONG_NGINX_PROXY_PROXY_BUFFERS: 64 160k
+    volumes:
+      - ./docker/kong.yml:/var/lib/kong/kong.yml:ro
+    networks:
+      - cacholaos-net
+
+  # ──────────────────────────────────────────────────────────
+  # Supabase Studio — Interface visual de administração do banco
+  # ──────────────────────────────────────────────────────────
+  supabase-studio:
+    image: supabase/studio:20250317-6955350
+    container_name: cacholaos-studio
+    restart: unless-stopped
+    depends_on:
+      supabase-db:
+        condition: service_healthy
+      supabase-analytics:
+        condition: service_started
+    ports:
+      - "3001:3000"
+    environment:
+      STUDIO_PG_META_URL: http://supabase-meta:8080
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      DEFAULT_ORGANIZATION_NAME: ${STUDIO_DEFAULT_ORGANIZATION:-Cachola OS}
+      DEFAULT_PROJECT_NAME: ${STUDIO_DEFAULT_PROJECT:-cacholaos}
+      SUPABASE_URL: http://supabase-kong:8000
+      SUPABASE_PUBLIC_URL: ${NEXT_PUBLIC_SUPABASE_URL:-http://localhost:8000}
+      SUPABASE_ANON_KEY: ${ANON_KEY}
+      SUPABASE_SERVICE_KEY: ${SERVICE_ROLE_KEY}
+      LOGFLARE_API_KEY: your-super-secret-and-long-logflare-key
+      LOGFLARE_URL: http://supabase-analytics:4000
+      NEXT_PUBLIC_ENABLE_LOGS: "true"
+      NEXT_ANALYTICS_BACKEND_PROVIDER: postgres
+    networks:
+      - cacholaos-net
+
+  # ──────────────────────────────────────────────────────────
+  # pg-meta — Metadata do PostgreSQL para o Studio
+  # ──────────────────────────────────────────────────────────
+  supabase-meta:
+    image: supabase/postgres-meta:v0.87.3
+    container_name: cacholaos-meta
+    restart: unless-stopped
+    depends_on:
+      supabase-db:
+        condition: service_healthy
+    environment:
+      PG_META_PORT: 8080
+      PG_META_DB_HOST: supabase-db
+      PG_META_DB_PORT: 5432
+      PG_META_DB_NAME: postgres
+      PG_META_DB_USER: supabase
+      PG_META_DB_PASSWORD: ${POSTGRES_PASSWORD}
+    networks:
+      - cacholaos-net
+
+  # ──────────────────────────────────────────────────────────
+  # Analytics (Logflare) — Logs e métricas
+  # ──────────────────────────────────────────────────────────
+  supabase-analytics:
+    image: supabase/logflare:1.12.0
+    container_name: cacholaos-analytics
+    restart: unless-stopped
+    depends_on:
+      supabase-db:
+        condition: service_healthy
+    ports:
+      - "4000:4000"
+    environment:
+      LOGFLARE_NODE_HOST: 127.0.0.1
+      DB_USERNAME: supabase_admin
+      DB_DATABASE: _analytics
+      DB_HOSTNAME: supabase-db
+      DB_PORT: 5432
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_SCHEMA: _analytics
+      LOGFLARE_API_KEY: your-super-secret-and-long-logflare-key
+      LOGFLARE_SINGLE_TENANT: "true"
+      LOGFLARE_SUPABASE_MODE: "true"
+      LOGFLARE_MIN_CLUSTER_SIZE: 1
+      RELEASE_COOKIE: cookie
+    networks:
+      - cacholaos-net
+
+  # ──────────────────────────────────────────────────────────
+  # App Next.js — Cachola OS Frontend
+  # ──────────────────────────────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: cacholaos-app
+    restart: unless-stopped
+    depends_on:
+      supabase-kong:
+        condition: service_started
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_SUPABASE_URL: http://localhost:8000
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${ANON_KEY}
+      SUPABASE_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY}
+      SUPABASE_JWT_SECRET: ${JWT_SECRET}
+      NEXTAUTH_URL: http://localhost:3000
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      NEXT_PUBLIC_APP_VERSION: ${NEXT_PUBLIC_APP_VERSION:-0.1.0}
+      NEXT_PUBLIC_APP_NAME: Cachola OS
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+    networks:
+      - cacholaos-net
+
+# ──────────────────────────────────────────────────────────
+# Rede interna
+# ──────────────────────────────────────────────────────────
+networks:
+  cacholaos-net:
+    driver: bridge

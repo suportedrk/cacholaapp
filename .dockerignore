@@ -1,0 +1,12 @@
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+node_modules
+.next
+docker/volumes
+*.md
+!README.md
+GITHUB_CREDENTIALS.MD
+HOSTINGER_CREDENTIALS.MD

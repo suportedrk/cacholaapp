@@ -1,0 +1,18 @@
+# ============================================================
+# Cachola OS — Dockerfile de Desenvolvimento
+# Next.js com hot reload
+# ============================================================
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Instala dependências
+COPY package.json package-lock.json ./
+RUN npm ci
+
+# Copia o código
+COPY . .
+
+EXPOSE 3000
+
+CMD ["npm", "run", "dev"]
