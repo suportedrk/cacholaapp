@@ -1,5 +1,6 @@
 // ============================================================
 // TIPOS DE PERMISSÕES — Cachola OS
+// Os tipos de linha (UserPermission, RoleDefaultPerm) estão em database.types.ts
 // ============================================================
 
 export type Role =
@@ -25,22 +26,6 @@ export type Module =
   | 'settings'
 
 export type Action = 'view' | 'create' | 'edit' | 'delete' | 'export'
-
-export interface UserPermission {
-  id: string
-  user_id: string
-  module: Module
-  action: Action
-  granted: boolean
-}
-
-export interface RoleDefaultPermission {
-  id: string
-  role: Role
-  module: Module
-  action: Action
-  granted: boolean
-}
 
 /** Mapa de permissões: module → action → granted */
 export type PermissionMap = Record<Module, Record<Action, boolean>>
