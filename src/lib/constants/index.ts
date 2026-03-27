@@ -55,6 +55,7 @@ export const ROUTES = {
   maintenance: '/manutencao',
   checklists: '/checklists',
   users: '/admin/usuarios',
+  units: '/admin/unidades',
   profile: '/perfil',
   settings: '/configuracoes',
   reports: '/relatorios',

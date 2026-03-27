@@ -13,6 +13,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { NotificationBell } from './notification-bell'
 import { Breadcrumbs } from './breadcrumbs'
+import { UnitSwitcher } from './unit-switcher'
 import { useAuth } from '@/hooks/use-auth'
 import { getInitials, getAvatarColor, cn } from '@/lib/utils'
 import { ROUTES } from '@/lib/constants'
@@ -60,6 +61,7 @@ export function Navbar({ onMenuClick }: NavbarProps) {
 
       {/* Ações direita */}
       <div className="flex items-center gap-1">
+        <UnitSwitcher />
         <NotificationBell />
 
         {/* Avatar + Dropdown */}

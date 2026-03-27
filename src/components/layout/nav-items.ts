@@ -8,6 +8,7 @@ import {
   BarChart3,
   Settings,
   ScrollText,
+  Building2,
 } from 'lucide-react'
 import { ROUTES } from '@/lib/constants'
 import type { Module } from '@/types/permissions'
@@ -55,6 +56,12 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Usuários',
     href: ROUTES.users,
     icon: Users,
+    module: 'users',
+  },
+  {
+    label: 'Unidades',
+    href: ROUTES.units,
+    icon: Building2,
     module: 'users',
   },
   {
