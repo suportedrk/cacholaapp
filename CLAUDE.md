@@ -361,6 +361,9 @@ docker compose -f docker-compose.prod.yml logs -f app
 | `/manutencao/nova` | `(auth)/manutencao/nova/page.tsx` | ✅ funcional (Fase 2 Bloco 1) |
 | `/manutencao/[id]` | `(auth)/manutencao/[id]/page.tsx` | ✅ funcional (Fase 2 Bloco 1) |
 | `/manutencao/[id]/editar` | `(auth)/manutencao/[id]/editar/page.tsx` | ✅ funcional (Fase 2 Bloco 1) |
+| `/admin/unidades` | `(auth)/admin/unidades/page.tsx` | ✅ funcional (Fase 2.5) |
+| `/admin/unidades/nova` | `(auth)/admin/unidades/nova/page.tsx` | ✅ funcional (Fase 2.5) |
+| `/admin/unidades/[id]` | `(auth)/admin/unidades/[id]/page.tsx` | ✅ funcional (Fase 2.5) |
 | `/relatorios` | `(auth)/relatorios/page.tsx` | 🚧 placeholder |
 | `/admin/logs` | `(auth)/admin/logs/page.tsx` | 🚧 placeholder |
 | `/login` | `(public)/login/page.tsx` | ✅ funcional |
@@ -454,6 +457,22 @@ docker compose -f docker-compose.prod.yml logs -f app
 - [x] `src/app/api/cron/check-alerts/route.ts`: adicionado `sendEmail` para event_tomorrow, checklist_overdue e maintenance_overdue — sempre checando preferência do usuário antes
 - [x] `.env.example`: `RESEND_API_KEY` e `EMAIL_FROM` adicionados
 
+### Fase 2.5 — Multi-Unidade (2026-03-27)
+- [x] `supabase/migrations/010_fase25_units.sql`: tabelas `units` (slug UNIQUE) + `user_units` (role por unidade, is_default), `unit_id` nullable→NOT NULL em events/checklists/checklist_templates/maintenance_orders, nullable em audit_logs + config tables (event_types, packages, venues, checklist_categories, sectors, user_permissions), RLS completo com `get_user_unit_ids()` + `is_global_viewer()`, seed Pinheiros
+- [x] `src/types/database.types.ts`: Unit, UserUnit, UserUnitWithUnit types; `unit_id` em todas entidades
+- [x] `src/stores/unit-store.ts`: Zustand com persist — activeUnitId (localStorage), activeUnit, userUnits; reset no sign out
+- [x] `src/hooks/use-units.ts`: useUnits, useUnit, useMyUnits, useUserUnits, useUnitUsers, useCreateUnit, useUpdateUnit, useDeactivateUnit, useAddUserToUnit, useUpdateUserUnitRole, useRemoveUserFromUnit, useSetDefaultUnit
+- [x] `src/hooks/use-auth.ts`: loadUserUnits() — carrega user_units, restaura unidade persistida ou usa default; retorna activeUnitId + userUnits
+- [x] `src/components/layout/unit-switcher.tsx`: dropdown navbar — "Todas as unidades" (super_admin/diretor), lista de unidades do usuário com check mark, invalida todas queries ao trocar
+- [x] `src/components/layout/navbar.tsx`: UnitSwitcher integrado antes de NotificationBell
+- [x] `src/components/layout/nav-items.ts`: item "Unidades" → `/admin/unidades` com ícone Building2
+- [x] `src/lib/constants/index.ts`: `ROUTES.units = '/admin/unidades'`
+- [x] Todos os hooks de dados com filtro `unit_id`: useEvents, useChecklists, useChecklistTemplates, useChecklistCategories, useCreateChecklist, useCreateTemplate, useMaintenanceOrders, useCreateMaintenanceOrder, useDashboardStats, useNextEvent, useDashboardMaintenanceStats, useCalendarEvents, useCalendarMaintenance, useEventTypes, usePackages, useVenues, useCreateEventType, useCreatePackage, useCreateVenue, useSectors, useCreateSector — queryKeys incluem activeUnitId
+- [x] `src/app/(auth)/admin/unidades/page.tsx`: lista cards de unidades com busca, status badge, endereço/telefone
+- [x] `src/app/(auth)/admin/unidades/nova/page.tsx`: formulário com slug auto-gerado a partir do nome
+- [x] `src/app/(auth)/admin/unidades/[id]/page.tsx`: editar dados + gerenciar usuários vinculados (add/remove/change role)
+- [x] `src/app/(auth)/admin/usuarios/[id]/page.tsx`: seção Unidades Vinculadas — lista com change role + remove
+
 ### Fase 2 — Bloco 2: Upload de Fotos (2026-03-27)
 - [x] `src/hooks/use-signed-urls.ts`: `useSignedUrls(bucket, paths)` — batch `createSignedUrls`, staleTime 30min
 - [x] `src/components/shared/photo-upload.tsx`: Canvas compress (max 1200px, 80%), preview thumbnail, progress bar, dois botões (Câmera com `capture="environment"` + Galeria), `PhotoThumb` para exibir foto existente
@@ -513,6 +532,7 @@ Role:  super_admin (32 permissões)
 - [x] Fase 2 Bloco 1: Módulo de Manutenção — CRUD completo
 - [x] Fase 2 Bloco 2: Upload de Fotos (before/after + lightbox + avatar)
 - [x] Fase 2 Bloco 3: E-mails com Resend (4 templates + cron + emergency route)
+- [x] Fase 2.5: Multi-Unidade (schema N:N, RLS, UnitSwitcher, filtros, CRUD admin)
 - [ ] Relatórios e exportação
 
 > **NOTA:** Após subir o Supabase com `docker compose up -d`, regenerar os tipos com:
@@ -567,3 +587,10 @@ Role:  super_admin (32 permissões)
 | E-mail emergency via API route (não hook) | `RESEND_API_KEY` é server-only. Hook client-side chama `POST /api/email/maintenance-emergency` fire-and-forget. Cron chama `sendEmail()` diretamente (já server-side). |
 | Resend graceful fallback | `sendEmail()` nunca lança exceção — erros são `console.error`. Se `RESEND_API_KEY` ausente, apenas avisa no log e segue. Fluxo principal nunca é interrompido por falha de e-mail. |
 | `preferences.notifications.email` já existia | O toggle de e-mail no perfil já existia como `notifEmail` (mapeado para `preferences.notifications.email`). Nenhuma migração necessária — campo já no JSONB. |
+| Multi-unidade com `activeUnitId` no Zustand (não na URL) | URL-based unit routing (ex: `/pinheiros/eventos`) forçaria refactor de todas as rotas. Zustand + localStorage = troca de unidade sem navegar. RLS garante isolamento no banco. |
+| `activeUnitId = null` = todas as unidades | super_admin/diretor veem dados agregados de todas as unidades quando null. Hooks não adicionam filtro unit_id nesse caso. Stats no dashboard somam todas as unidades. |
+| `unit_id` nullable → NOT NULL com migration incremental | Coluna adicionada nullable, UPDATE atribui unidade pinheiros a todos os registros existentes, depois ALTER COLUMN NOT NULL. Safe em banco não vazio. |
+| `get_user_unit_ids()` e `is_global_viewer()` como SQL functions | RLS policies precisam verificar acesso por unidade em múltiplas tabelas. Funções SQL reutilizáveis evitam subquery duplicada em cada policy. SECURITY DEFINER para bypass RLS interno. |
+| UNIQUE(name, unit_id) nas config tables | Config tables (event_types, packages, venues, checklist_categories, sectors) tinham UNIQUE(name). Multi-unidade exige UNIQUE(name, unit_id) para permitir mesmo nome em unidades diferentes. |
+| `useUnitUsers` separado de `useUserUnits` | `useUserUnits(userId)` retorna unidades de um usuário (admin user). `useUnitUsers(unitId)` retorna usuários de uma unidade (admin unit). Semânticas opostas, queries distintas. |
+| queryKey inclui `activeUnitId` em todos os hooks | React Query revalida automaticamente ao trocar de unidade sem precisar de `invalidateQueries` manual. UnitSwitcher ainda invalida explicitamente para garantia dupla. |
