@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import type { EventWithDetails, EventInsert, EventUpdate, EventStatus } from '@/types/database.types'
 import { toast } from 'sonner'
+import { notifyEventCreated, notifyStatusChanged } from '@/lib/notifications'
 
 const EVENT_WITH_DETAILS_SELECT = `
   *,
@@ -136,9 +137,17 @@ export function useCreateEvent() {
 
       return event.id
     },
-    onSuccess: () => {
+    onSuccess: (eventId) => {
       qc.invalidateQueries({ queryKey: ['events'] })
       toast.success('Evento criado com sucesso!')
+      // Fire-and-forget: notifica equipe escalada
+      ;(async () => {
+        try {
+          const sb = createClient()
+          const { data: { user } } = await sb.auth.getUser()
+          await notifyEventCreated(sb as any, eventId, user?.id)
+        } catch { /* não-crítico */ }
+      })()
     },
     onError: () => toast.error('Erro ao criar evento. Tente novamente.'),
   })
@@ -201,10 +210,18 @@ export function useChangeEventStatus() {
       const { error } = await supabase.from('events').update({ status }).eq('id', id)
       if (error) throw error
     },
-    onSuccess: (_, { id }) => {
+    onSuccess: (_, { id, status }) => {
       qc.invalidateQueries({ queryKey: ['events'] })
       qc.invalidateQueries({ queryKey: ['events', id] })
       toast.success('Status atualizado.')
+      // Fire-and-forget: notifica equipe sobre novo status
+      ;(async () => {
+        try {
+          const sb = createClient()
+          const { data: { user } } = await sb.auth.getUser()
+          await notifyStatusChanged(sb as any, id, status, user?.id)
+        } catch { /* não-crítico */ }
+      })()
     },
     onError: () => toast.error('Erro ao atualizar status.'),
   })

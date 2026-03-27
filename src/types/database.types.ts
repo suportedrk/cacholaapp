@@ -43,6 +43,7 @@ export interface Database {
       get_unread_notifications_count:{ Args: { p_user_id: string }; Returns: number }
       reload_user_permissions:       { Args: { p_user_id: string }; Returns: void }
       mark_all_notifications_read:   { Args: { p_user_id: string }; Returns: void }
+      create_notification:           { Args: { p_user_id: string; p_type: string; p_title: string; p_body: string; p_link?: string | null }; Returns: string }
     }
     Enums: Record<string, never>
   }

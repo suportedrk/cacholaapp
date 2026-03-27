@@ -60,7 +60,7 @@ export function Navbar({ onMenuClick }: NavbarProps) {
 
       {/* Ações direita */}
       <div className="flex items-center gap-1">
-        <NotificationBell count={0} />
+        <NotificationBell />
 
         {/* Avatar + Dropdown */}
         <DropdownMenu>

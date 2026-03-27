@@ -8,6 +8,7 @@ import type {
   ChecklistItemStatus, ChecklistStatus,
   TemplateWithItems,
 } from '@/types/database.types'
+import { notifyChecklistAssigned, notifyChecklistCompleted } from '@/lib/notifications'
 
 // ─────────────────────────────────────────────────────────────
 // FILTROS DA LISTA
@@ -194,9 +195,17 @@ export function useCreateChecklist() {
 
       return cl.id
     },
-    onSuccess: () => {
+    onSuccess: (checklistId) => {
       qc.invalidateQueries({ queryKey: ['checklists'] })
       toast.success('Checklist criado com sucesso!')
+      // Fire-and-forget: notifica responsável (se atribuído)
+      ;(async () => {
+        try {
+          const sb = createClient()
+          const { data: { user } } = await sb.auth.getUser()
+          await notifyChecklistAssigned(sb as any, checklistId, user?.id)
+        } catch { /* não-crítico */ }
+      })()
     },
     onError: () => toast.error('Erro ao criar checklist.'),
   })
@@ -214,10 +223,20 @@ export function useUpdateChecklistStatus() {
       const { error } = await supabase.from('checklists').update({ status }).eq('id', id)
       if (error) throw error
     },
-    onSuccess: (_, { id }) => {
+    onSuccess: (_, { id, status }) => {
       qc.invalidateQueries({ queryKey: ['checklists'] })
       qc.invalidateQueries({ queryKey: ['checklist', id] })
       toast.success('Status atualizado.')
+      // Fire-and-forget: notifica equipe quando checklist é concluído
+      if (status === 'completed') {
+        ;(async () => {
+          try {
+            const sb = createClient()
+            const { data: { user } } = await sb.auth.getUser()
+            await notifyChecklistCompleted(sb as any, id, user?.id)
+          } catch { /* não-crítico */ }
+        })()
+      }
     },
     onError: () => toast.error('Erro ao atualizar status.'),
   })
