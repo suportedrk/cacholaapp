@@ -352,7 +352,11 @@ docker compose -f docker-compose.prod.yml logs -f app
 | `/eventos/[id]` | `(auth)/eventos/[id]/page.tsx` | ✅ funcional (Bloco 1) |
 | `/eventos/[id]/editar` | `(auth)/eventos/[id]/editar/page.tsx` | ✅ funcional (Bloco 1) |
 | `/configuracoes` | `(auth)/configuracoes/page.tsx` | ✅ funcional (Bloco 1) |
-| `/checklists` | `(auth)/checklists/page.tsx` | 🚧 placeholder |
+| `/checklists` | `(auth)/checklists/page.tsx` | ✅ funcional (Bloco 3) |
+| `/checklists/[id]` | `(auth)/checklists/[id]/page.tsx` | ✅ funcional (Bloco 3) |
+| `/checklists/templates` | `(auth)/checklists/templates/page.tsx` | ✅ funcional (Bloco 3) |
+| `/checklists/templates/novo` | `(auth)/checklists/templates/novo/page.tsx` | ✅ funcional (Bloco 3) |
+| `/checklists/templates/[id]/editar` | `(auth)/checklists/templates/[id]/editar/page.tsx` | ✅ funcional (Bloco 3) |
 | `/manutencao` | `(auth)/manutencao/page.tsx` | 🚧 placeholder |
 | `/relatorios` | `(auth)/relatorios/page.tsx` | 🚧 placeholder |
 | `/admin/logs` | `(auth)/admin/logs/page.tsx` | 🚧 placeholder |
@@ -379,6 +383,22 @@ docker compose -f docker-compose.prod.yml logs -f app
 - [x] `src/app/(auth)/eventos/[id]/page.tsx`: detalhe com troca de status + editar + excluir
 - [x] `src/app/(auth)/eventos/[id]/editar/page.tsx`: formulário de edição
 - [x] `src/app/(auth)/configuracoes/page.tsx`: tabs Tipos/Pacotes/Salões com ConfigTable
+
+### Fase 1 — Bloco 3: Módulo de Checklists (2026-03-27)
+- [x] `supabase/migrations/007_fase1_checklists_update.sql`: `checklist_items.status` (pending/done/na), `checklist_templates.category_id` FK, bucket `checklist-photos` + RLS
+- [x] `src/types/database.types.ts`: ChecklistItemStatus, ChecklistWithItems, ChecklistForList, TemplateWithItems
+- [x] `src/hooks/use-checklists.ts`: useChecklists (filtros+paginação), useChecklist, useEventChecklists, useCreateChecklist, useUpdateChecklistStatus, useDeleteChecklist, useUpdateChecklistItem (status/notes/photo+Storage), useChecklistTemplates, useChecklistTemplate, useCreateTemplate, useUpdateTemplate, useDeleteTemplate, useChecklistCategories
+- [x] `src/components/features/checklists/checklist-progress.tsx`: barra de progresso + calcProgress() exportado
+- [x] `src/components/features/checklists/checklist-card.tsx`: card com badge de status, progresso, overdue highlight + skeleton
+- [x] `src/components/features/checklists/checklist-item-row.tsx`: toque para ciclar status (pending→done→na), notas expandíveis, upload de foto com câmera
+- [x] `src/components/features/checklists/sortable-template-items.tsx`: DnD reorder com @dnd-kit/core + @dnd-kit/sortable
+- [x] `src/components/features/checklists/add-checklist-modal.tsx`: modal de criação a partir de template
+- [x] `src/app/(auth)/checklists/page.tsx`: lista paginada com filtros de status + categoria
+- [x] `src/app/(auth)/checklists/[id]/page.tsx`: tela de preenchimento mobile-first (footer sticky + finalizar)
+- [x] `src/app/(auth)/checklists/templates/page.tsx`: lista de templates com editar/desativar
+- [x] `src/app/(auth)/checklists/templates/novo/page.tsx`: formulário de criação com DnD
+- [x] `src/app/(auth)/checklists/templates/[id]/editar/page.tsx`: formulário de edição com DnD
+- [x] `src/app/(auth)/eventos/[id]/page.tsx`: seção Checklists real (lista + AddChecklistModal)
 
 ### Fase 1 — Bloco 2: Dashboard + Calendário Unificado (2026-03-27)
 - [x] `src/hooks/use-dashboard.ts`: useDashboardStats, useNextEvent, useCalendarEvents + tipo CalendarEvent
@@ -434,7 +454,7 @@ Role:  super_admin (32 permissões)
 
 - [x] Bloco 1: Módulo de Eventos (CRUD completo + config tables)
 - [x] Bloco 2: Dashboard + Calendário Unificado
-- [ ] Bloco 3: Módulo de Checklists (templates + instâncias + itens + categorias)
+- [x] Bloco 3: Módulo de Checklists (templates + instâncias + itens + categorias)
 - [ ] Bloco 4: Sistema de Alertas Persistentes (notification bell + real-time + cron)
 - [ ] Módulo de Manutenção (ordens + fotos before/after)
 - [ ] Relatórios e exportação

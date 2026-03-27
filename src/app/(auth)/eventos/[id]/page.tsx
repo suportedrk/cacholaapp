@@ -7,7 +7,7 @@ import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import {
   ArrowLeft, Pencil, Trash2, Calendar, Clock, MapPin,
-  Users, Package, FileText, ChevronDown
+  Users, Package, FileText, ChevronDown, Plus, ClipboardList
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { buttonVariants } from '@/components/ui/button'
@@ -24,7 +24,11 @@ import { PageHeader } from '@/components/shared/page-header'
 import { EventStatusBadge, STATUS_CONFIG } from '@/components/shared/event-status-badge'
 import { ConfirmDialog } from '@/components/shared/confirm-dialog'
 import { UserAvatar } from '@/components/shared/user-avatar'
+import { ChecklistCard } from '@/components/features/checklists/checklist-card'
+import { AddChecklistModal } from '@/components/features/checklists/add-checklist-modal'
 import { useEvent, useDeleteEvent, useChangeEventStatus } from '@/hooks/use-events'
+import { useEventChecklists, useCreateChecklist } from '@/hooks/use-checklists'
+import { useUsers } from '@/hooks/use-users'
 import type { EventStatus } from '@/types/database.types'
 
 const ALL_STATUSES = Object.keys(STATUS_CONFIG) as EventStatus[]
@@ -36,8 +40,13 @@ export default function EventoDetailPage() {
   const { data: event, isLoading, isError } = useEvent(id)
   const deleteEvent = useDeleteEvent()
   const changeStatus = useChangeEventStatus()
+  const { data: checklists = [], isLoading: checklistsLoading } = useEventChecklists(id)
+  const createChecklist = useCreateChecklist()
+  const { data: usersData = [] } = useUsers({ isActive: true })
+  const users = usersData.map((u) => ({ id: u.id, name: u.name }))
 
   const [deleteOpen, setDeleteOpen] = useState(false)
+  const [addChecklistOpen, setAddChecklistOpen] = useState(false)
 
   // ─── Loading ───
   if (isLoading) {
@@ -244,15 +253,66 @@ export default function EventoDetailPage() {
         )}
       </div>
 
-      {/* Seção: Checklists (placeholder para Bloco 3) */}
+      {/* Seção: Checklists */}
       <div className="bg-card border border-border rounded-xl p-4 space-y-3">
-        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-          Checklists
-        </h3>
-        <p className="text-sm text-muted-foreground">
-          Os checklists deste evento aparecerão aqui em breve.
-        </p>
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+            Checklists ({checklists.length})
+          </h3>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setAddChecklistOpen(true)}
+            className="h-7 text-xs gap-1"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Adicionar
+          </Button>
+        </div>
+
+        {checklistsLoading && (
+          <div className="space-y-2">
+            {Array.from({ length: 2 }).map((_, i) => (
+              <Skeleton key={i} className="h-20 rounded-xl" />
+            ))}
+          </div>
+        )}
+
+        {!checklistsLoading && checklists.length === 0 && (
+          <div className="flex flex-col items-center gap-2 py-6 text-center">
+            <ClipboardList className="w-8 h-8 text-muted-foreground/40" />
+            <p className="text-sm text-muted-foreground">Nenhum checklist neste evento.</p>
+            <Button size="sm" variant="outline" onClick={() => setAddChecklistOpen(true)}>
+              Criar primeiro checklist
+            </Button>
+          </div>
+        )}
+
+        {!checklistsLoading && checklists.length > 0 && (
+          <div className="space-y-2">
+            {checklists.map((cl) => (
+              <ChecklistCard key={cl.id} checklist={cl} />
+            ))}
+          </div>
+        )}
       </div>
+
+      <AddChecklistModal
+        open={addChecklistOpen}
+        onOpenChange={setAddChecklistOpen}
+        users={users}
+        loading={createChecklist.isPending}
+        onConfirm={async ({ templateId, title, assignedTo, dueDate }) => {
+          await createChecklist.mutateAsync({
+            eventId: id,
+            templateId,
+            title,
+            assignedTo: assignedTo || undefined,
+            dueDate: dueDate || undefined,
+          })
+          setAddChecklistOpen(false)
+        }}
+      />
 
       {/* Confirm delete */}
       <ConfirmDialog

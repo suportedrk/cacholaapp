@@ -67,6 +67,7 @@ export type EventStatus =
   | 'post_event'  // Pós-Evento (limpeza, devolução, avaliação)
 
 export type ChecklistStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled'
+export type ChecklistItemStatus = 'pending' | 'done' | 'na'
 export type MaintenanceType = 'correctiva' | 'preventiva' | 'melhoria'
 export type MaintenancePriority = 'low' | 'medium' | 'high' | 'critical'
 export type MaintenanceStatus = 'open' | 'in_progress' | 'waiting_parts' | 'completed' | 'cancelled'
@@ -212,7 +213,8 @@ export type EventStaff = {
 export type ChecklistTemplate = {
   id: string
   title: string
-  category: string
+  category: string       // TEXT legado
+  category_id: string | null  // FK → checklist_categories (Fase 1, migration 007)
   created_by: string
   is_active: boolean
   created_at: string
@@ -242,7 +244,8 @@ export type ChecklistItem = {
   id: string
   checklist_id: string
   description: string
-  is_done: boolean
+  is_done: boolean          // legado — derivado de status
+  status: ChecklistItemStatus  // 'pending' | 'done' | 'na' (migration 007)
   done_by: string | null
   done_at: string | null
   photo_url: string | null
@@ -332,9 +335,24 @@ export type EventWithDetails = Event & {
   }>
 }
 
+// Checklist com itens completos (tela de preenchimento)
 export type ChecklistWithItems = Checklist & {
   checklist_items: ChecklistItem[]
+  event: Pick<Event, 'id' | 'title' | 'date'> | null
   assigned_user: Pick<User, 'id' | 'name' | 'avatar_url'> | null
+}
+
+// Checklist para listagem (itens apenas com id+status para progresso)
+export type ChecklistForList = Checklist & {
+  event: Pick<Event, 'id' | 'title' | 'date'> | null
+  assigned_user: Pick<User, 'id' | 'name' | 'avatar_url'> | null
+  checklist_items: Array<{ id: string; status: ChecklistItemStatus }>
+}
+
+// Template com itens e categoria
+export type TemplateWithItems = ChecklistTemplate & {
+  category: Pick<ChecklistCategory, 'id' | 'name'> | null
+  template_items: TemplateItem[]
 }
 
 export type MaintenanceOrderWithPhotos = MaintenanceOrder & {
