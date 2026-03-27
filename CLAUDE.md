@@ -569,6 +569,14 @@ Role:  super_admin (32 permissões)
 - [x] `src/app/(auth)/admin/logs/page.tsx`: substitui placeholder; check de permissão audit_logs:view com tela de acesso negado; achata páginas do infiniteQuery em lista única
 - [x] Fix colateral: `src/lib/email.ts` — new Resend() lazy (getResend()) para não crashar build sem RESEND_API_KEY
 
+### Fase 3 — Bloco 5: Otimizações de Performance (2026-03-27)
+- [x] `use-permissions.ts`: select('module,action,granted') — remove colunas desnecessárias + staleTime 5min
+- [x] `use-users.ts`: useUsers omite `preferences` JSONB na lista + staleTime 30s em ambas as queries
+- [x] `use-units.ts`: staleTime 5min em useUnits + useUnit (dado quase estático)
+- [x] `use-audit-logs.ts`: staleTime 30s no useInfiniteQuery
+- [x] `event-card.tsx`, `maintenance-card.tsx`, `checklist-card.tsx`, `equipment-card.tsx`: React.memo nos 4 card components de lista
+- [x] `@next/bundle-analyzer` instalado; `next.config.ts` com `withBundleAnalyzer(enabled: ANALYZE==='true')` — uso: `ANALYZE=true npm run build`
+
 ## PROXIMOS PASSOS — FASE 1
 
 - [x] Bloco 1: Módulo de Eventos (CRUD completo + config tables)
@@ -583,7 +591,7 @@ Role:  super_admin (32 permissões)
 - [x] Fase 3 Bloco 2: Cadastro de Equipamentos/Ativos (CRUD completo + foto + FK em OS)
 - [x] Fase 3 Bloco 3: Configurações Avançadas (unit_settings JSONB, equipment_categories, 3 novas abas)
 - [x] Fase 3 Bloco 4: Logs de Auditoria (useInfiniteQuery cursor-based, diff visual, filtros, permissão)
-- [ ] Fase 3 Bloco 5: Otimizações de Performance
+- [x] Fase 3 Bloco 5: Otimizações de Performance (select específico, staleTime, React.memo, bundle analyzer)
 - [ ] Fase 3 Bloco 6: Offline Mode
 
 > **NOTA:** Após subir o Supabase com `docker compose up -d`, regenerar os tipos com:
