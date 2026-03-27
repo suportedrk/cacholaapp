@@ -4,7 +4,8 @@ import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { User, Session } from '@supabase/supabase-js'
-import type { User as AppUser } from '@/types/database.types'
+import type { User as AppUser, UserUnitWithUnit } from '@/types/database.types'
+import { useUnitStore } from '@/stores/unit-store'
 
 interface AuthState {
   user: User | null
@@ -17,6 +18,7 @@ interface AuthState {
 export function useAuth() {
   const router = useRouter()
   const supabase = createClient()
+  const { setUserUnits, setActiveUnit, activeUnitId, userUnits, reset: resetUnit } = useUnitStore()
 
   const [state, setState] = useState<AuthState>({
     user: null,
@@ -34,16 +36,51 @@ export function useAuth() {
         .select('*')
         .eq('id', userId)
         .single()
-
       return data as AppUser | null
     },
     [supabase]
+  )
+
+  // Carrega unidades do usuário e inicializa a unidade ativa
+  const loadUserUnits = useCallback(
+    async (userId: string) => {
+      const { data } = await supabase
+        .from('user_units')
+        .select(`
+          *,
+          unit:units(id, name, slug, is_active)
+        `)
+        .eq('user_id', userId)
+        .order('is_default', { ascending: false })
+
+      const units = (data ?? []) as unknown as UserUnitWithUnit[]
+      setUserUnits(units)
+
+      // Restaurar unidade do localStorage, ou usar a default, ou a primeira disponível
+      const stored = useUnitStore.getState().activeUnitId
+      const storedUnit = stored ? units.find((u) => u.unit_id === stored) : null
+
+      if (storedUnit) {
+        // A unidade persistida ainda é válida — apenas sincroniza o objeto
+        setActiveUnit(storedUnit.unit_id, storedUnit.unit as { id: string; name: string; slug: string })
+      } else {
+        // Selecionar unidade padrão ou primeira disponível
+        const defaultUnit = units.find((u) => u.is_default) ?? units[0]
+        if (defaultUnit) {
+          setActiveUnit(defaultUnit.unit_id, defaultUnit.unit as { id: string; name: string; slug: string })
+        } else {
+          setActiveUnit(null, null)
+        }
+      }
+    },
+    [supabase, setUserUnits, setActiveUnit]
   )
 
   useEffect(() => {
     // Sessão inicial
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       const profile = session?.user ? await loadProfile(session.user.id) : null
+      if (session?.user) await loadUserUnits(session.user.id)
 
       setState({
         user: session?.user ?? null,
@@ -59,6 +96,9 @@ export function useAuth() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       const profile = session?.user ? await loadProfile(session.user.id) : null
+      if (session?.user) {
+        await loadUserUnits(session.user.id)
+      }
 
       setState({
         user: session?.user ?? null,
@@ -69,12 +109,13 @@ export function useAuth() {
       })
 
       if (event === 'SIGNED_OUT') {
+        resetUnit()
         router.push('/login')
       }
     })
 
     return () => subscription.unsubscribe()
-  }, [supabase, loadProfile, router])
+  }, [supabase, loadProfile, loadUserUnits, resetUnit, router])
 
   const signIn = useCallback(
     async (email: string, password: string) => {
@@ -123,6 +164,9 @@ export function useAuth() {
     profile: state.profile,
     loading: state.loading,
     error: state.error,
+    // Unidades
+    activeUnitId,
+    userUnits,
     signIn,
     signOut,
     resetPassword,
