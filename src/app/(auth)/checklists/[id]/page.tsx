@@ -1,22 +1,21 @@
 'use client'
 
-import { useCallback } from 'react'
+import { useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { ArrowLeft, Calendar, User, Clock, CheckCircle2 } from 'lucide-react'
+import { ArrowLeft, Calendar, User, Clock, CheckCircle2, WifiOff, RotateCw } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { ChecklistProgress } from '@/components/features/checklists/checklist-progress'
 import { ChecklistItemRow } from '@/components/features/checklists/checklist-item-row'
 import { ConfirmDialog } from '@/components/shared/confirm-dialog'
-import { useChecklist, useUpdateChecklistItem, useUpdateChecklistStatus } from '@/hooks/use-checklists'
+import { useOfflineChecklist } from '@/hooks/use-offline-checklist'
 import { useAuth } from '@/hooks/use-auth'
 import { calcProgress } from '@/components/features/checklists/checklist-progress'
 import { cn } from '@/lib/utils'
 import type { ChecklistItemStatus } from '@/types/database.types'
-import { useState } from 'react'
 
 const CHECKLIST_STATUS_LABEL = {
   pending:     'Pendente',
@@ -30,9 +29,20 @@ export default function ChecklistFillPage() {
   const router = useRouter()
   const { profile } = useAuth()
 
-  const { data: checklist, isLoading, isError } = useChecklist(id)
-  const updateItem   = useUpdateChecklistItem()
-  const updateStatus = useUpdateChecklistStatus()
+  const {
+    checklist,
+    isLoading,
+    isError,
+    isOffline,
+    pendingCount,
+    isSyncing,
+    isUpdating,
+    isFinishing,
+    handleItemStatus,
+    handleItemNotes,
+    handleItemPhoto,
+    handleFinish,
+  } = useOfflineChecklist(id)
 
   const [confirmFinish, setConfirmFinish] = useState(false)
 
@@ -40,25 +50,8 @@ export default function ChecklistFillPage() {
   const isCancelled = checklist?.status === 'cancelled'
   const isReadOnly  = isCompleted || isCancelled
 
-  const handleItemStatus = useCallback((itemId: string, status: ChecklistItemStatus) => {
-    updateItem.mutate({
-      itemId,
-      checklistId: id,
-      status,
-      userId: profile?.id,
-    })
-  }, [id, profile?.id, updateItem])
-
-  const handleItemNotes = useCallback((itemId: string, notes: string) => {
-    updateItem.mutate({ itemId, checklistId: id, notes, userId: profile?.id })
-  }, [id, profile?.id, updateItem])
-
-  const handleItemPhoto = useCallback((itemId: string, file: File) => {
-    updateItem.mutate({ itemId, checklistId: id, photoFile: file, userId: profile?.id })
-  }, [id, profile?.id, updateItem])
-
-  async function handleFinish() {
-    await updateStatus.mutateAsync({ id, status: 'completed' })
+  async function onFinish() {
+    await handleFinish()
     setConfirmFinish(false)
     router.push('/checklists')
   }
@@ -87,7 +80,9 @@ export default function ChecklistFillPage() {
           <ArrowLeft className="w-4 h-4" /> Voltar
         </Link>
         <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/20 text-sm text-destructive">
-          Checklist não encontrado ou erro ao carregar.
+          {isOffline
+            ? 'Sem conexão e checklist não está em cache. Abra novamente quando online.'
+            : 'Checklist não encontrado ou erro ao carregar.'}
         </div>
       </div>
     )
@@ -96,8 +91,31 @@ export default function ChecklistFillPage() {
   const { done, total, pct } = calcProgress(checklist.checklist_items)
 
   return (
-    // Padding bottom extra para o footer sticky não sobrepor os últimos itens
     <div className="space-y-4 pb-24">
+
+      {/* ── Banner offline ── */}
+      {isOffline && (
+        <div className="flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2.5 text-sm text-amber-800">
+          <WifiOff className="size-4 shrink-0" />
+          <span className="flex-1">
+            Sem conexão — alterações serão sincronizadas automaticamente ao reconectar.
+          </span>
+          {pendingCount > 0 && (
+            <span className="rounded-full bg-amber-200 px-2 py-0.5 text-xs font-medium">
+              {pendingCount} pendente{pendingCount !== 1 ? 's' : ''}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* ── Banner sincronizando ── */}
+      {isSyncing && (
+        <div className="flex items-center gap-2 rounded-lg bg-blue-50 border border-blue-200 px-3 py-2.5 text-sm text-blue-800">
+          <RotateCw className="size-4 shrink-0 animate-spin" />
+          Sincronizando alterações com o servidor…
+        </div>
+      )}
+
       {/* ── Breadcrumb ── */}
       <div className="flex items-center gap-2">
         <Link
@@ -160,10 +178,14 @@ export default function ChecklistFillPage() {
           <ChecklistItemRow
             key={item.id}
             item={item}
-            disabled={isReadOnly || updateItem.isPending}
-            onStatusChange={(status) => handleItemStatus(item.id, status)}
-            onNotesChange={(notes)  => handleItemNotes(item.id, notes)}
-            onPhotoChange={(file)   => handleItemPhoto(item.id, file)}
+            disabled={isReadOnly || isUpdating}
+            onStatusChange={(status: ChecklistItemStatus) =>
+              handleItemStatus(item.id, status, profile?.id)}
+            onNotesChange={(notes: string) =>
+              handleItemNotes(item.id, notes, profile?.id)}
+            onPhotoChange={isOffline
+              ? undefined  // upload de foto indisponível offline
+              : (file: File) => handleItemPhoto(item.id, file, profile?.id)}
           />
         ))}
         {checklist.checklist_items.length === 0 && (
@@ -186,7 +208,8 @@ export default function ChecklistFillPage() {
             <Button
               size="sm"
               onClick={() => setConfirmFinish(true)}
-              disabled={done === 0 || updateItem.isPending}
+              disabled={done === 0 || isUpdating || isOffline}
+              title={isOffline ? 'Reconecte-se para finalizar' : undefined}
               className="shrink-0 gap-1.5"
             >
               <CheckCircle2 className="w-4 h-4" />
@@ -211,8 +234,8 @@ export default function ChecklistFillPage() {
         title="Finalizar checklist?"
         description={`${done} de ${total} itens concluídos (${pct}%). Os itens restantes ficarão como pendente. Esta ação não pode ser desfeita.`}
         confirmLabel="Finalizar"
-        loading={updateStatus.isPending}
-        onConfirm={handleFinish}
+        loading={isFinishing}
+        onConfirm={onFinish}
       />
     </div>
   )

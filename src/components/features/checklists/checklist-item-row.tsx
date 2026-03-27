@@ -9,7 +9,7 @@ interface ChecklistItemRowProps {
   item: ChecklistItem
   onStatusChange: (status: ChecklistItemStatus) => void
   onNotesChange: (notes: string) => void
-  onPhotoChange: (file: File) => void
+  onPhotoChange?: (file: File) => void
   disabled?: boolean
 }
 
@@ -55,7 +55,7 @@ export function ChecklistItemRow({
 
   function handlePhotoSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
-    if (file) onPhotoChange(file)
+    if (file) onPhotoChange?.(file)
   }
 
   const isDone = item.status === 'done'

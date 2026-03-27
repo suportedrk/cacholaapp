@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek } from 'date-fns'
-import { Calendar, CheckCircle2, Clock4, Zap, Wrench, AlertTriangle } from 'lucide-react'
+import { Calendar, CheckCircle2, Clock4, Zap, Wrench, AlertTriangle, WifiOff } from 'lucide-react'
 import { PageHeader } from '@/components/shared/page-header'
 import { StatsCard } from '@/components/features/dashboard/stats-card'
 import { NextEventCard } from '@/components/features/dashboard/next-event-card'
@@ -47,7 +47,12 @@ export default function DashboardPage() {
   const { data: stats, isLoading: loadingStats } = useDashboardStats()
   const { data: maintenanceStats, isLoading: loadingMaintenanceStats } = useDashboardMaintenanceStats()
   const { data: nextEvent, isLoading: loadingNext } = useNextEvent()
-  const { data: calEvents = [], isLoading: loadingCal } = useCalendarEvents(dateFrom, dateTo)
+  const {
+    data: calEvents = [],
+    isLoading: loadingCal,
+    isOffline: calIsOffline,
+    cachedAt: calCachedAt,
+  } = useCalendarEvents(dateFrom, dateTo)
   const { data: calMaintenance = [] } = useCalendarMaintenance(dateFrom, dateTo, showMaintenance)
 
   // Saudação baseada no horário
@@ -122,6 +127,19 @@ export default function DashboardPage() {
           onClick={() => router.push('/manutencao')}
         />
       </div>
+
+      {/* ── Banner offline (calendário) ── */}
+      {calIsOffline && (
+        <div className="flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2.5 text-sm text-amber-800">
+          <WifiOff className="size-4 shrink-0" />
+          <span>
+            Dados offline — calendário em cache
+            {calCachedAt && (
+              <> · última atualização: {new Date(calCachedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</>
+            )}
+          </span>
+        </div>
+      )}
 
       {/* ── Próximo evento + Calendário ── */}
       <div className="grid grid-cols-1 xl:grid-cols-[300px_1fr] gap-4 items-start">

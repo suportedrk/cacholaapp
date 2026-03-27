@@ -1,7 +1,8 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { Menu, LogOut, User as UserIcon, Settings } from 'lucide-react'
+import { Menu, LogOut, User as UserIcon, Settings, WifiOff } from 'lucide-react'
+import { useOnlineStatus } from '@/hooks/use-online-status'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,6 +26,7 @@ interface NavbarProps {
 export function Navbar({ onMenuClick }: NavbarProps) {
   const router = useRouter()
   const { profile, signOut } = useAuth()
+  const { isOnline } = useOnlineStatus()
   const initials = profile ? getInitials(profile.name) : 'U'
   const avatarColor = profile ? getAvatarColor(profile.name) : ''
 
@@ -61,6 +63,15 @@ export function Navbar({ onMenuClick }: NavbarProps) {
 
       {/* Ações direita */}
       <div className="flex items-center gap-1">
+        {!isOnline && (
+          <span
+            className="flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800"
+            title="Sem conexão com a internet"
+          >
+            <WifiOff className="w-3 h-3" />
+            <span className="hidden sm:inline">Offline</span>
+          </span>
+        )}
         <UnitSwitcher />
         <NotificationBell />
 

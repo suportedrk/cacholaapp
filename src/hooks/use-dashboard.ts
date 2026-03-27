@@ -1,10 +1,13 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { format, startOfMonth, endOfMonth } from 'date-fns'
 import type { EventWithDetails, EventStatus, MaintenanceType } from '@/types/database.types'
 import { useUnitStore } from '@/stores/unit-store'
+import { useOnlineStatus } from './use-online-status'
+import { getOfflineDb } from '@/lib/offline-db'
 
 // ─────────────────────────────────────────────────────────────
 // TIPOS
@@ -161,7 +164,14 @@ export function useDashboardMaintenanceStats() {
 // ─────────────────────────────────────────────────────────────
 export function useCalendarEvents(dateFrom: string, dateTo: string) {
   const { activeUnitId } = useUnitStore()
-  return useQuery({
+  const { isOnline } = useOnlineStatus()
+  const [offlineData, setOfflineData] = useState<CalendarEvent[]>([])
+  const [cachedAt, setCachedAt]       = useState<string | null>(null)
+  const [isLoadingOffline, setIsLoadingOffline] = useState(false)
+
+  const cacheKey = `${dateFrom}::${dateTo}::${activeUnitId ?? 'all'}`
+
+  const query = useQuery({
     queryKey: ['dashboard', 'calendar', dateFrom, dateTo, activeUnitId],
     queryFn: async () => {
       const supabase = createClient()
@@ -179,8 +189,41 @@ export function useCalendarEvents(dateFrom: string, dateTo: string) {
       return (data ?? []) as unknown as CalendarEvent[]
     },
     staleTime: 30 * 1000,
-    enabled: !!dateFrom && !!dateTo,
+    enabled: isOnline && !!dateFrom && !!dateTo,
   })
+
+  // Salvar no IDB sempre que dados online chegarem
+  useEffect(() => {
+    if (!isOnline || !query.data) return
+    getOfflineDb().then((db) =>
+      db.put('calendar_events', {
+        key: cacheKey,
+        data: query.data,
+        cachedAt: new Date().toISOString(),
+      })
+    ).catch(() => {})
+  }, [isOnline, query.data, cacheKey])
+
+  // Carregar do IDB quando offline
+  useEffect(() => {
+    if (isOnline || !dateFrom || !dateTo) return
+    setIsLoadingOffline(true)
+    getOfflineDb().then(async (db) => {
+      const cached = await db.get('calendar_events', cacheKey)
+      setOfflineData(cached ? (cached.data as CalendarEvent[]) : [])
+      setCachedAt(cached?.cachedAt ?? null)
+    }).catch(() => {
+      setOfflineData([])
+    }).finally(() => setIsLoadingOffline(false))
+  }, [isOnline, cacheKey, dateFrom, dateTo])
+
+  return {
+    data:      isOnline ? (query.data ?? []) : offlineData,
+    isLoading: isOnline ? query.isLoading    : isLoadingOffline,
+    isError:   isOnline ? query.isError      : false,
+    isOffline: !isOnline,
+    cachedAt,
+  }
 }
 
 // ─────────────────────────────────────────────────────────────
