@@ -1,31 +1,114 @@
-import type { Metadata } from 'next'
-import { LayoutDashboard } from 'lucide-react'
+'use client'
 
-export const metadata: Metadata = {
-  title: 'Dashboard',
-}
+import { useState, useMemo } from 'react'
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek } from 'date-fns'
+import { Calendar, CheckCircle2, Clock4, Zap } from 'lucide-react'
+import { PageHeader } from '@/components/shared/page-header'
+import { StatsCard } from '@/components/features/dashboard/stats-card'
+import { NextEventCard } from '@/components/features/dashboard/next-event-card'
+import { CalendarView, type CalendarViewType } from '@/components/features/dashboard/calendar-view'
+import { EventQuickView } from '@/components/features/dashboard/event-quick-view'
+import { useDashboardStats, useNextEvent, useCalendarEvents, type CalendarEvent } from '@/hooks/use-dashboard'
 
 export default function DashboardPage() {
+  const [currentDate, setCurrentDate] = useState(() => new Date())
+  const [calView, setCalView] = useState<CalendarViewType>('month')
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
+
+  // Calcula o range de datas para a query do calendário
+  const { dateFrom, dateTo } = useMemo(() => {
+    if (calView === 'month') {
+      return {
+        dateFrom: format(startOfMonth(currentDate), 'yyyy-MM-dd'),
+        dateTo:   format(endOfMonth(currentDate),   'yyyy-MM-dd'),
+      }
+    }
+    if (calView === 'week') {
+      return {
+        dateFrom: format(startOfWeek(currentDate, { weekStartsOn: 1 }), 'yyyy-MM-dd'),
+        dateTo:   format(endOfWeek(currentDate,   { weekStartsOn: 1 }), 'yyyy-MM-dd'),
+      }
+    }
+    // day
+    const d = format(currentDate, 'yyyy-MM-dd')
+    return { dateFrom: d, dateTo: d }
+  }, [currentDate, calView])
+
+  const { data: stats, isLoading: loadingStats } = useDashboardStats()
+  const { data: nextEvent, isLoading: loadingNext } = useNextEvent()
+  const { data: calEvents = [], isLoading: loadingCal } = useCalendarEvents(dateFrom, dateTo)
+
+  // Saudação baseada no horário
+  const greeting = useMemo(() => {
+    const h = new Date().getHours()
+    if (h < 12) return 'Bom dia'
+    if (h < 18) return 'Boa tarde'
+    return 'Boa noite'
+  }, [])
+
   return (
     <div className="space-y-6">
-      {/* Cabeçalho */}
-      <div>
-        <h1 className="text-2xl font-semibold text-foreground tracking-tight">Dashboard</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Visão geral das operações do Cachola
-        </p>
+      <PageHeader
+        title={greeting}
+        description="Visão geral das operações do Cachola"
+      />
+
+      {/* ── Stats cards ── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <StatsCard
+          title="Este Mês"
+          value={stats?.thisMonth}
+          icon={Calendar}
+          description="eventos no mês atual"
+          iconClass="bg-primary/10 text-primary"
+          isLoading={loadingStats}
+        />
+        <StatsCard
+          title="Confirmados"
+          value={stats?.confirmed}
+          icon={CheckCircle2}
+          description="aguardando realização"
+          iconClass="bg-blue-50 text-blue-600"
+          isLoading={loadingStats}
+        />
+        <StatsCard
+          title="Pendentes"
+          value={stats?.pending}
+          icon={Clock4}
+          description="aguardando confirmação"
+          iconClass="bg-amber-50 text-amber-600"
+          isLoading={loadingStats}
+        />
+        <StatsCard
+          title="Em Andamento"
+          value={stats?.active}
+          icon={Zap}
+          description="em preparo ou execução"
+          iconClass="bg-green-50 text-green-600"
+          isLoading={loadingStats}
+        />
       </div>
 
-      {/* Empty state — conteúdo será implementado nas próximas fases */}
-      <div className="flex flex-col items-center justify-center min-h-[400px] rounded-2xl border-2 border-dashed border-border bg-card">
-        <div className="w-16 h-16 rounded-2xl bg-secondary flex items-center justify-center mb-4">
-          <LayoutDashboard className="w-8 h-8 text-muted-foreground" />
-        </div>
-        <h2 className="text-base font-medium text-foreground">Dashboard em construção</h2>
-        <p className="mt-1 text-sm text-muted-foreground text-center max-w-xs">
-          Os módulos de eventos, manutenção e checklists serão adicionados nas próximas fases.
-        </p>
+      {/* ── Próximo evento + Calendário ── */}
+      <div className="grid grid-cols-1 xl:grid-cols-[300px_1fr] gap-4 items-start">
+        <NextEventCard event={nextEvent} isLoading={loadingNext} />
+
+        <CalendarView
+          events={calEvents}
+          currentDate={currentDate}
+          view={calView}
+          onDateChange={setCurrentDate}
+          onViewChange={setCalView}
+          onEventClick={setSelectedEvent}
+          isLoading={loadingCal}
+        />
       </div>
+
+      {/* ── Quick view drawer ── */}
+      <EventQuickView
+        event={selectedEvent}
+        onClose={() => setSelectedEvent(null)}
+      />
     </div>
   )
 }

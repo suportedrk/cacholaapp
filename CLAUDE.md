@@ -341,20 +341,52 @@ docker compose -f docker-compose.prod.yml logs -f app
 
 | Rota | Arquivo | Status |
 |------|---------|--------|
-| `/dashboard` | `(auth)/dashboard/page.tsx` | ✅ funcional |
+| `/dashboard` | `(auth)/dashboard/page.tsx` | ✅ funcional (Bloco 2) |
 | `/perfil` | `(auth)/perfil/page.tsx` | ✅ funcional |
 | `/admin/usuarios` | `(auth)/admin/usuarios/page.tsx` | ✅ funcional |
 | `/admin/usuarios/novo` | `(auth)/admin/usuarios/novo/page.tsx` | ✅ funcional |
 | `/admin/usuarios/[id]` | `(auth)/admin/usuarios/[id]/page.tsx` | ✅ funcional |
 | `/admin/usuarios/[id]/permissoes` | `(auth)/admin/usuarios/[id]/permissoes/page.tsx` | ✅ funcional |
-| `/eventos` | `(auth)/eventos/page.tsx` | 🚧 placeholder (Fase 1) |
-| `/checklists` | `(auth)/checklists/page.tsx` | 🚧 placeholder (Fase 1) |
-| `/manutencao` | `(auth)/manutencao/page.tsx` | 🚧 placeholder (Fase 1) |
-| `/relatorios` | `(auth)/relatorios/page.tsx` | 🚧 placeholder (Fase 1) |
-| `/configuracoes` | `(auth)/configuracoes/page.tsx` | 🚧 placeholder (Fase 1) |
-| `/admin/logs` | `(auth)/admin/logs/page.tsx` | 🚧 placeholder (Fase 1) |
+| `/eventos` | `(auth)/eventos/page.tsx` | ✅ funcional (Bloco 1) |
+| `/eventos/novo` | `(auth)/eventos/novo/page.tsx` | ✅ funcional (Bloco 1) |
+| `/eventos/[id]` | `(auth)/eventos/[id]/page.tsx` | ✅ funcional (Bloco 1) |
+| `/eventos/[id]/editar` | `(auth)/eventos/[id]/editar/page.tsx` | ✅ funcional (Bloco 1) |
+| `/configuracoes` | `(auth)/configuracoes/page.tsx` | ✅ funcional (Bloco 1) |
+| `/checklists` | `(auth)/checklists/page.tsx` | 🚧 placeholder |
+| `/manutencao` | `(auth)/manutencao/page.tsx` | 🚧 placeholder |
+| `/relatorios` | `(auth)/relatorios/page.tsx` | 🚧 placeholder |
+| `/admin/logs` | `(auth)/admin/logs/page.tsx` | 🚧 placeholder |
 | `/login` | `(public)/login/page.tsx` | ✅ funcional |
 | `/recuperar-senha` | `(public)/recuperar-senha/page.tsx` | ✅ funcional |
+
+### Fase 1 — Bloco 1: Módulo de Eventos (2026-03-27)
+- [x] Migrations: `005_fase1_config_tables.sql` (event_types, packages, venues, checklist_categories + RLS + seed)
+- [x] Migrations: `006_fase1_events_update.sql` (novo enum EventStatus, FKs para config tables)
+- [x] `src/types/database.types.ts`: EventType, Package, Venue, ChecklistCategory, EventStatus atualizado, EventWithDetails, CalendarEvent
+- [x] `src/hooks/use-events.ts`: useEvents (com filtros + paginação), useEvent, useCreateEvent, useUpdateEvent, useChangeEventStatus, useDeleteEvent
+- [x] `src/hooks/use-event-config.ts`: useEventTypes/Packages/Venues + CRUD de cada
+- [x] `src/hooks/use-debounce.ts`: hook genérico de debounce (300ms)
+- [x] `src/components/shared/event-status-badge.tsx`: badge com dot + STATUS_CONFIG + DOT_COLOR exportados
+- [x] `src/components/shared/empty-state.tsx`: empty state reutilizável com ícone + ação
+- [x] `src/components/shared/confirm-dialog.tsx`: dialog de confirmação destrutiva
+- [x] `src/components/shared/page-header.tsx`: cabeçalho padrão de página
+- [x] `src/components/features/events/event-card.tsx`: card de evento + skeleton
+- [x] `src/components/features/events/event-filters.tsx`: busca com debounce + filtros de status (pills)
+- [x] `src/components/features/events/event-form.tsx`: formulário 5 seções (criar + editar)
+- [x] `src/components/features/settings/config-table.tsx`: CRUD inline para tabelas de configuração
+- [x] `src/app/(auth)/eventos/page.tsx`: lista paginada com filtros
+- [x] `src/app/(auth)/eventos/novo/page.tsx`: formulário de criação
+- [x] `src/app/(auth)/eventos/[id]/page.tsx`: detalhe com troca de status + editar + excluir
+- [x] `src/app/(auth)/eventos/[id]/editar/page.tsx`: formulário de edição
+- [x] `src/app/(auth)/configuracoes/page.tsx`: tabs Tipos/Pacotes/Salões com ConfigTable
+
+### Fase 1 — Bloco 2: Dashboard + Calendário Unificado (2026-03-27)
+- [x] `src/hooks/use-dashboard.ts`: useDashboardStats, useNextEvent, useCalendarEvents + tipo CalendarEvent
+- [x] `src/components/features/dashboard/stats-card.tsx`: card de métrica com ícone, valor, loading skeleton
+- [x] `src/components/features/dashboard/next-event-card.tsx`: próximo evento com equipe + link direto
+- [x] `src/components/features/dashboard/event-quick-view.tsx`: Sheet drawer com detalhes do evento
+- [x] `src/components/features/dashboard/calendar-view.tsx`: calendário 3 visões (mês/semana/dia) com CSS Grid
+- [x] `src/app/(auth)/dashboard/page.tsx`: página completa substituindo placeholder
 
 ### Fase 0 — Bloco 9: Docker Funcional + Banco Inicializado (2026-03-27)
 - [x] `.env` criado com todos os valores reais (JWTs gerados via Node.js HS256)
@@ -400,11 +432,11 @@ Role:  super_admin (32 permissões)
 
 ## PROXIMOS PASSOS — FASE 1
 
-- [ ] Módulo de Eventos (CRUD completo + integração Ploomes)
-- [ ] Módulo de Checklists (templates + instâncias + itens)
+- [x] Bloco 1: Módulo de Eventos (CRUD completo + config tables)
+- [x] Bloco 2: Dashboard + Calendário Unificado
+- [ ] Bloco 3: Módulo de Checklists (templates + instâncias + itens + categorias)
+- [ ] Bloco 4: Sistema de Alertas Persistentes (notification bell + real-time + cron)
 - [ ] Módulo de Manutenção (ordens + fotos before/after)
-- [ ] Dashboard com métricas reais
-- [ ] Notificações (in-app + email)
 - [ ] Relatórios e exportação
 
 > **NOTA:** Após subir o Supabase com `docker compose up -d`, regenerar os tipos com:
@@ -432,6 +464,10 @@ Role:  super_admin (32 permissões)
 | `_analytics` database criado manualmente | A imagem `supabase/postgres:15.8.1.084` NÃO cria o database `_analytics` automaticamente. Logflare exige esse database separado (não schema). Criar uma vez: `CREATE DATABASE _analytics`. |
 | `_realtime` schema criado manualmente | Realtime v2.34.47 usa `DB_AFTER_CONNECT_QUERY: SET search_path TO _realtime`. Se o schema não existe ao conectar, o Ecto migrator falha com `invalid_schema_name`. Criar antes do startup. |
 | `docker/gcloud.json` stub com RSA real | Logflare inicializa Goth (Google Auth) mesmo em modo postgres. `File.read!("gcloud.json")` é chamado em `runtime.exs:218`. Precisava de um JSON com RSA PKCS8 sintaticamente válido (gerado via `crypto.generateKeyPairSync`). Auth GCP falha graciosamente (Goth retry warnings), mas não crasha. |
+| Calendário custom (CSS Grid, sem lib) | react-big-calendar e similares são pesados e difíceis de customizar no design system. Implementado com date-fns + Tailwind CSS Grid. 3 visões: mês/semana/dia. Eventos como pills coloridos por status. |
+| Debounce sem useEffect em EventFiltersBar | `useEffect([debouncedSearch])` causava loop infinito no StrictMode (React 18 monta/desmonta duas vezes). Solução: timer manual com `setTimeout` no handler, limpeza no `useEffect(() => () => clearTimeout, [])` (só cleanup de unmount). |
+| Stats do dashboard filtrados por mês atual | Query leve: só busca `status, date` dos eventos do mês corrente. Não usa COUNT do banco para flexibilidade de cálculo no client. |
+| CalendarEvent tipo slim (não EventWithDetails) | Queries do calendário trazem apenas os campos necessários para exibição (id, title, date, times, status, client_name, event_type, venue). Reduz payload. Ao clicar, o detalhe completo fica em /eventos/[id]. |
 | imgproxy desabilitado em dev Windows | `darthsim/imgproxy:v3.8.0` causa segfault (exit code 139) no WSL2/Windows. Provável incompatibilidade libvips/CPU. Desabilitado via `ENABLE_IMAGE_TRANSFORMATION: "false"`. Reabilitar em prod Linux nativo. |
 | `RLIMIT_NOFILE` obrigatório no realtime | `run.sh` do realtime v2.34.47 usa `set -u` (unbound vars = error) e referencia `$RLIMIT_NOFILE`. Sem essa var, o script aborta imediatamente. Valor: `4096`. |
 | `APP_NAME` obrigatório no realtime | `runtime.exs:78` do realtime exige `APP_NAME`. Sem ela, boot falha com `APP_NAME not available`. Valor: `realtime`. |

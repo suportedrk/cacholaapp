@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { Search, X, SlidersHorizontal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -8,7 +8,6 @@ import { EventStatusBadge, STATUS_CONFIG } from '@/components/shared/event-statu
 import type { EventStatus } from '@/types/database.types'
 import type { EventFilters } from '@/hooks/use-events'
 import { cn } from '@/lib/utils'
-import { useDebounce } from '@/hooks/use-debounce'
 
 const ALL_STATUSES = Object.keys(STATUS_CONFIG) as EventStatus[]
 
@@ -20,13 +19,30 @@ interface EventFiltersProps {
 export function EventFiltersBar({ filters, onFiltersChange }: EventFiltersProps) {
   const [searchInput, setSearchInput] = useState(filters.search ?? '')
 
-  // Debounce de 300ms na busca
-  const debouncedSearch = useDebounce(searchInput, 300)
+  // Refs para evitar closures stale no timer de debounce
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const filtersRef = useRef(filters)
+  filtersRef.current = filters
+  const onFiltersChangeRef = useRef(onFiltersChange)
+  onFiltersChangeRef.current = onFiltersChange
 
-  // Propagar mudança de busca quando o valor debounced muda
-  const prevSearch = filters.search
-  if (debouncedSearch !== prevSearch) {
-    onFiltersChange({ ...filters, search: debouncedSearch || undefined, page: 1 })
+  // Limpa o timer ao desmontar
+  useEffect(() => () => {
+    if (debounceTimer.current) clearTimeout(debounceTimer.current)
+  }, [])
+
+  function handleSearchChange(value: string) {
+    setSearchInput(value)
+    if (debounceTimer.current) clearTimeout(debounceTimer.current)
+    debounceTimer.current = setTimeout(() => {
+      onFiltersChangeRef.current({ ...filtersRef.current, search: value || undefined, page: 1 })
+    }, 300)
+  }
+
+  function handleSearchClear() {
+    setSearchInput('')
+    if (debounceTimer.current) clearTimeout(debounceTimer.current)
+    onFiltersChangeRef.current({ ...filtersRef.current, search: undefined, page: 1 })
   }
 
   const toggleStatus = useCallback(
@@ -51,15 +67,12 @@ export function EventFiltersBar({ filters, onFiltersChange }: EventFiltersProps)
           <Input
             placeholder="Buscar por cliente, aniversariante..."
             value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
             className="pl-9 h-10"
           />
           {searchInput && (
             <button
-              onClick={() => {
-                setSearchInput('')
-                onFiltersChange({ ...filters, search: undefined, page: 1 })
-              }}
+              onClick={handleSearchClear}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
             >
               <X className="w-4 h-4" />
@@ -73,6 +86,7 @@ export function EventFiltersBar({ filters, onFiltersChange }: EventFiltersProps)
             className="h-10 px-3 text-sm shrink-0"
             onClick={() => {
               setSearchInput('')
+              if (debounceTimer.current) clearTimeout(debounceTimer.current)
               onFiltersChange({ page: 1 })
             }}
           >
