@@ -508,6 +508,16 @@ docker compose -f docker-compose.prod.yml logs -f app
 - [x] `src/components/shared/photo-upload.tsx`: `compressImage` exportada como função pública
 - [x] Nav e ROUTES: item Equipamentos (Package icon, module:'maintenance'), ROUTES.equipment='/equipamentos'
 
+### Fase 3 — Bloco 3: Configurações Avançadas (2026-03-27)
+- [x] `supabase/migrations/013_fase3_settings.sql`: tabelas `unit_settings` (id, unit_id UNIQUE, settings JSONB, updated_at + trigger) e `equipment_categories` (id, unit_id, name, is_active, sort_order — UNIQUE(name, unit_id)), RLS por `get_user_unit_ids()` em ambas, seed de 9 categorias para unidade Pinheiros
+- [x] `src/types/database.types.ts`: UnitSettingsData (timezone, date_format, business_hours, event_defaults), BusinessHourDay, UnitSettings, EquipmentCategory + entradas em Database.Tables
+- [x] `src/hooks/use-unit-settings.ts`: useUnitSettings, useUnitSettingsData (merge com DEFAULT_UNIT_SETTINGS), useUpdateUnitSettings (upsert via onConflict:'unit_id'), DEFAULT_UNIT_SETTINGS exportado (Mon–Sat 08:00–22:00, duração 4h, gap 1h, início 14:00)
+- [x] `src/hooks/use-equipment-categories.ts`: useEquipmentCategoryItems (onlyActive flag), useCreateEquipmentCategory (auto sort_order), useUpdateEquipmentCategory, useDeleteEquipmentCategory
+- [x] `src/components/features/settings/general-settings-tab.tsx`: aba Geral — nome da unidade (readonly, link para /admin/unidades), fuso horário (10 zonas BR), formato de data (BR/EUA/ISO)
+- [x] `src/components/features/settings/business-hours-tab.tsx`: aba Horários — grid 7 dias (enable toggle + open/close inputs), padrões de evento (duração, intervalo mínimo, horário início)
+- [x] `src/app/(auth)/configuracoes/page.tsx`: + abas Categ. Equipamentos (ConfigTable), Horários, Geral; TabsList com flex-wrap para mobile
+- [x] `src/components/features/equipment/equipment-form.tsx`: select de categoria usa `useEquipmentCategoryItems(true)`, fallback para FALLBACK_CATEGORIES se lista vazia
+
 ### Fase 0 — Bloco 9: Docker Funcional + Banco Inicializado (2026-03-27)
 - [x] `.env` criado com todos os valores reais (JWTs gerados via Node.js HS256)
 - [x] `docker-compose.yml` corrigido: volumes nomeados, kong sem eval/echo, realtime APP_NAME + RLIMIT_NOFILE
@@ -562,7 +572,7 @@ Role:  super_admin (32 permissões)
 - [x] Fase 2.5: Multi-Unidade (schema N:N, RLS, UnitSwitcher, filtros, CRUD admin)
 - [x] Fase 3 Bloco 1: Relatórios e Dashboards Analíticos (13 RPC functions, 4 abas, Excel + PDF)
 - [x] Fase 3 Bloco 2: Cadastro de Equipamentos/Ativos (CRUD completo + foto + FK em OS)
-- [ ] Fase 3 Bloco 3: Configurações Avançadas
+- [x] Fase 3 Bloco 3: Configurações Avançadas (unit_settings JSONB, equipment_categories, 3 novas abas)
 - [ ] Fase 3 Bloco 4: Logs de Auditoria
 - [ ] Fase 3 Bloco 5: Otimizações de Performance
 - [ ] Fase 3 Bloco 6: Offline Mode
@@ -632,3 +642,6 @@ Role:  super_admin (32 permissões)
 | `compressImage` exportada de photo-upload.tsx | Função era private. Exportada para reutilização em equipment-form.tsx sem duplicação de código. |
 | `/* eslint-disable react-hooks/set-state-in-effect */` em useEffect de inicialização de form | Padrão legítimo: carregar dados async → preencher formulário. A regra é muito estrita para este caso de uso. Envolvido em disable/enable para escopo mínimo. |
 | `Button asChild` não suportado pelo @base-ui/react/button | Button usa `@base-ui/react/button` que não processa `asChild`. Padrão: `<Link className={cn(buttonVariants({...}))}>`. Mesmo fix aplicado em DropdownMenuTrigger no Bloco 1. |
+| `unit_settings` com upsert `onConflict: 'unit_id'` | Evita inserção de linha duplicada. A constraint UNIQUE(unit_id) garante no máximo 1 row por unidade. Primeira gravação insere; edições subsequentes atualizam. |
+| `DEFAULT_UNIT_SETTINGS` exportado do hook | Reutilizado em business-hours-tab.tsx para inicializar estado antes dos dados carregarem. Evita duplicação de defaults. |
+| `equipment_categories` fallback hardcoded | Se nenhuma categoria gerenciada existir ainda, `equipment-form.tsx` usa `FALLBACK_CATEGORIES`. Facilita onboarding sem precisar configurar antes de usar. |
