@@ -3,7 +3,8 @@
 import { useState } from 'react'
 import { Download, FileSpreadsheet, FileText, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { Button } from '@/components/ui/button'
+import { buttonVariants } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -73,15 +74,15 @@ export function ExportButton({
 
   return (
     <DropdownMenu>
-      {/* @ts-expect-error asChild handled by Radix at runtime */}
-      <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" disabled={disabled || loading} className="h-9 gap-1.5">
-          {loading
-            ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            : <Download className="w-3.5 h-3.5" />
-          }
-          Exportar
-        </Button>
+      <DropdownMenuTrigger
+        disabled={disabled || loading}
+        className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'h-9 gap-1.5')}
+      >
+        {loading
+          ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          : <Download className="w-3.5 h-3.5" />
+        }
+        Exportar
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem className="cursor-pointer gap-2" onClick={handleExcel}>

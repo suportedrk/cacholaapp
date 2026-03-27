@@ -3,7 +3,8 @@
 import { useState } from 'react'
 import { format, subDays, subMonths, subQuarters, subYears, startOfMonth, endOfMonth } from 'date-fns'
 import { CalendarIcon, ChevronDown } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { buttonVariants } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -75,18 +76,13 @@ export function ReportFiltersBar({ value, onChange, disabled }: ReportFiltersBar
       {/* Presets */}
       <div className="flex items-center gap-1 flex-wrap">
         <DropdownMenu>
-          {/* @ts-expect-error asChild handled by Radix at runtime */}
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={disabled}
-              className="h-9 gap-1.5"
-            >
-              <CalendarIcon className="w-3.5 h-3.5" />
-              <span>{activePreset ?? 'Personalizado'}</span>
-              <ChevronDown className="w-3 h-3" />
-            </Button>
+          <DropdownMenuTrigger
+            disabled={disabled}
+            className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'h-9 gap-1.5')}
+          >
+            <CalendarIcon className="w-3.5 h-3.5" />
+            <span>{activePreset ?? 'Personalizado'}</span>
+            <ChevronDown className="w-3 h-3" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-44">
             {presets.map((p) => (
