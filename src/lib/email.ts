@@ -6,9 +6,13 @@
 
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
 const FROM = process.env.EMAIL_FROM ?? 'Cachola OS <no-reply@cacholaos.com.br>'
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+
+// Instanciação lazy — evita crash no build quando RESEND_API_KEY não está disponível
+function getResend() {
+  return new Resend(process.env.RESEND_API_KEY)
+}
 
 // ─────────────────────────────────────────────────────────────
 // BASE TEMPLATE
@@ -170,7 +174,7 @@ export async function sendEmail(
     return
   }
   try {
-    const { error } = await resend.emails.send({ from: FROM, to, subject, html })
+    const { error } = await getResend().emails.send({ from: FROM, to, subject, html })
     if (error) console.error('[email] Resend error:', error)
   } catch (err) {
     console.error('[email] Failed to send email:', err)

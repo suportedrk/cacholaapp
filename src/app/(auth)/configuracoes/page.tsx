@@ -57,15 +57,17 @@ export default function ConfiguracoesPage() {
       />
 
       <Tabs defaultValue="tipos">
-        <TabsList className="flex-wrap h-auto gap-1">
-          <TabsTrigger value="tipos">Tipos de Evento</TabsTrigger>
-          <TabsTrigger value="pacotes">Pacotes</TabsTrigger>
-          <TabsTrigger value="saloes">Salões</TabsTrigger>
-          <TabsTrigger value="setores">Setores</TabsTrigger>
-          <TabsTrigger value="categorias-equip">Categ. Equipamentos</TabsTrigger>
-          <TabsTrigger value="horarios">Horários</TabsTrigger>
-          <TabsTrigger value="geral">Geral</TabsTrigger>
-        </TabsList>
+        <div className="w-full overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <TabsList className="inline-flex w-max justify-start gap-1">
+            <TabsTrigger value="tipos"            className="flex-shrink-0 whitespace-nowrap">Tipos de Evento</TabsTrigger>
+            <TabsTrigger value="pacotes"          className="flex-shrink-0 whitespace-nowrap">Pacotes</TabsTrigger>
+            <TabsTrigger value="saloes"           className="flex-shrink-0 whitespace-nowrap">Salões</TabsTrigger>
+            <TabsTrigger value="setores"          className="flex-shrink-0 whitespace-nowrap">Setores</TabsTrigger>
+            <TabsTrigger value="categorias-equip" className="flex-shrink-0 whitespace-nowrap">Categ. Equipamentos</TabsTrigger>
+            <TabsTrigger value="horarios"         className="flex-shrink-0 whitespace-nowrap">Horários</TabsTrigger>
+            <TabsTrigger value="geral"            className="flex-shrink-0 whitespace-nowrap">Geral</TabsTrigger>
+          </TabsList>
+        </div>
 
         {/* ── Tipos de Evento ── */}
         <TabsContent value="tipos" className="mt-4 space-y-3">
