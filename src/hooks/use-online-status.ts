@@ -8,11 +8,15 @@ import { useState, useEffect } from 'react'
  * SSR-safe: inicia como true no servidor.
  */
 export function useOnlineStatus() {
-  const [isOnline, setIsOnline] = useState(
-    typeof navigator !== 'undefined' ? navigator.onLine : true
-  )
+  // Sempre inicia como true para garantir que server e client renderizem o mesmo
+  // HTML inicial. O valor real de navigator.onLine é aplicado no useEffect,
+  // após a hidratação, evitando mismatch quando o browser está offline.
+  const [isOnline, setIsOnline] = useState(true)
 
   useEffect(() => {
+    // Sincroniza com o estado real assim que o componente monta
+    setIsOnline(navigator.onLine)
+
     const onOnline  = () => setIsOnline(true)
     const onOffline = () => setIsOnline(false)
 

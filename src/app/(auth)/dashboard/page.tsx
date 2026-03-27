@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek } from 'date-fns'
 import { Calendar, CheckCircle2, Clock4, Zap, Wrench, AlertTriangle, WifiOff } from 'lucide-react'
@@ -55,12 +55,12 @@ export default function DashboardPage() {
   } = useCalendarEvents(dateFrom, dateTo)
   const { data: calMaintenance = [] } = useCalendarMaintenance(dateFrom, dateTo, showMaintenance)
 
-  // Saudação baseada no horário
-  const greeting = useMemo(() => {
+  // Saudação baseada no horário — computada apenas no cliente para evitar
+  // mismatch de hidratação (servidor pode estar em fuso diferente do browser)
+  const [greeting, setGreeting] = useState('Olá')
+  useEffect(() => {
     const h = new Date().getHours()
-    if (h < 12) return 'Bom dia'
-    if (h < 18) return 'Boa tarde'
-    return 'Boa noite'
+    setGreeting(h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite')
   }, [])
 
   return (
@@ -68,7 +68,6 @@ export default function DashboardPage() {
       <PageHeader
         title={greeting}
         description="Visão geral das operações do Cachola"
-        suppressTitleHydrationWarning
       />
 
       {/* ── Stats de eventos ── */}
