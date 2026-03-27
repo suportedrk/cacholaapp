@@ -26,6 +26,7 @@ import {
 import { MaintenanceTypeBadge } from '@/components/features/maintenance/maintenance-type-badge'
 import { MaintenanceStatusBadge, MaintenancePriorityBadge } from '@/components/features/maintenance/maintenance-status-badge'
 import { MaintenanceTimeline } from '@/components/features/maintenance/maintenance-timeline'
+import { PhotoSection } from '@/components/features/maintenance/photo-section'
 import { cn } from '@/lib/utils'
 import type { MaintenanceStatus } from '@/types/database.types'
 
@@ -269,14 +270,12 @@ export default function DetalheOrdemPage({
         </div>
       )}
 
-      {/* Fotos — placeholder Bloco 2 */}
-      <div className="bg-card rounded-xl border border-border p-4 space-y-3">
-        <h2 className="text-sm font-semibold text-foreground">Fotos</h2>
-        <Separator />
-        <div className="rounded-lg border-2 border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-          Upload de fotos disponível em breve (Bloco 2).
-        </div>
-      </div>
+      {/* Fotos */}
+      <PhotoSection
+        orderId={order.id}
+        photos={order.maintenance_photos}
+        canEdit={canComplete}
+      />
 
       {/* Timeline */}
       <div className="bg-card rounded-xl border border-border p-4 space-y-3">

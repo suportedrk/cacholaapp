@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Loader2, Save, Camera } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -10,10 +10,39 @@ import { UserAvatar } from '@/components/shared/user-avatar'
 import { useAuth } from '@/hooks/use-auth'
 import { useUpdateUser } from '@/hooks/use-users'
 import { ROLE_LABELS } from '@/lib/constants'
+import { createClient } from '@/lib/supabase/client'
+import { toast } from 'sonner'
+
+const AVATAR_BUCKET = 'user-avatars'
+
+async function compressImage(file: File, maxDimension = 600, quality = 0.85): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    const objectUrl = URL.createObjectURL(file)
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl)
+      const { width, height } = img
+      let w = width, h = height
+      if (w > maxDimension || h > maxDimension) {
+        if (w > h) { h = Math.round((h * maxDimension) / w); w = maxDimension }
+        else { w = Math.round((w * maxDimension) / h); h = maxDimension }
+      }
+      const canvas = document.createElement('canvas')
+      canvas.width = w; canvas.height = h
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return reject(new Error('canvas unavailable'))
+      ctx.drawImage(img, 0, 0, w, h)
+      canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error('toBlob null')), 'image/jpeg', quality)
+    }
+    img.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error('load failed')) }
+    img.src = objectUrl
+  })
+}
 
 export default function PerfilPage() {
   const { profile } = useAuth()
   const updateUser = useUpdateUser()
+  const avatarInputRef = useRef<HTMLInputElement>(null)
 
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
@@ -22,6 +51,8 @@ export default function PerfilPage() {
   const [notifEvents, setNotifEvents] = useState(true)
   const [notifMaintenance, setNotifMaintenance] = useState(true)
   const [notifChecklists, setNotifChecklists] = useState(true)
+  const [avatarUploading, setAvatarUploading] = useState(false)
+  const [localAvatarUrl, setLocalAvatarUrl] = useState<string | null>(null)
 
   useEffect(() => {
     if (profile) {
@@ -41,6 +72,41 @@ export default function PerfilPage() {
         <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
       </div>
     )
+  }
+
+  async function handleAvatarChange(file: File | null | undefined) {
+    if (!file || !profile) return
+    setAvatarUploading(true)
+    try {
+      const blob = await compressImage(file)
+      const storagePath = `${profile.id}/avatar.jpg`
+      const supabase = createClient()
+
+      // Remove old file if exists (best-effort)
+      await supabase.storage.from(AVATAR_BUCKET).remove([storagePath])
+
+      const { error: uploadError } = await supabase.storage
+        .from(AVATAR_BUCKET)
+        .upload(storagePath, blob, { contentType: 'image/jpeg', upsert: true })
+      if (uploadError) throw uploadError
+
+      // Long-lived signed URL (1 year = 31536000s)
+      const { data: signedData, error: signError } = await supabase.storage
+        .from(AVATAR_BUCKET)
+        .createSignedUrl(storagePath, 31536000)
+      if (signError) throw signError
+
+      const signedUrl = signedData.signedUrl
+
+      await updateUser.mutateAsync({ id: profile.id, data: { avatar_url: signedUrl } })
+      setLocalAvatarUrl(signedUrl)
+      toast.success('Foto de perfil atualizada!')
+    } catch (err) {
+      console.error(err)
+      toast.error('Erro ao atualizar foto de perfil.')
+    } finally {
+      setAvatarUploading(false)
+    }
   }
 
   async function handleSave(e: React.FormEvent) {
@@ -65,6 +131,8 @@ export default function PerfilPage() {
     })
   }
 
+  const displayAvatarUrl = localAvatarUrl ?? profile.avatar_url
+
   return (
     <div className="max-w-2xl space-y-6">
       {/* Cabeçalho */}
@@ -77,14 +145,27 @@ export default function PerfilPage() {
       <div className="bg-card rounded-2xl border border-border p-6">
         <div className="flex items-center gap-4">
           <div className="relative">
-            <UserAvatar name={profile.name} avatarUrl={profile.avatar_url} size="lg" />
+            <UserAvatar name={profile.name} avatarUrl={displayAvatarUrl} size="lg" />
             <button
-              className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-sm hover:opacity-90 transition-opacity"
-              aria-label="Alterar foto"
-              title="Alterar foto (em breve)"
+              type="button"
+              className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-sm hover:opacity-90 transition-opacity disabled:opacity-50"
+              aria-label="Alterar foto de perfil"
+              disabled={avatarUploading}
+              onClick={() => avatarInputRef.current?.click()}
             >
-              <Camera className="w-3.5 h-3.5" />
+              {avatarUploading
+                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                : <Camera className="w-3.5 h-3.5" />
+              }
             </button>
+            <input
+              ref={avatarInputRef}
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              onChange={(e) => handleAvatarChange(e.target.files?.[0])}
+              onClick={(e) => ((e.target as HTMLInputElement).value = '')}
+            />
           </div>
           <div>
             <p className="font-semibold text-foreground">{profile.name}</p>

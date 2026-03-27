@@ -446,6 +446,14 @@ docker compose -f docker-compose.prod.yml logs -f app
 - [x] `src/app/api/cron/check-alerts/route.ts`: alertas maintenance_overdue + maintenance_due_soon adicionados
 - [x] `src/components/shared/confirm-dialog.tsx`: refatorado para suportar `trigger` prop (DialogTrigger) + `destructive` bool
 
+### Fase 2 — Bloco 2: Upload de Fotos (2026-03-27)
+- [x] `src/hooks/use-signed-urls.ts`: `useSignedUrls(bucket, paths)` — batch `createSignedUrls`, staleTime 30min
+- [x] `src/components/shared/photo-upload.tsx`: Canvas compress (max 1200px, 80%), preview thumbnail, progress bar, dois botões (Câmera com `capture="environment"` + Galeria), `PhotoThumb` para exibir foto existente
+- [x] `src/components/shared/photo-lightbox.tsx`: overlay fullscreen, prev/next, keyboard (Esc/Arrows), contador e label por foto
+- [x] `src/components/features/maintenance/photo-section.tsx`: grid before/during/after, signed URLs, PhotoUpload por seção, PhotoThumb clicável, PhotoLightbox, remove de Storage + DB
+- [x] `src/app/(auth)/manutencao/[id]/page.tsx`: substituído placeholder por `<PhotoSection orderId photos canEdit />`
+- [x] `src/app/(auth)/perfil/page.tsx`: avatar upload funcional — compressão (max 600px), upload para `user-avatars/{userId}/avatar.jpg`, signed URL 1 ano salva em `users.avatar_url`
+
 ### Fase 0 — Bloco 9: Docker Funcional + Banco Inicializado (2026-03-27)
 - [x] `.env` criado com todos os valores reais (JWTs gerados via Node.js HS256)
 - [x] `docker-compose.yml` corrigido: volumes nomeados, kong sem eval/echo, realtime APP_NAME + RLIMIT_NOFILE
@@ -495,7 +503,7 @@ Role:  super_admin (32 permissões)
 - [x] Bloco 3: Módulo de Checklists (templates + instâncias + itens + categorias)
 - [x] Bloco 4: Sistema de Alertas Persistentes (notification bell + real-time + cron)
 - [x] Fase 2 Bloco 1: Módulo de Manutenção — CRUD completo
-- [ ] Fase 2 Bloco 2: Upload de Fotos (before/after + lightbox)
+- [x] Fase 2 Bloco 2: Upload de Fotos (before/after + lightbox + avatar)
 - [ ] Fase 2 Bloco 3: E-mails com Resend
 - [ ] Relatórios e exportação
 
@@ -543,3 +551,8 @@ Role:  super_admin (32 permissões)
 | `ConfirmDialog` refatorado para dual-mode | Versão original usava apenas `open`/`onOpenChange` (controlled). Refatorada para aceitar também `trigger` prop (usa `DialogTrigger asChild`) sem quebrar os usos existentes. `destructive` bool substituiu `variant` string para simplificar. |
 | `asChild` ausente em shadcn Primitive wrappers | `dropdown-menu.tsx` e `dialog.tsx` da versão local do shadcn expõem `ComponentProps` via `Trigger.Props` que não inclui `asChild` nos tipos. Solução: adicionar `& { asChild?: boolean }` na assinatura do componente — o Radix processa `asChild` em runtime corretamente. |
 | Recorrência automática no useCompleteMaintenanceOrder | Ao concluir uma ordem `recurring`, o hook lê o `recurrence_rule`, calcula `next_due_date` via `calcNextDueDate()` e cria uma nova ordem `open` em uma única mutation. Zero intervenção manual. |
+| `useSignedUrls` com paths (não URLs) | `maintenance_photos.url` armazena o storage PATH (não URL completa). `useSignedUrls` faz batch de `createSignedUrls` com staleTime 30min (URLs válidas 1h). React Query evita re-fetch desnecessário. |
+| Avatar com signed URL de 1 ano | `user-avatars` é bucket privado. Gerar signed URL de 1 ano no upload e salvar em `users.avatar_url`. Evita hook `useSignedUrls` em todo componente `UserAvatar`. |
+| Canvas compression antes do upload | Imagens comprimidas para max 1200px / 80% quality (fotos) e max 600px / 85% quality (avatar) via Canvas API antes do upload. Reduz banda e storage. |
+| Dois botões de upload (câmera + galeria) | Mobile-first: botão "Câmera" usa `capture="environment"` (força câmera traseira), botão "Galeria" abre seletor de arquivos. Melhor UX do que um único input. |
+| `PhotoLightbox` sem Radix Dialog | Lightbox é um overlay `fixed inset-0 z-[100]` puro com navegação via teclado (Escape/Arrows). Mais leve e sem dependência de Radix para esse caso de uso. |
