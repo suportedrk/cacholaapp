@@ -41,7 +41,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" className={`${inter.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col bg-background text-foreground font-sans">
+      {/* suppressHydrationWarning: extensões de browser (Dashlane, LastPass etc.)
+          injetam atributos no <body> que causam mismatch de hidratação */}
+      <body suppressHydrationWarning className="min-h-full flex flex-col bg-background text-foreground font-sans">
         {children}
       </body>
     </html>

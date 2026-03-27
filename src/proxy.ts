@@ -4,12 +4,6 @@ import { NextResponse, type NextRequest } from 'next/server'
 // Rotas públicas (não requerem autenticação)
 const PUBLIC_ROUTES = ['/login', '/recuperar-senha', '/auth/callback']
 
-// Rotas que requerem roles específicos
-const PROTECTED_BY_ROLE: Record<string, string[]> = {
-  '/admin': ['super_admin', 'rh', 'gerente'],
-  '/relatorios': ['super_admin', 'diretor', 'gerente', 'financeiro'],
-}
-
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
@@ -36,7 +30,7 @@ export async function proxy(request: NextRequest) {
     }
   )
 
-  // Refresh da sessão (IMPORTANTE: não remover)
+  // Refresh da sessão (IMPORTANTE: não remover — mantém o cookie atualizado)
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -63,26 +57,9 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // Verificação de role para rotas restritas
-  if (user) {
-    for (const [routePrefix, allowedRoles] of Object.entries(PROTECTED_BY_ROLE)) {
-      if (pathname.startsWith(routePrefix)) {
-        const { data: userData } = await supabase
-          .from('users')
-          .select('role')
-          .eq('id', user.id)
-          .single()
-
-        if (!userData || !allowedRoles.includes(userData.role)) {
-          const url = request.nextUrl.clone()
-          url.pathname = '/dashboard'
-          url.searchParams.set('error', 'sem_permissao')
-          return NextResponse.redirect(url)
-        }
-        break
-      }
-    }
-  }
+  // Verificação de role por rota é feita nos layouts de Server Component
+  // (src/app/(auth)/admin/layout.tsx) — evita query ao banco aqui no proxy
+  // o que adicionaria latência extra em CADA request.
 
   return supabaseResponse
 }
