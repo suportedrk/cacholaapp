@@ -11,9 +11,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import dynamic from 'next/dynamic'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { NotificationBell } from './notification-bell'
 import { Breadcrumbs } from './breadcrumbs'
+
+const NotificationBell = dynamic(
+  () => import('./notification-bell').then((m) => ({ default: m.NotificationBell })),
+  { ssr: false }
+)
 import { UnitSwitcher } from './unit-switcher'
 import { useAuth } from '@/hooks/use-auth'
 import { getInitials, getAvatarColor, cn } from '@/lib/utils'
