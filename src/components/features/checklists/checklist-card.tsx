@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import Link from 'next/link'
 import { format, isPast, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -25,7 +26,7 @@ interface ChecklistCardProps {
   checklist: ChecklistForList
 }
 
-export function ChecklistCard({ checklist }: ChecklistCardProps) {
+export const ChecklistCard = memo(function ChecklistCard({ checklist }: ChecklistCardProps) {
   const { done, total } = calcProgress(checklist.checklist_items)
   const isOverdue = checklist.due_date
     && checklist.status !== 'completed'
@@ -97,7 +98,7 @@ export function ChecklistCard({ checklist }: ChecklistCardProps) {
       </div>
     </Link>
   )
-}
+})
 
 export function ChecklistCardSkeleton() {
   return (

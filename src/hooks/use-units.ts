@@ -20,6 +20,7 @@ export function useUnits() {
       if (error) throw error
       return (data ?? []) as Unit[]
     },
+    staleTime: 5 * 60 * 1000, // unidades raramente mudam
   })
 }
 
@@ -40,6 +41,7 @@ export function useUnit(id: string) {
       return data as Unit
     },
     enabled: !!id,
+    staleTime: 5 * 60 * 1000,
   })
 }
 

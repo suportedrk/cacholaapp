@@ -1,5 +1,6 @@
 'use client'
 
+import { memo } from 'react'
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -12,7 +13,7 @@ interface EventCardProps {
   event: EventWithDetails
 }
 
-export function EventCard({ event }: EventCardProps) {
+export const EventCard = memo(function EventCard({ event }: EventCardProps) {
   // Formatar data: "Sáb, 12 abr"
   const formattedDate = format(new Date(`${event.date}T00:00:00`), "EEE, d MMM", { locale: ptBR })
 
@@ -110,7 +111,7 @@ export function EventCard({ event }: EventCardProps) {
       )}
     </Link>
   )
-}
+})
 
 // Skeleton de loading
 export function EventCardSkeleton() {

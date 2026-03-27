@@ -1,5 +1,6 @@
 'use client'
 
+import { memo } from 'react'
 import Link from 'next/link'
 import { format, isPast, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -15,7 +16,7 @@ interface Props {
   order: MaintenanceForList
 }
 
-export function MaintenanceCard({ order }: Props) {
+export const MaintenanceCard = memo(function MaintenanceCard({ order }: Props) {
   const isOverdue = !!(
     order.due_date &&
     order.status !== 'completed' &&
@@ -99,7 +100,7 @@ export function MaintenanceCard({ order }: Props) {
       </article>
     </Link>
   )
-}
+})
 
 export function MaintenanceCardSkeleton() {
   return (

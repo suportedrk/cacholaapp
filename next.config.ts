@@ -1,5 +1,9 @@
 import type { NextConfig } from 'next'
 import withPWA from '@ducanh2912/next-pwa'
+import BundleAnalyzer from '@next/bundle-analyzer'
+
+// Uso: ANALYZE=true npm run build
+const withBundleAnalyzer = BundleAnalyzer({ enabled: process.env.ANALYZE === 'true' })
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
@@ -37,7 +41,7 @@ const nextConfig: NextConfig = {
   },
 }
 
-export default withPWA({
+export default withBundleAnalyzer(withPWA({
   dest: 'public',
   cacheOnFrontEndNav: true,
   aggressiveFrontEndNavCaching: true,
@@ -46,4 +50,4 @@ export default withPWA({
   workboxOptions: {
     disableDevLogs: true,
   },
-})(nextConfig)
+})(nextConfig))

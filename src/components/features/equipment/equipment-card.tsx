@@ -1,5 +1,6 @@
 'use client'
 
+import { memo } from 'react'
 import Link from 'next/link'
 import { format, parseISO, isFuture } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -51,7 +52,7 @@ type EquipmentCardProps = {
   openMaintenance?: number   // count de manutenções abertas
 }
 
-export function EquipmentCard({ equipment: eq, openMaintenance = 0 }: EquipmentCardProps) {
+export const EquipmentCard = memo(function EquipmentCard({ equipment: eq, openMaintenance = 0 }: EquipmentCardProps) {
   const photoPath = eq.photo_url ? [eq.photo_url] : []
   const { data: signedUrls = {} } = useSignedUrls('equipment-photos', photoPath)
   const photoSrc = eq.photo_url ? signedUrls[eq.photo_url] : null
@@ -125,4 +126,4 @@ export function EquipmentCard({ equipment: eq, openMaintenance = 0 }: EquipmentC
       )}
     </Link>
   )
-}
+})

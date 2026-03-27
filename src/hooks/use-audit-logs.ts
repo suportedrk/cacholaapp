@@ -41,5 +41,6 @@ export function useAuditLogs(filters: AuditLogFilters = {}) {
       return lastPage[lastPage.length - 1].created_at
     },
     initialPageParam: undefined as string | undefined,
+    staleTime: 30 * 1000,
   })
 }

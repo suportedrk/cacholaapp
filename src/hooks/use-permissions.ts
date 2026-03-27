@@ -14,16 +14,17 @@ export function useUserPermissions(userId: string | null | undefined) {
     queryFn: async () => {
       if (!userId) return null
 
+      // Seleciona apenas as 3 colunas usadas para montar o mapa — evita id/created_at/unit_id
       const { data, error } = await supabase
         .from('user_permissions')
-        .select('*')
+        .select('module, action, granted')
         .eq('user_id', userId)
 
       if (error) throw error
 
       // Converte para mapa module → action → granted
       const map: Partial<PermissionMap> = {}
-      for (const perm of data as UserPermission[]) {
+      for (const perm of data as Pick<UserPermission, 'module' | 'action' | 'granted'>[]) {
         if (!map[perm.module as Module]) {
           map[perm.module as Module] = {} as Record<Action, boolean>
         }
@@ -34,6 +35,7 @@ export function useUserPermissions(userId: string | null | undefined) {
       return map as PermissionMap
     },
     enabled: !!userId,
+    staleTime: 5 * 60 * 1000, // permissões raramente mudam — revalida a cada 5min
   })
 }
 

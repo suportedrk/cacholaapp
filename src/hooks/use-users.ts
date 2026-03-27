@@ -16,7 +16,11 @@ export function useUsers(filters?: { role?: UserRole; isActive?: boolean; search
   return useQuery({
     queryKey: ['users', filters],
     queryFn: async () => {
-      let query = supabase.from('users').select('*').order('name')
+      // Omite `preferences` (JSONB grande) — não necessário em listas
+      let query = supabase
+        .from('users')
+        .select('id, name, email, role, avatar_url, is_active, phone')
+        .order('name')
 
       if (filters?.role) query = query.eq('role', filters.role)
       if (filters?.isActive !== undefined) query = query.eq('is_active', filters.isActive)
@@ -30,6 +34,7 @@ export function useUsers(filters?: { role?: UserRole; isActive?: boolean; search
       if (error) throw error
       return data as User[]
     },
+    staleTime: 30 * 1000,
   })
 }
 
@@ -40,13 +45,14 @@ export function useUser(id: string | null | undefined) {
       if (!id) return null
       const { data, error } = await supabase
         .from('users')
-        .select('*')
+        .select('*') // detalhe: precisa de preferences para a página de perfil
         .eq('id', id)
         .single()
       if (error) throw error
       return data as User
     },
     enabled: !!id,
+    staleTime: 30 * 1000,
   })
 }
 
