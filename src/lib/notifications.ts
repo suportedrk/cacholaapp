@@ -163,3 +163,132 @@ export async function notifyChecklistCompleted(
     )
   )
 }
+
+// ─────────────────────────────────────────────────────────────
+// MANUTENÇÃO CRIADA → notifica responsável
+// ─────────────────────────────────────────────────────────────
+export async function notifyMaintenanceCreated(
+  supabase: SupabaseClient,
+  orderId: string,
+  actorUserId?: string
+): Promise<void> {
+  const { data: order } = await (supabase as any)
+    .from('maintenance_orders')
+    .select('title, assigned_to')
+    .eq('id', orderId)
+    .single()
+
+  if (!order?.assigned_to || order.assigned_to === actorUserId) return
+
+  await insert(supabase, order.assigned_to, 'maintenance_created',
+    'Nova ordem de manutenção',
+    `Você foi designado para: "${order.title}"`,
+    `/manutencao/${orderId}`
+  )
+}
+
+// ─────────────────────────────────────────────────────────────
+// MANUTENÇÃO EMERGENCIAL → notifica responsável + gerentes
+// ─────────────────────────────────────────────────────────────
+export async function notifyMaintenanceEmergency(
+  supabase: SupabaseClient,
+  orderId: string,
+  actorUserId?: string
+): Promise<void> {
+  const { data: order } = await (supabase as any)
+    .from('maintenance_orders')
+    .select('title, assigned_to')
+    .eq('id', orderId)
+    .single()
+
+  if (!order) return
+
+  // Buscar gerentes e diretores
+  const { data: managers } = await (supabase as any)
+    .from('users')
+    .select('id')
+    .in('role', ['super_admin', 'diretor', 'gerente'])
+    .eq('is_active', true)
+
+  const recipients = new Set<string>(
+    (managers ?? []).map((u: { id: string }) => u.id)
+  )
+  if (order.assigned_to) recipients.add(order.assigned_to)
+  recipients.delete(actorUserId ?? '')
+
+  await Promise.all(
+    Array.from(recipients).map((uid) =>
+      insert(supabase, uid, 'maintenance_emergency',
+        '🔴 Manutenção Emergencial',
+        `"${order.title}" requer atenção imediata!`,
+        `/manutencao/${orderId}`
+      )
+    )
+  )
+}
+
+// ─────────────────────────────────────────────────────────────
+// STATUS DA MANUTENÇÃO MUDOU → notifica criador + responsável
+// ─────────────────────────────────────────────────────────────
+const MAINTENANCE_STATUS_LABEL: Record<string, string> = {
+  open:          'Aberta',
+  in_progress:   'Em Andamento',
+  waiting_parts: 'Aguardando Peças',
+  completed:     'Concluída',
+  cancelled:     'Cancelada',
+}
+
+export async function notifyMaintenanceStatusChanged(
+  supabase: SupabaseClient,
+  orderId: string,
+  newStatus: string,
+  actorUserId?: string
+): Promise<void> {
+  const { data: order } = await (supabase as any)
+    .from('maintenance_orders')
+    .select('title, created_by, assigned_to')
+    .eq('id', orderId)
+    .single()
+
+  if (!order) return
+
+  const label = MAINTENANCE_STATUS_LABEL[newStatus] ?? newStatus
+  const recipients = new Set<string>([order.created_by, order.assigned_to].filter(Boolean))
+  recipients.delete(actorUserId ?? '')
+
+  await Promise.all(
+    Array.from(recipients).map((uid) =>
+      insert(supabase, uid, 'maintenance_status',
+        'Status de manutenção atualizado',
+        `"${order.title}" agora está como ${label}`,
+        `/manutencao/${orderId}`
+      )
+    )
+  )
+}
+
+// ─────────────────────────────────────────────────────────────
+// MANUTENÇÃO CONCLUÍDA → notifica criador
+// ─────────────────────────────────────────────────────────────
+export async function notifyMaintenanceCompleted(
+  supabase: SupabaseClient,
+  orderId: string,
+  creatorUserId: string,
+  actorUserId?: string
+): Promise<void> {
+  if (creatorUserId === actorUserId) return
+
+  const { data: order } = await (supabase as any)
+    .from('maintenance_orders')
+    .select('title')
+    .eq('id', orderId)
+    .single()
+
+  if (!order) return
+
+  await insert(supabase, creatorUserId, 'maintenance_completed',
+    'Manutenção concluída',
+    `A ordem "${order.title}" foi concluída`,
+    `/manutencao/${orderId}`
+  )
+}

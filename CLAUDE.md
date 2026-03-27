@@ -357,7 +357,10 @@ docker compose -f docker-compose.prod.yml logs -f app
 | `/checklists/templates` | `(auth)/checklists/templates/page.tsx` | ✅ funcional (Bloco 3) |
 | `/checklists/templates/novo` | `(auth)/checklists/templates/novo/page.tsx` | ✅ funcional (Bloco 3) |
 | `/checklists/templates/[id]/editar` | `(auth)/checklists/templates/[id]/editar/page.tsx` | ✅ funcional (Bloco 3) |
-| `/manutencao` | `(auth)/manutencao/page.tsx` | 🚧 placeholder |
+| `/manutencao` | `(auth)/manutencao/page.tsx` | ✅ funcional (Fase 2 Bloco 1) |
+| `/manutencao/nova` | `(auth)/manutencao/nova/page.tsx` | ✅ funcional (Fase 2 Bloco 1) |
+| `/manutencao/[id]` | `(auth)/manutencao/[id]/page.tsx` | ✅ funcional (Fase 2 Bloco 1) |
+| `/manutencao/[id]/editar` | `(auth)/manutencao/[id]/editar/page.tsx` | ✅ funcional (Fase 2 Bloco 1) |
 | `/relatorios` | `(auth)/relatorios/page.tsx` | 🚧 placeholder |
 | `/admin/logs` | `(auth)/admin/logs/page.tsx` | 🚧 placeholder |
 | `/login` | `(public)/login/page.tsx` | ✅ funcional |
@@ -419,6 +422,30 @@ docker compose -f docker-compose.prod.yml logs -f app
 - [x] `src/components/features/dashboard/calendar-view.tsx`: calendário 3 visões (mês/semana/dia) com CSS Grid
 - [x] `src/app/(auth)/dashboard/page.tsx`: página completa substituindo placeholder
 
+### Fase 2 — Bloco 1: Módulo de Manutenção (2026-03-27)
+- [x] `supabase/migrations/009_fase2_maintenance.sql`: tabela `sectors` (8 setores seed), `maintenance_orders` atualizado (sector_id FK, recurrence_rule JSONB, tipo emergency/punctual/recurring), buckets privados `maintenance-photos` + `user-avatars` com RLS Storage
+- [x] `src/types/database.types.ts`: Sector, RecurrenceRule, MaintenanceWithDetails, MaintenanceForList, CalendarMaintenance, DashboardMaintenanceStats, MaintenanceType atualizado
+- [x] `src/hooks/use-sectors.ts`: useSectors, useCreateSector, useUpdateSector, useDeleteSector
+- [x] `src/hooks/use-maintenance.ts`: useMaintenanceOrders (filtros+paginação, emergency-first), useMaintenanceOrder, useCreateMaintenanceOrder, useUpdateMaintenanceOrder, useChangeMaintenanceStatus, useCompleteMaintenanceOrder (recorrência automática), useDeleteMaintenanceOrder, useAddMaintenancePhoto, useRemoveMaintenancePhoto
+- [x] `src/hooks/use-dashboard.ts`: useDashboardMaintenanceStats, useCalendarMaintenance adicionados
+- [x] `src/lib/notifications.ts`: notifyMaintenanceCreated, notifyMaintenanceEmergency, notifyMaintenanceStatusChanged, notifyMaintenanceCompleted adicionados
+- [x] `src/components/features/maintenance/maintenance-type-badge.tsx`: pills emergency(vermelho)/punctual(âmbar)/recurring(verde)
+- [x] `src/components/features/maintenance/maintenance-status-badge.tsx`: MaintenanceStatusBadge + MaintenancePriorityBadge
+- [x] `src/components/features/maintenance/maintenance-card.tsx`: card com overdue highlight + responsável + skeleton
+- [x] `src/components/features/maintenance/maintenance-filters.tsx`: busca debounce + pills tipo/status/prioridade + select setor
+- [x] `src/components/features/maintenance/maintenance-form.tsx`: formulário 5 seções com recorrência condicional
+- [x] `src/components/features/maintenance/maintenance-timeline.tsx`: timeline de audit_logs por ordem
+- [x] `src/app/(auth)/manutencao/page.tsx`: lista paginada, default excluindo concluídas
+- [x] `src/app/(auth)/manutencao/nova/page.tsx`: formulário criação
+- [x] `src/app/(auth)/manutencao/[id]/page.tsx`: detalhe com concluir/editar/excluir/mudar-status inline + recorrência + timeline
+- [x] `src/app/(auth)/manutencao/[id]/editar/page.tsx`: formulário edição
+- [x] `src/components/features/dashboard/calendar-view.tsx`: props maintenanceItems/showMaintenance/onToggleMaintenance/onMaintenanceClick, pills de manutenção com ícone Wrench nas 3 visões
+- [x] `src/components/features/dashboard/stats-card.tsx`: prop onClick adicionada
+- [x] `src/app/(auth)/dashboard/page.tsx`: 2 cards de manutenção (Abertas + Urgentes Hoje), toggle manutenções no calendário
+- [x] `src/app/(auth)/configuracoes/page.tsx`: tab Setores com ConfigTable
+- [x] `src/app/api/cron/check-alerts/route.ts`: alertas maintenance_overdue + maintenance_due_soon adicionados
+- [x] `src/components/shared/confirm-dialog.tsx`: refatorado para suportar `trigger` prop (DialogTrigger) + `destructive` bool
+
 ### Fase 0 — Bloco 9: Docker Funcional + Banco Inicializado (2026-03-27)
 - [x] `.env` criado com todos os valores reais (JWTs gerados via Node.js HS256)
 - [x] `docker-compose.yml` corrigido: volumes nomeados, kong sem eval/echo, realtime APP_NAME + RLIMIT_NOFILE
@@ -467,7 +494,9 @@ Role:  super_admin (32 permissões)
 - [x] Bloco 2: Dashboard + Calendário Unificado
 - [x] Bloco 3: Módulo de Checklists (templates + instâncias + itens + categorias)
 - [x] Bloco 4: Sistema de Alertas Persistentes (notification bell + real-time + cron)
-- [ ] Módulo de Manutenção (ordens + fotos before/after)
+- [x] Fase 2 Bloco 1: Módulo de Manutenção — CRUD completo
+- [ ] Fase 2 Bloco 2: Upload de Fotos (before/after + lightbox)
+- [ ] Fase 2 Bloco 3: E-mails com Resend
 - [ ] Relatórios e exportação
 
 > **NOTA:** Após subir o Supabase com `docker compose up -d`, regenerar os tipos com:
@@ -511,3 +540,6 @@ Role:  super_admin (32 permissões)
 | Notificações fire-and-forget nos hooks | Inserção de notificação em `onSuccess` é não-crítica. Wrapped em IIFE async sem await no handler para não bloquear invalidação de queries e toast. Erros são silenciados (`catch {}`). |
 | Supabase Realtime com polling fallback | Realtime pode ser instável em dev (container Docker). `refetchInterval: 60 * 1000` garante que o sino se atualiza mesmo sem WebSocket. Realtime é bonus — polling é o baseline. |
 | Cron endpoint protegido por CRON_SECRET | Endpoint `/api/cron/check-alerts` usa `Authorization: Bearer <CRON_SECRET>` para evitar chamadas não autorizadas. Usar com Vercel Cron, GitHub Actions ou curl manual. |
+| `ConfirmDialog` refatorado para dual-mode | Versão original usava apenas `open`/`onOpenChange` (controlled). Refatorada para aceitar também `trigger` prop (usa `DialogTrigger asChild`) sem quebrar os usos existentes. `destructive` bool substituiu `variant` string para simplificar. |
+| `asChild` ausente em shadcn Primitive wrappers | `dropdown-menu.tsx` e `dialog.tsx` da versão local do shadcn expõem `ComponentProps` via `Trigger.Props` que não inclui `asChild` nos tipos. Solução: adicionar `& { asChild?: boolean }` na assinatura do componente — o Radix processa `asChild` em runtime corretamente. |
+| Recorrência automática no useCompleteMaintenanceOrder | Ao concluir uma ordem `recurring`, o hook lê o `recurrence_rule`, calcula `next_due_date` via `calcNextDueDate()` e cria uma nova ordem `open` em uma única mutation. Zero intervenção manual. |

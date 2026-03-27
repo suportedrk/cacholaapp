@@ -9,6 +9,7 @@ interface StatsCardProps {
   description?: string
   iconClass?: string  // e.g. 'bg-blue-50 text-blue-600'
   isLoading?: boolean
+  onClick?: () => void
 }
 
 export function StatsCard({
@@ -18,6 +19,7 @@ export function StatsCard({
   description,
   iconClass,
   isLoading,
+  onClick,
 }: StatsCardProps) {
   if (isLoading) {
     return (
@@ -33,7 +35,13 @@ export function StatsCard({
   }
 
   return (
-    <div className="bg-card border border-border rounded-xl p-4 space-y-2">
+    <div
+      className={cn(
+        'bg-card border border-border rounded-xl p-4 space-y-2',
+        onClick && 'cursor-pointer hover:bg-muted/30 transition-colors'
+      )}
+      onClick={onClick}
+    >
       <div className="flex items-center justify-between">
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
           {title}

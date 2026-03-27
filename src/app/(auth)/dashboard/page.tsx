@@ -1,19 +1,29 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek } from 'date-fns'
-import { Calendar, CheckCircle2, Clock4, Zap } from 'lucide-react'
+import { Calendar, CheckCircle2, Clock4, Zap, Wrench, AlertTriangle } from 'lucide-react'
 import { PageHeader } from '@/components/shared/page-header'
 import { StatsCard } from '@/components/features/dashboard/stats-card'
 import { NextEventCard } from '@/components/features/dashboard/next-event-card'
 import { CalendarView, type CalendarViewType } from '@/components/features/dashboard/calendar-view'
 import { EventQuickView } from '@/components/features/dashboard/event-quick-view'
-import { useDashboardStats, useNextEvent, useCalendarEvents, type CalendarEvent } from '@/hooks/use-dashboard'
+import {
+  useDashboardStats,
+  useDashboardMaintenanceStats,
+  useNextEvent,
+  useCalendarEvents,
+  useCalendarMaintenance,
+  type CalendarEvent,
+} from '@/hooks/use-dashboard'
 
 export default function DashboardPage() {
+  const router = useRouter()
   const [currentDate, setCurrentDate] = useState(() => new Date())
   const [calView, setCalView] = useState<CalendarViewType>('month')
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
+  const [showMaintenance, setShowMaintenance] = useState(true)
 
   // Calcula o range de datas para a query do calendário
   const { dateFrom, dateTo } = useMemo(() => {
@@ -35,8 +45,10 @@ export default function DashboardPage() {
   }, [currentDate, calView])
 
   const { data: stats, isLoading: loadingStats } = useDashboardStats()
+  const { data: maintenanceStats, isLoading: loadingMaintenanceStats } = useDashboardMaintenanceStats()
   const { data: nextEvent, isLoading: loadingNext } = useNextEvent()
   const { data: calEvents = [], isLoading: loadingCal } = useCalendarEvents(dateFrom, dateTo)
+  const { data: calMaintenance = [] } = useCalendarMaintenance(dateFrom, dateTo, showMaintenance)
 
   // Saudação baseada no horário
   const greeting = useMemo(() => {
@@ -53,7 +65,7 @@ export default function DashboardPage() {
         description="Visão geral das operações do Cachola"
       />
 
-      {/* ── Stats cards ── */}
+      {/* ── Stats de eventos ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatsCard
           title="Este Mês"
@@ -89,17 +101,43 @@ export default function DashboardPage() {
         />
       </div>
 
+      {/* ── Stats de manutenção ── */}
+      <div className="grid grid-cols-2 gap-3">
+        <StatsCard
+          title="Manutenções Abertas"
+          value={maintenanceStats?.open}
+          icon={Wrench}
+          description="ordens em aberto"
+          iconClass="bg-orange-50 text-orange-600"
+          isLoading={loadingMaintenanceStats}
+          onClick={() => router.push('/manutencao')}
+        />
+        <StatsCard
+          title="Urgentes Hoje"
+          value={maintenanceStats?.urgentToday}
+          icon={AlertTriangle}
+          description="emergenciais ou atrasadas"
+          iconClass="bg-red-50 text-red-600"
+          isLoading={loadingMaintenanceStats}
+          onClick={() => router.push('/manutencao')}
+        />
+      </div>
+
       {/* ── Próximo evento + Calendário ── */}
       <div className="grid grid-cols-1 xl:grid-cols-[300px_1fr] gap-4 items-start">
         <NextEventCard event={nextEvent} isLoading={loadingNext} />
 
         <CalendarView
           events={calEvents}
+          maintenanceItems={calMaintenance}
+          showMaintenance={showMaintenance}
+          onToggleMaintenance={() => setShowMaintenance((v) => !v)}
           currentDate={currentDate}
           view={calView}
           onDateChange={setCurrentDate}
           onViewChange={setCalView}
           onEventClick={setSelectedEvent}
+          onMaintenanceClick={(id) => router.push(`/manutencao/${id}`)}
           isLoading={loadingCal}
         />
       </div>

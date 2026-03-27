@@ -3,11 +3,11 @@
 import { useMemo } from 'react'
 import { format, addMonths, addWeeks, addDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isToday } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { ChevronLeft, ChevronRight, CalendarX } from 'lucide-react'
+import { ChevronLeft, ChevronRight, CalendarX, Wrench } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
-import type { CalendarEvent } from '@/hooks/use-dashboard'
-import type { EventStatus } from '@/types/database.types'
+import type { CalendarEvent, CalendarMaintenance } from '@/hooks/use-dashboard'
+import type { EventStatus, MaintenanceType } from '@/types/database.types'
 
 // ─────────────────────────────────────────────────────────────
 // TIPOS
@@ -16,11 +16,15 @@ export type CalendarViewType = 'month' | 'week' | 'day'
 
 interface CalendarViewProps {
   events: CalendarEvent[]
+  maintenanceItems?: CalendarMaintenance[]
+  showMaintenance?: boolean
+  onToggleMaintenance?: () => void
   currentDate: Date
   view: CalendarViewType
   onDateChange: (date: Date) => void
   onViewChange: (view: CalendarViewType) => void
   onEventClick: (event: CalendarEvent) => void
+  onMaintenanceClick?: (id: string) => void
   isLoading?: boolean
 }
 
@@ -47,16 +51,32 @@ const EVENT_DOT: Record<EventStatus, string> = {
 
 const WEEK_HEADERS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
 
+const MAINTENANCE_PILL: Record<MaintenanceType, string> = {
+  emergency: 'bg-red-100 text-red-800 border-l-2 border-l-red-500',
+  punctual:  'bg-amber-100 text-amber-800 border-l-2 border-l-amber-500',
+  recurring: 'bg-green-100 text-green-800 border-l-2 border-l-green-500',
+}
+
+const MAINTENANCE_DOT: Record<MaintenanceType, string> = {
+  emergency: 'bg-red-500',
+  punctual:  'bg-amber-500',
+  recurring: 'bg-green-500',
+}
+
 // ─────────────────────────────────────────────────────────────
 // COMPONENTE PRINCIPAL
 // ─────────────────────────────────────────────────────────────
 export function CalendarView({
   events,
+  maintenanceItems = [],
+  showMaintenance = true,
+  onToggleMaintenance,
   currentDate,
   view,
   onDateChange,
   onViewChange,
   onEventClick,
+  onMaintenanceClick,
   isLoading,
 }: CalendarViewProps) {
   // Índice de eventos por data
@@ -68,6 +88,17 @@ export function CalendarView({
     }
     return map
   }, [events])
+
+  // Índice de manutenções por data
+  const maintenanceByDate = useMemo(() => {
+    const map: Record<string, CalendarMaintenance[]> = {}
+    for (const m of maintenanceItems) {
+      if (!m.date) continue
+      if (!map[m.date]) map[m.date] = []
+      map[m.date].push(m)
+    }
+    return map
+  }, [maintenanceItems])
 
   // Navegação
   function navigate(dir: 1 | -1) {
@@ -126,6 +157,22 @@ export function CalendarView({
           </button>
         </div>
 
+        {/* Toggle manutenções */}
+        {onToggleMaintenance && (
+          <button
+            onClick={onToggleMaintenance}
+            title={showMaintenance ? 'Ocultar manutenções' : 'Mostrar manutenções'}
+            className={cn(
+              'flex items-center justify-center w-7 h-7 rounded-md transition-colors shrink-0',
+              showMaintenance
+                ? 'bg-amber-100 text-amber-700 hover:bg-amber-200'
+                : 'text-muted-foreground hover:bg-muted'
+            )}
+          >
+            <Wrench className="w-3.5 h-3.5" />
+          </button>
+        )}
+
         {/* Toggle de visão */}
         <div className="flex items-center rounded-lg border border-border overflow-hidden shrink-0">
           {(['month', 'week', 'day'] as CalendarViewType[]).map((v) => (
@@ -152,21 +199,27 @@ export function CalendarView({
         <MonthView
           currentDate={currentDate}
           eventsByDate={eventsByDate}
+          maintenanceByDate={showMaintenance ? maintenanceByDate : {}}
           onEventClick={onEventClick}
+          onMaintenanceClick={onMaintenanceClick}
           onDayClick={(day) => { onDateChange(day); onViewChange('day') }}
         />
       ) : view === 'week' ? (
         <WeekView
           currentDate={currentDate}
           eventsByDate={eventsByDate}
+          maintenanceByDate={showMaintenance ? maintenanceByDate : {}}
           onEventClick={onEventClick}
+          onMaintenanceClick={onMaintenanceClick}
           onDayClick={(day) => { onDateChange(day); onViewChange('day') }}
         />
       ) : (
         <DayView
           currentDate={currentDate}
           eventsByDate={eventsByDate}
+          maintenanceByDate={showMaintenance ? maintenanceByDate : {}}
           onEventClick={onEventClick}
+          onMaintenanceClick={onMaintenanceClick}
         />
       )}
     </div>
@@ -192,11 +245,13 @@ function LoadingSkeleton() {
 interface ViewProps {
   currentDate: Date
   eventsByDate: Record<string, CalendarEvent[]>
+  maintenanceByDate: Record<string, CalendarMaintenance[]>
   onEventClick: (e: CalendarEvent) => void
+  onMaintenanceClick?: (id: string) => void
   onDayClick: (day: Date) => void
 }
 
-function MonthView({ currentDate, eventsByDate, onEventClick, onDayClick }: ViewProps) {
+function MonthView({ currentDate, eventsByDate, maintenanceByDate, onEventClick, onMaintenanceClick, onDayClick }: ViewProps) {
   const monthStart = startOfMonth(currentDate)
   const monthEnd   = endOfMonth(currentDate)
   const gridStart  = startOfWeek(monthStart, { weekStartsOn: 1 })
@@ -219,6 +274,7 @@ function MonthView({ currentDate, eventsByDate, onEventClick, onDayClick }: View
         {days.map((day) => {
           const key = format(day, 'yyyy-MM-dd')
           const dayEvents = eventsByDate[key] ?? []
+          const dayMaintenance = maintenanceByDate[key] ?? []
           const isCurrentMonth = isSameMonth(day, currentDate)
           const todayFlag = isToday(day)
 
@@ -290,6 +346,45 @@ function MonthView({ currentDate, eventsByDate, onEventClick, onDayClick }: View
                   </div>
                 </>
               )}
+
+              {/* Manutenções */}
+              {dayMaintenance.length > 0 && (
+                <>
+                  {/* Mobile: dots */}
+                  <div className="flex flex-wrap gap-0.5 sm:hidden">
+                    {dayMaintenance.slice(0, 3).map((m) => (
+                      <button
+                        key={m.id}
+                        onClick={() => onMaintenanceClick?.(m.id)}
+                        className={cn('w-1.5 h-1.5 rounded-full', MAINTENANCE_DOT[m.type])}
+                        aria-label={m.title}
+                      />
+                    ))}
+                  </div>
+                  {/* sm+: pills */}
+                  <div className="hidden sm:flex flex-col gap-0.5">
+                    {dayMaintenance.slice(0, 1).map((m) => (
+                      <button
+                        key={m.id}
+                        onClick={() => onMaintenanceClick?.(m.id)}
+                        className={cn(
+                          'w-full text-left text-[10px] leading-tight px-1 py-0.5 rounded-sm truncate font-medium transition-opacity hover:opacity-80 flex items-center gap-0.5',
+                          MAINTENANCE_PILL[m.type]
+                        )}
+                        title={m.title}
+                      >
+                        <Wrench className="w-2.5 h-2.5 shrink-0" />
+                        <span className="truncate">{m.title}</span>
+                      </button>
+                    ))}
+                    {dayMaintenance.length > 1 && (
+                      <span className="text-[10px] text-muted-foreground px-1">
+                        +{dayMaintenance.length - 1} manutenção
+                      </span>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           )
         })}
@@ -301,7 +396,7 @@ function MonthView({ currentDate, eventsByDate, onEventClick, onDayClick }: View
 // ─────────────────────────────────────────────────────────────
 // VISÃO SEMANAL
 // ─────────────────────────────────────────────────────────────
-function WeekView({ currentDate, eventsByDate, onEventClick, onDayClick }: ViewProps) {
+function WeekView({ currentDate, eventsByDate, maintenanceByDate, onEventClick, onMaintenanceClick, onDayClick }: ViewProps) {
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 })
   const weekEnd   = endOfWeek(currentDate, { weekStartsOn: 1 })
   const days      = eachDayOfInterval({ start: weekStart, end: weekEnd })
@@ -334,15 +429,16 @@ function WeekView({ currentDate, eventsByDate, onEventClick, onDayClick }: ViewP
           })}
         </div>
 
-        {/* Eventos por dia */}
+        {/* Eventos + Manutenções por dia */}
         <div className="grid grid-cols-7 divide-x divide-border min-h-[200px]">
           {days.map((day) => {
             const key = format(day, 'yyyy-MM-dd')
             const dayEvents = eventsByDate[key] ?? []
+            const dayMaintenance = maintenanceByDate[key] ?? []
 
             return (
               <div key={key} className={cn('p-1 space-y-0.5', isToday(day) && 'bg-primary/5')}>
-                {dayEvents.length === 0 && (
+                {dayEvents.length === 0 && dayMaintenance.length === 0 && (
                   <div className="h-full" />
                 )}
                 {dayEvents.map((ev) => (
@@ -359,6 +455,20 @@ function WeekView({ currentDate, eventsByDate, onEventClick, onDayClick }: ViewP
                     <span className="truncate block">{ev.client_name || ev.title}</span>
                   </button>
                 ))}
+                {dayMaintenance.map((m) => (
+                  <button
+                    key={m.id}
+                    onClick={() => onMaintenanceClick?.(m.id)}
+                    className={cn(
+                      'w-full text-left text-[10px] leading-tight px-1 py-0.5 rounded-sm font-medium transition-opacity hover:opacity-80 flex items-center gap-0.5',
+                      MAINTENANCE_PILL[m.type]
+                    )}
+                    title={m.title}
+                  >
+                    <Wrench className="w-2.5 h-2.5 shrink-0" />
+                    <span className="truncate">{m.title}</span>
+                  </button>
+                ))}
               </div>
             )
           })}
@@ -371,11 +481,12 @@ function WeekView({ currentDate, eventsByDate, onEventClick, onDayClick }: ViewP
 // ─────────────────────────────────────────────────────────────
 // VISÃO DIÁRIA
 // ─────────────────────────────────────────────────────────────
-function DayView({ currentDate, eventsByDate, onEventClick }: Omit<ViewProps, 'onDayClick'>) {
+function DayView({ currentDate, eventsByDate, maintenanceByDate, onEventClick, onMaintenanceClick }: Omit<ViewProps, 'onDayClick'>) {
   const key = format(currentDate, 'yyyy-MM-dd')
   const dayEvents = eventsByDate[key] ?? []
+  const dayMaintenance = maintenanceByDate[key] ?? []
 
-  if (dayEvents.length === 0) {
+  if (dayEvents.length === 0 && dayMaintenance.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 gap-3 text-muted-foreground">
         <CalendarX className="w-8 h-8 opacity-40" />
@@ -408,6 +519,24 @@ function DayView({ currentDate, eventsByDate, onEventClick }: Omit<ViewProps, 'o
               {ev.event_type && ev.venue && <span>·</span>}
               {ev.venue && <span>{ev.venue.name}</span>}
             </div>
+          )}
+        </button>
+      ))}
+      {dayMaintenance.map((m) => (
+        <button
+          key={m.id}
+          onClick={() => onMaintenanceClick?.(m.id)}
+          className={cn(
+            'w-full text-left rounded-lg px-3 py-2.5 transition-opacity hover:opacity-80',
+            MAINTENANCE_PILL[m.type]
+          )}
+        >
+          <div className="flex items-center gap-2">
+            <Wrench className="w-4 h-4 shrink-0 opacity-70" />
+            <p className="text-sm font-semibold truncate">{m.title}</p>
+          </div>
+          {m.sector && (
+            <p className="text-xs opacity-70 mt-0.5 ml-6">{m.sector.name}</p>
           )}
         </button>
       ))}

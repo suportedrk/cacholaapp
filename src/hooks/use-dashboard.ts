@@ -3,7 +3,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { format, startOfMonth, endOfMonth } from 'date-fns'
-import type { EventWithDetails, EventStatus } from '@/types/database.types'
+import type { EventWithDetails, EventStatus, MaintenanceType } from '@/types/database.types'
 
 // ─────────────────────────────────────────────────────────────
 // TIPOS
@@ -27,7 +27,24 @@ export type CalendarEvent = {
   birthday_person: string | null
   event_type: { id: string; name: string } | null
   venue: { id: string; name: string; capacity: number | null } | null
+  entityType?: 'event'  // default
 }
+
+export type CalendarMaintenance = {
+  id: string
+  title: string
+  date: string          // due_date 'YYYY-MM-DD'
+  type: MaintenanceType
+  status: string
+  sector: { id: string; name: string } | null
+  entityType: 'maintenance'
+}
+
+export type DashboardMaintenanceStats = {
+  open: number
+  urgentToday: number   // emergenciais abertas ou atrasadas
+}
+
 
 const CALENDAR_EVENT_SELECT = `
   id, title, date, start_time, end_time, status, client_name, birthday_person,
@@ -100,6 +117,36 @@ export function useNextEvent() {
 }
 
 // ─────────────────────────────────────────────────────────────
+// STATS DE MANUTENÇÃO
+// ─────────────────────────────────────────────────────────────
+export function useDashboardMaintenanceStats() {
+  return useQuery({
+    queryKey: ['dashboard', 'maintenance-stats'],
+    queryFn: async () => {
+      const supabase = createClient()
+      const today = format(new Date(), 'yyyy-MM-dd')
+
+      const { data, error } = await supabase
+        .from('maintenance_orders')
+        .select('type, status, due_date')
+        .not('status', 'in', '("completed","cancelled")')
+
+      if (error) throw error
+
+      const orders = data ?? []
+      const open = orders.length
+      const urgentToday = orders.filter((o) =>
+        o.type === 'emergency' ||
+        (o.due_date && o.due_date.split('T')[0] <= today)
+      ).length
+
+      return { open, urgentToday } satisfies DashboardMaintenanceStats
+    },
+    staleTime: 60 * 1000,
+  })
+}
+
+// ─────────────────────────────────────────────────────────────
 // EVENTOS DO CALENDÁRIO (range de datas)
 // ─────────────────────────────────────────────────────────────
 export function useCalendarEvents(dateFrom: string, dateTo: string) {
@@ -120,5 +167,37 @@ export function useCalendarEvents(dateFrom: string, dateTo: string) {
     },
     staleTime: 30 * 1000,
     enabled: !!dateFrom && !!dateTo,
+  })
+}
+
+// ─────────────────────────────────────────────────────────────
+// MANUTENÇÕES DO CALENDÁRIO (por due_date)
+// ─────────────────────────────────────────────────────────────
+export function useCalendarMaintenance(dateFrom: string, dateTo: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ['dashboard', 'calendar-maintenance', dateFrom, dateTo],
+    queryFn: async () => {
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from('maintenance_orders')
+        .select('id, title, type, status, due_date, sector:sectors(id, name)')
+        .gte('due_date', `${dateFrom}T00:00:00`)
+        .lte('due_date', `${dateTo}T23:59:59`)
+        .not('status', 'in', '("completed","cancelled")')
+        .order('due_date', { ascending: true })
+
+      if (error) throw error
+      return (data ?? []).map((o) => ({
+        id: o.id,
+        title: o.title,
+        date: o.due_date ? o.due_date.split('T')[0] : '',
+        type: o.type,
+        status: o.status,
+        sector: o.sector as unknown as { id: string; name: string } | null,
+        entityType: 'maintenance' as const,
+      })) satisfies CalendarMaintenance[]
+    },
+    staleTime: 30 * 1000,
+    enabled: enabled && !!dateFrom && !!dateTo,
   })
 }

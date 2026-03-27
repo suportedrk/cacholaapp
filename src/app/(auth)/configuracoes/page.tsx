@@ -8,6 +8,7 @@ import {
   usePackages, useCreatePackage, useUpdatePackage, useDeletePackage,
   useVenues, useCreateVenue, useUpdateVenue, useDeleteVenue,
 } from '@/hooks/use-event-config'
+import { useSectors, useCreateSector, useUpdateSector, useDeleteSector } from '@/hooks/use-sectors'
 
 export default function ConfiguracoesPage() {
   // Tipos de Evento
@@ -28,11 +29,17 @@ export default function ConfiguracoesPage() {
   const updateVenue = useUpdateVenue()
   const deleteVenue = useDeleteVenue()
 
+  // Setores (manutenção)
+  const { data: sectors = [], isLoading: loadingSectors } = useSectors(false)
+  const createSector = useCreateSector()
+  const updateSector = useUpdateSector()
+  const deleteSector = useDeleteSector()
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Configurações"
-        description="Gerencie tipos de evento, pacotes e salões"
+        description="Gerencie tipos de evento, pacotes, salões e setores"
       />
 
       <Tabs defaultValue="tipos">
@@ -40,6 +47,7 @@ export default function ConfiguracoesPage() {
           <TabsTrigger value="tipos">Tipos de Evento</TabsTrigger>
           <TabsTrigger value="pacotes">Pacotes</TabsTrigger>
           <TabsTrigger value="saloes">Salões</TabsTrigger>
+          <TabsTrigger value="setores">Setores</TabsTrigger>
         </TabsList>
 
         {/* ── Tipos de Evento ── */}
@@ -85,6 +93,20 @@ export default function ConfiguracoesPage() {
             onCreate={(d) => createVenue.mutateAsync(d as { name: string; capacity?: number })}
             onUpdate={(id, d) => updateVenue.mutateAsync({ id, data: d })}
             onDelete={(id) => deleteVenue.mutateAsync(id)}
+          />
+        </TabsContent>
+        {/* ── Setores ── */}
+        <TabsContent value="setores" className="mt-4 space-y-3">
+          <p className="text-sm text-muted-foreground">
+            Setores do buffet para vinculação das ordens de manutenção (ex: Cozinha, Salão Principal).
+          </p>
+          <ConfigTable
+            title="Setor"
+            items={sectors as ConfigItem[]}
+            isLoading={loadingSectors}
+            onCreate={(d) => createSector.mutateAsync(d as { name: string })}
+            onUpdate={(id, d) => updateSector.mutateAsync({ id, data: d })}
+            onDelete={(id) => deleteSector.mutateAsync(id)}
           />
         </TabsContent>
       </Tabs>

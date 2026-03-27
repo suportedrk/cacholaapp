@@ -7,34 +7,41 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
+import type { ReactNode } from 'react'
 
 interface ConfirmDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
   title: string
   description: string
   confirmLabel?: string
   cancelLabel?: string
-  variant?: 'destructive' | 'default'
+  destructive?: boolean
   loading?: boolean
-  onConfirm: () => void
+  onConfirm: () => void | Promise<void>
+  // Controlled pattern
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+  // Trigger pattern
+  trigger?: ReactNode
 }
 
 export function ConfirmDialog({
-  open,
-  onOpenChange,
   title,
   description,
   confirmLabel = 'Confirmar',
   cancelLabel = 'Cancelar',
-  variant = 'destructive',
+  destructive = false,
   loading = false,
   onConfirm,
+  open,
+  onOpenChange,
+  trigger,
 }: ConfirmDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
+      {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
@@ -43,13 +50,13 @@ export function ConfirmDialog({
         <DialogFooter className="gap-2">
           <Button
             variant="outline"
-            onClick={() => onOpenChange(false)}
+            onClick={() => onOpenChange?.(false)}
             disabled={loading}
           >
             {cancelLabel}
           </Button>
           <Button
-            variant={variant}
+            variant={destructive ? 'destructive' : 'default'}
             onClick={onConfirm}
             disabled={loading}
           >

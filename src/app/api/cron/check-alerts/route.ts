@@ -50,7 +50,7 @@ export async function GET(request: Request) {
     if (error) throw error
 
     for (const event of events ?? []) {
-      const staff = event.event_staff as { user_id: string }[]
+      const staff = event.event_staff as unknown as { user_id: string }[]
       for (const { user_id } of staff) {
         const { error: rpcErr } = await supabase.rpc('create_notification', {
           p_user_id: user_id,
@@ -92,6 +92,71 @@ export async function GET(request: Request) {
     }
   } catch (e) {
     errors.push(`checklist_overdue: ${e}`)
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // 3. Manutenções atrasadas → alertar responsável
+  // ─────────────────────────────────────────────────────────────
+  try {
+    const { data: overdueOrders, error } = await supabase
+      .from('maintenance_orders')
+      .select('id, title, assigned_to')
+      .lt('due_date', `${todayStr}T00:00:00`)
+      .not('status', 'in', '("completed","cancelled")')
+      .not('assigned_to', 'is', null)
+
+    if (error) throw error
+
+    for (const order of overdueOrders ?? []) {
+      if (!order.assigned_to) continue
+      const { error: rpcErr } = await supabase.rpc('create_notification', {
+        p_user_id: order.assigned_to,
+        p_type:    'maintenance_overdue',
+        p_title:   'Manutenção atrasada',
+        p_body:    `A ordem "${order.title}" está atrasada. Resolva o quanto antes.`,
+        p_link:    `/manutencao/${order.id}`,
+      })
+      if (!rpcErr) created++
+    }
+  } catch (e) {
+    errors.push(`maintenance_overdue: ${e}`)
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // 4. Manutenções recorrentes próximas do vencimento
+  // ─────────────────────────────────────────────────────────────
+  try {
+    const { data: recurringOrders, error } = await supabase
+      .from('maintenance_orders')
+      .select('id, title, assigned_to, recurrence_rule')
+      .eq('type', 'recurring')
+      .eq('status', 'open')
+      .not('assigned_to', 'is', null)
+
+    if (error) throw error
+
+    for (const order of recurringOrders ?? []) {
+      if (!order.assigned_to || !order.recurrence_rule) continue
+      const rule = order.recurrence_rule as { next_due_date?: string; advance_notice_days?: number }
+      if (!rule.next_due_date) continue
+
+      const advanceDays = rule.advance_notice_days ?? 1
+      const notifyDate = new Date(rule.next_due_date)
+      notifyDate.setDate(notifyDate.getDate() - advanceDays)
+
+      if (notifyDate.toISOString().split('T')[0] === todayStr) {
+        const { error: rpcErr } = await supabase.rpc('create_notification', {
+          p_user_id: order.assigned_to,
+          p_type:    'maintenance_due_soon',
+          p_title:   'Manutenção próxima do vencimento',
+          p_body:    `"${order.title}" vence em ${advanceDays} dia(s). Planeje-se.`,
+          p_link:    `/manutencao/${order.id}`,
+        })
+        if (!rpcErr) created++
+      }
+    }
+  } catch (e) {
+    errors.push(`maintenance_due_soon: ${e}`)
   }
 
   return Response.json({

@@ -10,9 +10,11 @@ import { Label } from '@/components/ui/label'
 import { PageHeader } from '@/components/shared/page-header'
 import { SortableTemplateItems, type TemplateItemDraft } from '@/components/features/checklists/sortable-template-items'
 import { useCreateTemplate, useChecklistCategories } from '@/hooks/use-checklists'
+import { useAuth } from '@/hooks/use-auth'
 
 export default function NovoTemplatePage() {
   const router = useRouter()
+  const { profile } = useAuth()
   const createTemplate = useCreateTemplate()
   const { data: categories = [] } = useChecklistCategories()
 
@@ -26,7 +28,8 @@ export default function NovoTemplatePage() {
     if (!isValid) return
     await createTemplate.mutateAsync({
       title: title.trim(),
-      categoryId: categoryId || undefined,
+      categoryId: categoryId || null,
+      createdBy: profile?.id ?? '',
       items: items
         .filter((i) => i.description.trim())
         .map((i, idx) => ({ description: i.description.trim(), sort_order: idx })),

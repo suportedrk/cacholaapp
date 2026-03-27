@@ -47,7 +47,8 @@ export default function EditarTemplatePage() {
     await updateTemplate.mutateAsync({
       id,
       title: title.trim(),
-      categoryId: categoryId || undefined,
+      categoryId: categoryId || null,
+      isActive: template?.is_active ?? true,
       items: items
         .filter((i) => i.description.trim())
         .map((i, idx) => ({ description: i.description.trim(), sort_order: idx })),

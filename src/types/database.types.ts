@@ -29,6 +29,7 @@ export interface Database {
       checklists:           { Row: Checklist;           Insert: Partial<Checklist>;      Update: Partial<Checklist>;      Relationships: [] }
       checklist_items:      { Row: ChecklistItem;       Insert: Partial<ChecklistItem>;  Update: Partial<ChecklistItem>;  Relationships: [] }
       // Manutenção
+      sectors:              { Row: Sector;              Insert: Partial<Sector>;           Update: Partial<Sector>;           Relationships: [] }
       maintenance_orders:   { Row: MaintenanceOrder;    Insert: Partial<MaintenanceOrder>; Update: Partial<MaintenanceOrder>; Relationships: [] }
       maintenance_photos:   { Row: MaintenancePhoto;    Insert: Partial<MaintenancePhoto>; Update: Partial<MaintenancePhoto>; Relationships: [] }
       // Sistema
@@ -69,7 +70,7 @@ export type EventStatus =
 
 export type ChecklistStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled'
 export type ChecklistItemStatus = 'pending' | 'done' | 'na'
-export type MaintenanceType = 'correctiva' | 'preventiva' | 'melhoria'
+export type MaintenanceType = 'emergency' | 'punctual' | 'recurring'
 export type MaintenancePriority = 'low' | 'medium' | 'high' | 'critical'
 export type MaintenanceStatus = 'open' | 'in_progress' | 'waiting_parts' | 'completed' | 'cancelled'
 export type PhotoType = 'before' | 'after' | 'during'
@@ -109,6 +110,26 @@ export type ChecklistCategory = {
   is_active: boolean
   sort_order: number
   created_at: string
+}
+
+// ─────────────────────────────────────────────────────────────
+// MANUTENÇÃO — CONFIGURAÇÃO
+// ─────────────────────────────────────────────────────────────
+export type Sector = {
+  id: string
+  name: string
+  is_active: boolean
+  sort_order: number
+  created_at: string
+}
+
+export type RecurrenceRule = {
+  frequency: 'daily' | 'weekly' | 'monthly'
+  interval: number                // a cada N dias/semanas/meses
+  day_of_week?: number            // 0=dom ... 6=sáb (para weekly)
+  day_of_month?: number           // 1-31 (para monthly)
+  advance_notice_days: number     // alertar X dias antes
+  next_due_date: string           // 'YYYY-MM-DD' — próxima data calculada
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -263,13 +284,13 @@ export type MaintenanceOrder = {
   description: string | null
   type: MaintenanceType
   priority: MaintenancePriority
-  sector: string
+  sector_id: string | null
   equipment: string | null
   status: MaintenanceStatus
   assigned_to: string | null
   due_date: string | null
   event_id: string | null
-  recurrence_rule: string | null
+  recurrence_rule: RecurrenceRule | null
   created_by: string
   created_at: string
   updated_at: string
@@ -356,7 +377,18 @@ export type TemplateWithItems = ChecklistTemplate & {
   template_items: TemplateItem[]
 }
 
-export type MaintenanceOrderWithPhotos = MaintenanceOrder & {
-  maintenance_photos: MaintenancePhoto[]
+// Manutenção com detalhes completos (tela de detalhe)
+export type MaintenanceWithDetails = MaintenanceOrder & {
+  sector: Pick<Sector, 'id' | 'name'> | null
   assigned_user: Pick<User, 'id' | 'name' | 'avatar_url'> | null
+  creator: Pick<User, 'id' | 'name' | 'avatar_url'> | null
+  event: Pick<Event, 'id' | 'title' | 'date'> | null
+  maintenance_photos: MaintenancePhoto[]
+}
+
+// Manutenção para listagem (sem fotos inline)
+export type MaintenanceForList = MaintenanceOrder & {
+  sector: Pick<Sector, 'id' | 'name'> | null
+  assigned_user: Pick<User, 'id' | 'name' | 'avatar_url'> | null
+  photo_count: number  // calculado no client
 }
