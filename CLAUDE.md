@@ -328,6 +328,34 @@ docker compose -f docker-compose.prod.yml logs -f app
 - [x] `.github/workflows/ci.yml`: TypeScript check + ESLint em push/PR
 - [x] Repositório: `suportedrk/cacholaapp`
 
+### Fase 0 — Bloco 10: Correções Next.js 16 + Rotas (2026-03-27)
+- [x] `src/middleware.ts` → `src/proxy.ts` (nova convenção Next.js 16, export `proxy`)
+- [x] `next.config.ts`: `turbopack: {}` adicionado (silencia conflito webpack/@ducanh2912/next-pwa)
+- [x] `src/app/globals.css`: `@import url(googleapis)` removido (quebrava Turbopack PostCSS)
+- [x] `src/app/layout.tsx`: Inter carregada via `next/font/google` (self-hosted, zero CLS)
+- [x] Páginas placeholder criadas para 6 rotas da sidebar (Fase 1):
+  - `/eventos`, `/checklists`, `/manutencao`, `/relatorios`, `/configuracoes`, `/admin/logs`
+- [x] `src/components/shared/placeholder-page.tsx`: componente reutilizável de "Em desenvolvimento"
+
+### ROTAS FUNCIONAIS
+
+| Rota | Arquivo | Status |
+|------|---------|--------|
+| `/dashboard` | `(auth)/dashboard/page.tsx` | ✅ funcional |
+| `/perfil` | `(auth)/perfil/page.tsx` | ✅ funcional |
+| `/admin/usuarios` | `(auth)/admin/usuarios/page.tsx` | ✅ funcional |
+| `/admin/usuarios/novo` | `(auth)/admin/usuarios/novo/page.tsx` | ✅ funcional |
+| `/admin/usuarios/[id]` | `(auth)/admin/usuarios/[id]/page.tsx` | ✅ funcional |
+| `/admin/usuarios/[id]/permissoes` | `(auth)/admin/usuarios/[id]/permissoes/page.tsx` | ✅ funcional |
+| `/eventos` | `(auth)/eventos/page.tsx` | 🚧 placeholder (Fase 1) |
+| `/checklists` | `(auth)/checklists/page.tsx` | 🚧 placeholder (Fase 1) |
+| `/manutencao` | `(auth)/manutencao/page.tsx` | 🚧 placeholder (Fase 1) |
+| `/relatorios` | `(auth)/relatorios/page.tsx` | 🚧 placeholder (Fase 1) |
+| `/configuracoes` | `(auth)/configuracoes/page.tsx` | 🚧 placeholder (Fase 1) |
+| `/admin/logs` | `(auth)/admin/logs/page.tsx` | 🚧 placeholder (Fase 1) |
+| `/login` | `(public)/login/page.tsx` | ✅ funcional |
+| `/recuperar-senha` | `(public)/recuperar-senha/page.tsx` | ✅ funcional |
+
 ### Fase 0 — Bloco 9: Docker Funcional + Banco Inicializado (2026-03-27)
 - [x] `.env` criado com todos os valores reais (JWTs gerados via Node.js HS256)
 - [x] `docker-compose.yml` corrigido: volumes nomeados, kong sem eval/echo, realtime APP_NAME + RLIMIT_NOFILE
