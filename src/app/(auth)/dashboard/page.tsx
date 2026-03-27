@@ -68,6 +68,7 @@ export default function DashboardPage() {
       <PageHeader
         title={greeting}
         description="Visão geral das operações do Cachola"
+        suppressTitleHydrationWarning
       />
 
       {/* ── Stats de eventos ── */}
