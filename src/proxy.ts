@@ -10,7 +10,7 @@ const PROTECTED_BY_ROLE: Record<string, string[]> = {
   '/relatorios': ['super_admin', 'diretor', 'gerente', 'financeiro'],
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
   })

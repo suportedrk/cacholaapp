@@ -4,6 +4,9 @@ import withPWA from '@ducanh2912/next-pwa'
 const nextConfig: NextConfig = {
   reactStrictMode: true,
 
+  // Turbopack é o padrão no Next.js 16 — config vazia silencia aviso de conflito webpack
+  turbopack: {},
+
   images: {
     remotePatterns: [
       {
