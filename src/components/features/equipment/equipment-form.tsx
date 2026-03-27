@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import { compressImage } from '@/components/shared/photo-upload'
 import { useCreateEquipment, useUpdateEquipment } from '@/hooks/use-equipment'
+import { useEquipmentCategoryItems } from '@/hooks/use-equipment-categories'
 import { useSignedUrls } from '@/hooks/use-signed-urls'
 import { Package, Camera, ImagePlus, X } from 'lucide-react'
 import type { Equipment } from '@/types/database.types'
@@ -45,7 +46,8 @@ const DEFAULT_FORM: FormData = {
   notes:          '',
 }
 
-const CATEGORIES = [
+// Fallback quando nenhuma categoria gerenciada existir
+const FALLBACK_CATEGORIES = [
   'Brinquedo', 'Mobília', 'Cozinha', 'Elétrica',
   'Hidráulica', 'Decoração', 'Audiovisual', 'Climatização', 'Outro',
 ]
@@ -69,6 +71,12 @@ export function EquipmentForm({ equipment, onSuccess }: Props) {
 
   const create = useCreateEquipment()
   const update = useUpdateEquipment()
+
+  // Categorias gerenciadas (fallback para lista hardcoded se vazia)
+  const { data: managedCategories = [] } = useEquipmentCategoryItems(true)
+  const categoryOptions = managedCategories.length > 0
+    ? managedCategories.map((c) => c.name)
+    : FALLBACK_CATEGORIES
 
   const [form, setForm] = useState<FormData>(() => {
     if (!equipment) return DEFAULT_FORM
@@ -203,7 +211,7 @@ export function EquipmentForm({ equipment, onSuccess }: Props) {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__none__">Sem categoria</SelectItem>
-                {CATEGORIES.map((c) => (
+                {categoryOptions.map((c) => (
                   <SelectItem key={c} value={c}>{c}</SelectItem>
                 ))}
               </SelectContent>

@@ -37,6 +37,9 @@ export interface Database {
       maintenance_orders:   { Row: MaintenanceOrder;    Insert: Partial<MaintenanceOrder>; Update: Partial<MaintenanceOrder>; Relationships: [] }
       equipment:            { Row: Equipment;           Insert: Partial<Equipment>;        Update: Partial<Equipment>;        Relationships: [] }
       maintenance_photos:   { Row: MaintenancePhoto;    Insert: Partial<MaintenancePhoto>; Update: Partial<MaintenancePhoto>; Relationships: [] }
+      // Configurações avançadas (Fase 3)
+      unit_settings:        { Row: UnitSettings;        Insert: Partial<UnitSettings>;   Update: Partial<UnitSettings>;   Relationships: [] }
+      equipment_categories: { Row: EquipmentCategory;   Insert: Partial<EquipmentCategory>; Update: Partial<EquipmentCategory>; Relationships: [] }
       // Sistema
       notifications:        { Row: AppNotification;     Insert: Partial<AppNotification>; Update: Partial<AppNotification>; Relationships: [] }
       audit_logs:           { Row: AuditLog;            Insert: Partial<AuditLog>;       Update: Partial<AuditLog>;       Relationships: [] }
@@ -123,6 +126,43 @@ export type UserUnit = {
 // UserUnit com dados da unidade expandida (para dropdowns e listas)
 export type UserUnitWithUnit = UserUnit & {
   unit: Pick<Unit, 'id' | 'name' | 'slug' | 'is_active'>
+}
+
+// ─────────────────────────────────────────────────────────────
+// CONFIGURAÇÕES AVANÇADAS (Fase 3)
+// ─────────────────────────────────────────────────────────────
+
+export type BusinessHourDay = {
+  open: string    // "HH:MM"
+  close: string   // "HH:MM"
+  enabled: boolean
+}
+
+export type UnitSettingsData = {
+  timezone?: string                              // ex: "America/Sao_Paulo"
+  date_format?: string                           // ex: "DD/MM/YYYY"
+  business_hours?: Record<string, BusinessHourDay> // key: "0"–"6" (Sun–Sat)
+  event_defaults?: {
+    default_duration_hours?: number              // ex: 4
+    min_gap_hours?: number                       // ex: 1
+    default_start_time?: string                  // ex: "14:00"
+  }
+}
+
+export type UnitSettings = {
+  id: string
+  unit_id: string
+  settings: UnitSettingsData
+  updated_at: string
+}
+
+export type EquipmentCategory = {
+  id: string
+  unit_id: string
+  name: string
+  is_active: boolean
+  sort_order: number
+  created_at: string
 }
 
 // ─────────────────────────────────────────────────────────────
