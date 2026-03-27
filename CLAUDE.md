@@ -577,6 +577,18 @@ Role:  super_admin (32 permissões)
 - [x] `event-card.tsx`, `maintenance-card.tsx`, `checklist-card.tsx`, `equipment-card.tsx`: React.memo nos 4 card components de lista
 - [x] `@next/bundle-analyzer` instalado; `next.config.ts` com `withBundleAnalyzer(enabled: ANALYZE==='true')` — uso: `ANALYZE=true npm run build`
 
+### Fase 3 — Bloco 6: Offline Mode (2026-03-27)
+- [x] `idb` instalado (4KB, Promise-based IndexedDB)
+- [x] `src/lib/offline-db.ts`: schema IDB tipado — `checklists` (snapshot), `checklist_items` (fila de sync com index `by-checklist`), `calendar_events` (cache read-only); singleton `getOfflineDb()` SSR-safe
+- [x] `src/hooks/use-online-status.ts`: `useOnlineStatus()` — `navigator.onLine` como estado inicial + `window.addEventListener('online'/'offline')`
+- [x] `src/hooks/use-sync-manager.ts`: `useSyncManager()` — conta pendentes no IDB, auto-sync ao voltar online (for loop com upsert Supabase), toast de sucesso, `countPending` exposto
+- [x] `src/hooks/use-offline-checklist.ts`: hook unificado online/offline — React Query quando online; IDB snapshot + `localPatches` quando offline; `patchesRef` para evitar stale closures; `useMemo` mescla snapshot + patches; `handleItemStatus/Notes` persiste no IDB offline; foto (`handleItemPhoto`) só disponível online
+- [x] `src/app/(auth)/checklists/[id]/page.tsx`: refatorado para `useOfflineChecklist`; banner amber WifiOff com contador de pendentes; banner azul spinning ao sincronizar; botão Finalizar + upload foto desabilitados offline; mensagem de erro diferencia offline vs rede
+- [x] `src/components/features/checklists/checklist-item-row.tsx`: `onPhotoChange` prop agora opcional (`?`) — permite desabilitar upload offline via `undefined`
+- [x] `src/components/layout/navbar.tsx`: badge amber "Offline" com ícone WifiOff — visível apenas quando offline, rótulo oculto em mobile (apenas ícone)
+- [x] `src/hooks/use-dashboard.ts` `useCalendarEvents`: salva no IDB store `calendar_events` após cada fetch online; quando offline lê do IDB; retorna `isOffline` + `cachedAt` além de `data`/`isLoading`/`isError`; query desabilitada offline (`enabled: isOnline && ...`)
+- [x] `src/app/(auth)/dashboard/page.tsx`: banner amber no calendário quando offline com horário da última atualização (HH:MM)
+
 ## PROXIMOS PASSOS — FASE 1
 
 - [x] Bloco 1: Módulo de Eventos (CRUD completo + config tables)
@@ -592,7 +604,7 @@ Role:  super_admin (32 permissões)
 - [x] Fase 3 Bloco 3: Configurações Avançadas (unit_settings JSONB, equipment_categories, 3 novas abas)
 - [x] Fase 3 Bloco 4: Logs de Auditoria (useInfiniteQuery cursor-based, diff visual, filtros, permissão)
 - [x] Fase 3 Bloco 5: Otimizações de Performance (select específico, staleTime, React.memo, bundle analyzer)
-- [ ] Fase 3 Bloco 6: Offline Mode
+- [x] Fase 3 Bloco 6: Offline Mode (IDB checklists R/W com sync queue + calendário read-only cached)
 
 > **NOTA:** Após subir o Supabase com `docker compose up -d`, regenerar os tipos com:
 > ```bash
@@ -662,3 +674,9 @@ Role:  super_admin (32 permissões)
 | `unit_settings` com upsert `onConflict: 'unit_id'` | Evita inserção de linha duplicada. A constraint UNIQUE(unit_id) garante no máximo 1 row por unidade. Primeira gravação insere; edições subsequentes atualizam. |
 | `DEFAULT_UNIT_SETTINGS` exportado do hook | Reutilizado em business-hours-tab.tsx para inicializar estado antes dos dados carregarem. Evita duplicação de defaults. |
 | `equipment_categories` fallback hardcoded | Se nenhuma categoria gerenciada existir ainda, `equipment-form.tsx` usa `FALLBACK_CATEGORIES`. Facilita onboarding sem precisar configurar antes de usar. |
+| `idb` em vez de IDB nativo para offline | API Promise-based, schema tipado via DBSchema, 4KB de bundle. Alternativa `localForage` tem mais peso e menos controle de schema. Dexie foi descartada por API verbosa. |
+| `patchesRef` para evitar stale closures no IDB | `handleItemStatus/Notes` são callbacks memorizados com `useCallback`. Se lessem `localPatches` diretamente do state, teriam valor stale na closure. `useRef` sincronizado via `useEffect` garante acesso ao valor atual sem re-criar os callbacks. |
+| Checklist offline: patches em memória + IDB | Patches aplicados em memória (`localPatches`) para UI otimista imediata. Salvos no IDB para persistência entre page refreshes. Ao voltar online, React Query (fonte de verdade) substitui tudo e patches são limpos. |
+| Upload de foto desabilitado offline | `File` não é serializable para IDB de forma prática (Blob + metadata complexo). Botão de câmera desabilitado quando `isOffline`, `onPhotoChange` passa `undefined`. |
+| `useCalendarEvents` com `enabled: isOnline` | Evita query desnecessária ao Supabase quando offline. IDB serve como fallback via `useState` + `useEffect` separados — não mistura com o `queryFn`. |
+| Cache key do calendário inclui `activeUnitId` | Garante que trocar de unidade offline não sirva cache de outra unidade. Formato: `dateFrom::dateTo::unitId\|all`. |
