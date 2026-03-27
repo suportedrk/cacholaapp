@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { EventWithDetails, EventInsert, EventUpdate, EventStatus } from '@/types/database.types'
 import { toast } from 'sonner'
 import { notifyEventCreated, notifyStatusChanged } from '@/lib/notifications'
+import { useUnitStore } from '@/stores/unit-store'
 
 const EVENT_WITH_DETAILS_SELECT = `
   *,
@@ -35,9 +36,10 @@ export type EventFilters = {
 // ─────────────────────────────────────────────────────────────
 export function useEvents(filters: EventFilters = {}) {
   const { search, status, dateFrom, dateTo, page = 1, pageSize = 12 } = filters
+  const { activeUnitId } = useUnitStore()
 
   return useQuery({
-    queryKey: ['events', filters],
+    queryKey: ['events', filters, activeUnitId],
     queryFn: async () => {
       const supabase = createClient()
 
@@ -46,6 +48,9 @@ export function useEvents(filters: EventFilters = {}) {
         .select(EVENT_WITH_DETAILS_SELECT, { count: 'exact' })
         .order('date', { ascending: true })
         .order('start_time', { ascending: true })
+
+      // Filtro por unidade ativa
+      if (activeUnitId) query = query.eq('unit_id', activeUnitId)
 
       // Filtro por busca (nome contratante ou aniversariante)
       if (search?.trim()) {
@@ -107,6 +112,7 @@ export function useEvent(id: string | null) {
 // ─────────────────────────────────────────────────────────────
 export function useCreateEvent() {
   const qc = useQueryClient()
+  const { activeUnitId } = useUnitStore()
 
   return useMutation({
     mutationFn: async ({
@@ -121,7 +127,7 @@ export function useCreateEvent() {
       // Inserir evento
       const { data: event, error: eventError } = await supabase
         .from('events')
-        .insert(eventData)
+        .insert({ ...eventData, unit_id: activeUnitId! })
         .select('id')
         .single()
 

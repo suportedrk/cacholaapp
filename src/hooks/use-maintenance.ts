@@ -14,6 +14,7 @@ import {
   notifyMaintenanceStatusChanged,
   notifyMaintenanceCompleted,
 } from '@/lib/notifications'
+import { useUnitStore } from '@/stores/unit-store'
 
 // ─────────────────────────────────────────────────────────────
 // SELECT FRAGMENTS
@@ -51,9 +52,10 @@ export type MaintenanceFilters = {
 // ─────────────────────────────────────────────────────────────
 export function useMaintenanceOrders(filters: MaintenanceFilters = {}) {
   const { search, type, status, priority, sectorId, page = 1, pageSize = 12 } = filters
+  const { activeUnitId } = useUnitStore()
 
   return useQuery({
-    queryKey: ['maintenance', filters],
+    queryKey: ['maintenance', filters, activeUnitId],
     queryFn: async () => {
       const supabase = createClient()
       const from = (page - 1) * pageSize
@@ -63,6 +65,7 @@ export function useMaintenanceOrders(filters: MaintenanceFilters = {}) {
         .from('maintenance_orders')
         .select(MAINTENANCE_LIST_SELECT, { count: 'exact' })
 
+      if (activeUnitId) q = q.eq('unit_id', activeUnitId)
       if (search?.trim()) {
         q = q.or(`title.ilike.%${search}%,description.ilike.%${search}%,equipment.ilike.%${search}%`)
       }
@@ -124,13 +127,14 @@ export type MaintenanceOrderInsert = Omit<
 
 export function useCreateMaintenanceOrder() {
   const qc = useQueryClient()
+  const { activeUnitId } = useUnitStore()
 
   return useMutation({
     mutationFn: async (orderData: MaintenanceOrderInsert) => {
       const supabase = createClient()
       const { data, error } = await supabase
         .from('maintenance_orders')
-        .insert(orderData as any)
+        .insert({ ...orderData, unit_id: activeUnitId! } as any)
         .select('id, type')
         .single()
       if (error) throw error

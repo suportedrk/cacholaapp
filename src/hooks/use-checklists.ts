@@ -9,6 +9,7 @@ import type {
   TemplateWithItems,
 } from '@/types/database.types'
 import { notifyChecklistAssigned, notifyChecklistCompleted } from '@/lib/notifications'
+import { useUnitStore } from '@/stores/unit-store'
 
 // ─────────────────────────────────────────────────────────────
 // FILTROS DA LISTA
@@ -27,9 +28,10 @@ export type ChecklistFilters = {
 // ─────────────────────────────────────────────────────────────
 export function useChecklists(filters: ChecklistFilters = {}) {
   const { eventId, assignedTo, status, categoryId, page = 1, pageSize = 20 } = filters
+  const { activeUnitId } = useUnitStore()
 
   return useQuery({
-    queryKey: ['checklists', filters],
+    queryKey: ['checklists', filters, activeUnitId],
     queryFn: async () => {
       const supabase = createClient()
 
@@ -44,6 +46,7 @@ export function useChecklists(filters: ChecklistFilters = {}) {
         .order('due_date', { ascending: true, nullsFirst: false })
         .order('created_at', { ascending: false })
 
+      if (activeUnitId) query = query.eq('unit_id', activeUnitId)
       if (eventId)    query = query.eq('event_id', eventId)
       if (assignedTo) query = query.eq('assigned_to', assignedTo)
       if (status?.length) query = query.in('status', status)
@@ -139,6 +142,7 @@ export function useEventChecklists(eventId: string | null) {
 // ─────────────────────────────────────────────────────────────
 export function useCreateChecklist() {
   const qc = useQueryClient()
+  const { activeUnitId } = useUnitStore()
 
   return useMutation({
     mutationFn: async ({
@@ -166,6 +170,7 @@ export function useCreateChecklist() {
           assigned_to: assignedTo ?? null,
           due_date: dueDate ?? null,
           status: 'pending' as ChecklistStatus,
+          unit_id: activeUnitId!,
         })
         .select('id')
         .single()
@@ -340,8 +345,9 @@ export function useUpdateChecklistItem() {
 // TEMPLATES — LISTAR
 // ─────────────────────────────────────────────────────────────
 export function useChecklistTemplates(onlyActive = true) {
+  const { activeUnitId } = useUnitStore()
   return useQuery({
-    queryKey: ['checklist-templates', onlyActive],
+    queryKey: ['checklist-templates', onlyActive, activeUnitId],
     queryFn: async () => {
       const supabase = createClient()
       let query = supabase
@@ -353,6 +359,7 @@ export function useChecklistTemplates(onlyActive = true) {
         `)
         .order('title', { ascending: true })
 
+      if (activeUnitId) query = query.eq('unit_id', activeUnitId)
       if (onlyActive) query = query.eq('is_active', true)
 
       const { data, error } = await query
@@ -400,6 +407,7 @@ export function useChecklistTemplate(id: string | null) {
 // ─────────────────────────────────────────────────────────────
 export function useCreateTemplate() {
   const qc = useQueryClient()
+  const { activeUnitId } = useUnitStore()
 
   return useMutation({
     mutationFn: async ({
@@ -423,6 +431,7 @@ export function useCreateTemplate() {
           category_id: categoryId,
           created_by: createdBy,
           is_active: true,
+          unit_id: activeUnitId!,
         })
         .select('id')
         .single()
@@ -520,15 +529,18 @@ export function useDeleteTemplate() {
 // CATEGORIAS DE CHECKLIST
 // ─────────────────────────────────────────────────────────────
 export function useChecklistCategories() {
+  const { activeUnitId } = useUnitStore()
   return useQuery({
-    queryKey: ['checklist-categories'],
+    queryKey: ['checklist-categories', activeUnitId],
     queryFn: async () => {
       const supabase = createClient()
-      const { data, error } = await supabase
+      let query = supabase
         .from('checklist_categories')
         .select('id, name, sort_order')
         .eq('is_active', true)
         .order('sort_order', { ascending: true })
+      if (activeUnitId) query = query.eq('unit_id', activeUnitId)
+      const { data, error } = await query
       if (error) throw error
       return data ?? []
     },

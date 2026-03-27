@@ -4,19 +4,22 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import type { EventType, Package, Venue } from '@/types/database.types'
 import { toast } from 'sonner'
+import { useUnitStore } from '@/stores/unit-store'
 
 // ─────────────────────────────────────────────────────────────
 // EVENT TYPES
 // ─────────────────────────────────────────────────────────────
 export function useEventTypes(onlyActive = true) {
+  const { activeUnitId } = useUnitStore()
   return useQuery({
-    queryKey: ['event-types', { onlyActive }],
+    queryKey: ['event-types', { onlyActive }, activeUnitId],
     queryFn: async () => {
       const supabase = createClient()
       let query = supabase
         .from('event_types')
         .select('*')
         .order('sort_order', { ascending: true })
+      if (activeUnitId) query = query.eq('unit_id', activeUnitId)
       if (onlyActive) query = query.eq('is_active', true)
       const { data, error } = await query
       if (error) throw error
@@ -28,10 +31,11 @@ export function useEventTypes(onlyActive = true) {
 
 export function useCreateEventType() {
   const qc = useQueryClient()
+  const { activeUnitId } = useUnitStore()
   return useMutation({
     mutationFn: async (data: { name: string; sort_order?: number }) => {
       const supabase = createClient()
-      const { error } = await supabase.from('event_types').insert(data)
+      const { error } = await supabase.from('event_types').insert({ ...data, unit_id: activeUnitId! })
       if (error) throw error
     },
     onSuccess: () => {
@@ -78,14 +82,16 @@ export function useDeleteEventType() {
 // PACKAGES
 // ─────────────────────────────────────────────────────────────
 export function usePackages(onlyActive = true) {
+  const { activeUnitId } = useUnitStore()
   return useQuery({
-    queryKey: ['packages', { onlyActive }],
+    queryKey: ['packages', { onlyActive }, activeUnitId],
     queryFn: async () => {
       const supabase = createClient()
       let query = supabase
         .from('packages')
         .select('*')
         .order('sort_order', { ascending: true })
+      if (activeUnitId) query = query.eq('unit_id', activeUnitId)
       if (onlyActive) query = query.eq('is_active', true)
       const { data, error } = await query
       if (error) throw error
@@ -97,10 +103,11 @@ export function usePackages(onlyActive = true) {
 
 export function useCreatePackage() {
   const qc = useQueryClient()
+  const { activeUnitId } = useUnitStore()
   return useMutation({
     mutationFn: async (data: { name: string; description?: string; sort_order?: number }) => {
       const supabase = createClient()
-      const { error } = await supabase.from('packages').insert(data)
+      const { error } = await supabase.from('packages').insert({ ...data, unit_id: activeUnitId! })
       if (error) throw error
     },
     onSuccess: () => {
@@ -147,14 +154,16 @@ export function useDeletePackage() {
 // VENUES
 // ─────────────────────────────────────────────────────────────
 export function useVenues(onlyActive = true) {
+  const { activeUnitId } = useUnitStore()
   return useQuery({
-    queryKey: ['venues', { onlyActive }],
+    queryKey: ['venues', { onlyActive }, activeUnitId],
     queryFn: async () => {
       const supabase = createClient()
       let query = supabase
         .from('venues')
         .select('*')
         .order('sort_order', { ascending: true })
+      if (activeUnitId) query = query.eq('unit_id', activeUnitId)
       if (onlyActive) query = query.eq('is_active', true)
       const { data, error } = await query
       if (error) throw error
@@ -166,10 +175,11 @@ export function useVenues(onlyActive = true) {
 
 export function useCreateVenue() {
   const qc = useQueryClient()
+  const { activeUnitId } = useUnitStore()
   return useMutation({
     mutationFn: async (data: { name: string; capacity?: number; sort_order?: number }) => {
       const supabase = createClient()
-      const { error } = await supabase.from('venues').insert(data)
+      const { error } = await supabase.from('venues').insert({ ...data, unit_id: activeUnitId! })
       if (error) throw error
     },
     onSuccess: () => {

@@ -4,16 +4,19 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import type { Sector } from '@/types/database.types'
+import { useUnitStore } from '@/stores/unit-store'
 
 // ─────────────────────────────────────────────────────────────
 // LISTAR SETORES
 // ─────────────────────────────────────────────────────────────
 export function useSectors(onlyActive = true) {
+  const { activeUnitId } = useUnitStore()
   return useQuery({
-    queryKey: ['sectors', onlyActive],
+    queryKey: ['sectors', onlyActive, activeUnitId],
     queryFn: async () => {
       const supabase = createClient()
       let q = supabase.from('sectors').select('*').order('sort_order')
+      if (activeUnitId) q = q.eq('unit_id', activeUnitId)
       if (onlyActive) q = q.eq('is_active', true)
       const { data, error } = await q
       if (error) throw error
@@ -28,13 +31,15 @@ export function useSectors(onlyActive = true) {
 // ─────────────────────────────────────────────────────────────
 export function useCreateSector() {
   const qc = useQueryClient()
+  const { activeUnitId } = useUnitStore()
   return useMutation({
     mutationFn: async (data: { name: string }) => {
       const supabase = createClient()
-      const { data: existing } = await supabase
-        .from('sectors').select('sort_order').order('sort_order', { ascending: false }).limit(1)
+      let q = supabase.from('sectors').select('sort_order').order('sort_order', { ascending: false }).limit(1)
+      if (activeUnitId) q = q.eq('unit_id', activeUnitId)
+      const { data: existing } = await q
       const nextOrder = ((existing?.[0]?.sort_order ?? 0) as number) + 1
-      const { error } = await supabase.from('sectors').insert({ ...data, sort_order: nextOrder })
+      const { error } = await supabase.from('sectors').insert({ ...data, sort_order: nextOrder, unit_id: activeUnitId! })
       if (error) throw error
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['sectors'] }); toast.success('Setor criado.') },

@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { format, startOfMonth, endOfMonth } from 'date-fns'
 import type { EventWithDetails, EventStatus, MaintenanceType } from '@/types/database.types'
+import { useUnitStore } from '@/stores/unit-store'
 
 // ─────────────────────────────────────────────────────────────
 // TIPOS
@@ -56,19 +57,22 @@ const CALENDAR_EVENT_SELECT = `
 // STATS DO MÊS ATUAL
 // ─────────────────────────────────────────────────────────────
 export function useDashboardStats() {
+  const { activeUnitId } = useUnitStore()
   return useQuery({
-    queryKey: ['dashboard', 'stats'],
+    queryKey: ['dashboard', 'stats', activeUnitId],
     queryFn: async () => {
       const supabase = createClient()
       const now = new Date()
       const monthStart = format(startOfMonth(now), 'yyyy-MM-dd')
       const monthEnd   = format(endOfMonth(now),   'yyyy-MM-dd')
 
-      const { data, error } = await supabase
+      let q = supabase
         .from('events')
         .select('status, date')
         .gte('date', monthStart)
         .lte('date', monthEnd)
+      if (activeUnitId) q = q.eq('unit_id', activeUnitId)
+      const { data, error } = await q
 
       if (error) throw error
 
@@ -87,13 +91,14 @@ export function useDashboardStats() {
 // PRÓXIMO EVENTO
 // ─────────────────────────────────────────────────────────────
 export function useNextEvent() {
+  const { activeUnitId } = useUnitStore()
   return useQuery({
-    queryKey: ['dashboard', 'next-event'],
+    queryKey: ['dashboard', 'next-event', activeUnitId],
     queryFn: async () => {
       const supabase = createClient()
       const today = format(new Date(), 'yyyy-MM-dd')
 
-      const { data, error } = await supabase
+      let q = supabase
         .from('events')
         .select(`
           *,
@@ -104,6 +109,8 @@ export function useNextEvent() {
         `)
         .gte('date', today)
         .not('status', 'in', '("finished","post_event")')
+      if (activeUnitId) q = q.eq('unit_id', activeUnitId)
+      const { data, error } = await q
         .order('date', { ascending: true })
         .order('start_time', { ascending: true })
         .limit(1)
@@ -120,16 +127,19 @@ export function useNextEvent() {
 // STATS DE MANUTENÇÃO
 // ─────────────────────────────────────────────────────────────
 export function useDashboardMaintenanceStats() {
+  const { activeUnitId } = useUnitStore()
   return useQuery({
-    queryKey: ['dashboard', 'maintenance-stats'],
+    queryKey: ['dashboard', 'maintenance-stats', activeUnitId],
     queryFn: async () => {
       const supabase = createClient()
       const today = format(new Date(), 'yyyy-MM-dd')
 
-      const { data, error } = await supabase
+      let q = supabase
         .from('maintenance_orders')
         .select('type, status, due_date')
         .not('status', 'in', '("completed","cancelled")')
+      if (activeUnitId) q = q.eq('unit_id', activeUnitId)
+      const { data, error } = await q
 
       if (error) throw error
 
@@ -150,17 +160,20 @@ export function useDashboardMaintenanceStats() {
 // EVENTOS DO CALENDÁRIO (range de datas)
 // ─────────────────────────────────────────────────────────────
 export function useCalendarEvents(dateFrom: string, dateTo: string) {
+  const { activeUnitId } = useUnitStore()
   return useQuery({
-    queryKey: ['dashboard', 'calendar', dateFrom, dateTo],
+    queryKey: ['dashboard', 'calendar', dateFrom, dateTo, activeUnitId],
     queryFn: async () => {
       const supabase = createClient()
-      const { data, error } = await supabase
+      let q = supabase
         .from('events')
         .select(CALENDAR_EVENT_SELECT)
         .gte('date', dateFrom)
         .lte('date', dateTo)
         .order('date', { ascending: true })
         .order('start_time', { ascending: true })
+      if (activeUnitId) q = q.eq('unit_id', activeUnitId)
+      const { data, error } = await q
 
       if (error) throw error
       return (data ?? []) as unknown as CalendarEvent[]
@@ -174,17 +187,20 @@ export function useCalendarEvents(dateFrom: string, dateTo: string) {
 // MANUTENÇÕES DO CALENDÁRIO (por due_date)
 // ─────────────────────────────────────────────────────────────
 export function useCalendarMaintenance(dateFrom: string, dateTo: string, enabled: boolean) {
+  const { activeUnitId } = useUnitStore()
   return useQuery({
-    queryKey: ['dashboard', 'calendar-maintenance', dateFrom, dateTo],
+    queryKey: ['dashboard', 'calendar-maintenance', dateFrom, dateTo, activeUnitId],
     queryFn: async () => {
       const supabase = createClient()
-      const { data, error } = await supabase
+      let q = supabase
         .from('maintenance_orders')
         .select('id, title, type, status, due_date, sector:sectors(id, name)')
         .gte('due_date', `${dateFrom}T00:00:00`)
         .lte('due_date', `${dateTo}T23:59:59`)
         .not('status', 'in', '("completed","cancelled")')
         .order('due_date', { ascending: true })
+      if (activeUnitId) q = q.eq('unit_id', activeUnitId)
+      const { data, error } = await q
 
       if (error) throw error
       return (data ?? []).map((o) => ({
