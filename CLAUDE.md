@@ -364,7 +364,11 @@ docker compose -f docker-compose.prod.yml logs -f app
 | `/admin/unidades` | `(auth)/admin/unidades/page.tsx` | ✅ funcional (Fase 2.5) |
 | `/admin/unidades/nova` | `(auth)/admin/unidades/nova/page.tsx` | ✅ funcional (Fase 2.5) |
 | `/admin/unidades/[id]` | `(auth)/admin/unidades/[id]/page.tsx` | ✅ funcional (Fase 2.5) |
-| `/relatorios` | `(auth)/relatorios/page.tsx` | 🚧 placeholder |
+| `/equipamentos` | `(auth)/equipamentos/page.tsx` | ✅ funcional (Fase 3 Bloco 2) |
+| `/equipamentos/novo` | `(auth)/equipamentos/novo/page.tsx` | ✅ funcional (Fase 3 Bloco 2) |
+| `/equipamentos/[id]` | `(auth)/equipamentos/[id]/page.tsx` | ✅ funcional (Fase 3 Bloco 2) |
+| `/equipamentos/[id]/editar` | `(auth)/equipamentos/[id]/editar/page.tsx` | ✅ funcional (Fase 3 Bloco 2) |
+| `/relatorios` | `(auth)/relatorios/page.tsx` | ✅ funcional (Fase 3 Bloco 1) |
 | `/admin/logs` | `(auth)/admin/logs/page.tsx` | 🚧 placeholder |
 | `/login` | `(public)/login/page.tsx` | ✅ funcional |
 | `/recuperar-senha` | `(public)/recuperar-senha/page.tsx` | ✅ funcional |
@@ -481,6 +485,29 @@ docker compose -f docker-compose.prod.yml logs -f app
 - [x] `src/app/(auth)/manutencao/[id]/page.tsx`: substituído placeholder por `<PhotoSection orderId photos canEdit />`
 - [x] `src/app/(auth)/perfil/page.tsx`: avatar upload funcional — compressão (max 600px), upload para `user-avatars/{userId}/avatar.jpg`, signed URL 1 ano salva em `users.avatar_url`
 
+### Fase 3 — Bloco 1: Relatórios e Dashboards Analíticos (2026-03-27)
+- [x] `supabase/migrations/011_fase3_reports.sql`: 9 índices de performance + 13 RPC functions (SECURITY INVOKER + GRANT EXECUTE TO authenticated) — report_events_summary/by_month/by_type/by_venue, report_maintenance_summary/by_month/by_sector, report_checklists_summary/by_month/by_category, report_staff_by_events/by_checklists/summary
+- [x] `recharts`, `xlsx`, `jspdf`, `html2canvas` instalados
+- [x] `src/types/database.types.ts`: 13 tipos de retorno RPC + ReportFilters, todos os tipos de summary/detail
+- [x] `src/hooks/use-reports.ts`: useEventReport, useMaintenanceReport, useChecklistReport, useStaffReport — todos leem activeUnitId do Zustand
+- [x] `src/lib/utils/export.ts`: exportToExcel (SheetJS, dynamic import) + exportToPDF (jsPDF + html2canvas, A4 landscape, brand header, paginação)
+- [x] `src/components/features/reports/`: report-filters.tsx, report-stats-card.tsx, bar-chart-card.tsx, donut-chart-card.tsx, horizontal-bar-chart-card.tsx, export-button.tsx, events-tab.tsx, maintenance-tab.tsx, checklists-tab.tsx, staff-tab.tsx
+- [x] `src/app/(auth)/relatorios/page.tsx`: 4 abas dinâmicas (next/dynamic + ssr:false), ReportFiltersBar, filtros de período com presets
+
+### Fase 3 — Bloco 2: Cadastro de Equipamentos/Ativos (2026-03-27)
+- [x] `supabase/migrations/012_fase3_equipment.sql`: tabela `equipment` (status CHECK, garantia, foto, serial_number, FK unit_id), RLS por unidade, bucket privado `equipment-photos` (5MB, imagens), ALTER maintenance_orders: DROP equipment TEXT, ADD equipment_id UUID FK nullable
+- [x] `src/types/database.types.ts`: EquipmentStatus, Equipment, EquipmentWithHistory; MaintenanceWithDetails/ForList com `equipment: Pick<Equipment,'id'|'name'|'category'|'location'> | null`
+- [x] `src/hooks/use-equipment.ts`: useEquipment (filtros search/category/status/onlyActive), useEquipmentItem, useEquipmentMaintenanceHistory, useCreateEquipment, useUpdateEquipment, useChangeEquipmentStatus, useEquipmentCategories
+- [x] `src/components/features/equipment/equipment-card.tsx`: card com foto signed URL, badges status/garantia/OS abertas + EquipmentCardSkeleton
+- [x] `src/components/features/equipment/equipment-form.tsx`: formulário com upload de foto (compressImage exportada de photo-upload.tsx), categorias select, status, campos técnicos
+- [x] `src/app/(auth)/equipamentos/page.tsx`: lista com busca, filtro categoria, filtro status
+- [x] `src/app/(auth)/equipamentos/novo/page.tsx`: formulário de criação
+- [x] `src/app/(auth)/equipamentos/[id]/page.tsx`: detalhe com histórico de manutenções linkado
+- [x] `src/app/(auth)/equipamentos/[id]/editar/page.tsx`: formulário de edição
+- [x] `src/app/(auth)/manutencao/[id]/page.tsx`: campo equipment exibe nome com link `/equipamentos/[id]`
+- [x] `src/components/shared/photo-upload.tsx`: `compressImage` exportada como função pública
+- [x] Nav e ROUTES: item Equipamentos (Package icon, module:'maintenance'), ROUTES.equipment='/equipamentos'
+
 ### Fase 0 — Bloco 9: Docker Funcional + Banco Inicializado (2026-03-27)
 - [x] `.env` criado com todos os valores reais (JWTs gerados via Node.js HS256)
 - [x] `docker-compose.yml` corrigido: volumes nomeados, kong sem eval/echo, realtime APP_NAME + RLIMIT_NOFILE
@@ -533,7 +560,12 @@ Role:  super_admin (32 permissões)
 - [x] Fase 2 Bloco 2: Upload de Fotos (before/after + lightbox + avatar)
 - [x] Fase 2 Bloco 3: E-mails com Resend (4 templates + cron + emergency route)
 - [x] Fase 2.5: Multi-Unidade (schema N:N, RLS, UnitSwitcher, filtros, CRUD admin)
-- [ ] Relatórios e exportação
+- [x] Fase 3 Bloco 1: Relatórios e Dashboards Analíticos (13 RPC functions, 4 abas, Excel + PDF)
+- [x] Fase 3 Bloco 2: Cadastro de Equipamentos/Ativos (CRUD completo + foto + FK em OS)
+- [ ] Fase 3 Bloco 3: Configurações Avançadas
+- [ ] Fase 3 Bloco 4: Logs de Auditoria
+- [ ] Fase 3 Bloco 5: Otimizações de Performance
+- [ ] Fase 3 Bloco 6: Offline Mode
 
 > **NOTA:** Após subir o Supabase com `docker compose up -d`, regenerar os tipos com:
 > ```bash
@@ -594,3 +626,9 @@ Role:  super_admin (32 permissões)
 | UNIQUE(name, unit_id) nas config tables | Config tables (event_types, packages, venues, checklist_categories, sectors) tinham UNIQUE(name). Multi-unidade exige UNIQUE(name, unit_id) para permitir mesmo nome em unidades diferentes. |
 | `useUnitUsers` separado de `useUserUnits` | `useUserUnits(userId)` retorna unidades de um usuário (admin user). `useUnitUsers(unitId)` retorna usuários de uma unidade (admin unit). Semânticas opostas, queries distintas. |
 | queryKey inclui `activeUnitId` em todos os hooks | React Query revalida automaticamente ao trocar de unidade sem precisar de `invalidateQueries` manual. UnitSwitcher ainda invalida explicitamente para garantia dupla. |
+| RPC reports com SECURITY INVOKER + GRANT EXECUTE | RLS das tabelas se aplica automaticamente (sem bypass). super_admin vê tudo via `is_global_viewer()` na policy. `p_unit_id = null` retorna todos os dados naturalmente. |
+| `equipment TEXT` → `equipment_id UUID FK` na migration 012 | Campo freetext não tinha valor histórico importante. DROP + ADD com nullable FK é mais limpo que manter ambos. Formulário de manutenção agora usa Select dos equipamentos ativos. |
+| `logAudit` removido dos hooks client-side de equipamento | `logAudit` usa `createAdminClient` (server-only). Hooks de equipamento são client-side. Auditoria de equipamentos pode ser adicionada futuramente via API route. |
+| `compressImage` exportada de photo-upload.tsx | Função era private. Exportada para reutilização em equipment-form.tsx sem duplicação de código. |
+| `/* eslint-disable react-hooks/set-state-in-effect */` em useEffect de inicialização de form | Padrão legítimo: carregar dados async → preencher formulário. A regra é muito estrita para este caso de uso. Envolvido em disable/enable para escopo mínimo. |
+| `Button asChild` não suportado pelo @base-ui/react/button | Button usa `@base-ui/react/button` que não processa `asChild`. Padrão: `<Link className={cn(buttonVariants({...}))}>`. Mesmo fix aplicado em DropdownMenuTrigger no Bloco 1. |
