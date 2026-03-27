@@ -369,7 +369,7 @@ docker compose -f docker-compose.prod.yml logs -f app
 | `/equipamentos/[id]` | `(auth)/equipamentos/[id]/page.tsx` | ✅ funcional (Fase 3 Bloco 2) |
 | `/equipamentos/[id]/editar` | `(auth)/equipamentos/[id]/editar/page.tsx` | ✅ funcional (Fase 3 Bloco 2) |
 | `/relatorios` | `(auth)/relatorios/page.tsx` | ✅ funcional (Fase 3 Bloco 1) |
-| `/admin/logs` | `(auth)/admin/logs/page.tsx` | 🚧 placeholder |
+| `/admin/logs` | `(auth)/admin/logs/page.tsx` | ✅ funcional (Fase 3 Bloco 4) |
 | `/login` | `(public)/login/page.tsx` | ✅ funcional |
 | `/recuperar-senha` | `(public)/recuperar-senha/page.tsx` | ✅ funcional |
 
@@ -560,6 +560,15 @@ Role:  super_admin (32 permissões)
 
 ---
 
+### Fase 3 — Bloco 4: Logs de Auditoria (2026-03-27)
+- [x] `src/types/database.types.ts`: AuditLogWithUser, AuditLogFilters adicionados
+- [x] `src/hooks/use-audit-logs.ts`: useAuditLogs — useInfiniteQuery com cursor-based pagination (created_at < cursor, PAGE_SIZE=100), filtros por período/usuário/módulo/ação, filtro unit_id via Zustand
+- [x] `src/components/features/audit/audit-diff.tsx`: diff visual old_data vs new_data — verde (adicionado), vermelho (removido), amarelo com "antes → depois" (modificado); modo especial para create/delete sem diff
+- [x] `src/components/features/audit/audit-filters.tsx`: barra com 5 filtros (De/Até, Usuário via useUsers, Módulo, Ação) + botão "Limpar filtros" condicional
+- [x] `src/components/features/audit/audit-log-table.tsx`: tabela com rows expansíveis (chevron), skeleton de loading, badge de ação colorido, coluna IP hidden em mobile; rodapé com contagem + "Carregar mais" (load more)
+- [x] `src/app/(auth)/admin/logs/page.tsx`: substitui placeholder; check de permissão audit_logs:view com tela de acesso negado; achata páginas do infiniteQuery em lista única
+- [x] Fix colateral: `src/lib/email.ts` — new Resend() lazy (getResend()) para não crashar build sem RESEND_API_KEY
+
 ## PROXIMOS PASSOS — FASE 1
 
 - [x] Bloco 1: Módulo de Eventos (CRUD completo + config tables)
@@ -573,7 +582,7 @@ Role:  super_admin (32 permissões)
 - [x] Fase 3 Bloco 1: Relatórios e Dashboards Analíticos (13 RPC functions, 4 abas, Excel + PDF)
 - [x] Fase 3 Bloco 2: Cadastro de Equipamentos/Ativos (CRUD completo + foto + FK em OS)
 - [x] Fase 3 Bloco 3: Configurações Avançadas (unit_settings JSONB, equipment_categories, 3 novas abas)
-- [ ] Fase 3 Bloco 4: Logs de Auditoria
+- [x] Fase 3 Bloco 4: Logs de Auditoria (useInfiniteQuery cursor-based, diff visual, filtros, permissão)
 - [ ] Fase 3 Bloco 5: Otimizações de Performance
 - [ ] Fase 3 Bloco 6: Offline Mode
 
