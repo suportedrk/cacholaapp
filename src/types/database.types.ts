@@ -12,10 +12,14 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 export interface Database {
   public: {
     Tables: {
+      // Multi-unidade (Fase 2.5)
+      units:                { Row: Unit;                Insert: Partial<Unit>;           Update: Partial<Unit>;           Relationships: [] }
+      user_units:           { Row: UserUnit;            Insert: Partial<UserUnit>;       Update: Partial<UserUnit>;       Relationships: [] }
+      // Usuários
       users:                { Row: User;                Insert: UserInsert;              Update: UserUpdate;              Relationships: [] }
       user_permissions:     { Row: UserPermission;      Insert: UserPermissionInsert;    Update: UserPermissionUpdate;    Relationships: [] }
       role_default_perms:   { Row: RoleDefaultPerm;     Insert: Partial<RoleDefaultPerm>; Update: Partial<RoleDefaultPerm>; Relationships: [] }
-      // Configurações (Fase 1)
+      // Configurações (por unidade — Fase 2.5)
       event_types:          { Row: EventType;           Insert: Partial<EventType>;      Update: Partial<EventType>;      Relationships: [] }
       packages:             { Row: Package;             Insert: Partial<Package>;        Update: Partial<Package>;        Relationships: [] }
       venues:               { Row: Venue;               Insert: Partial<Venue>;          Update: Partial<Venue>;          Relationships: [] }
@@ -76,11 +80,40 @@ export type MaintenanceStatus = 'open' | 'in_progress' | 'waiting_parts' | 'comp
 export type PhotoType = 'before' | 'after' | 'during'
 
 // ─────────────────────────────────────────────────────────────
-// TABELAS DE CONFIGURAÇÃO (Fase 1)
+// MULTI-UNIDADE (Fase 2.5)
+// ─────────────────────────────────────────────────────────────
+export type Unit = {
+  id: string
+  name: string
+  slug: string
+  address: string | null
+  phone: string | null
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export type UserUnit = {
+  id: string
+  user_id: string
+  unit_id: string
+  role: UserRole
+  is_default: boolean
+  created_at: string
+}
+
+// UserUnit com dados da unidade expandida (para dropdowns e listas)
+export type UserUnitWithUnit = UserUnit & {
+  unit: Pick<Unit, 'id' | 'name' | 'slug' | 'is_active'>
+}
+
+// ─────────────────────────────────────────────────────────────
+// TABELAS DE CONFIGURAÇÃO (por unidade — Fase 2.5)
 // ─────────────────────────────────────────────────────────────
 export type EventType = {
   id: string
   name: string
+  unit_id: string
   is_active: boolean
   sort_order: number
   created_at: string
@@ -90,6 +123,7 @@ export type Package = {
   id: string
   name: string
   description: string | null
+  unit_id: string
   is_active: boolean
   sort_order: number
   created_at: string
@@ -99,6 +133,7 @@ export type Venue = {
   id: string
   name: string
   capacity: number | null
+  unit_id: string
   is_active: boolean
   sort_order: number
   created_at: string
@@ -107,6 +142,7 @@ export type Venue = {
 export type ChecklistCategory = {
   id: string
   name: string
+  unit_id: string
   is_active: boolean
   sort_order: number
   created_at: string
@@ -118,6 +154,7 @@ export type ChecklistCategory = {
 export type Sector = {
   id: string
   name: string
+  unit_id: string
   is_active: boolean
   sort_order: number
   created_at: string
@@ -162,6 +199,7 @@ export type UserUpdate = Omit<Partial<User>, 'preferences'> & { preferences?: Js
 export type UserPermission = {
   id: string
   user_id: string
+  unit_id: string | null   // null = permissão global; string = permissão por unidade
   module: string
   action: string
   granted: boolean
@@ -183,6 +221,7 @@ export type RoleDefaultPerm = {
 // ─────────────────────────────────────────────────────────────
 export type Event = {
   id: string
+  unit_id: string
   ploomes_deal_id: string | null
   title: string
   date: string           // DATE → 'YYYY-MM-DD'
@@ -203,6 +242,7 @@ export type Event = {
 }
 
 export type EventInsert = {
+  unit_id?: string   // injetado pelo hook a partir do activeUnitId
   title: string
   date: string
   start_time: string
@@ -234,6 +274,7 @@ export type EventStaff = {
 // ─────────────────────────────────────────────────────────────
 export type ChecklistTemplate = {
   id: string
+  unit_id: string
   title: string
   category: string       // TEXT legado
   category_id: string | null  // FK → checklist_categories (Fase 1, migration 007)
@@ -252,6 +293,7 @@ export type TemplateItem = {
 
 export type Checklist = {
   id: string
+  unit_id: string
   title: string
   template_id: string | null
   event_id: string | null
@@ -280,6 +322,7 @@ export type ChecklistItem = {
 // ─────────────────────────────────────────────────────────────
 export type MaintenanceOrder = {
   id: string
+  unit_id: string
   title: string
   description: string | null
   type: MaintenanceType
@@ -322,6 +365,7 @@ export type AppNotification = {
 export type AuditLog = {
   id: string
   user_id: string | null
+  unit_id: string | null   // nullable — logs globais não têm unidade
   action: string
   module: string
   entity_id: string | null
