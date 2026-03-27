@@ -199,11 +199,20 @@ docker compose down -v
 # Reiniciar um container específico
 docker compose restart supabase-auth
 
-# Executar migration SQL manual
-docker compose exec supabase-db psql -U postgres -d postgres -f /migrations/001_initial_schema.sql
+# Executar migrations manualmente (SEMPRE via bash -c no Windows)
+docker exec cacholaos-db bash -c "psql -U postgres -d postgres -f /docker-entrypoint-migrations/001_initial_schema.sql"
+docker exec cacholaos-db bash -c "psql -U postgres -d postgres -f /docker-entrypoint-migrations/002_rls_policies.sql"
+docker exec cacholaos-db bash -c "psql -U postgres -d postgres -f /docker-entrypoint-migrations/003_functions.sql"
+docker exec cacholaos-db bash -c "psql -U postgres -d postgres -f /docker-entrypoint-migrations/004_seed.sql"
 
-# Aplicar seed
-docker compose exec supabase-db psql -U postgres -d postgres -f /migrations/seed.sql
+# ⚠️ Após primeiro `docker compose up`, também rodar (uma vez):
+# docker exec cacholaos-db psql -U postgres -c "ALTER ROLE supabase_auth_admin WITH PASSWORD 'POSTGRES_PASSWORD';"
+# docker exec cacholaos-db psql -U postgres -c "ALTER ROLE authenticator WITH PASSWORD 'POSTGRES_PASSWORD';"
+# docker exec cacholaos-db psql -U postgres -c "ALTER ROLE supabase_storage_admin WITH PASSWORD 'POSTGRES_PASSWORD';"
+# docker exec cacholaos-db psql -U postgres -c "ALTER ROLE supabase_replication_admin WITH PASSWORD 'POSTGRES_PASSWORD';"
+# docker exec cacholaos-db psql -U postgres -c "CREATE DATABASE _analytics;"
+# docker exec cacholaos-db psql -U postgres -d _analytics -c "GRANT ALL ON DATABASE _analytics TO supabase_admin; CREATE SCHEMA IF NOT EXISTS _analytics; GRANT ALL ON SCHEMA _analytics TO supabase_admin;"
+# docker exec cacholaos-db psql -U postgres -c "CREATE SCHEMA IF NOT EXISTS _realtime; GRANT ALL ON SCHEMA _realtime TO supabase_admin, postgres;"
 
 # Acessar PostgreSQL direto
 docker compose exec supabase-db psql -U postgres -d postgres
@@ -319,6 +328,46 @@ docker compose -f docker-compose.prod.yml logs -f app
 - [x] `.github/workflows/ci.yml`: TypeScript check + ESLint em push/PR
 - [x] Repositório: `suportedrk/cacholaapp`
 
+### Fase 0 — Bloco 9: Docker Funcional + Banco Inicializado (2026-03-27)
+- [x] `.env` criado com todos os valores reais (JWTs gerados via Node.js HS256)
+- [x] `docker-compose.yml` corrigido: volumes nomeados, kong sem eval/echo, realtime APP_NAME + RLIMIT_NOFILE
+- [x] `docker/kong.yml`: JWTs hardcoded (sem substituição em runtime — evita corrupção YAML)
+- [x] `docker/gcloud.json`: stub com RSA key válida para analytics Logflare
+- [x] `_analytics` database criado manualmente no PostgreSQL
+- [x] `_realtime` schema criado manualmente antes do startup do realtime
+- [x] Senhas dos roles Supabase definidas via `ALTER ROLE ... WITH PASSWORD`
+- [x] imgproxy desabilitado (segfault exit 139 no WSL2/Windows) — ENABLE_IMAGE_TRANSFORMATION=false
+- [x] Migrations executadas: 001→004 (14 tabelas, RLS, functions, seed)
+- [x] Super admin criado: `admin@cacholaos.com.br` / `Admin2026cacholaos` / role: super_admin / 32 permissões
+
+---
+
+## SERVIÇOS E PORTAS (DEV LOCAL)
+
+| Serviço | URL | Status |
+|---------|-----|--------|
+| App Next.js | http://localhost:3000 | ✅ |
+| Supabase API (Kong) | http://localhost:8000 | ✅ healthy |
+| Supabase Studio | http://localhost:3001 | ✅ (healthcheck falso-negativo) |
+| Analytics (Logflare) | http://localhost:4000 | ✅ |
+| PostgreSQL | localhost:5432 | ✅ healthy |
+
+> **Studio unhealthy**: Next.js 14 no Studio escuta no IP de rede, não em 127.0.0.1.
+> O healthcheck interno falha, mas o serviço funciona em http://localhost:3001.
+> Não é um problema real — é um falso-negativo do Docker healthcheck.
+
+---
+
+## CREDENCIAIS SUPER ADMIN (DEV LOCAL APENAS)
+
+```
+Email: admin@cacholaos.com.br
+Senha: Admin2026cacholaos
+Role:  super_admin (32 permissões)
+```
+
+> ⚠️ NUNCA usar estas credenciais em produção. Criar novo super_admin em prod.
+
 ---
 
 ## PROXIMOS PASSOS — FASE 1
@@ -348,3 +397,13 @@ docker compose -f docker-compose.prod.yml logs -f app
 | Supabase self-hosted dev e prod | Decisão do Bruno: sem Supabase Cloud. Total controle de dados. Dev === Prod em termos de infra. |
 | `type` ao invés de `interface` em database.types.ts | TypeScript interfaces NÃO satisfazem `Record<string, unknown>` em conditional types (Supabase GenericTable constraint). Type aliases SIM. Regra: sempre usar `type = {}` para tipos de entidades do banco. |
 | `AppNotification` ao invés de `Notification` | `Notification` conflita com a interface DOM global do browser. Renomeada para `AppNotification`. |
+| Volume nomeado para PostgreSQL (não bind mount) | Bind mounts no Windows criam arquivos ocultos (`.s.PGSQL.5432.lock`, etc.) que impedem a inicialização do PostgreSQL. Named volumes resolvem isso. |
+| NÃO montar migrations em `/docker-entrypoint-initdb.d` | A imagem `supabase/postgres` tem seus próprios init scripts nesse path (cria schema `auth`, roles, etc). Sobrescrever quebra tudo. Usar `/docker-entrypoint-migrations` e rodar manualmente. |
+| JWTs hardcoded em `docker/kong.yml` (dev) | Kong 2.8.1 não faz substituição de env vars nativamente. A trick `eval "echo \"$(cat ...)\"` corrompe `_format_version: "1.1"` (YAML string vira número). Solução: valores literais no arquivo. |
+| Senhas dos roles Supabase via `ALTER ROLE` | A imagem cria os roles `supabase_auth_admin`, `authenticator`, etc. SEM senha. Necessário rodar `ALTER ROLE ... WITH PASSWORD '...'` após o primeiro startup. |
+| `_analytics` database criado manualmente | A imagem `supabase/postgres:15.8.1.084` NÃO cria o database `_analytics` automaticamente. Logflare exige esse database separado (não schema). Criar uma vez: `CREATE DATABASE _analytics`. |
+| `_realtime` schema criado manualmente | Realtime v2.34.47 usa `DB_AFTER_CONNECT_QUERY: SET search_path TO _realtime`. Se o schema não existe ao conectar, o Ecto migrator falha com `invalid_schema_name`. Criar antes do startup. |
+| `docker/gcloud.json` stub com RSA real | Logflare inicializa Goth (Google Auth) mesmo em modo postgres. `File.read!("gcloud.json")` é chamado em `runtime.exs:218`. Precisava de um JSON com RSA PKCS8 sintaticamente válido (gerado via `crypto.generateKeyPairSync`). Auth GCP falha graciosamente (Goth retry warnings), mas não crasha. |
+| imgproxy desabilitado em dev Windows | `darthsim/imgproxy:v3.8.0` causa segfault (exit code 139) no WSL2/Windows. Provável incompatibilidade libvips/CPU. Desabilitado via `ENABLE_IMAGE_TRANSFORMATION: "false"`. Reabilitar em prod Linux nativo. |
+| `RLIMIT_NOFILE` obrigatório no realtime | `run.sh` do realtime v2.34.47 usa `set -u` (unbound vars = error) e referencia `$RLIMIT_NOFILE`. Sem essa var, o script aborta imediatamente. Valor: `4096`. |
+| `APP_NAME` obrigatório no realtime | `runtime.exs:78` do realtime exige `APP_NAME`. Sem ela, boot falha com `APP_NAME not available`. Valor: `realtime`. |

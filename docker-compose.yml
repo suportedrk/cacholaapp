@@ -31,8 +31,10 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXP: 3600
     volumes:
-      - ./docker/volumes/db:/var/lib/postgresql/data
-      - ./supabase/migrations:/docker-entrypoint-initdb.d:ro
+      - cacholaos-db-data:/var/lib/postgresql/data
+      # NOTA: NÃO montar migrations em /docker-entrypoint-initdb.d (sobrescreve os init scripts internos da imagem)
+      # As migrations são executadas manualmente após o startup: docker compose exec supabase-db psql -U supabase_admin ...
+      - ./supabase/migrations:/docker-entrypoint-migrations:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
       interval: 10s
@@ -127,10 +129,12 @@ services:
       API_JWT_SECRET: ${JWT_SECRET}
       FLY_ALLOC_ID: fly123
       FLY_APP_NAME: realtime
+      APP_NAME: realtime
       SECRET_KEY_BASE: UpNVntn3cDxHJpq99YMc1T1AQgQpc8kfYTuRgBiYa15BLrx8etQoXz3bhZAKlR38
       ERL_AFLAGS: -proto_dist inet_tcp
       ENABLE_TAILSCALE: "false"
       DNS_NODES: "''"
+      RLIMIT_NOFILE: "4096"
     networks:
       - cacholaos-net
 
@@ -158,29 +162,19 @@ services:
       TENANT_ID: stub
       REGION: local
       GLOBAL_S3_BUCKET: stub
-      ENABLE_IMAGE_TRANSFORMATION: "true"
-      IMGPROXY_URL: http://supabase-imgproxy:5001
+      ENABLE_IMAGE_TRANSFORMATION: "false"
     volumes:
-      - ./docker/volumes/storage:/var/lib/storage
+      - cacholaos-storage-data:/var/lib/storage
     networks:
       - cacholaos-net
 
   # ──────────────────────────────────────────────────────────
-  # Imgproxy — Transformação de imagens
+  # Imgproxy — DESABILITADO (segfault no Windows/WSL2 com v3.8.0)
+  # ENABLE_IMAGE_TRANSFORMATION=false no supabase-storage
   # ──────────────────────────────────────────────────────────
-  supabase-imgproxy:
-    image: darthsim/imgproxy:v3.8.0
-    container_name: cacholaos-imgproxy
-    restart: unless-stopped
-    environment:
-      IMGPROXY_BIND: ":5001"
-      IMGPROXY_LOCAL_FILESYSTEM_ROOT: /
-      IMGPROXY_USE_ETAG: "true"
-      IMGPROXY_ENABLE_WEBP_DETECTION: "true"
-    volumes:
-      - ./docker/volumes/storage:/var/lib/storage
-    networks:
-      - cacholaos-net
+  # supabase-imgproxy:
+  #   image: darthsim/imgproxy:v3.8.0
+  #   (desabilitado — reabilitar em produção Linux nativo)
 
   # ──────────────────────────────────────────────────────────
   # Kong — API Gateway (ponto de entrada único para Supabase)
@@ -195,15 +189,16 @@ services:
     ports:
       - "8000:8000"    # HTTP — API Supabase
       - "8443:8443"    # HTTPS
+    # JWTs hardcoded em docker/kong.yml (local dev) — sem necessidade de substituição
     environment:
       KONG_DATABASE: "off"
-      KONG_DECLARATIVE_CONFIG: /var/lib/kong/kong.yml
+      KONG_DECLARATIVE_CONFIG: /home/kong/kong.yml
       KONG_DNS_ORDER: LAST,A,CNAME
       KONG_PLUGINS: request-transformer,cors,key-auth,acl,basic-auth
       KONG_NGINX_PROXY_PROXY_BUFFER_SIZE: 160k
       KONG_NGINX_PROXY_PROXY_BUFFERS: 64 160k
     volumes:
-      - ./docker/kong.yml:/var/lib/kong/kong.yml:ro
+      - ./docker/kong.yml:/home/kong/kong.yml:ro
     networks:
       - cacholaos-net
 
@@ -241,7 +236,7 @@ services:
   # pg-meta — Metadata do PostgreSQL para o Studio
   # ──────────────────────────────────────────────────────────
   supabase-meta:
-    image: supabase/postgres-meta:v0.87.3
+    image: supabase/postgres-meta:v0.86.0
     container_name: cacholaos-meta
     restart: unless-stopped
     depends_on:
@@ -282,6 +277,8 @@ services:
       LOGFLARE_SUPABASE_MODE: "true"
       LOGFLARE_MIN_CLUSTER_SIZE: 1
       RELEASE_COOKIE: cookie
+    volumes:
+      - ./docker/gcloud.json:/opt/app/rel/logflare/bin/gcloud.json:ro
     networks:
       - cacholaos-net
 
@@ -322,3 +319,12 @@ services:
 networks:
   cacholaos-net:
     driver: bridge
+
+# ──────────────────────────────────────────────────────────
+# Volumes nomeados (evitam problemas de bind mount no Windows)
+# ──────────────────────────────────────────────────────────
+volumes:
+  cacholaos-db-data:
+    name: cacholaos-db-data
+  cacholaos-storage-data:
+    name: cacholaos-storage-data
