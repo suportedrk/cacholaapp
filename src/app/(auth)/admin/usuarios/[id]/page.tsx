@@ -3,14 +3,16 @@
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Loader2, Save, UserX, UserCheck } from 'lucide-react'
+import { ArrowLeft, Loader2, Save, UserX, UserCheck, Building2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { StatusBadge } from '@/components/shared/status-badge'
 import { UserAvatar } from '@/components/shared/user-avatar'
 import { useUser, useUpdateUser, useDeactivateUser, useReactivateUser } from '@/hooks/use-users'
+import { useUserUnits, useRemoveUserFromUnit, useUpdateUserUnitRole } from '@/hooks/use-units'
 import { ROLE_LABELS, ROUTES } from '@/lib/constants'
+import type { UserRole } from '@/types/database.types'
 
 export default function EditarUsuarioPage() {
   const params = useParams()
@@ -21,6 +23,9 @@ export default function EditarUsuarioPage() {
   const updateUser = useUpdateUser()
   const deactivateUser = useDeactivateUser()
   const reactivateUser = useReactivateUser()
+  const { data: userUnits } = useUserUnits(id)
+  const { mutate: removeFromUnit } = useRemoveUserFromUnit()
+  const { mutate: updateRole } = useUpdateUserUnitRole()
 
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
@@ -159,6 +164,64 @@ export default function EditarUsuarioPage() {
             </Button>
           </div>
         </form>
+      </div>
+      {/* Seção de Unidades */}
+      <div className="bg-card rounded-2xl border border-border p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="font-semibold text-foreground flex items-center gap-2">
+            <Building2 className="w-4 h-4" />
+            Unidades Vinculadas
+          </h2>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => router.push(ROUTES.units)}
+          >
+            Gerenciar unidades →
+          </Button>
+        </div>
+
+        {userUnits && userUnits.length === 0 && (
+          <p className="text-sm text-muted-foreground">Nenhuma unidade vinculada.</p>
+        )}
+
+        {userUnits && userUnits.length > 0 && (
+          <div className="space-y-2">
+            {userUnits.map((uu) => {
+              const unit = uu.unit as { id: string; name: string; slug: string; is_active: boolean } | undefined
+              return (
+                <div key={uu.id} className="flex items-center gap-3 p-3 rounded-lg border border-border bg-background">
+                  <Building2 className="w-4 h-4 text-muted-foreground shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm truncate">{unit?.name ?? 'Unidade'}</p>
+                    <p className="text-xs text-muted-foreground font-mono">{unit?.slug}</p>
+                  </div>
+                  {uu.is_default && (
+                    <span className="text-xs text-primary font-medium shrink-0">Padrão</span>
+                  )}
+                  <select
+                    value={uu.role}
+                    onChange={(e) => updateRole({ id: uu.id, userId: uu.user_id, role: e.target.value as UserRole })}
+                    className="h-8 rounded-md border border-input bg-background px-2 py-1 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  >
+                    {Object.entries(ROLE_LABELS).map(([r, label]) => (
+                      <option key={r} value={r}>{label}</option>
+                    ))}
+                  </select>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
+                    onClick={() => removeFromUnit({ id: uu.id, userId: uu.user_id })}
+                  >
+                    Remover
+                  </Button>
+                </div>
+              )
+            })}
+          </div>
+        )}
       </div>
     </div>
   )

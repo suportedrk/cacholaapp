@@ -89,6 +89,29 @@ export function useUserUnits(userId: string | undefined) {
 }
 
 // ─────────────────────────────────────────────────────────────
+// USUÁRIOS DE UMA UNIDADE ESPECÍFICA (para admin de unidade)
+// ─────────────────────────────────────────────────────────────
+export function useUnitUsers(unitId: string | undefined) {
+  return useQuery({
+    queryKey: ['user-units', 'unit', unitId],
+    queryFn: async () => {
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from('user_units')
+        .select(`
+          *,
+          user:users(id, name, email, avatar_url, is_active)
+        `)
+        .eq('unit_id', unitId!)
+        .order('created_at', { ascending: true })
+      if (error) throw error
+      return (data ?? []) as unknown as (UserUnit & { user: { id: string; name: string; email: string; avatar_url: string | null; is_active: boolean } })[]
+    },
+    enabled: !!unitId,
+  })
+}
+
+// ─────────────────────────────────────────────────────────────
 // CRIAR UNIDADE
 // ─────────────────────────────────────────────────────────────
 export function useCreateUnit() {
