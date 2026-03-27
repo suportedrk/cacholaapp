@@ -28,11 +28,12 @@ export function Navbar({ onMenuClick }: NavbarProps) {
   const router = useRouter()
   const { profile, signOut } = useAuth()
   const { isOnline } = useOnlineStatus()
+  // All @base-ui DropdownMenuTrigger components must be deferred until after
+  // hydration — MenuPrimitive.Trigger is not SSR-safe and causes tree mismatches.
   const [clientReady, setClientReady] = useState(false)
   const initials = profile ? getInitials(profile.name) : 'U'
   const avatarColor = profile ? getAvatarColor(profile.name) : ''
 
-  // Defer client-only UI (offline badge + NotificationBell) until after hydration
   useEffect(() => { setClientReady(true) }, [])
 
   return (
@@ -66,9 +67,8 @@ export function Navbar({ onMenuClick }: NavbarProps) {
       {/* Espaço flex no mobile */}
       <div className="flex-1 lg:hidden" />
 
-      {/* Ações direita */}
+      {/* Ações direita — todos diferidos até pós-hidratação */}
       <div className="flex items-center gap-1">
-        {/* Offline badge e NotificationBell apenas no cliente (evita hydration mismatch) */}
         {clientReady && !isOnline && (
           <span
             className="flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800"
@@ -78,60 +78,67 @@ export function Navbar({ onMenuClick }: NavbarProps) {
             <span className="hidden sm:inline">Offline</span>
           </span>
         )}
-        <UnitSwitcher />
+
+        {clientReady && <UnitSwitcher />}
         {clientReady && <NotificationBell />}
 
-        {/* Avatar + Dropdown */}
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            className={cn(
-              'p-1 rounded-lg cursor-pointer',
-              'hover:bg-accent transition-colors',
-              'min-h-[44px] min-w-[44px] flex items-center justify-center outline-none'
-            )}
-            aria-label="Menu do usuário"
-          >
-            <Avatar className="w-8 h-8">
-              <AvatarImage src={profile?.avatar_url ?? undefined} alt={profile?.name ?? 'Usuário'} />
-              <AvatarFallback className={cn('text-xs font-semibold', avatarColor)}>
-                {initials}
-              </AvatarFallback>
-            </Avatar>
-          </DropdownMenuTrigger>
+        {/* Avatar + Dropdown — placeholder estático até montar */}
+        {clientReady ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              className={cn(
+                'p-1 rounded-lg cursor-pointer',
+                'hover:bg-accent transition-colors',
+                'min-h-[44px] min-w-[44px] flex items-center justify-center outline-none'
+              )}
+              aria-label="Menu do usuário"
+            >
+              <Avatar className="w-8 h-8">
+                <AvatarImage src={profile?.avatar_url ?? undefined} alt={profile?.name ?? 'Usuário'} />
+                <AvatarFallback className={cn('text-xs font-semibold', avatarColor)}>
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+            </DropdownMenuTrigger>
 
-          <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel>
-              <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium">{profile?.name ?? 'Usuário'}</p>
-                <p className="text-xs text-muted-foreground truncate">{profile?.email}</p>
-              </div>
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className="cursor-pointer"
-              onClick={() => router.push(ROUTES.profile)}
-            >
-              <UserIcon className="w-4 h-4 mr-2" />
-              Meu perfil
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              className="cursor-pointer"
-              onClick={() => router.push(ROUTES.settings)}
-            >
-              <Settings className="w-4 h-4 mr-2" />
-              Configurações
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={signOut}
-              variant="destructive"
-              className="cursor-pointer"
-            >
-              <LogOut className="w-4 h-4 mr-2" />
-              Sair
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium">{profile?.name ?? 'Usuário'}</p>
+                  <p className="text-xs text-muted-foreground truncate">{profile?.email}</p>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="cursor-pointer"
+                onClick={() => router.push(ROUTES.profile)}
+              >
+                <UserIcon className="w-4 h-4 mr-2" />
+                Meu perfil
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="cursor-pointer"
+                onClick={() => router.push(ROUTES.settings)}
+              >
+                <Settings className="w-4 h-4 mr-2" />
+                Configurações
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={signOut}
+                variant="destructive"
+                className="cursor-pointer"
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                Sair
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <div className="min-h-[44px] min-w-[44px] p-1 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-full bg-muted" />
+          </div>
+        )}
       </div>
     </header>
   )
