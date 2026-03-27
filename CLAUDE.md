@@ -446,6 +446,14 @@ docker compose -f docker-compose.prod.yml logs -f app
 - [x] `src/app/api/cron/check-alerts/route.ts`: alertas maintenance_overdue + maintenance_due_soon adicionados
 - [x] `src/components/shared/confirm-dialog.tsx`: refatorado para suportar `trigger` prop (DialogTrigger) + `destructive` bool
 
+### Fase 2 — Bloco 3: E-mails com Resend (2026-03-27)
+- [x] `resend` instalado como dependência
+- [x] `src/lib/email.ts`: `sendEmail(to, subject, html)` com graceful fallback, 4 templates: `tplMaintenanceEmergency`, `tplMaintenanceOverdue`, `tplEventTomorrow`, `tplChecklistOverdue` — HTML responsivo com cores da marca (#7C8D78)
+- [x] `src/app/api/email/maintenance-emergency/route.ts`: POST route que busca destinatários, checa `preferences.notifications.email` e envia e-mail de emergência
+- [x] `src/hooks/use-maintenance.ts`: chama `POST /api/email/maintenance-emergency` fire-and-forget no `onSuccess` de ordem emergencial
+- [x] `src/app/api/cron/check-alerts/route.ts`: adicionado `sendEmail` para event_tomorrow, checklist_overdue e maintenance_overdue — sempre checando preferência do usuário antes
+- [x] `.env.example`: `RESEND_API_KEY` e `EMAIL_FROM` adicionados
+
 ### Fase 2 — Bloco 2: Upload de Fotos (2026-03-27)
 - [x] `src/hooks/use-signed-urls.ts`: `useSignedUrls(bucket, paths)` — batch `createSignedUrls`, staleTime 30min
 - [x] `src/components/shared/photo-upload.tsx`: Canvas compress (max 1200px, 80%), preview thumbnail, progress bar, dois botões (Câmera com `capture="environment"` + Galeria), `PhotoThumb` para exibir foto existente
@@ -504,7 +512,7 @@ Role:  super_admin (32 permissões)
 - [x] Bloco 4: Sistema de Alertas Persistentes (notification bell + real-time + cron)
 - [x] Fase 2 Bloco 1: Módulo de Manutenção — CRUD completo
 - [x] Fase 2 Bloco 2: Upload de Fotos (before/after + lightbox + avatar)
-- [ ] Fase 2 Bloco 3: E-mails com Resend
+- [x] Fase 2 Bloco 3: E-mails com Resend (4 templates + cron + emergency route)
 - [ ] Relatórios e exportação
 
 > **NOTA:** Após subir o Supabase com `docker compose up -d`, regenerar os tipos com:
@@ -556,3 +564,6 @@ Role:  super_admin (32 permissões)
 | Canvas compression antes do upload | Imagens comprimidas para max 1200px / 80% quality (fotos) e max 600px / 85% quality (avatar) via Canvas API antes do upload. Reduz banda e storage. |
 | Dois botões de upload (câmera + galeria) | Mobile-first: botão "Câmera" usa `capture="environment"` (força câmera traseira), botão "Galeria" abre seletor de arquivos. Melhor UX do que um único input. |
 | `PhotoLightbox` sem Radix Dialog | Lightbox é um overlay `fixed inset-0 z-[100]` puro com navegação via teclado (Escape/Arrows). Mais leve e sem dependência de Radix para esse caso de uso. |
+| E-mail emergency via API route (não hook) | `RESEND_API_KEY` é server-only. Hook client-side chama `POST /api/email/maintenance-emergency` fire-and-forget. Cron chama `sendEmail()` diretamente (já server-side). |
+| Resend graceful fallback | `sendEmail()` nunca lança exceção — erros são `console.error`. Se `RESEND_API_KEY` ausente, apenas avisa no log e segue. Fluxo principal nunca é interrompido por falha de e-mail. |
+| `preferences.notifications.email` já existia | O toggle de e-mail no perfil já existia como `notifEmail` (mapeado para `preferences.notifications.email`). Nenhuma migração necessária — campo já no JSONB. |

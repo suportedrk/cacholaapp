@@ -140,13 +140,19 @@ export function useCreateMaintenanceOrder() {
       qc.invalidateQueries({ queryKey: ['maintenance'] })
       qc.invalidateQueries({ queryKey: ['dashboard'] })
       toast.success('Ordem de manutenção criada!')
-      // Fire-and-forget notifications
+      // Fire-and-forget notifications + email
       ;(async () => {
         try {
           const sb = createClient()
           const { data: { user } } = await sb.auth.getUser()
           if (type === 'emergency') {
             await notifyMaintenanceEmergency(sb as any, id, user?.id)
+            // Email via server route (API key is server-side only)
+            fetch('/api/email/maintenance-emergency', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ orderId: id }),
+            }).catch(() => { /* não-crítico */ })
           } else {
             await notifyMaintenanceCreated(sb as any, id, user?.id)
           }

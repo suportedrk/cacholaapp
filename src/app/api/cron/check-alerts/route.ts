@@ -1,12 +1,22 @@
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database.types'
+import {
+  sendEmail,
+  tplEventTomorrow,
+  tplChecklistOverdue,
+  tplMaintenanceOverdue,
+} from '@/lib/email'
+import { format } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
 
 /**
  * GET /api/cron/check-alerts
  *
  * Endpoint para verificação periódica de alertas automáticos:
- *  1. Eventos de amanhã → notifica equipe escalada
- *  2. Checklists atrasados → notifica responsável
+ *  1. Eventos de amanhã → notifica equipe escalada + e-mail
+ *  2. Checklists atrasados → notifica responsável + e-mail
+ *  3. Manutenções atrasadas → notifica responsável + e-mail
+ *  4. Manutenções recorrentes próximas → notifica responsável
  *
  * Protegido por CRON_SECRET no header Authorization.
  * Chamar via: `Authorization: Bearer <CRON_SECRET>`
@@ -33,9 +43,25 @@ export async function GET(request: Request) {
 
   const todayStr    = today.toISOString().split('T')[0]
   const tomorrowStr = tomorrow.toISOString().split('T')[0]
+  const tomorrowLabel = format(tomorrow, "d 'de' MMMM", { locale: ptBR })
 
   let created = 0
   const errors: string[] = []
+
+  // ─────────────────────────────────────────────────────────────
+  // HELPER — buscar e-mail do usuário + checar preferência
+  // ─────────────────────────────────────────────────────────────
+  async function getUserEmail(userId: string): Promise<string | null> {
+    const { data } = await supabase
+      .from('users')
+      .select('email, preferences')
+      .eq('id', userId)
+      .single()
+    if (!data) return null
+    const prefs = data.preferences as { notifications?: { email?: boolean } } | null
+    if (prefs?.notifications?.email === false) return null
+    return data.email
+  }
 
   // ─────────────────────────────────────────────────────────────
   // 1. Eventos de amanhã → alertar equipe
@@ -60,6 +86,13 @@ export async function GET(request: Request) {
           p_link:    `/eventos/${event.id}`,
         })
         if (!rpcErr) created++
+
+        // E-mail
+        const email = await getUserEmail(user_id)
+        if (email) {
+          const { subject, html } = tplEventTomorrow(event.title, event.id, tomorrowLabel)
+          await sendEmail(email, subject, html)
+        }
       }
     }
   } catch (e) {
@@ -89,6 +122,13 @@ export async function GET(request: Request) {
         p_link:    `/checklists/${cl.id}`,
       })
       if (!rpcErr) created++
+
+      // E-mail
+      const email = await getUserEmail(cl.assigned_to)
+      if (email) {
+        const { subject, html } = tplChecklistOverdue(cl.title, cl.id)
+        await sendEmail(email, subject, html)
+      }
     }
   } catch (e) {
     errors.push(`checklist_overdue: ${e}`)
@@ -117,6 +157,13 @@ export async function GET(request: Request) {
         p_link:    `/manutencao/${order.id}`,
       })
       if (!rpcErr) created++
+
+      // E-mail
+      const email = await getUserEmail(order.assigned_to)
+      if (email) {
+        const { subject, html } = tplMaintenanceOverdue(order.title, order.id)
+        await sendEmail(email, subject, html)
+      }
     }
   } catch (e) {
     errors.push(`maintenance_overdue: ${e}`)
