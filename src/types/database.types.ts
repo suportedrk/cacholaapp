@@ -463,6 +463,18 @@ export type AuditLog = {
   created_at: string
 }
 
+export type AuditLogWithUser = AuditLog & {
+  user: { name: string; avatar_url: string | null } | null
+}
+
+export type AuditLogFilters = {
+  dateFrom?: string
+  dateTo?: string
+  userId?: string
+  module?: string
+  action?: string
+}
+
 export type SystemConfig = {
   id: string
   category: string
