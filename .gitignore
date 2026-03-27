@@ -60,3 +60,13 @@ yarn-error.log*
 # VERCEL / CLOUD (não utilizado — self-hosted)
 # ============================================================
 .vercel
+
+# ============================================================
+# PWA — arquivos gerados pelo @ducanh2912/next-pwa (build artifacts)
+# ============================================================
+public/sw.js
+public/sw.js.map
+public/workbox-*.js
+public/workbox-*.js.map
+public/swe-worker-*.js
+public/swe-worker-*.js.map
