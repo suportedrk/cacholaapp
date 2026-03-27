@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -99,12 +100,28 @@ function NotificationItem({
 // ─────────────────────────────────────────────────────────────
 export function NotificationBell() {
   const router = useRouter()
+  const [mounted, setMounted] = useState(false)
   const { notifications, unreadCount, isLoading, markRead, markAllRead, isMarkingAll } =
     useNotifications()
+
+  useEffect(() => { setMounted(true) }, [])
 
   function handleRead(id: string, link: string | null) {
     markRead(id)
     if (link) router.push(link)
+  }
+
+  // Render a static placeholder until client mounts to avoid SSR/hydration mismatch
+  // with @base-ui/react MenuPrimitive.Trigger
+  if (!mounted) {
+    return (
+      <button
+        className="relative p-2 rounded-lg text-muted-foreground min-h-[44px] min-w-[44px] flex items-center justify-center"
+        aria-label="Notificações"
+      >
+        <Bell className="w-5 h-5" />
+      </button>
+    )
   }
 
   return (
