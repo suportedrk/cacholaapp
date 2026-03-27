@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Menu, LogOut, User as UserIcon, Settings, WifiOff } from 'lucide-react'
 import { useOnlineStatus } from '@/hooks/use-online-status'
@@ -11,14 +12,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import dynamic from 'next/dynamic'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { NotificationBell } from './notification-bell'
 import { Breadcrumbs } from './breadcrumbs'
-
-const NotificationBell = dynamic(
-  () => import('./notification-bell').then((m) => ({ default: m.NotificationBell })),
-  { ssr: false }
-)
 import { UnitSwitcher } from './unit-switcher'
 import { useAuth } from '@/hooks/use-auth'
 import { getInitials, getAvatarColor, cn } from '@/lib/utils'
@@ -32,8 +28,12 @@ export function Navbar({ onMenuClick }: NavbarProps) {
   const router = useRouter()
   const { profile, signOut } = useAuth()
   const { isOnline } = useOnlineStatus()
+  const [clientReady, setClientReady] = useState(false)
   const initials = profile ? getInitials(profile.name) : 'U'
   const avatarColor = profile ? getAvatarColor(profile.name) : ''
+
+  // Defer client-only UI (offline badge + NotificationBell) until after hydration
+  useEffect(() => { setClientReady(true) }, [])
 
   return (
     <header className="sticky top-0 z-20 h-16 flex items-center gap-3 px-4 bg-card border-b border-border shadow-sm">
@@ -68,7 +68,8 @@ export function Navbar({ onMenuClick }: NavbarProps) {
 
       {/* Ações direita */}
       <div className="flex items-center gap-1">
-        {!isOnline && (
+        {/* Offline badge e NotificationBell apenas no cliente (evita hydration mismatch) */}
+        {clientReady && !isOnline && (
           <span
             className="flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800"
             title="Sem conexão com a internet"
@@ -78,7 +79,7 @@ export function Navbar({ onMenuClick }: NavbarProps) {
           </span>
         )}
         <UnitSwitcher />
-        <NotificationBell />
+        {clientReady && <NotificationBell />}
 
         {/* Avatar + Dropdown */}
         <DropdownMenu>
