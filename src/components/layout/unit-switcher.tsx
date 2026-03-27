@@ -15,6 +15,10 @@ import { useAuth } from '@/hooks/use-auth'
 
 const GLOBAL_VIEWER_ROLES = ['super_admin', 'diretor']
 
+function formatSlug(slug: string) {
+  return slug.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+}
+
 export function UnitSwitcher() {
   const qc = useQueryClient()
   const { userUnits, activeUnitId } = useAuth()
@@ -24,9 +28,10 @@ export function UnitSwitcher() {
   const canViewAll = userUnits.some((u) => GLOBAL_VIEWER_ROLES.includes(u.role))
 
   const activeUserUnit = userUnits.find((u) => u.unit_id === activeUnitId)
+  const activeSlug = (activeUserUnit?.unit as { slug: string } | undefined)?.slug
   const activeName = activeUnitId === null
     ? 'Todas as unidades'
-    : (activeUserUnit?.unit as { name: string } | undefined)?.name ?? 'Unidade'
+    : activeSlug ? formatSlug(activeSlug) : 'Unidade'
 
   function switchUnit(unitId: string | null) {
     const unitObj = unitId
@@ -86,7 +91,7 @@ export function UnitSwitcher() {
 
         {/* Unidades do usuário */}
         {userUnits.map((uu) => {
-          const unit = uu.unit as { id: string; name: string; is_active: boolean }
+          const unit = uu.unit as { id: string; name: string; slug: string; is_active: boolean }
           return (
             <DropdownMenuItem
               key={uu.unit_id}
@@ -95,7 +100,7 @@ export function UnitSwitcher() {
               disabled={!unit.is_active}
             >
               <Building2 className="w-4 h-4 text-muted-foreground" />
-              <span className="flex-1 truncate">{unit.name}</span>
+              <span className="flex-1 truncate">{formatSlug(unit.slug)}</span>
               {uu.unit_id === activeUnitId && <Check className="w-3.5 h-3.5 text-primary" />}
             </DropdownMenuItem>
           )

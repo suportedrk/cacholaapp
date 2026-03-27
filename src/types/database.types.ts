@@ -49,6 +49,23 @@ export interface Database {
       reload_user_permissions:       { Args: { p_user_id: string }; Returns: void }
       mark_all_notifications_read:   { Args: { p_user_id: string }; Returns: void }
       create_notification:           { Args: { p_user_id: string; p_type: string; p_title: string; p_body: string; p_link?: string | null }; Returns: string }
+      // ── Relatórios (Fase 3) ──────────────────────────────────────────
+      report_events_summary:         { Args: { p_unit_id?: string | null; p_from?: string; p_to?: string }; Returns: { total_events: number; avg_guests: number; top_event_type: string | null; top_venue: string | null }[] }
+      report_events_by_month:        { Args: { p_unit_id?: string | null; p_from?: string; p_to?: string }; Returns: { month: string; status: string; count: number }[] }
+      report_events_by_type:         { Args: { p_unit_id?: string | null; p_from?: string; p_to?: string }; Returns: { type_name: string; count: number }[] }
+      report_events_by_venue:        { Args: { p_unit_id?: string | null; p_from?: string; p_to?: string }; Returns: { venue_name: string; count: number }[] }
+      report_maintenance_summary:    { Args: { p_unit_id?: string | null; p_from?: string; p_to?: string }; Returns: { total_open: number; total_completed: number; avg_resolution_days: number | null; top_sector: string | null }[] }
+      report_maintenance_by_month:   { Args: { p_unit_id?: string | null; p_from?: string; p_to?: string }; Returns: { month: string; open_count: number; completed_count: number }[] }
+      report_maintenance_by_sector:  { Args: { p_unit_id?: string | null; p_from?: string; p_to?: string }; Returns: { sector_name: string; count: number }[] }
+      report_checklists_summary:     { Args: { p_unit_id?: string | null; p_from?: string; p_to?: string }; Returns: { total: number; on_time_count: number; overdue_count: number; top_overdue_cat: string | null }[] }
+      report_checklists_by_month:    { Args: { p_unit_id?: string | null; p_from?: string; p_to?: string }; Returns: { month: string; completed_count: number; overdue_count: number }[] }
+      report_checklists_by_category: { Args: { p_unit_id?: string | null; p_from?: string; p_to?: string }; Returns: { category_name: string; total_count: number; overdue_count: number }[] }
+      report_staff_by_events:        { Args: { p_unit_id?: string | null; p_from?: string; p_to?: string }; Returns: { user_id: string; user_name: string; events_count: number }[] }
+      report_staff_by_checklists:    { Args: { p_unit_id?: string | null; p_from?: string; p_to?: string }; Returns: { user_id: string; user_name: string; checklists_completed: number; checklists_overdue: number; maintenance_count: number }[] }
+      report_staff_summary:          { Args: { p_unit_id?: string | null; p_from?: string; p_to?: string }; Returns: { top_events_user: string | null; top_checklists_user: string | null; avg_events_per_user: number | null }[] }
+      // ── Helpers de RLS (Fase 2.5) ───────────────────────────────────
+      get_user_unit_ids:             { Args: Record<string, never>; Returns: string[] }
+      is_global_viewer:              { Args: Record<string, never>; Returns: boolean }
     }
     Enums: Record<string, never>
   }
@@ -435,4 +452,95 @@ export type MaintenanceForList = MaintenanceOrder & {
   sector: Pick<Sector, 'id' | 'name'> | null
   assigned_user: Pick<User, 'id' | 'name' | 'avatar_url'> | null
   photo_count: number  // calculado no client
+}
+
+
+// ─────────────────────────────────────────────────────────────
+// TIPOS DE RELATÓRIO (Fase 3)
+// ─────────────────────────────────────────────────────────────
+
+export type ReportFilters = {
+  from: string   // ISO date 'YYYY-MM-DD'
+  to:   string   // ISO date 'YYYY-MM-DD'
+  unitId?: string | null
+}
+
+export type EventReportSummary = {
+  total_events:   number
+  avg_guests:     number
+  top_event_type: string | null
+  top_venue:      string | null
+}
+
+export type EventsByMonth = {
+  month:  string
+  status: string
+  count:  number
+}
+
+export type EventsByType = {
+  type_name: string
+  count:     number
+}
+
+export type EventsByVenue = {
+  venue_name: string
+  count:      number
+}
+
+export type MaintenanceReportSummary = {
+  total_open:           number
+  total_completed:      number
+  avg_resolution_days:  number | null
+  top_sector:           string | null
+}
+
+export type MaintenanceByMonth = {
+  month:           string
+  open_count:      number
+  completed_count: number
+}
+
+export type MaintenanceBySector = {
+  sector_name: string
+  count:       number
+}
+
+export type ChecklistReportSummary = {
+  total:           number
+  on_time_count:   number
+  overdue_count:   number
+  top_overdue_cat: string | null
+}
+
+export type ChecklistsByMonth = {
+  month:           string
+  completed_count: number
+  overdue_count:   number
+}
+
+export type ChecklistsByCategory = {
+  category_name: string
+  total_count:   number
+  overdue_count: number
+}
+
+export type StaffReportSummary = {
+  top_events_user:     string | null
+  top_checklists_user: string | null
+  avg_events_per_user: number | null
+}
+
+export type StaffByEvents = {
+  user_id:      string
+  user_name:    string
+  events_count: number
+}
+
+export type StaffByChecklists = {
+  user_id:              string
+  user_name:            string
+  checklists_completed: number
+  checklists_overdue:   number
+  maintenance_count:    number
 }
