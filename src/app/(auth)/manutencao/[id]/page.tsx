@@ -195,7 +195,15 @@ export default function DetalheOrdemPage({
           {order.equipment && (
             <div className="flex items-center gap-2 text-sm">
               <Wrench className="w-4 h-4 text-muted-foreground shrink-0" />
-              <span>{order.equipment}</span>
+              <Link
+                href={`/equipamentos/${order.equipment.id}`}
+                className="text-primary hover:underline font-medium"
+              >
+                {order.equipment.name}
+              </Link>
+              {order.equipment.location && (
+                <span className="text-muted-foreground">— {order.equipment.location}</span>
+              )}
             </div>
           )}
         </div>

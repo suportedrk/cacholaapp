@@ -60,6 +60,7 @@ export const ROUTES = {
   settings: '/configuracoes',
   reports: '/relatorios',
   auditLogs: '/admin/logs',
+  equipment: '/equipamentos',
 } as const
 
 // ============================================================

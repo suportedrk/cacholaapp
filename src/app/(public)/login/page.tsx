@@ -30,11 +30,13 @@ function LoginForm() {
   }, [isAuthenticated, router, redirectTo])
 
   // Erro de callback (ex: link expirado)
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (callbackError) {
       setServerError('O link expirou ou é inválido. Solicite um novo.')
     }
   }, [callbackError])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()

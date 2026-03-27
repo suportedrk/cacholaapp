@@ -9,7 +9,7 @@ import { createClient } from '@/lib/supabase/client'
 // ─────────────────────────────────────────────────────────────
 // CANVAS COMPRESSION
 // ─────────────────────────────────────────────────────────────
-async function compressImage(file: File, maxDimension = 1200, quality = 0.8): Promise<Blob> {
+export async function compressImage(file: File, maxDimension = 1200, quality = 0.8): Promise<Blob> {
   return new Promise((resolve, reject) => {
     const img = new Image()
     const objectUrl = URL.createObjectURL(file)

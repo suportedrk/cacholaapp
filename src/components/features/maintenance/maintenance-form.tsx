@@ -14,6 +14,7 @@ import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
 import { useSectors } from '@/hooks/use-sectors'
 import { useUsers } from '@/hooks/use-users'
+import { useEquipment } from '@/hooks/use-equipment'
 import { useCreateMaintenanceOrder, useUpdateMaintenanceOrder } from '@/hooks/use-maintenance'
 import { useAuth } from '@/hooks/use-auth'
 import type {
@@ -31,7 +32,7 @@ interface FormData {
   priority:         MaintenancePriority
   status:           MaintenanceStatus
   sector_id:        string
-  equipment:        string
+  equipment_id:     string
   assigned_to:      string
   due_date:         string
   // recorrência
@@ -49,7 +50,7 @@ const DEFAULT_FORM: FormData = {
   priority:         'medium',
   status:           'open',
   sector_id:        '',
-  equipment:        '',
+  equipment_id:     '',
   assigned_to:      '',
   due_date:         '',
   recurrence_frequency:      'weekly',
@@ -81,6 +82,7 @@ export function MaintenanceForm({ order, onSuccess }: Props) {
 
   const { data: sectors = [] } = useSectors(true)
   const { data: users = [] } = useUsers({ isActive: true })
+  const { data: equipmentList = [] } = useEquipment({ onlyActive: true })
 
   const createOrder = useCreateMaintenanceOrder()
   const updateOrder = useUpdateMaintenanceOrder()
@@ -98,7 +100,7 @@ export function MaintenanceForm({ order, onSuccess }: Props) {
       priority:         order.priority,
       status:           order.status,
       sector_id:        order.sector_id ?? '',
-      equipment:        order.equipment ?? '',
+      equipment_id:     order.equipment_id ?? '',
       assigned_to:      order.assigned_to ?? '',
       due_date:         order.due_date ? order.due_date.split('T')[0] : '',
       recurrence_frequency:      r?.frequency ?? 'weekly',
@@ -152,7 +154,7 @@ export function MaintenanceForm({ order, onSuccess }: Props) {
       priority:        form.priority,
       status:          form.status,
       sector_id:       form.sector_id || null,
-      equipment:       form.equipment.trim() || null,
+      equipment_id:    form.equipment_id || null,
       assigned_to:     form.assigned_to || null,
       due_date:        form.due_date ? new Date(form.due_date).toISOString() : null,
       event_id:        null,
@@ -273,13 +275,24 @@ export function MaintenanceForm({ order, onSuccess }: Props) {
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="equipment">Equipamento / Ativo</Label>
-            <Input
-              id="equipment"
-              value={form.equipment}
-              onChange={(e) => set('equipment', e.target.value)}
-              placeholder="Ex: Ar-condicionado salão 1, Tobogã azul..."
-            />
+            <Label>Equipamento / Ativo</Label>
+            <Select
+              value={form.equipment_id || '__none__'}
+              onValueChange={(v) => set('equipment_id', v === '__none__' ? '' : v)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecionar equipamento..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">Nenhum</SelectItem>
+                {equipmentList.map((eq) => (
+                  <SelectItem key={eq.id} value={eq.id}>
+                    {eq.name}
+                    {eq.location ? ` — ${eq.location}` : ''}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </section>

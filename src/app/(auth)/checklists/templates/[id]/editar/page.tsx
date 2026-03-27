@@ -26,6 +26,7 @@ export default function EditarTemplatePage() {
   const [initialized, setInitialized] = useState(false)
 
   // Preencher formulário quando o template carregar
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (template && !initialized) {
       setTitle(template.title)
@@ -39,6 +40,7 @@ export default function EditarTemplatePage() {
       setInitialized(true)
     }
   }, [template, initialized])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const isValid = title.trim().length > 0
 

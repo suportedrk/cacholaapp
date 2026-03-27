@@ -62,7 +62,7 @@ export function MaintenanceCard({ order }: Props) {
           {order.equipment && (
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <Wrench className="w-3.5 h-3.5 shrink-0" />
-              <span className="truncate">{order.equipment}</span>
+              <span className="truncate">{order.equipment.name}</span>
             </div>
           )}
           {order.due_date && (

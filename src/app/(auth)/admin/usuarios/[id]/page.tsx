@@ -30,12 +30,14 @@ export default function EditarUsuarioPage() {
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (user) {
       setName(user.name)
       setPhone(user.phone ?? '')
     }
   }, [user])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()

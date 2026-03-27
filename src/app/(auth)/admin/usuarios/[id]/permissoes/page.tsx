@@ -1,7 +1,7 @@
 'use client'
 
 import { useParams, useRouter } from 'next/navigation'
-import Link from 'next/link'
+
 import { ArrowLeft, Loader2, Shield } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 import { useUser } from '@/hooks/use-users'

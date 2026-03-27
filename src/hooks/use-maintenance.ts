@@ -22,7 +22,8 @@ import { useUnitStore } from '@/stores/unit-store'
 const MAINTENANCE_LIST_SELECT = `
   *,
   sector:sectors(id, name),
-  assigned_user:users!maintenance_orders_assigned_to_fkey(id, name, avatar_url)
+  assigned_user:users!maintenance_orders_assigned_to_fkey(id, name, avatar_url),
+  equipment(id, name)
 ` as const
 
 const MAINTENANCE_DETAIL_SELECT = `
@@ -31,7 +32,8 @@ const MAINTENANCE_DETAIL_SELECT = `
   assigned_user:users!maintenance_orders_assigned_to_fkey(id, name, avatar_url),
   creator:users!maintenance_orders_created_by_fkey(id, name, avatar_url),
   event:events(id, title, date),
-  maintenance_photos(*)
+  maintenance_photos(*),
+  equipment(id, name, category, location)
 ` as const
 
 // ─────────────────────────────────────────────────────────────
@@ -67,7 +69,7 @@ export function useMaintenanceOrders(filters: MaintenanceFilters = {}) {
 
       if (activeUnitId) q = q.eq('unit_id', activeUnitId)
       if (search?.trim()) {
-        q = q.or(`title.ilike.%${search}%,description.ilike.%${search}%,equipment.ilike.%${search}%`)
+        q = q.or(`title.ilike.%${search}%,description.ilike.%${search}%`)
       }
       if (type?.length)     q = q.in('type', type)
       if (status?.length)   q = q.in('status', status)
@@ -274,7 +276,7 @@ export function useCompleteMaintenanceOrder() {
             type:            order.type,
             priority:        order.priority,
             sector_id:       order.sector_id,
-            equipment:       order.equipment,
+            equipment_id:    order.equipment_id,
             status:          'open',
             assigned_to:     order.assigned_to,
             due_date:        nextDate,

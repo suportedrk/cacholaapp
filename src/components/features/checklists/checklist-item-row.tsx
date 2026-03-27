@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { Camera, MessageSquare, Check, X, Minus } from 'lucide-react'
+import { Camera, MessageSquare, Check, Minus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ChecklistItem, ChecklistItemStatus } from '@/types/database.types'
 

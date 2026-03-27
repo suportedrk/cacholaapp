@@ -7,7 +7,7 @@ import { ptBR } from 'date-fns/locale'
 import { useChecklistReport } from '@/hooks/use-reports'
 import { ReportStatsCard } from './report-stats-card'
 import { BarChartCard } from './bar-chart-card'
-import { DonutChartCard, CHART_COLORS } from './donut-chart-card'
+import { DonutChartCard } from './donut-chart-card'
 import { ExportButton } from './export-button'
 import type { ReportFilters } from '@/types/database.types'
 
@@ -44,7 +44,7 @@ export function ChecklistsTab({ filters, unitName }: ChecklistsTabProps) {
   ]
 
   // Donut por categoria
-  const categoryData = (byCategory.data ?? []).map((r, i) => ({
+  const categoryData = (byCategory.data ?? []).map((r, _i) => ({
     name:  r.category_name,
     value: Number(r.total_count),
   }))

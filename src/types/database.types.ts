@@ -35,6 +35,7 @@ export interface Database {
       // Manutenção
       sectors:              { Row: Sector;              Insert: Partial<Sector>;           Update: Partial<Sector>;           Relationships: [] }
       maintenance_orders:   { Row: MaintenanceOrder;    Insert: Partial<MaintenanceOrder>; Update: Partial<MaintenanceOrder>; Relationships: [] }
+      equipment:            { Row: Equipment;           Insert: Partial<Equipment>;        Update: Partial<Equipment>;        Relationships: [] }
       maintenance_photos:   { Row: MaintenancePhoto;    Insert: Partial<MaintenancePhoto>; Update: Partial<MaintenancePhoto>; Relationships: [] }
       // Sistema
       notifications:        { Row: AppNotification;     Insert: Partial<AppNotification>; Update: Partial<AppNotification>; Relationships: [] }
@@ -175,6 +176,35 @@ export type Sector = {
   is_active: boolean
   sort_order: number
   created_at: string
+}
+
+// ─────────────────────────────────────────────────────────────
+// EQUIPMENT (Fase 3 Bloco 2)
+// ─────────────────────────────────────────────────────────────
+
+export type EquipmentStatus = 'active' | 'inactive' | 'in_repair' | 'retired'
+
+export type Equipment = {
+  id:             string
+  unit_id:        string
+  name:           string
+  category:       string | null
+  location:       string | null
+  serial_number:  string | null
+  purchase_date:  string | null   // ISO date
+  warranty_until: string | null   // ISO date
+  status:         EquipmentStatus
+  notes:          string | null
+  photo_url:      string | null
+  created_at:     string
+  updated_at:     string
+}
+
+export type EquipmentWithHistory = Equipment & {
+  maintenance_orders: Pick<
+    MaintenanceOrder,
+    'id' | 'title' | 'type' | 'priority' | 'status' | 'created_at' | 'due_date'
+  >[]
 }
 
 export type RecurrenceRule = {
@@ -345,7 +375,7 @@ export type MaintenanceOrder = {
   type: MaintenanceType
   priority: MaintenancePriority
   sector_id: string | null
-  equipment: string | null
+  equipment_id: string | null   // FK → equipment (Fase 3 Bloco 2)
   status: MaintenanceStatus
   assigned_to: string | null
   due_date: string | null
@@ -445,6 +475,7 @@ export type MaintenanceWithDetails = MaintenanceOrder & {
   creator: Pick<User, 'id' | 'name' | 'avatar_url'> | null
   event: Pick<Event, 'id' | 'title' | 'date'> | null
   maintenance_photos: MaintenancePhoto[]
+  equipment: Pick<Equipment, 'id' | 'name' | 'category' | 'location'> | null
 }
 
 // Manutenção para listagem (sem fotos inline)
@@ -452,6 +483,7 @@ export type MaintenanceForList = MaintenanceOrder & {
   sector: Pick<Sector, 'id' | 'name'> | null
   assigned_user: Pick<User, 'id' | 'name' | 'avatar_url'> | null
   photo_count: number  // calculado no client
+  equipment: Pick<Equipment, 'id' | 'name'> | null
 }
 
 

@@ -22,9 +22,12 @@ export function EventFiltersBar({ filters, onFiltersChange }: EventFiltersProps)
   // Refs para evitar closures stale no timer de debounce
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const filtersRef = useRef(filters)
-  filtersRef.current = filters
   const onFiltersChangeRef = useRef(onFiltersChange)
-  onFiltersChangeRef.current = onFiltersChange
+
+  useEffect(() => {
+    filtersRef.current = filters
+    onFiltersChangeRef.current = onFiltersChange
+  })
 
   // Limpa o timer ao desmontar
   useEffect(() => () => {

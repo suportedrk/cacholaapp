@@ -34,42 +34,16 @@ interface Props {
   onFiltersChange: (f: MaintenanceFilters) => void
 }
 
-function PillToggle<T extends string>({
-  value,
-  active,
-  onClick,
-  className,
-}: {
-  value: T
-  active: boolean
-  onClick: (v: T) => void
-  className?: string
-} & React.PropsWithChildren) {
-  return (
-    <button
-      type="button"
-      onClick={() => onClick(value)}
-      className={cn(
-        'px-3 py-1 rounded-full text-xs font-medium transition-all duration-150',
-        'border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-        active
-          ? 'bg-primary text-primary-foreground border-primary'
-          : 'bg-card text-muted-foreground border-border hover:border-primary/50',
-        className
-      )}
-    >
-      {value}
-    </button>
-  )
-}
-
 export function MaintenanceFilters({ filters, sectors, onFiltersChange }: Props) {
   const [searchInput, setSearchInput] = useState(filters.search ?? '')
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const filtersRef = useRef(filters)
-  filtersRef.current = filters
   const onChangeRef = useRef(onFiltersChange)
-  onChangeRef.current = onFiltersChange
+
+  useEffect(() => {
+    filtersRef.current = filters
+    onChangeRef.current = onFiltersChange
+  })
 
   useEffect(() => () => {
     if (debounceTimer.current) clearTimeout(debounceTimer.current)

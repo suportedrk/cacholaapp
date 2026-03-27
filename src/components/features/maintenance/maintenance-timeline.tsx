@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { Clock, Loader2 } from 'lucide-react'
+import { Clock } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { AuditLog } from '@/types/database.types'
 

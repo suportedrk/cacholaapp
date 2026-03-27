@@ -26,7 +26,7 @@ interface ChecklistCardProps {
 }
 
 export function ChecklistCard({ checklist }: ChecklistCardProps) {
-  const { done, total, pct } = calcProgress(checklist.checklist_items)
+  const { done, total } = calcProgress(checklist.checklist_items)
   const isOverdue = checklist.due_date
     && checklist.status !== 'completed'
     && checklist.status !== 'cancelled'

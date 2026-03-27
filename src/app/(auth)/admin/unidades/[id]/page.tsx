@@ -44,6 +44,7 @@ export default function EditarUnidadePage() {
   const [addUserId, setAddUserId] = useState('')
   const [addRole, setAddRole] = useState<UserRole>('gerente')
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (unit) {
       setName(unit.name)
@@ -53,6 +54,7 @@ export default function EditarUnidadePage() {
       setIsActive(unit.is_active)
     }
   }, [unit])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   function handleNameChange(v: string) {
     setName(v)

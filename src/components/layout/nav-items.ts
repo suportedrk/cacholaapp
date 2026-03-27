@@ -9,6 +9,7 @@ import {
   Settings,
   ScrollText,
   Building2,
+  Package,
 } from 'lucide-react'
 import { ROUTES } from '@/lib/constants'
 import type { Module } from '@/types/permissions'
@@ -44,6 +45,12 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Manutenção',
     href: ROUTES.maintenance,
     icon: Wrench,
+    module: 'maintenance',
+  },
+  {
+    label: 'Equipamentos',
+    href: ROUTES.equipment,
+    icon: Package,
     module: 'maintenance',
   },
   {
