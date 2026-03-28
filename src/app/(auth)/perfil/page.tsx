@@ -144,18 +144,18 @@ export default function PerfilPage() {
       {/* Card avatar */}
       <div className="bg-card rounded-2xl border border-border p-6">
         <div className="flex items-center gap-4">
-          <div className="relative">
+          <div className="relative w-fit">
             <UserAvatar name={profile.name} avatarUrl={displayAvatarUrl} size="lg" />
             <button
               type="button"
-              className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-sm hover:opacity-90 transition-opacity disabled:opacity-50"
+              className="absolute bottom-0 right-0 !w-6 !h-6 !min-w-0 !min-h-0 rounded-full bg-card border border-border shadow-xs flex items-center justify-center hover:bg-muted transition-colors disabled:opacity-50"
               aria-label="Alterar foto de perfil"
               disabled={avatarUploading}
               onClick={() => avatarInputRef.current?.click()}
             >
               {avatarUploading
-                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                : <Camera className="w-3.5 h-3.5" />
+                ? <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />
+                : <Camera className="w-3 h-3 text-muted-foreground" />
               }
             </button>
             <input

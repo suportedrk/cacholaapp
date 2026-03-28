@@ -74,7 +74,7 @@ export function DonutChartCard({
           Nenhum dado no período
         </div>
       ) : (
-        <ResponsiveContainer width="100%" height={height}>
+        <ResponsiveContainer width="100%" height={height} debounce={50}>
           <PieChart>
             <Pie
               data={data}

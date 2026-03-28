@@ -52,7 +52,7 @@ export function HorizontalBarChartCard({
           Nenhum dado no período
         </div>
       ) : (
-        <ResponsiveContainer width="100%" height={calcH}>
+        <ResponsiveContainer width="100%" height={calcH} debounce={50}>
           <BarChart
             data={sliced}
             layout="vertical"
