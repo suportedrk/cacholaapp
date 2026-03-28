@@ -40,7 +40,7 @@ export const EventCard = memo(function EventCard({ event }: EventCardProps) {
           <span>{formatTime(event.start_time)} – {formatTime(event.end_time)}</span>
         </div>
         <div className="flex items-center gap-1.5">
-          {event.ploomes_deal_id && <PloomeBadge url={event.ploomes_url} size="xs" />}
+          {event.ploomes_deal_id && <PloomeBadge size="xs" />}
           <EventStatusBadge status={event.status} size="sm" />
         </div>
       </div>
