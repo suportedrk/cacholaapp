@@ -9,17 +9,17 @@ interface Props {
 export const MAINTENANCE_TYPE_CONFIG: Record<MaintenanceType, { label: string; pill: string; dot: string }> = {
   emergency: {
     label: 'Emergencial',
-    pill: 'bg-red-50 text-red-700 border border-red-200',
+    pill: 'badge-red border',
     dot:  'bg-red-500',
   },
   punctual: {
     label: 'Pontual',
-    pill: 'bg-amber-50 text-amber-700 border border-amber-200',
+    pill: 'badge-amber border',
     dot:  'bg-amber-500',
   },
   recurring: {
     label: 'Recorrente',
-    pill: 'bg-green-50 text-green-700 border border-green-200',
+    pill: 'badge-green border',
     dot:  'bg-green-500',
   },
 }

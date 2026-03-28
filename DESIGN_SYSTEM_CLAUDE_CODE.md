@@ -1084,6 +1084,28 @@ Para containers de ícone dentro de cards (ex: StatsCard, cards de módulo), **N
 
 Essas classes estão definidas em `src/app/globals.css` → `@layer utilities` → seção `ICON CONTAINERS`.
 
+### Status / Type Badges — padrão obrigatório
+
+Para pills de status e tipo (ex: EventStatusBadge, MaintenanceTypeBadge), **NUNCA** use
+`bg-blue-50 text-blue-700 border-blue-200` diretamente. Use as classes `.badge-{cor}`:
+
+```tsx
+// ✅ CORRETO — adapta a light e dark automaticamente
+className: 'badge-blue border'     // Aberta, Confirmado
+className: 'badge-green border'    // Concluído, Recorrente
+className: 'badge-amber border'    // Pendente, Aguardando
+className: 'badge-orange border'   // Alta prioridade
+className: 'badge-red border'      // Emergencial, Crítico
+className: 'badge-purple border'   // Em Preparo, Em Andamento
+className: 'badge-gray border'     // Cancelado, Finalizado
+
+// ❌ ERRADO — bg-*-50 é tint claro, fica branco/claro no dark mode
+className: 'bg-blue-50 text-blue-700 border border-blue-200'
+```
+
+Componentes que usam este padrão: `event-status-badge.tsx`, `maintenance-type-badge.tsx`,
+`maintenance-status-badge.tsx`. Ao criar novos badges, usar sempre `.badge-{cor}`.
+
 ---
 
 ## 9. Z-INDEX SCALE

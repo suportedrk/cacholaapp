@@ -558,6 +558,19 @@
   .icon-red    { @apply bg-red-100        text-red-600    dark:bg-red-900/40        dark:text-red-400; }
   .icon-purple { @apply bg-purple-100     text-purple-600 dark:bg-purple-900/40     dark:text-purple-400; }
   .icon-gray   { @apply bg-muted          text-muted-foreground; }
+
+  /*
+   * STATUS / TYPE BADGES — use SEMPRE estas classes em pills de status.
+   * NUNCA use bg-*-50 diretamente — quebram no dark mode.
+   * Padrão: .badge-{cor} aplica bg + text + border adaptados a light e dark.
+   */
+  .badge-blue   { @apply bg-blue-50   text-blue-700   border-blue-200   dark:bg-blue-900/30   dark:text-blue-300   dark:border-blue-800; }
+  .badge-green  { @apply bg-green-50  text-green-700  border-green-200  dark:bg-green-900/30  dark:text-green-300  dark:border-green-800; }
+  .badge-amber  { @apply bg-amber-50  text-amber-700  border-amber-200  dark:bg-amber-900/30  dark:text-amber-300  dark:border-amber-800; }
+  .badge-orange { @apply bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-800; }
+  .badge-red    { @apply bg-red-50    text-red-700    border-red-200    dark:bg-red-900/30    dark:text-red-300    dark:border-red-800; }
+  .badge-purple { @apply bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800; }
+  .badge-gray   { @apply bg-gray-100  text-gray-600   border-gray-200   dark:bg-gray-800/60   dark:text-gray-400   dark:border-gray-700; }
 }
 
 /* ============================================================
