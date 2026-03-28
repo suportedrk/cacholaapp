@@ -116,7 +116,7 @@ async function checkAndNotifyConsecutiveErrors(
         p_user_id: admin.id,
         p_type: 'system_alert',
         p_title: 'Sync Ploomes com falhas consecutivas',
-        p_message: `A sincronização automática com o Ploomes falhou ${MAX_CONSECUTIVE_ERRORS} vezes seguidas. Verifique as configurações em /configuracoes/integracoes/ploomes.`,
+        p_body: `A sincronização automática com o Ploomes falhou ${MAX_CONSECUTIVE_ERRORS} vezes seguidas. Verifique as configurações em /configuracoes/integracoes/ploomes.`,
         p_entity_type: 'ploomes_sync',
         p_entity_id: null,
       })
