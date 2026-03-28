@@ -1,20 +1,35 @@
 'use client'
 
+import { useEffect } from 'react'
+import { createClient } from '@/lib/supabase/client'
 import { useAuthReadyStore } from '@/stores/auth-store'
 
 /**
  * Bloqueia a renderização dos filhos até que a sessão Supabase
- * tenha sido verificada pelo menos uma vez (getSession() resolvido).
+ * tenha sido verificada pelo menos uma vez.
  *
- * Isso garante que NENHUMA query do React Query dispare antes de:
- *   1. Sabermos se o usuário está autenticado
- *   2. As unidades do usuário terem sido carregadas no Zustand store
+ * O AuthGuard faz seu próprio getSession() leve para não depender
+ * do useAuth() do Navbar (que só roda DENTRO dos filhos). Sem isso,
+ * haveria dependência circular: guard bloqueia AppLayout → Navbar
+ * nunca monta → useAuth() nunca chama setSessionReady() → spinner eterno.
  *
  * Na navegação cliente (Link/router.push), isSessionReady já é true
- * (valor em memória), então o guard passa imediatamente sem spinner.
+ * em memória — o guard passa imediatamente sem spinner.
  */
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
+  const setSessionReady = useAuthReadyStore((s) => s.setSessionReady)
+
+  useEffect(() => {
+    // Se já está pronto (navegação client-side), não faz nada
+    if (isSessionReady) return
+
+    // Verificação leve: só precisa saber se a sessão existe
+    const supabase = createClient()
+    supabase.auth.getSession().then(() => {
+      setSessionReady()
+    })
+  }, [isSessionReady, setSessionReady])
 
   if (!isSessionReady) {
     return (
