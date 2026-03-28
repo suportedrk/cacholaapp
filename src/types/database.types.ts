@@ -37,6 +37,11 @@ export interface Database {
       maintenance_orders:   { Row: MaintenanceOrder;    Insert: Partial<MaintenanceOrder>; Update: Partial<MaintenanceOrder>; Relationships: [] }
       equipment:            { Row: Equipment;           Insert: Partial<Equipment>;        Update: Partial<Equipment>;        Relationships: [] }
       maintenance_photos:   { Row: MaintenancePhoto;    Insert: Partial<MaintenancePhoto>; Update: Partial<MaintenancePhoto>; Relationships: [] }
+      // Manutenção — Schema Expandido (Migration 017)
+      maintenance_suppliers: { Row: MaintenanceSupplier; Insert: Partial<MaintenanceSupplier>; Update: Partial<MaintenanceSupplier>; Relationships: [] }
+      supplier_contacts:     { Row: SupplierContact;     Insert: Partial<SupplierContact>;     Update: Partial<SupplierContact>;     Relationships: [] }
+      supplier_documents:    { Row: SupplierDocument;    Insert: Partial<SupplierDocument>;    Update: Partial<SupplierDocument>;    Relationships: [] }
+      maintenance_costs:     { Row: MaintenanceCost;     Insert: Partial<MaintenanceCost>;     Update: Partial<MaintenanceCost>;     Relationships: [] }
       // Configurações avançadas (Fase 3)
       unit_settings:        { Row: UnitSettings;        Insert: Partial<UnitSettings>;   Update: Partial<UnitSettings>;   Relationships: [] }
       equipment_categories: { Row: EquipmentCategory;   Insert: Partial<EquipmentCategory>; Update: Partial<EquipmentCategory>; Relationships: [] }
@@ -434,9 +439,87 @@ export type MaintenanceOrder = {
   due_date: string | null
   event_id: string | null
   recurrence_rule: RecurrenceRule | null
+  // Migration 017 — schema expansion
+  supplier_id:     string | null
+  cost_estimate:   number | null
+  completed_at:    string | null
+  preventive_plan: PreventivePlan | null
   created_by: string
   created_at: string
   updated_at: string
+}
+
+export type PreventivePlan = {
+  frequency:            'monthly' | 'quarterly' | 'semiannual' | 'annual'
+  interval:             number
+  checklist_items:      string[]
+  last_performed_at:    string | null
+  next_due_date:        string | null
+  advance_notice_days:  number
+  linked_equipment_id:  string | null
+}
+
+export type MaintenanceSupplier = {
+  id:           string
+  unit_id:      string
+  company_name: string
+  trade_name:   string | null
+  cnpj:         string | null
+  category:     string | null
+  email:        string | null
+  phone:        string | null
+  address:      string | null
+  notes:        string | null
+  is_active:    boolean
+  rating:       number | null
+  created_at:   string
+  updated_at:   string
+}
+
+export type SupplierContact = {
+  id:          string
+  supplier_id: string
+  name:        string
+  role:        string | null
+  phone:       string | null
+  whatsapp:    string | null
+  email:       string | null
+  is_primary:  boolean
+  created_at:  string
+}
+
+export type SupplierDocument = {
+  id:               string
+  supplier_id:      string
+  name:             string
+  file_url:         string
+  file_type:        string | null
+  file_size_bytes:  number | null
+  uploaded_by:      string | null
+  expires_at:       string | null
+  created_at:       string
+}
+
+export type MaintenanceCostStatus = 'pending' | 'approved' | 'rejected'
+export type MaintenanceCostType   = 'material' | 'labor' | 'travel' | 'other'
+
+export type MaintenanceCost = {
+  id:            string
+  unit_id:       string
+  order_id:      string
+  description:   string
+  amount:        number
+  cost_type:     MaintenanceCostType
+  receipt_url:   string | null
+  receipt_notes: string | null
+  status:        MaintenanceCostStatus
+  submitted_by:  string
+  submitted_at:  string
+  reviewed_by:   string | null
+  reviewed_at:   string | null
+  review_notes:  string | null
+  created_at:    string
+  updated_at:    string
 }
 
 export type MaintenancePhoto = {

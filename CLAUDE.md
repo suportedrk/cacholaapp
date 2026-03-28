@@ -576,6 +576,37 @@ docker compose -f docker-compose.prod.yml logs -f app
 - `cost_approved`: gerente aprovou → notifica técnico que submeteu
 - `cost_rejected`: gerente rejeitou → notifica técnico (com motivo)
 
+### Manutenção — Dashboard / KPIs (Prompt 2 — 2026-03-28)
+
+#### API
+- `GET /api/maintenance/stats?unit_id=X` — retorna KPIs + dados de gráficos
+- 10 queries em `Promise.all`; processamento de gaps semanais e médias no JS
+- Auth: cookie-based via `createClient()` server (padrão do projeto)
+
+#### Hook
+- `useMaintenanceStats()` em `src/hooks/use-maintenance-stats.ts`
+- `staleTime: 2min`, `enabled: !!activeUnitId && isSessionReady`
+- `retry`: não retenta 401/403
+
+#### Componentes
+- `MaintenanceKPIs`: 5 cards — abertas, atrasadas, concluídas (mês), tempo médio, custos (mês)
+  - Grid: `grid-cols-2 sm:grid-cols-3 lg:grid-cols-5`; card 5 tem `col-span-2 sm:col-span-1`
+  - Variante `error` (fundo vermelho) no card Atrasadas quando `count > 0`
+  - Sub-texto emergenciais (vermelho) e pendentes de aprovação (âmbar)
+  - Counter animation: `requestAnimationFrame` com ease-out cúbico (500ms)
+- `MaintenanceCharts`: AreaChart semanal + barras CSS por tipo/setor
+  - AreaChart: Recharts `ResponsiveContainer` 140px, gradiente `#22C55E`
+  - Barras CSS: `transition-width 500ms ease-out`, delay por índice
+  - Stagger de entrada: `animationDelay` 0–50ms, `animationFillMode: backwards`
+
+#### Cores por tipo (hex — Recharts/CSS)
+- `emergency`=#EF4444, `punctual`=#F59E0B, `recurring`=#22C55E, `preventive`=#3B82F6
+- Setores: `BRAND_GREEN[500]` (#7C8D78)
+
+#### Animação `fadeSlideUp`
+- `@keyframes fade-slide-up` em `globals.css`; `prefers-reduced-motion` sem translateY
+- Token: `--animate-fade-slide-up`; classe: `.animate-fade-slide-up`
+
 ---
 
 ### Fase 2 — Bloco 2: Upload de Fotos (2026-03-27 → polimento Prompt 8 2026-03-28)

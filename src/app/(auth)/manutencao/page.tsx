@@ -11,6 +11,8 @@ import { MaintenanceCard, MaintenanceCardSkeleton } from '@/components/features/
 import { MaintenanceFilters } from '@/components/features/maintenance/maintenance-filters'
 import { useMaintenanceOrders, type MaintenanceFilters as Filters } from '@/hooks/use-maintenance'
 import { useSectors } from '@/hooks/use-sectors'
+import { MaintenanceKPIs } from '@/components/features/maintenance/maintenance-kpis'
+import { MaintenanceCharts } from '@/components/features/maintenance/maintenance-charts'
 
 // ─────────────────────────────────────────────────────────────
 // CONTEÚDO PRINCIPAL
@@ -119,6 +121,12 @@ export default function ManutencaoPage() {
           </Link>
         }
       />
+
+      {/* ── KPIs + Charts ────────────────────────────────────── */}
+      <MaintenanceKPIs />
+      <MaintenanceCharts />
+
+      {/* ── Filtros + Lista ───────────────────────────────────── */}
       <Suspense fallback={
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
           {Array.from({ length: 6 }).map((_, i) => <MaintenanceCardSkeleton key={i} />)}

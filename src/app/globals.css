@@ -152,6 +152,7 @@
   --animate-slide-left-in:  slide-left-in  var(--duration-normal) var(--ease-out)    both;
   --animate-slide-right-in: slide-right-in var(--duration-normal) var(--ease-out)    both;
   --animate-celebrate:      celebrate-check 0.5s var(--ease-bounce) both;
+  --animate-fade-slide-up:  fade-slide-up   0.3s var(--ease-out) both;
 }
 
 /* ============================================================
@@ -260,6 +261,21 @@
 }
 .animate-notification-in {
   animation: notification-in 0.35s var(--ease-spring) both;
+}
+
+/* KPI / stats cards — stagger entrance */
+@keyframes fade-slide-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  @keyframes fade-slide-up {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+}
+.animate-fade-slide-up {
+  animation: var(--animate-fade-slide-up);
 }
 
 /* PWA safe area bottom padding */
