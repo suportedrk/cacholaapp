@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { format, startOfMonth, endOfMonth, subMonths, differenceInCalendarDays, parseISO } from 'date-fns'
 import type { EventWithDetails, EventStatus, MaintenanceType } from '@/types/database.types'
 import { useUnitStore } from '@/stores/unit-store'
+import { useAuthReadyStore } from '@/stores/auth-store'
 import { useOnlineStatus } from './use-online-status'
 import { getOfflineDb } from '@/lib/offline-db'
 
@@ -61,8 +62,10 @@ const CALENDAR_EVENT_SELECT = `
 // ─────────────────────────────────────────────────────────────
 export function useDashboardStats() {
   const { activeUnitId } = useUnitStore()
+  const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
   return useQuery({
     queryKey: ['dashboard', 'stats', activeUnitId],
+    enabled: isSessionReady,
     queryFn: async () => {
       const supabase = createClient()
       const now = new Date()
@@ -96,8 +99,10 @@ export function useDashboardStats() {
 // ─────────────────────────────────────────────────────────────
 export function useNextEvent() {
   const { activeUnitId } = useUnitStore()
+  const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
   return useQuery({
     queryKey: ['dashboard', 'next-event', activeUnitId],
+    enabled: isSessionReady,
     queryFn: async () => {
       const supabase = createClient()
       const today = format(new Date(), 'yyyy-MM-dd')
@@ -132,8 +137,10 @@ export function useNextEvent() {
 // ─────────────────────────────────────────────────────────────
 export function useDashboardMaintenanceStats() {
   const { activeUnitId } = useUnitStore()
+  const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
   return useQuery({
     queryKey: ['dashboard', 'maintenance-stats', activeUnitId],
+    enabled: isSessionReady,
     queryFn: async () => {
       const supabase = createClient()
       const today = format(new Date(), 'yyyy-MM-dd')
@@ -165,6 +172,7 @@ export function useDashboardMaintenanceStats() {
 // ─────────────────────────────────────────────────────────────
 export function useCalendarEvents(dateFrom: string, dateTo: string) {
   const { activeUnitId } = useUnitStore()
+  const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
   const { isOnline } = useOnlineStatus()
   const [offlineData, setOfflineData] = useState<CalendarEvent[]>([])
   const [cachedAt, setCachedAt]       = useState<string | null>(null)
@@ -191,7 +199,7 @@ export function useCalendarEvents(dateFrom: string, dateTo: string) {
       return (data ?? []) as unknown as CalendarEvent[]
     },
     staleTime: 30 * 1000,
-    enabled: isOnline && !!dateFrom && !!dateTo,
+    enabled: isSessionReady && isOnline && !!dateFrom && !!dateTo,
   })
 
   // Salvar no IDB sempre que dados online chegarem
@@ -233,6 +241,7 @@ export function useCalendarEvents(dateFrom: string, dateTo: string) {
 // ─────────────────────────────────────────────────────────────
 export function useCalendarMaintenance(dateFrom: string, dateTo: string, enabled: boolean) {
   const { activeUnitId } = useUnitStore()
+  const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
   return useQuery({
     queryKey: ['dashboard', 'calendar-maintenance', dateFrom, dateTo, activeUnitId],
     queryFn: async () => {
@@ -259,7 +268,7 @@ export function useCalendarMaintenance(dateFrom: string, dateTo: string, enabled
       })) satisfies CalendarMaintenance[]
     },
     staleTime: 30 * 1000,
-    enabled: enabled && !!dateFrom && !!dateTo,
+    enabled: isSessionReady && enabled && !!dateFrom && !!dateTo,
   })
 }
 
@@ -298,9 +307,11 @@ function trendPct(curr: number, prev: number): number | null {
 
 export function useDashboardKpis() {
   const { activeUnitId } = useUnitStore()
+  const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
 
   return useQuery({
     queryKey: ['dashboard', 'kpis', activeUnitId],
+    enabled: isSessionReady,
     queryFn: async (): Promise<DashboardKpis> => {
       const supabase  = createClient()
       const now       = new Date()

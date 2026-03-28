@@ -15,6 +15,7 @@ import {
   notifyMaintenanceCompleted,
 } from '@/lib/notifications'
 import { useUnitStore } from '@/stores/unit-store'
+import { useAuthReadyStore } from '@/stores/auth-store'
 
 // ─────────────────────────────────────────────────────────────
 // SELECT FRAGMENTS
@@ -55,9 +56,11 @@ export type MaintenanceFilters = {
 export function useMaintenanceOrders(filters: MaintenanceFilters = {}) {
   const { search, type, status, priority, sectorId, page = 1, pageSize = 12 } = filters
   const { activeUnitId } = useUnitStore()
+  const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
 
   return useQuery({
     queryKey: ['maintenance', filters, activeUnitId],
+    enabled: isSessionReady,
     queryFn: async () => {
       const supabase = createClient()
       const from = (page - 1) * pageSize

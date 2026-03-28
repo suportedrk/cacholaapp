@@ -4,13 +4,16 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import type { Unit, UserUnit, UserUnitWithUnit, UserRole } from '@/types/database.types'
+import { useAuthReadyStore } from '@/stores/auth-store'
 
 // ─────────────────────────────────────────────────────────────
 // LISTAR TODAS AS UNIDADES (para admin)
 // ─────────────────────────────────────────────────────────────
 export function useUnits() {
+  const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
   return useQuery({
     queryKey: ['units'],
+    enabled: isSessionReady,
     queryFn: async () => {
       const supabase = createClient()
       const { data, error } = await supabase

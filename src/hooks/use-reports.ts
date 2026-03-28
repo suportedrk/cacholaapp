@@ -3,6 +3,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useUnitStore } from '@/stores/unit-store'
+import { useAuthReadyStore } from '@/stores/auth-store'
 import type {
   ReportFilters,
   EventReportSummary,
@@ -38,11 +39,13 @@ function rpcArgs(filters: ReportFilters) {
 
 export function useEventReport(filters: ReportFilters) {
   const { activeUnitId } = useUnitStore()
+  const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
   const effectiveFilters = { ...filters, unitId: filters.unitId ?? activeUnitId }
   const args = rpcArgs(effectiveFilters)
 
   const summary = useQuery({
     queryKey: ['report', 'events', 'summary', effectiveFilters],
+    enabled: isSessionReady,
     queryFn: async () => {
       const { data, error } = await createClient()
         .rpc('report_events_summary', args)
@@ -121,11 +124,13 @@ export function useEventReport(filters: ReportFilters) {
 
 export function useMaintenanceReport(filters: ReportFilters) {
   const { activeUnitId } = useUnitStore()
+  const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
   const effectiveFilters = { ...filters, unitId: filters.unitId ?? activeUnitId }
   const args = rpcArgs(effectiveFilters)
 
   const summary = useQuery({
     queryKey: ['report', 'maintenance', 'summary', effectiveFilters],
+    enabled: isSessionReady,
     queryFn: async () => {
       const { data, error } = await createClient()
         .rpc('report_maintenance_summary', args)
@@ -191,11 +196,13 @@ export function useMaintenanceReport(filters: ReportFilters) {
 
 export function useChecklistReport(filters: ReportFilters) {
   const { activeUnitId } = useUnitStore()
+  const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
   const effectiveFilters = { ...filters, unitId: filters.unitId ?? activeUnitId }
   const args = rpcArgs(effectiveFilters)
 
   const summary = useQuery({
     queryKey: ['report', 'checklists', 'summary', effectiveFilters],
+    enabled: isSessionReady,
     queryFn: async () => {
       const { data, error } = await createClient()
         .rpc('report_checklists_summary', args)
@@ -265,11 +272,13 @@ export function useChecklistReport(filters: ReportFilters) {
 
 export function useStaffReport(filters: ReportFilters) {
   const { activeUnitId } = useUnitStore()
+  const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
   const effectiveFilters = { ...filters, unitId: filters.unitId ?? activeUnitId }
   const args = rpcArgs(effectiveFilters)
 
   const summary = useQuery({
     queryKey: ['report', 'staff', 'summary', effectiveFilters],
+    enabled: isSessionReady,
     queryFn: async () => {
       const { data, error } = await createClient()
         .rpc('report_staff_summary', args)
