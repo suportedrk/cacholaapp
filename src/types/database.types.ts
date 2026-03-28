@@ -105,7 +105,7 @@ export type EventStatus =
 
 export type ChecklistStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled'
 export type ChecklistItemStatus = 'pending' | 'done' | 'na'
-export type MaintenanceType = 'emergency' | 'punctual' | 'recurring'
+export type MaintenanceType = 'emergency' | 'preventive' | 'punctual' | 'recurring'
 export type MaintenancePriority = 'low' | 'medium' | 'high' | 'critical'
 export type MaintenanceStatus = 'open' | 'in_progress' | 'waiting_parts' | 'completed' | 'cancelled'
 export type PhotoType = 'before' | 'after' | 'during'
@@ -669,12 +669,15 @@ export type MaintenanceWithDetails = MaintenanceOrder & {
   equipment: Pick<Equipment, 'id' | 'name' | 'category' | 'location'> | null
 }
 
-// Manutenção para listagem (sem fotos inline)
+// Manutenção para listagem (com fotos e fornecedor)
 export type MaintenanceForList = MaintenanceOrder & {
   sector: Pick<Sector, 'id' | 'name'> | null
   assigned_user: Pick<User, 'id' | 'name' | 'avatar_url'> | null
-  photo_count: number  // calculado no client
   equipment: Pick<Equipment, 'id' | 'name'> | null
+  supplier: Pick<MaintenanceSupplier, 'id' | 'company_name'> | null
+  photos: Array<Pick<MaintenancePhoto, 'id' | 'url' | 'type'>>
+  /** @deprecated use photos.length */
+  photo_count: number
 }
 
 

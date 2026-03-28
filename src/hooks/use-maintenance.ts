@@ -24,7 +24,9 @@ const MAINTENANCE_LIST_SELECT = `
   *,
   sector:sectors(id, name),
   assigned_user:users!maintenance_orders_assigned_to_fkey(id, name, avatar_url),
-  equipment(id, name)
+  equipment:equipment!equipment_id(id, name),
+  supplier:maintenance_suppliers!supplier_id(id, company_name),
+  photos:maintenance_photos(id, url, type)
 ` as const
 
 const MAINTENANCE_DETAIL_SELECT = `
@@ -79,9 +81,8 @@ export function useMaintenanceOrders(filters: MaintenanceFilters = {}) {
       if (priority?.length) q = q.in('priority', priority)
       if (sectorId)         q = q.eq('sector_id', sectorId)
 
-      // Ordenação: emergencial primeiro, depois prioridade, depois data
+      // Server-side ordering baseline
       q = q
-        .order('type',     { ascending: true })   // emergency < punctual < recurring (alpha)
         .order('priority', { ascending: false })   // critical first
         .order('due_date', { ascending: true, nullsFirst: false })
         .range(from, to)
@@ -89,8 +90,27 @@ export function useMaintenanceOrders(filters: MaintenanceFilters = {}) {
       const { data, count, error } = await q
       if (error) throw error
 
+      const TYPE_ORDER: Record<string, number> = { emergency: 0, preventive: 1, punctual: 2, recurring: 3 }
+      const PRIORITY_ORDER: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 }
+      const now = Date.now()
+
+      const sorted = ((data ?? []) as unknown as MaintenanceForList[]).sort((a, b) => {
+        const aOverdue = !!(a.due_date && a.status !== 'completed' && a.status !== 'cancelled' && new Date(a.due_date).getTime() < now)
+        const bOverdue = !!(b.due_date && b.status !== 'completed' && b.status !== 'cancelled' && new Date(b.due_date).getTime() < now)
+        if (aOverdue !== bOverdue) return aOverdue ? -1 : 1
+        const tDiff = (TYPE_ORDER[a.type] ?? 9) - (TYPE_ORDER[b.type] ?? 9)
+        if (tDiff !== 0) return tDiff
+        const pDiff = (PRIORITY_ORDER[a.priority] ?? 9) - (PRIORITY_ORDER[b.priority] ?? 9)
+        if (pDiff !== 0) return pDiff
+        if (a.due_date && b.due_date) return a.due_date.localeCompare(b.due_date)
+        return a.due_date ? -1 : b.due_date ? 1 : 0
+      })
+
+      // Backfill deprecated photo_count from photos array
+      sorted.forEach((o) => { o.photo_count = o.photos?.length ?? 0 })
+
       return {
-        data: (data ?? []) as unknown as MaintenanceForList[],
+        data: sorted,
         count: count ?? 0,
         page,
         pageSize,

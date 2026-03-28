@@ -72,15 +72,17 @@ const STATUS_LABEL: Record<EventStatus, string> = {
 const WEEK_HEADERS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
 
 const MAINTENANCE_PILL: Record<MaintenanceType, string> = {
-  emergency: 'bg-red-100 text-red-800 border-l-2 border-l-red-500 dark:bg-red-950/50 dark:text-red-300 dark:border-l-red-600',
-  punctual:  'bg-amber-100 text-amber-800 border-l-2 border-l-amber-500 dark:bg-amber-950/50 dark:text-amber-300 dark:border-l-amber-600',
-  recurring: 'bg-green-100 text-green-800 border-l-2 border-l-green-500 dark:bg-green-950/50 dark:text-green-300 dark:border-l-green-600',
+  emergency:  'bg-red-100 text-red-800 border-l-2 border-l-red-500 dark:bg-red-950/50 dark:text-red-300 dark:border-l-red-600',
+  preventive: 'bg-blue-100 text-blue-800 border-l-2 border-l-blue-500 dark:bg-blue-950/50 dark:text-blue-300 dark:border-l-blue-600',
+  punctual:   'bg-amber-100 text-amber-800 border-l-2 border-l-amber-500 dark:bg-amber-950/50 dark:text-amber-300 dark:border-l-amber-600',
+  recurring:  'bg-green-100 text-green-800 border-l-2 border-l-green-500 dark:bg-green-950/50 dark:text-green-300 dark:border-l-green-600',
 }
 
 const MAINTENANCE_DOT: Record<MaintenanceType, string> = {
-  emergency: 'bg-red-500',
-  punctual:  'bg-amber-500',
-  recurring: 'bg-green-500',
+  emergency:  'bg-red-500',
+  preventive: 'bg-blue-500',
+  punctual:   'bg-amber-500',
+  recurring:  'bg-green-500',
 }
 
 // ─────────────────────────────────────────────────────────────

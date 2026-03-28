@@ -18,6 +18,18 @@ const ACTIVE_CLASS: Record<FilterChipColor, string> = {
   gray:   'badge-gray   border font-semibold',
 }
 
+/** Cor do dot indicador quando ativo */
+const DOT_CLASS: Record<FilterChipColor, string> = {
+  brand:  'bg-primary',
+  amber:  'bg-amber-500',
+  red:    'bg-red-500',
+  green:  'bg-green-500',
+  blue:   'bg-blue-500',
+  purple: 'bg-purple-500',
+  orange: 'bg-orange-500',
+  gray:   'bg-gray-400',
+}
+
 interface FilterChipProps {
   label: string
   active: boolean
@@ -58,6 +70,9 @@ export function FilterChip({
         className,
       )}
     >
+      {active && !icon && (
+        <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', DOT_CLASS[color])} />
+      )}
       {icon && (
         <span className="shrink-0 [&>svg]:size-3">{icon}</span>
       )}

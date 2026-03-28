@@ -13,16 +13,17 @@ import type { Sector } from '@/types/database.types'
 import type { FilterChipColor } from '@/components/shared/filter-chip'
 
 const TYPE_OPTIONS: { value: MaintenanceType; label: string; color: FilterChipColor }[] = [
-  { value: 'emergency', label: 'Emergencial', color: 'red'   },
-  { value: 'punctual',  label: 'Pontual',     color: 'amber' },
-  { value: 'recurring', label: 'Recorrente',  color: 'brand' },
+  { value: 'emergency',  label: 'Emergencial', color: 'red'   },
+  { value: 'preventive', label: 'Preventiva',  color: 'blue'  },
+  { value: 'punctual',   label: 'Pontual',     color: 'amber' },
+  { value: 'recurring',  label: 'Recorrente',  color: 'green' },
 ]
 
 const STATUS_OPTIONS: { value: MaintenanceStatus; label: string; color: FilterChipColor }[] = [
-  { value: 'open',          label: 'Aberta',            color: 'blue'   },
-  { value: 'in_progress',   label: 'Em Andamento',      color: 'purple' },
-  { value: 'waiting_parts', label: 'Aguardando Peças',  color: 'amber'  },
-  { value: 'completed',     label: 'Concluída',         color: 'green'  },
+  { value: 'open',          label: 'Aberta',           color: 'brand'  },
+  { value: 'in_progress',   label: 'Em Andamento',     color: 'amber'  },
+  { value: 'waiting_parts', label: 'Aguard. Peças',    color: 'purple' },
+  { value: 'completed',     label: 'Concluída',        color: 'green'  },
 ]
 
 const PRIORITY_OPTIONS: { value: MaintenancePriority; label: string; color: FilterChipColor }[] = [
