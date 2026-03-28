@@ -60,8 +60,11 @@ export function useEvents(filters: EventFilters = {}) {
       }
 
       // Filtro por status
+      // Por padrão (sem filtro), 'lost' é excluído — o usuário precisa selecionar explicitamente
       if (status?.length) {
         query = query.in('status', status)
+      } else {
+        query = query.neq('status', 'lost')
       }
 
       // Filtro por período

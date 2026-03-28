@@ -9,7 +9,9 @@ import type { EventStatus } from '@/types/database.types'
 import type { EventFilters } from '@/hooks/use-events'
 import { cn } from '@/lib/utils'
 
-const ALL_STATUSES = Object.keys(STATUS_CONFIG) as EventStatus[]
+// 'lost' é separado — fica oculto por padrão, exibido como toggle opcional
+const MAIN_STATUSES = (Object.keys(STATUS_CONFIG) as EventStatus[]).filter((s) => s !== 'lost')
+const LOST_STATUS: EventStatus = 'lost'
 
 interface EventFiltersProps {
   filters: EventFilters
@@ -105,7 +107,7 @@ export function EventFiltersBar({ filters, onFiltersChange }: EventFiltersProps)
           <SlidersHorizontal className="w-3.5 h-3.5" />
           Status:
         </span>
-        {ALL_STATUSES.map((status) => {
+        {MAIN_STATUSES.map((status) => {
           const active = filters.status?.includes(status) ?? false
           return (
             <button
@@ -124,6 +126,24 @@ export function EventFiltersBar({ filters, onFiltersChange }: EventFiltersProps)
             </button>
           )
         })}
+
+        {/* Separador + toggle "Perdidos" — oculto por padrão */}
+        <span className="w-px h-5 bg-border self-center mx-1" />
+        <button
+          onClick={() => toggleStatus(LOST_STATUS)}
+          className={cn(
+            'transition-all duration-150 text-xs text-muted-foreground hover:text-foreground',
+            filters.status?.includes(LOST_STATUS)
+              ? 'opacity-100'
+              : 'opacity-50 hover:opacity-70'
+          )}
+        >
+          <EventStatusBadge
+            status={LOST_STATUS}
+            size="sm"
+            className={filters.status?.includes(LOST_STATUS) ? 'ring-2 ring-offset-1 ring-gray-400' : ''}
+          />
+        </button>
       </div>
     </div>
   )

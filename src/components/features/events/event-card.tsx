@@ -21,13 +21,16 @@ export const EventCard = memo(function EventCard({ event }: EventCardProps) {
   // Formatar hora: "14:00"
   const formatTime = (t: string) => t.slice(0, 5)
 
+  const isLost = event.status === 'lost'
+
   return (
     <Link
       href={`/eventos/${event.id}`}
       className={cn(
         'group block bg-card rounded-xl border border-border p-4',
         'hover:border-primary/40 hover:shadow-md transition-all duration-200',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        isLost && 'opacity-60'
       )}
     >
       {/* Header: data + status */}
@@ -47,7 +50,10 @@ export const EventCard = memo(function EventCard({ event }: EventCardProps) {
 
       {/* Título e cliente */}
       <div className="mb-3">
-        <h3 className="font-semibold text-foreground text-base leading-tight group-hover:text-primary transition-colors line-clamp-1">
+        <h3 className={cn(
+          'font-semibold text-foreground text-base leading-tight group-hover:text-primary transition-colors line-clamp-1',
+          isLost && 'line-through text-muted-foreground'
+        )}>
           {event.title}
         </h3>
         <p className="text-sm text-muted-foreground mt-0.5 line-clamp-1">

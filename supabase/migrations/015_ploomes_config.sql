@@ -121,12 +121,12 @@ SELECT
     "clientEmail": "Email",
     "clientPhone": "Phones[0].PhoneNumber"
   }'::jsonb,
-  -- status_mappings (array format: todos os deals no stage Festa Fechada são processados;
-  -- StatusId 2 (Perdido) é ignorado — deal perdido não gera evento)
+  -- status_mappings (array format: Ploomes padrão: 1=Em aberto, 2=Ganho, 3=Perdido)
+  -- StatusId=3 (Perdido) → 'lost' no Cachola OS; demais → 'confirmed'
   '[
-    {"statusId": 1, "statusName": "Ganho",     "description": "Deal ganho — festa confirmada",             "cacholaAction": "confirmed"},
-    {"statusId": 2, "statusName": "Perdido",   "description": "Deal perdido — não importado",              "cacholaAction": "skip"},
-    {"statusId": 3, "statusName": "Em aberto", "description": "Deal em aberto no stage Festa Fechada — festa confirmada", "cacholaAction": "confirmed"}
+    {"statusId": 1, "statusName": "Em aberto", "description": "Deal ainda em negociação no stage Festa Fechada — festa confirmada",  "cacholaStatus": "confirmed"},
+    {"statusId": 2, "statusName": "Ganho",     "description": "Festa confirmada/ganha",                                             "cacholaStatus": "confirmed"},
+    {"statusId": 3, "statusName": "Perdido",   "description": "Festa perdida/cancelada — mantido para estatísticas",                "cacholaStatus": "lost"}
   ]'::jsonb
 FROM public.units u
 WHERE u.slug = 'pinheiros'

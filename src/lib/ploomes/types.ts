@@ -94,6 +94,7 @@ export type SyncResult = {
   dealsFound: number
   dealsCreated: number
   dealsUpdated: number
+  dealsMarkedLost: number
   dealsErrors: number
   venuesCreated: number
   typesCreated: number

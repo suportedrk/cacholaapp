@@ -8,6 +8,7 @@ const STATUS_CONFIG: Record<EventStatus, { label: string; className: string }> =
   in_progress: { label: 'Em Andamento',  className: 'bg-green-50 text-green-700 border-green-200' },
   finished:    { label: 'Finalizado',    className: 'bg-gray-100 text-gray-600 border-gray-200' },
   post_event:  { label: 'Pós-Evento',   className: 'bg-gray-100 text-gray-500 border-gray-200' },
+  lost:        { label: 'Perdido',       className: 'bg-gray-100 text-gray-400 border-gray-200' },
 }
 
 const DOT_COLOR: Record<EventStatus, string> = {
@@ -17,6 +18,7 @@ const DOT_COLOR: Record<EventStatus, string> = {
   in_progress: 'bg-green-500',
   finished:    'bg-gray-400',
   post_event:  'bg-gray-400',
+  lost:        'bg-gray-300',
 }
 
 interface EventStatusBadgeProps {

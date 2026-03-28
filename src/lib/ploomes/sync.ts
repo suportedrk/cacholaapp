@@ -154,6 +154,7 @@ export async function syncDeals(
     dealsFound: 0,
     dealsCreated: 0,
     dealsUpdated: 0,
+    dealsMarkedLost: 0,
     dealsErrors: 0,
     venuesCreated: 0,
     typesCreated: 0,
@@ -161,7 +162,7 @@ export async function syncDeals(
   }
 
   // Inserir log de início
-  const { data: logRow } = await supabase
+  const { data: logRow, error: logInsertErr } = await supabase
     .from('ploomes_sync_log')
     .insert({
       status: 'running',
@@ -171,6 +172,10 @@ export async function syncDeals(
     })
     .select('id')
     .single()
+
+  if (logInsertErr) {
+    console.error('[Ploomes sync] Falha ao inserir sync_log:', logInsertErr.message)
+  }
 
   const logId = logRow?.id
 
@@ -185,6 +190,7 @@ export async function syncDeals(
         deals_found: result.dealsFound,
         deals_created: result.dealsCreated,
         deals_updated: result.dealsUpdated,
+        deals_removed: result.dealsMarkedLost,
         deals_errors: result.dealsErrors,
         venues_created: result.venuesCreated,
         types_created: result.typesCreated,
@@ -199,29 +205,42 @@ export async function syncDeals(
 
     const pipelineId = dbConfig?.pipeline_id ?? DEFAULT_PIPELINE_ID
     const stageId    = dbConfig?.stage_id    ?? DEFAULT_STAGE_ID
-    // won_status_id não é mais usado como filtro — todos os deals no stage são importados.
-    // StatusId é tratado como metadado: 2 (Perdido) → cancelado; demais → confirmado.
+    // Regra de negócio: todos os deals no stage "Festa Fechada" são importados.
+    // StatusId determina o status do evento:
+    //   2 (Perdido) → 'lost' (mantido para estatísticas, oculto por padrão na UI)
+    //   demais      → 'confirmed'
 
     // ── 2. Buscar createdBy ──────────────────────────────────────
     const createdBy = options.triggeredByUserId ?? (await getSystemUserId(supabase))
 
-    // ── 3. Buscar deals do Ploomes ───────────────────────────────
-    // Filtro: apenas pipeline + stage. Qualquer deal no stage "Festa Fechada"
-    // é uma festa confirmada no Cachola OS, independente do StatusId.
-    const query = [
-      `$filter=PipelineId eq ${pipelineId} and StageId eq ${stageId}`,
-      `$expand=OtherProperties,Contact($select=Id,Name,Email,Phones)`,
-      `$select=Id,Title,ContactId,OwnerId,Amount,StageId,StatusId,CreateDate,LastUpdateDate,OtherProperties`,
-      `$top=200`,
-      `$orderby=CreateDate desc`,
-    ].join('&')
+    // ── 3. Buscar deals do Ploomes com paginação ─────────────────
+    // O Ploomes limita resultados por página (100). Faz loop com $skip até esgotar.
+    const allDeals: PloomesDeal[] = []
+    const pageSize = 100
+    let skip = 0
 
-    const response = await ploomesGet<PloomesDeal>(`Deals?${query}`)
-    const deals = response.value ?? []
-    result.dealsFound = deals.length
+    while (true) {
+      const queryParts = [
+        `$filter=PipelineId eq ${pipelineId} and StageId eq ${stageId}`,
+        `$expand=OtherProperties,Contact($select=Id,Name,Email,Phones)`,
+        `$select=Id,Title,ContactId,OwnerId,Amount,StageId,StatusId,CreateDate,LastUpdateDate,OtherProperties`,
+        `$top=${pageSize}`,
+        `$skip=${skip}`,
+        `$orderby=CreateDate desc`,
+      ].join('&')
+
+      const response = await ploomesGet<PloomesDeal>(`Deals?${queryParts}`)
+      const page = response.value ?? []
+      allDeals.push(...page)
+
+      if (page.length < pageSize) break
+      skip += pageSize
+    }
+
+    result.dealsFound = allDeals.length
 
     // ── 4. Processar cada deal ───────────────────────────────────
-    for (const deal of deals) {
+    for (const deal of allDeals) {
       try {
         const parsed = parseDeal(deal)
 
@@ -254,9 +273,10 @@ export async function syncDeals(
         const startTime = parsed.startTime || '08:00'
         const endTime   = parsed.endTime   || '12:00'
 
-        // StatusId 2 (Perdido no Ploomes) → deal não fechou, não criar evento
-        if (deal.StatusId === 2) continue
-        const eventStatus = 'confirmed' as const
+        // Mapear StatusId → status do evento
+        // Ploomes padrão: 1=Em aberto, 2=Ganho, 3=Perdido
+        // No stage "Festa Fechada": StatusId=3 (Perdido) → lost; demais → confirmed
+        const eventStatus = deal.StatusId === 3 ? 'lost' as const : 'confirmed' as const
 
         const eventPayload = {
           ploomes_deal_id: String(deal.Id),
@@ -275,10 +295,10 @@ export async function syncDeals(
           created_by: createdBy,
         }
 
-        // Verificar se já existe (para contar created vs updated)
+        // Verificar se já existe (para contar created vs updated vs lost)
         const { data: existing } = await supabase
           .from('events')
-          .select('id')
+          .select('id, status')
           .eq('ploomes_deal_id', String(deal.Id))
           .single()
 
@@ -291,9 +311,18 @@ export async function syncDeals(
           result.dealsErrors++
         } else {
           if (existing) {
-            result.dealsUpdated++
+            // Detectar transição para/de lost (deal ganho/perdido ou reaberto)
+            if (eventStatus === 'lost' && existing.status !== 'lost') {
+              result.dealsMarkedLost++
+            } else {
+              result.dealsUpdated++
+            }
           } else {
-            result.dealsCreated++
+            if (eventStatus === 'lost') {
+              result.dealsMarkedLost++
+            } else {
+              result.dealsCreated++
+            }
           }
         }
       } catch (dealErr) {

@@ -88,6 +88,7 @@ export type UserRole =
 
 // Fase 1: enum atualizado (migration 006)
 // draft→pending, completed→finished, cancelado removido, adding preparing e post_event
+// Fase 4 (migration 016): adicionado 'lost' para deals Perdido do Ploomes
 export type EventStatus =
   | 'pending'     // Pendente (aguardando confirmação)
   | 'confirmed'   // Confirmado
@@ -95,6 +96,7 @@ export type EventStatus =
   | 'in_progress' // Em Andamento (evento acontecendo)
   | 'finished'    // Finalizado
   | 'post_event'  // Pós-Evento (limpeza, devolução, avaliação)
+  | 'lost'        // Perdido (deal perdido no Ploomes — mantido para estatísticas)
 
 export type ChecklistStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled'
 export type ChecklistItemStatus = 'pending' | 'done' | 'na'
@@ -522,6 +524,7 @@ export type PloomesSyncLog = {
   deals_created: number
   deals_updated: number
   deals_errors: number
+  deals_removed: number
   venues_created: number
   types_created: number
   error_message: string | null

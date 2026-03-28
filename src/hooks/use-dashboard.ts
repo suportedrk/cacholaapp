@@ -74,6 +74,7 @@ export function useDashboardStats() {
         .select('status, date')
         .gte('date', monthStart)
         .lte('date', monthEnd)
+        .neq('status', 'lost')   // 'lost' excluído dos contadores do dashboard
       if (activeUnitId) q = q.eq('unit_id', activeUnitId)
       const { data, error } = await q
 
@@ -111,7 +112,7 @@ export function useNextEvent() {
           staff:event_staff(id, role_in_event, user:users(id, name, avatar_url))
         `)
         .gte('date', today)
-        .not('status', 'in', '("finished","post_event")')
+        .not('status', 'in', '("finished","post_event","lost")')
       if (activeUnitId) q = q.eq('unit_id', activeUnitId)
       const { data, error } = await q
         .order('date', { ascending: true })
@@ -180,6 +181,7 @@ export function useCalendarEvents(dateFrom: string, dateTo: string) {
         .select(CALENDAR_EVENT_SELECT)
         .gte('date', dateFrom)
         .lte('date', dateTo)
+        .neq('status', 'lost')   // 'lost' não aparece no calendário
         .order('date', { ascending: true })
         .order('start_time', { ascending: true })
       if (activeUnitId) q = q.eq('unit_id', activeUnitId)

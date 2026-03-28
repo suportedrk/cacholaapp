@@ -624,17 +624,25 @@ Role:  super_admin (32 permissões)
 - [x] `src/app/(auth)/configuracoes/integracoes/ploomes/mapeamento/page.tsx`: página visual com 4 seções carregadas do banco
 - [x] 4 componentes mapping-*-card.tsx: Pipeline, Fields, Contact, Status
 
-### Fase 4 — Regra de Negócio: Filtro de Sync (2026-03-27)
-- **REGRA:** Deals no stage "Festa Fechada" são importados como eventos confirmados, **exceto** StatusId=2 (Perdido) que é ignorado (deal perdido = negócio não fechou = não há festa).
-  - StatusId=1 (Ganho) → `confirmed`
-  - StatusId=2 (Perdido) → **skip** (não importado — deal perdido não gera evento)
-  - StatusId=3 (Em aberto) → `confirmed`
-  - Antes o filtro usava `StatusId eq 1` (só "Ganhos"), trazendo apenas 4 deals. Agora: 200 encontrados, 4 importados, 196 Perdido ignorados.
-  - **Nota técnica:** `cancelled` foi removido do CHECK constraint em migration 006; status disponíveis: `pending`, `confirmed`, `preparing`, `in_progress`, `finished`, `post_event`.
-- [x] `src/lib/ploomes/sync.ts`: removido `StatusId eq ${statusId}` do OData `$filter`; deals com `StatusId === 2` recebem `continue` (skip)
-- [x] `supabase/migrations/015_ploomes_config.sql`: seed de `status_mappings` atualizado para array format `[{statusId, statusName, description, cacholaAction}]` com `cacholaAction: "skip"` para Perdido
-- [x] `src/components/features/ploomes/mapping-status-card.tsx`: reescrito para suportar novo formato array (+ backward compat com `Record<string,string>` legado); `skip` exibido como "Ignorado" em vermelho suave
-- [x] DB `ploomes_config.status_mappings` atualizado: Ganho→confirmed, Perdido→skip, Em aberto→confirmed
+### Fase 4 — Status 'lost' + Paginação Ploomes (2026-03-27)
+- **StatusId no Ploomes (padrão global):** 1=Em aberto, 2=Ganho, 3=Perdido (NOT 1=Ganho como assumido originalmente)
+- **REGRA:** Todos os deals no stage "Festa Fechada" são importados.
+  - StatusId=1 (Em aberto) → `confirmed` (negociação aberta mas no stage fechada = festa confirmada)
+  - StatusId=2 (Ganho) → `confirmed` (a maioria dos deals — ~642 de 654)
+  - StatusId=3 (Perdido) → `lost` (mantido para estatísticas, oculto por padrão na UI)
+- **Paginação OData:** loop `$top=100 + $skip=N` até `page.length < 100`; total: 654 deals (646 confirmed + 8 lost)
+- **'lost' na UI:** filtro "Perdido" separado do grupo principal (após separador vertical), desativado por padrão; cards com `opacity-60` e título `line-through`; excluído de contadores do dashboard e do calendário
+- **Nota técnica:** `cancelled` foi removido do CHECK em migration 006; `lost` adicionado em migration 016
+- [x] `supabase/migrations/016_events_status_lost.sql`: ADD `lost` ao CHECK constraint de `events.status`; ADD `deals_removed INTEGER DEFAULT 0` ao `ploomes_sync_log`
+- [x] `src/types/database.types.ts`: `EventStatus` += `'lost'`; `PloomesSyncLog` += `deals_removed`; `SyncResult` += `dealsMarkedLost`
+- [x] `src/components/shared/event-status-badge.tsx`: STATUS_CONFIG e DOT_COLOR com entrada `lost` (cinza suave)
+- [x] `src/lib/ploomes/sync.ts`: paginação OData com loop `$skip`; `StatusId===3→lost`, demais→`confirmed`; `dealsMarkedLost` counter; error log no sync_log INSERT
+- [x] `src/components/features/events/event-filters.tsx`: `MAIN_STATUSES` sem `lost`; badge "Perdido" após separador, desativado por padrão
+- [x] `src/components/features/events/event-card.tsx`: `opacity-60` + `line-through` no título quando `status==='lost'`
+- [x] `src/hooks/use-events.ts`: sem filtro de status → `neq('status','lost')` por padrão
+- [x] `src/hooks/use-dashboard.ts`: `useDashboardStats` e `useNextEvent` excluem `lost`; `useCalendarEvents` exclui `lost`
+- [x] `src/components/features/ploomes/mapping-status-card.tsx`: suporte a `cacholaStatus` (novo) + `cacholaAction` (legado); `lost` renderizado como "Perdido" cinza
+- [x] `supabase/migrations/015_ploomes_config.sql`: seed `status_mappings` com formato correto (1=Em aberto→confirmed, 2=Ganho→confirmed, 3=Perdido→lost)
 
 ### Fase 3 — Bloco 6: Offline Mode (2026-03-27)
 - [x] `idb` instalado (4KB, Promise-based IndexedDB)

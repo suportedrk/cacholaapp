@@ -7,7 +7,9 @@ type StatusMappingEntry = {
   statusId: number
   statusName: string
   description: string
-  cacholaAction: string
+  // Suporta tanto cacholaStatus (novo) quanto cacholaAction (legado)
+  cacholaStatus?: string
+  cacholaAction?: string
 }
 
 type Props = {
@@ -18,14 +20,14 @@ const EVENT_STATUS_COLORS: Record<string, string> = {
   confirmed: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
   pending:   'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
   finished:  'bg-gray-100 text-gray-600 dark:bg-gray-800/40 dark:text-gray-400',
-  skip:      'bg-red-50 text-red-500 dark:bg-red-900/20 dark:text-red-400',
+  lost:      'bg-gray-100 text-gray-400 dark:bg-gray-800/30 dark:text-gray-500',
 }
 
 const EVENT_STATUS_LABELS: Record<string, string> = {
   confirmed: 'Confirmado',
   pending:   'Pendente',
   finished:  'Finalizado',
-  skip:      'Ignorado',
+  lost:      'Perdido',
 }
 
 const PLOOMES_STATUS_COLORS: Record<string, string> = {
@@ -39,11 +41,11 @@ export function MappingStatusCard({ config }: Props) {
   const raw = config.status_mappings
   const entries: StatusMappingEntry[] = Array.isArray(raw)
     ? (raw as StatusMappingEntry[])
-    : Object.entries(raw as Record<string, string>).map(([statusName, cacholaAction], i) => ({
+    : Object.entries(raw as Record<string, string>).map(([statusName, cacholaStatus], i) => ({
         statusId: i + 1,
         statusName,
         description: '',
-        cacholaAction,
+        cacholaStatus,
       }))
 
   return (
@@ -63,8 +65,9 @@ export function MappingStatusCard({ config }: Props) {
 
       {/* Nota de contexto */}
       <div className="px-5 py-3 bg-primary/5 border-b border-border text-xs text-muted-foreground">
-        Deals no stage <span className="font-medium text-foreground">Festa Fechada</span> são importados
-        — exceto <span className="font-medium text-foreground">Perdido</span> (negócio não fechado).
+        Todos os deals no stage <span className="font-medium text-foreground">Festa Fechada</span> são importados.
+        Deals <span className="font-medium text-foreground">Perdido</span> ficam com status{' '}
+        <span className="font-medium text-foreground">Perdido</span> no Cachola OS (ocultos por padrão, mantidos para estatísticas).
       </div>
 
       {/* Rows */}
@@ -98,15 +101,20 @@ export function MappingStatusCard({ config }: Props) {
 
               <ArrowRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground mt-1" />
 
-              {/* Ação Cachola */}
-              <span
-                className={[
-                  'shrink-0 inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
-                  EVENT_STATUS_COLORS[entry.cacholaAction] ?? 'bg-muted text-muted-foreground',
-                ].join(' ')}
-              >
-                {EVENT_STATUS_LABELS[entry.cacholaAction] ?? entry.cacholaAction}
-              </span>
+              {/* Status Cachola (suporta cacholaStatus novo e cacholaAction legado) */}
+              {(() => {
+                const val = entry.cacholaStatus ?? entry.cacholaAction ?? ''
+                return (
+                  <span
+                    className={[
+                      'shrink-0 inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
+                      EVENT_STATUS_COLORS[val] ?? 'bg-muted text-muted-foreground',
+                    ].join(' ')}
+                  >
+                    {EVENT_STATUS_LABELS[val] ?? val}
+                  </span>
+                )
+              })()}
             </div>
           ))}
         </div>
