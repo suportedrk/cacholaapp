@@ -25,6 +25,7 @@ import { ConfirmDialog } from '@/components/shared/confirm-dialog'
 import { UserAvatar } from '@/components/shared/user-avatar'
 import { ChecklistCard } from '@/components/features/checklists/checklist-card'
 import { AddChecklistModal } from '@/components/features/checklists/add-checklist-modal'
+import { PloomesEventDetails } from '@/components/features/ploomes/ploomes-event-details'
 import { useEvent, useDeleteEvent, useChangeEventStatus } from '@/hooks/use-events'
 import { useEventChecklists, useCreateChecklist } from '@/hooks/use-checklists'
 import { useUsers } from '@/hooks/use-users'
@@ -229,6 +230,11 @@ export default function EventoDetailPage() {
           </div>
         )}
       </div>
+
+      {/* Seção: Dados do Ploomes (apenas se evento veio do CRM) */}
+      {event.ploomes_deal_id && (
+        <PloomesEventDetails event={event} />
+      )}
 
       {/* Seção: Equipe */}
       <div className="bg-card border border-border rounded-xl p-4 space-y-3">

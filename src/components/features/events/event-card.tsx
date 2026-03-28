@@ -6,6 +6,7 @@ import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Calendar, Clock, MapPin, Users, Package } from 'lucide-react'
 import { EventStatusBadge } from '@/components/shared/event-status-badge'
+import { PloomeBadge } from '@/components/features/ploomes/ploomes-badge'
 import { cn } from '@/lib/utils'
 import type { EventWithDetails } from '@/types/database.types'
 
@@ -38,7 +39,10 @@ export const EventCard = memo(function EventCard({ event }: EventCardProps) {
           <Clock className="w-3.5 h-3.5" />
           <span>{formatTime(event.start_time)} – {formatTime(event.end_time)}</span>
         </div>
-        <EventStatusBadge status={event.status} size="sm" />
+        <div className="flex items-center gap-1.5">
+          {event.ploomes_deal_id && <PloomeBadge url={event.ploomes_url} size="xs" />}
+          <EventStatusBadge status={event.status} size="sm" />
+        </div>
       </div>
 
       {/* Título e cliente */}

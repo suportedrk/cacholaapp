@@ -40,6 +40,8 @@ export interface Database {
       // Configurações avançadas (Fase 3)
       unit_settings:        { Row: UnitSettings;        Insert: Partial<UnitSettings>;   Update: Partial<UnitSettings>;   Relationships: [] }
       equipment_categories: { Row: EquipmentCategory;   Insert: Partial<EquipmentCategory>; Update: Partial<EquipmentCategory>; Relationships: [] }
+      // Integração Ploomes CRM
+      ploomes_sync_log:     { Row: PloomesSyncLog;      Insert: Partial<PloomesSyncLog>; Update: Partial<PloomesSyncLog>; Relationships: [] }
       // Sistema
       notifications:        { Row: AppNotification;     Insert: Partial<AppNotification>; Update: Partial<AppNotification>; Relationships: [] }
       audit_logs:           { Row: AuditLog;            Insert: Partial<AuditLog>;       Update: Partial<AuditLog>;       Relationships: [] }
@@ -310,6 +312,7 @@ export type Event = {
   id: string
   unit_id: string
   ploomes_deal_id: string | null
+  ploomes_url: string | null
   title: string
   date: string           // DATE → 'YYYY-MM-DD'
   start_time: string     // TIME → 'HH:MM:SS'
@@ -344,6 +347,7 @@ export type EventInsert = {
   package_id?: string | null
   venue_id?: string | null
   ploomes_deal_id?: string | null
+  ploomes_url?: string | null
   created_by: string
 }
 
@@ -482,6 +486,27 @@ export type SystemConfig = {
   label: string
   sort_order: number
   is_active: boolean
+}
+
+// ─────────────────────────────────────────────────────────────
+// PLOOMES CRM
+// ─────────────────────────────────────────────────────────────
+export type PloomesSyncLog = {
+  id: string
+  started_at: string
+  finished_at: string | null
+  status: 'running' | 'success' | 'error'
+  deals_found: number
+  deals_created: number
+  deals_updated: number
+  deals_errors: number
+  venues_created: number
+  types_created: number
+  error_message: string | null
+  triggered_by: 'cron' | 'manual' | 'webhook'
+  triggered_by_user_id: string | null
+  unit_id: string | null
+  created_at: string
 }
 
 // ─────────────────────────────────────────────────────────────

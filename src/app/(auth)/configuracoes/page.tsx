@@ -1,5 +1,7 @@
 'use client'
 
+import Link from 'next/link'
+import { ExternalLink } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { PageHeader } from '@/components/shared/page-header'
 import { ConfigTable, type ConfigItem } from '@/components/features/settings/config-table'
@@ -66,6 +68,7 @@ export default function ConfiguracoesPage() {
             <TabsTrigger value="categorias-equip">Categ. Equipamentos</TabsTrigger>
             <TabsTrigger value="horarios">Horários</TabsTrigger>
             <TabsTrigger value="geral">Geral</TabsTrigger>
+            <TabsTrigger value="integracoes">Integrações</TabsTrigger>
           </TabsList>
         </div>
 
@@ -153,6 +156,25 @@ export default function ConfiguracoesPage() {
         {/* ── Configurações Gerais ── */}
         <TabsContent value="geral" className="mt-4">
           <GeneralSettingsTab />
+        </TabsContent>
+
+        {/* ── Integrações ── */}
+        <TabsContent value="integracoes" className="mt-4 space-y-3">
+          <p className="text-sm text-muted-foreground">
+            Integrações com sistemas externos para importar e exportar dados do Cachola OS.
+          </p>
+          <Link
+            href="/configuracoes/integracoes/ploomes"
+            className="flex items-center justify-between rounded-xl border border-border bg-card p-4 hover:bg-muted/40 transition-colors group"
+          >
+            <div className="space-y-0.5">
+              <p className="font-medium text-sm group-hover:text-primary transition-colors">Ploomes CRM</p>
+              <p className="text-xs text-muted-foreground">
+                Sincronize festas fechadas do Ploomes automaticamente com o calendário do Cachola OS.
+              </p>
+            </div>
+            <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
+          </Link>
         </TabsContent>
       </Tabs>
     </div>

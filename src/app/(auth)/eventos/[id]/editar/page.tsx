@@ -2,7 +2,7 @@
 
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, AlertTriangle } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { PageHeader } from '@/components/shared/page-header'
 import { EventForm } from '@/components/features/events/event-form'
@@ -51,6 +51,16 @@ export default function EditarEventoPage() {
           description={event.title}
         />
       </div>
+
+      {/* Aviso quando evento é do Ploomes */}
+      {event.ploomes_deal_id && (
+        <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-amber-500" />
+          <p>
+            Este evento veio do <strong>Ploomes CRM</strong>. Alterações nos campos de data, horário, aniversariante e convidados serão <strong>sobrescritas na próxima sincronização</strong>. Edite esses dados diretamente no Ploomes.
+          </p>
+        </div>
+      )}
 
       <EventForm event={event} />
     </div>
