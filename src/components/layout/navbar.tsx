@@ -10,7 +10,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
@@ -163,12 +162,11 @@ export function Navbar({ onMenuClick, scrolled }: NavbarProps) {
             </DropdownMenuTrigger>
 
             <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel>
-                <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium">{profile?.name ?? 'Usuário'}</p>
-                  <p className="text-xs text-muted-foreground truncate">{profile?.email}</p>
-                </div>
-              </DropdownMenuLabel>
+              {/* Header de perfil — div simples, não GroupLabel (exige Group pai) */}
+              <div className="px-1.5 py-1.5 flex flex-col space-y-0.5">
+                <p className="text-sm font-medium">{profile?.name ?? 'Usuário'}</p>
+                <p className="text-xs text-muted-foreground truncate">{profile?.email}</p>
+              </div>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="cursor-pointer"
