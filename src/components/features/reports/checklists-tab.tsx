@@ -10,6 +10,7 @@ import { BarChartCard } from './bar-chart-card'
 import { DonutChartCard } from './donut-chart-card'
 import { ExportButton } from './export-button'
 import type { ReportFilters } from '@/types/database.types'
+import { CHART_COLORS } from '@/lib/constants/brand-colors'
 
 const STATUS_LABEL: Record<string, string> = {
   pending:     'Pendente',
@@ -39,8 +40,8 @@ export function ChecklistsTab({ filters, unitName }: ChecklistsTabProps) {
   }, [byMonth.data])
 
   const byMonthSeries = [
-    { dataKey: 'Concluídos', name: 'Concluídos', color: '#7C8D78' },
-    { dataKey: 'Atrasados',  name: 'Atrasados',  color: '#E07070' },
+    { dataKey: 'Concluídos', name: 'Concluídos', color: CHART_COLORS.checklistDone },
+    { dataKey: 'Atrasados',  name: 'Atrasados',  color: CHART_COLORS.checklistLate },
   ]
 
   // Donut por categoria

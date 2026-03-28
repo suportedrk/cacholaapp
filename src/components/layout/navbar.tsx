@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Menu, LogOut, User as UserIcon, Settings, WifiOff } from 'lucide-react'
+import { Menu, LogOut, User as UserIcon, Settings, WifiOff, Sun, Moon } from 'lucide-react'
 import { useOnlineStatus } from '@/hooks/use-online-status'
+import { useTheme } from '@/components/theme-provider'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,6 +29,7 @@ export function Navbar({ onMenuClick }: NavbarProps) {
   const router = useRouter()
   const { profile, signOut } = useAuth()
   const { isOnline } = useOnlineStatus()
+  const { resolvedTheme, toggleTheme } = useTheme()
   // All @base-ui DropdownMenuTrigger components must be deferred until after
   // hydration — MenuPrimitive.Trigger is not SSR-safe and causes tree mismatches.
   const [clientReady, setClientReady] = useState(false)
@@ -80,6 +82,27 @@ export function Navbar({ onMenuClick }: NavbarProps) {
         )}
 
         {clientReady && <UnitSwitcher />}
+
+        {/* Toggle de tema — sol/lua */}
+        {clientReady && (
+          <button
+            onClick={toggleTheme}
+            className={cn(
+              'p-2 rounded-lg text-muted-foreground interactive',
+              'hover:bg-accent hover:text-foreground',
+              'min-h-[44px] min-w-[44px] flex items-center justify-center',
+            )}
+            aria-label={resolvedTheme === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}
+            title={resolvedTheme === 'dark' ? 'Modo claro' : 'Modo escuro'}
+          >
+            {resolvedTheme === 'dark' ? (
+              <Sun className="w-4 h-4" />
+            ) : (
+              <Moon className="w-4 h-4" />
+            )}
+          </button>
+        )}
+
         {clientReady && <NotificationBell />}
 
         {/* Avatar + Dropdown — placeholder estático até montar */}

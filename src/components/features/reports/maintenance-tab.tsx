@@ -10,6 +10,7 @@ import { BarChartCard } from './bar-chart-card'
 import { HorizontalBarChartCard } from './horizontal-bar-chart-card'
 import { ExportButton } from './export-button'
 import type { ReportFilters } from '@/types/database.types'
+import { CHART_COLORS } from '@/lib/constants/brand-colors'
 
 const TYPE_LABEL: Record<string, string> = {
   emergency: 'Emergencial',
@@ -45,8 +46,8 @@ export function MaintenanceTab({ filters, unitName }: MaintenanceTabProps) {
   }, [byMonth.data])
 
   const byMonthSeries = [
-    { dataKey: 'Abertas',    name: 'Abertas',    color: '#E07070' },
-    { dataKey: 'Concluídas', name: 'Concluídas', color: '#7C8D78' },
+    { dataKey: 'Abertas',    name: 'Abertas',    color: CHART_COLORS.maintenanceOpen },
+    { dataKey: 'Concluídas', name: 'Concluídas', color: CHART_COLORS.maintenanceClosed },
   ]
 
   // Setor para gráfico horizontal
@@ -142,7 +143,7 @@ export function MaintenanceTab({ filters, unitName }: MaintenanceTabProps) {
           title="Por setor"
           data={sectorData}
           loading={bySector.isLoading}
-          color="#B5C4B1"
+          color={CHART_COLORS.neutral}
         />
       </div>
 

@@ -80,6 +80,16 @@ src/
 - **LEIA ANTES** de criar qualquer componente visual
 - **Tokens aplicados** em `src/app/globals.css`
 
+### Foundation Layer (feat/ui-polish-foundation — 2026-03-28)
+
+| Artefato | Descrição |
+|----------|-----------|
+| `src/app/globals.css` | Todos os tokens CSS §1.1–1.5 + dark mode completo + `.interactive` + `prefers-reduced-motion` |
+| `src/components/theme-provider.tsx` | ThemeProvider + `useTheme()` — light/dark/system, localStorage, prefers-color-scheme |
+| `src/app/layout.tsx` | Script anti-FOUC inline + `<ThemeProvider>` no root |
+| `src/components/layout/navbar.tsx` | Toggle Sol/Lua (`<Sun>/<Moon>`) integrado ao `useTheme()` |
+| `src/lib/constants/brand-colors.ts` | Hex centralizados para Recharts/html2canvas/e-mails |
+
 ### Cores da Marca
 
 | Token | oklch | Hex | Uso |
@@ -91,10 +101,32 @@ src/
 | `--brand-primary-dark` | `oklch(0.487 0.044 144)` | ~`#697a65` | Hover de primário |
 | `--brand-primary-light` | `oklch(0.667 0.038 144)` | ~`#8fa08b` | Backgrounds sutis |
 
+### Rampas de Cor (novas)
+- **`bg-brand-50` … `bg-brand-900`** — Verde sálvia completo (50–900)
+- **`bg-beige-50` … `bg-beige-900`** — Bege quente completo (50–900)
+
+### Tokens Semânticos Disponíveis (Tailwind utilities)
+- **Superfícies:** `bg-surface-primary`, `bg-surface-secondary`, `bg-surface-tertiary`, `bg-surface-inverse`
+- **Texto:** `text-text-primary`, `text-text-secondary`, `text-text-tertiary`, `text-text-inverse`, `text-text-link`
+- **Bordas:** `border-border-default`, `border-border-strong`, `border-border-focus`
+- **Status:** `bg-status-error-bg`, `text-status-error-text`, `border-status-error-border` (e success/warning/info)
+- **Interativos:** `bg-interactive-primary`, `hover:bg-interactive-primary-hover` etc.
+- **Sombras:** `shadow-xs`, `shadow-sm`, `shadow-md`, `shadow-lg`, `shadow-xl`
+- **Z-index:** `z-dropdown` (10), `z-sticky` (20), `z-overlay` (30), `z-modal` (40), `z-toast` (50), `z-tooltip` (60)
+
 ### Convenção de Cores
-- NUNCA usar hex diretamente na UI
-- SEMPRE usar tokens semânticos: `bg-primary`, `text-foreground`, `border-border`, etc.
-- Tailwind v4: as classes utilitárias são geradas via `@theme inline {}` em globals.css
+- NUNCA usar hex diretamente na UI — sempre tokens semânticos Tailwind
+- **Exceções legítimas** (hex obrigatório): Recharts color props, html2canvas, HTML de e-mail
+  → Usar `CHART_COLORS` / `BRAND_GREEN` / `BRAND_BEIGE` de `src/lib/constants/brand-colors.ts`
+- Tailwind v4: classes utilitárias geradas via `@theme inline {}` em globals.css
+
+### Dark Mode
+- Toggle no navbar (ícone Sol/Lua) — salvo em `localStorage` com chave `cachola-theme`
+- Valores: `'light'` | `'dark'` | `'system'` (default)
+- Sistema: `prefers-color-scheme` como fallback quando `'system'`
+- Anti-FOUC: script inline no `<head>` antes da hidratação React
+- CSS: `.dark` e `[data-theme="dark"]` aplicados no `<html>`
+- `prefers-reduced-motion`: todas as transições/animações desabilitadas globalmente
 
 ---
 

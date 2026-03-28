@@ -7,10 +7,11 @@ import { ptBR } from 'date-fns/locale'
 import { useEventReport } from '@/hooks/use-reports'
 import { ReportStatsCard } from './report-stats-card'
 import { BarChartCard } from './bar-chart-card'
-import { DonutChartCard, CHART_COLORS } from './donut-chart-card'
+import { DonutChartCard, CHART_COLORS as DONUT_COLORS } from './donut-chart-card'
 import { HorizontalBarChartCard } from './horizontal-bar-chart-card'
 import { ExportButton } from './export-button'
 import type { ReportFilters } from '@/types/database.types'
+import { CHART_COLORS } from '@/lib/constants/brand-colors'
 
 // Status → label PT-BR
 const STATUS_LABEL: Record<string, string> = {
@@ -19,17 +20,17 @@ const STATUS_LABEL: Record<string, string> = {
   preparing:   'Em Preparo',
   in_progress: 'Em Andamento',
   finished:    'Finalizado',
-  cancelled:   'Cancelado',
+  lost:        'Perdido',
 }
 
-// Cores por status
+// Cores por status (usa tokens centralizados)
 const STATUS_COLOR: Record<string, string> = {
-  pending:     '#E3DAD1',
-  confirmed:   '#7C8D78',
-  preparing:   '#6B9E8B',
-  in_progress: '#4A5E46',
-  finished:    '#B5C4B1',
-  cancelled:   '#9C8B78',
+  pending:     CHART_COLORS.eventPending,
+  confirmed:   CHART_COLORS.eventConfirmed,
+  preparing:   CHART_COLORS.eventPreparing,
+  in_progress: CHART_COLORS.eventInProgress,
+  finished:    CHART_COLORS.eventFinished,
+  lost:        CHART_COLORS.eventLost,
 }
 
 type EventsTabProps = {
@@ -68,7 +69,7 @@ export function EventsTab({ filters, unitName }: EventsTabProps) {
   const byMonthSeries = statuses.map((s) => ({
     dataKey: s,
     name:    STATUS_LABEL[s] ?? s,
-    color:   STATUS_COLOR[s] ?? CHART_COLORS[0],
+    color:   STATUS_COLOR[s] ?? DONUT_COLORS[0],
   }))
 
   // Donut por tipo
