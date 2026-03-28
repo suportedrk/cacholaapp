@@ -41,6 +41,7 @@ export interface Database {
       unit_settings:        { Row: UnitSettings;        Insert: Partial<UnitSettings>;   Update: Partial<UnitSettings>;   Relationships: [] }
       equipment_categories: { Row: EquipmentCategory;   Insert: Partial<EquipmentCategory>; Update: Partial<EquipmentCategory>; Relationships: [] }
       // Integração Ploomes CRM
+      ploomes_config:       { Row: PloomesConfigRow;    Insert: Partial<PloomesConfigRow>; Update: Partial<PloomesConfigRow>; Relationships: [] }
       ploomes_sync_log:     { Row: PloomesSyncLog;      Insert: Partial<PloomesSyncLog>; Update: Partial<PloomesSyncLog>; Relationships: [] }
       // Sistema
       notifications:        { Row: AppNotification;     Insert: Partial<AppNotification>; Update: Partial<AppNotification>; Relationships: [] }
@@ -491,6 +492,27 @@ export type SystemConfig = {
 // ─────────────────────────────────────────────────────────────
 // PLOOMES CRM
 // ─────────────────────────────────────────────────────────────
+export type PloomesConfigRow = {
+  id: string
+  unit_id: string
+  pipeline_id: number
+  stage_id: number
+  won_status_id: number
+  field_mappings: Record<string, {
+    field: string
+    label: string
+    valueKey: string
+    parser: string
+  }>
+  contact_mappings: Record<string, string>
+  status_mappings: Record<string, string>
+  webhook_url: string | null
+  webhook_registered_at: string | null
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
 export type PloomesSyncLog = {
   id: string
   started_at: string

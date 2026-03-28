@@ -4,18 +4,49 @@
 // syncDeals(): busca deals do Ploomes → upsert em public.events.
 // Aceita o cliente Supabase admin como parâmetro para não depender
 // de cookies() diretamente (reutilizável em cron + API routes).
+//
+// A configuração de pipeline/stage/status é carregada da tabela
+// `ploomes_config` (banco de dados). Fallback para env vars caso
+// não haja registro no banco (retrocompatibilidade).
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database.types'
 import { ploomesGet } from './client'
 import { parseDeal } from './field-mapping'
 import type { PloomesDeal, SyncResult } from './types'
-
-const PIPELINE_ID = parseInt(process.env.PLOOMES_PIPELINE_ID ?? '60000636', 10)
-const STAGE_ID    = parseInt(process.env.PLOOMES_STAGE_FESTA_FECHADA_ID ?? '60004787', 10)
-const STATUS_ID   = parseInt(process.env.PLOOMES_WON_STATUS_ID ?? '1', 10)
+import type { PloomesConfigRow } from '@/types/database.types'
 
 type AdminClient = SupabaseClient<Database>
+
+// ── Config defaults (fallback quando não há ploomes_config no DB) ─
+
+const DEFAULT_PIPELINE_ID   = parseInt(process.env.PLOOMES_PIPELINE_ID ?? '60000636', 10)
+const DEFAULT_STAGE_ID      = parseInt(process.env.PLOOMES_STAGE_FESTA_FECHADA_ID ?? '60004787', 10)
+const DEFAULT_STATUS_ID     = parseInt(process.env.PLOOMES_WON_STATUS_ID ?? '1', 10)
+
+// ── Carregar config do banco ──────────────────────────────────
+
+/**
+ * Carrega a configuração Ploomes da unidade do banco.
+ * Retorna null se não houver config cadastrada (usa fallback de env vars).
+ * Se unitId for null, usa a config da primeira unidade ativa encontrada.
+ */
+export async function loadPloomesConfig(
+  supabase: AdminClient,
+  unitId: string | null,
+): Promise<PloomesConfigRow | null> {
+  let query = supabase
+    .from('ploomes_config')
+    .select('*')
+    .eq('is_active', true)
+
+  if (unitId) {
+    query = query.eq('unit_id', unitId)
+  }
+
+  const { data } = await query.limit(1).single()
+  return data ?? null
+}
 
 // ── Resolvedores auxiliares ───────────────────────────────────
 
@@ -163,12 +194,19 @@ export async function syncDeals(
   }
 
   try {
-    // ── 1. Buscar createdBy ──────────────────────────────────
+    // ── 1. Carregar config do banco (ou usar defaults de env vars) ──
+    const dbConfig = await loadPloomesConfig(supabase, options.unitId ?? null)
+
+    const pipelineId = dbConfig?.pipeline_id ?? DEFAULT_PIPELINE_ID
+    const stageId    = dbConfig?.stage_id    ?? DEFAULT_STAGE_ID
+    const statusId   = dbConfig?.won_status_id ?? DEFAULT_STATUS_ID
+
+    // ── 2. Buscar createdBy ──────────────────────────────────────
     const createdBy = options.triggeredByUserId ?? (await getSystemUserId(supabase))
 
-    // ── 2. Buscar deals do Ploomes ───────────────────────────
+    // ── 3. Buscar deals do Ploomes ───────────────────────────────
     const query = [
-      `$filter=PipelineId eq ${PIPELINE_ID} and StageId eq ${STAGE_ID} and StatusId eq ${STATUS_ID}`,
+      `$filter=PipelineId eq ${pipelineId} and StageId eq ${stageId} and StatusId eq ${statusId}`,
       `$expand=OtherProperties,Contact($select=Id,Name,Email,Phones)`,
       `$select=Id,Title,ContactId,OwnerId,Amount,StageId,StatusId,CreateDate,LastUpdateDate,OtherProperties`,
       `$top=200`,
@@ -179,7 +217,7 @@ export async function syncDeals(
     const deals = response.value ?? []
     result.dealsFound = deals.length
 
-    // ── 3. Processar cada deal ───────────────────────────────
+    // ── 4. Processar cada deal ───────────────────────────────────
     for (const deal of deals) {
       try {
         const parsed = parseDeal(deal)
