@@ -1,10 +1,10 @@
 'use client'
 
-import { useRef, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import { AreaChart, Area, ResponsiveContainer } from 'recharts'
+import { AreaChart, Area } from 'recharts'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import type { SparkPoint } from '@/hooks/use-dashboard'
@@ -114,19 +114,27 @@ export function KpiCard({
   isLoading,
   className,
 }: KpiCardProps) {
-  const sparkRef  = useRef<HTMLDivElement>(null)
   const [isInView, setIsInView] = useState(false)
+  const [sparkW, setSparkW] = useState(0)
 
-  // Animate sparkline when card enters viewport
-  useEffect(() => {
-    const el = sparkRef.current
+  // Callback ref: fires when the div mounts (even if it mounts after isLoading flips),
+  // unlike useRef which only runs the effect once on component mount.
+  const sparkRef = useCallback((el: HTMLDivElement | null) => {
     if (!el) return
-    const obs = new IntersectionObserver(
+
+    const ro = new ResizeObserver(([entry]) => {
+      const w = Math.round(entry.contentRect.width)
+      if (w > 0) setSparkW(w)
+    })
+    ro.observe(el)
+
+    const io = new IntersectionObserver(
       ([entry]) => { if (entry.isIntersecting) setIsInView(true) },
       { threshold: 0.1 },
     )
-    obs.observe(el)
-    return () => obs.disconnect()
+    io.observe(el)
+    // Note: cleanup is not called here because callback refs don't support cleanup.
+    // The observers are disconnected when the element is removed from DOM.
   }, [])
 
   if (isLoading) return <KpiCardSkeleton className={className} />
@@ -166,30 +174,34 @@ export function KpiCard({
       </p>
 
       {/* ── Sparkline ── */}
+      {/* sparkW gate prevents ResponsiveContainer from rendering with width=-1 */}
       <div ref={sparkRef} className="h-20 -mx-1">
-        {spark.length > 0 && (
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={spark} margin={{ top: 2, right: 2, left: 2, bottom: 2 }}>
-              <defs>
-                <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor={strokeColor} stopOpacity={0.25} />
-                  <stop offset="95%" stopColor={strokeColor} stopOpacity={0.02} />
-                </linearGradient>
-              </defs>
-              <Area
-                type="monotone"
-                dataKey="v"
-                stroke={strokeColor}
-                strokeWidth={2}
-                fill={`url(#${gradId})`}
-                dot={false}
-                activeDot={false}
-                isAnimationActive={isInView}
-                animationDuration={800}
-                animationEasing="ease-out"
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+        {spark.length > 0 && sparkW > 0 && (
+          <AreaChart
+            width={sparkW}
+            height={80}
+            data={spark}
+            margin={{ top: 2, right: 2, left: 2, bottom: 2 }}
+          >
+            <defs>
+              <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%"  stopColor={strokeColor} stopOpacity={0.25} />
+                <stop offset="95%" stopColor={strokeColor} stopOpacity={0.02} />
+              </linearGradient>
+            </defs>
+            <Area
+              type="monotone"
+              dataKey="v"
+              stroke={strokeColor}
+              strokeWidth={2}
+              fill={`url(#${gradId})`}
+              dot={false}
+              activeDot={false}
+              isAnimationActive={isInView}
+              animationDuration={800}
+              animationEasing="ease-out"
+            />
+          </AreaChart>
         )}
       </div>
     </Link>
