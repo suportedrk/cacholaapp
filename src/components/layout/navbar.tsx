@@ -23,9 +23,10 @@ import { ROUTES } from '@/lib/constants'
 
 interface NavbarProps {
   onMenuClick: () => void
+  scrolled?: boolean
 }
 
-export function Navbar({ onMenuClick }: NavbarProps) {
+export function Navbar({ onMenuClick, scrolled }: NavbarProps) {
   const router = useRouter()
   const { profile, signOut } = useAuth()
   const { isOnline } = useOnlineStatus()
@@ -39,7 +40,12 @@ export function Navbar({ onMenuClick }: NavbarProps) {
   useEffect(() => { setClientReady(true) }, [])
 
   return (
-    <header className="sticky top-0 z-20 h-16 flex items-center gap-3 px-4 bg-card border-b border-border shadow-sm">
+    <header className={cn(
+      'sticky top-0 z-20 flex items-center gap-3 px-4 bg-card border-b border-border',
+      'h-12 lg:h-14',
+      'transition-shadow duration-200',
+      scrolled ? 'shadow-sm' : 'shadow-none',
+    )}>
       {/* Botão hamburguer — mobile */}
       <button
         onClick={onMenuClick}
