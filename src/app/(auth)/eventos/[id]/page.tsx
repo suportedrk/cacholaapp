@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -111,16 +112,18 @@ export default function EventoDetailPage() {
                   <ChevronDown className="w-3.5 h-3.5" />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>Mudar status</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {ALL_STATUSES.filter((s) => s !== event.status).map((s) => (
-                    <DropdownMenuItem
-                      key={s}
-                      onClick={() => changeStatus.mutate({ id, status: s })}
-                    >
-                      <EventStatusBadge status={s} size="sm" className="pointer-events-none" />
-                    </DropdownMenuItem>
-                  ))}
+                  <DropdownMenuGroup>
+                    <DropdownMenuLabel>Mudar status</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {ALL_STATUSES.filter((s) => s !== event.status).map((s) => (
+                      <DropdownMenuItem
+                        key={s}
+                        onClick={() => changeStatus.mutate({ id, status: s })}
+                      >
+                        <EventStatusBadge status={s} size="sm" className="pointer-events-none" />
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuGroup>
                 </DropdownMenuContent>
               </DropdownMenu>
 
