@@ -38,19 +38,10 @@ export default function EditarEventoPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Link
-          href={`/eventos/${id}`}
-          className="text-muted-foreground hover:text-foreground transition-colors"
-          aria-label="Voltar para o evento"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </Link>
-        <PageHeader
-          title="Editar Evento"
-          description={event.title}
-        />
-      </div>
+      <PageHeader
+        title="Editar Evento"
+        description={event.title}
+      />
 
       {/* Aviso quando evento é do Ploomes */}
       {event.ploomes_deal_id && (

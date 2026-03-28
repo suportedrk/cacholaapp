@@ -4,8 +4,8 @@
   "description": "Sistema de gestão do Buffet Infantil Cachola",
   "start_url": "/dashboard",
   "display": "standalone",
-  "orientation": "portrait-primary",
-  "background_color": "#FAFAF8",
+  "orientation": "portrait",
+  "background_color": "#E3DAD1",
   "theme_color": "#7C8D78",
   "lang": "pt-BR",
   "icons": [

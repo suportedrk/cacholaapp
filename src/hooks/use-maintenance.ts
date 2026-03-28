@@ -377,3 +377,24 @@ export function useRemoveMaintenancePhoto() {
     onError: () => toast.error('Erro ao remover foto.'),
   })
 }
+
+// ─────────────────────────────────────────────────────────────
+// MANUTENÇÕES DE UM EVENTO
+// ─────────────────────────────────────────────────────────────
+export function useEventMaintenances(eventId: string | null) {
+  return useQuery({
+    queryKey: ['maintenance', 'by-event', eventId],
+    enabled: !!eventId,
+    queryFn: async () => {
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from('maintenance_orders')
+        .select(MAINTENANCE_LIST_SELECT)
+        .eq('event_id', eventId!)
+        .order('created_at', { ascending: true })
+      if (error) throw error
+      return (data ?? []) as unknown as MaintenanceForList[]
+    },
+    staleTime: 30 * 1000,
+  })
+}

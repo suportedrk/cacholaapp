@@ -64,4 +64,8 @@ export const CHART_COLORS = {
   secondary: BRAND_BEIGE[500],
   danger:    '#E07070',
   neutral:   BRAND_GREEN[200],
+
+  // Verde-água (complementar)
+  tealMid:   '#6B9E8B',
+  tealLight: '#A8C5BD',
 } as const

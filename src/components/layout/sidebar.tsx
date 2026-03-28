@@ -2,6 +2,7 @@
 
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { X, ChevronLeft, ChevronRight } from 'lucide-react'
 import { NAV_GROUPS } from './nav-items'
 import {
@@ -11,6 +12,8 @@ import {
 } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { APP_NAME } from '@/lib/constants'
+import { useUnitBrand } from '@/hooks/use-unit-settings'
+import { createClient } from '@/lib/supabase/client'
 
 interface SidebarProps {
   isOpen: boolean
@@ -19,8 +22,17 @@ interface SidebarProps {
   onToggleCollapse: () => void
 }
 
+function useSidebarLogo() {
+  const { logoPath, displayName, accentColor } = useUnitBrand()
+  if (!logoPath) return { logoUrl: null, displayName, accentColor }
+
+  const { data } = createClient().storage.from('user-avatars').getPublicUrl(logoPath)
+  return { logoUrl: data.publicUrl, displayName, accentColor }
+}
+
 export function Sidebar({ isOpen, isCollapsed, onClose, onToggleCollapse }: SidebarProps) {
   const pathname = usePathname()
+  const { logoUrl, displayName } = useSidebarLogo()
 
   return (
     <>
@@ -35,6 +47,7 @@ export function Sidebar({ isOpen, isCollapsed, onClose, onToggleCollapse }: Side
 
       {/* ── Sidebar ── */}
       <aside
+        data-tour="sidebar"
         className={cn(
           // base
           'fixed top-0 left-0 h-full z-40 flex flex-col',
@@ -65,15 +78,28 @@ export function Sidebar({ isOpen, isCollapsed, onClose, onToggleCollapse }: Side
               isCollapsed && 'lg:justify-center',
             )}
           >
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0">
-              <span className="text-sm font-bold text-primary-foreground">C</span>
+            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0 overflow-hidden">
+              {logoUrl ? (
+                <Image
+                  src={logoUrl}
+                  alt={`Logo ${displayName || APP_NAME}`}
+                  width={32}
+                  height={32}
+                  className="w-full h-full object-cover"
+                  unoptimized
+                />
+              ) : (
+                <span className="text-sm font-bold text-primary-foreground">
+                  {(displayName || APP_NAME).charAt(0).toUpperCase()}
+                </span>
+              )}
             </div>
             <span className={cn(
               'font-semibold text-foreground text-sm truncate',
               'transition-[opacity,width] duration-150 overflow-hidden',
               isCollapsed ? 'lg:opacity-0 lg:w-0' : 'opacity-100 w-auto',
             )}>
-              {APP_NAME}
+              {displayName || APP_NAME}
             </span>
           </Link>
 

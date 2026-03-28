@@ -122,13 +122,13 @@ export default function ChecklistsPage() {
       {!isLoading && !isError && !hasResults && (
         <EmptyState
           icon={ClipboardList}
-          title="Nenhum checklist encontrado"
+          title={hasFilters ? 'Nenhum checklist encontrado' : 'Crie seu primeiro checklist'}
           description={hasFilters
-            ? 'Tente remover os filtros para ver mais checklists.'
-            : 'Crie um checklist a partir do detalhe de um evento.'}
+            ? 'Tente remover os filtros para ver mais resultados.'
+            : 'Comece criando um modelo de checklist e aplique-o aos seus eventos. É rápido!'}
           action={hasFilters
             ? { label: 'Limpar filtros', onClick: clearFilters }
-            : { label: 'Ver Eventos', onClick: () => router.push('/eventos') }
+            : { label: 'Criar modelo de checklist', onClick: () => router.push('/checklists/templates/novo') }
           }
         />
       )}

@@ -1,6 +1,6 @@
 'use client'
 
-import { ArrowLeft, MapPin } from 'lucide-react'
+import { MapPin } from 'lucide-react'
 import Link from 'next/link'
 import { SyncStatusCard } from '@/components/features/ploomes/sync-status-card'
 import { SyncHistoryTable } from '@/components/features/ploomes/sync-history-table'
@@ -9,15 +9,6 @@ import { PageHeader } from '@/components/shared/page-header'
 export default function PloomesIntegrationPage() {
   return (
     <div className="space-y-6">
-      {/* Voltar */}
-      <Link
-        href="/configuracoes"
-        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Configurações
-      </Link>
-
       <PageHeader
         title="Integração Ploomes CRM"
         description="Sincronize as festas fechadas do Ploomes com o Cachola OS automaticamente."

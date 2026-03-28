@@ -85,11 +85,6 @@ export default function DetalheOrdemPage({
 
   return (
     <div className="space-y-6 max-w-3xl">
-      {/* Back */}
-      <Link href="/manutencao" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors w-fit">
-        <ArrowLeft className="w-4 h-4" />
-        Voltar para Manutenção
-      </Link>
 
       {/* Header */}
       <div className={cn(

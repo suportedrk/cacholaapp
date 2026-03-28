@@ -148,7 +148,10 @@
   --animate-page-enter: page-enter var(--duration-slow) var(--ease-out) both;
   --animate-fade-up:    fade-up    0.4s                 var(--ease-out) both;
   --animate-shimmer:    shimmer    1.5s ease-in-out     infinite;
-  --animate-scale-in:   scale-in   var(--duration-normal) var(--ease-bounce) both;
+  --animate-scale-in:        scale-in        var(--duration-normal) var(--ease-bounce) both;
+  --animate-slide-left-in:  slide-left-in  var(--duration-normal) var(--ease-out)    both;
+  --animate-slide-right-in: slide-right-in var(--duration-normal) var(--ease-out)    both;
+  --animate-celebrate:      celebrate-check 0.5s var(--ease-bounce) both;
 }
 
 /* ============================================================
@@ -173,6 +176,95 @@
 @keyframes scale-in {
   from { opacity: 0; transform: scale(0.95); }
   to   { opacity: 1; transform: scale(1);    }
+}
+
+@keyframes check-draw {
+  from { stroke-dashoffset: 20; }
+  to   { stroke-dashoffset: 0;  }
+}
+
+@keyframes item-flash-done {
+  0%   { opacity: 0.5; }
+  100% { opacity: 0;   }
+}
+
+@keyframes celebrate-check {
+  0%   { opacity: 0; transform: scale(0.4); }
+  60%  { transform: scale(1.12); }
+  80%  { transform: scale(0.95); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+/* SVG path draw animation — aplicado diretamente em elementos <path> */
+.animate-check-draw {
+  stroke-dasharray: 20;
+  stroke-dashoffset: 20;
+  animation: check-draw 0.28s ease-out forwards;
+}
+
+/* Flash verde ao concluir item — aplicado em overlay absoluto */
+.animate-item-flash {
+  animation: item-flash-done 0.55s ease-out forwards;
+}
+
+@keyframes slide-left-in {
+  from { opacity: 0; transform: translateX(16px); }
+  to   { opacity: 1; transform: translateX(0);    }
+}
+
+@keyframes slide-right-in {
+  from { opacity: 0; transform: translateX(-16px); }
+  to   { opacity: 1; transform: translateX(0);     }
+}
+
+@keyframes login-shake {
+  0%, 100% { transform: translateX(0); }
+  15%       { transform: translateX(-7px); }
+  30%       { transform: translateX(6px); }
+  45%       { transform: translateX(-5px); }
+  60%       { transform: translateX(4px); }
+  75%       { transform: translateX(-3px); }
+  90%       { transform: translateX(2px); }
+}
+
+/* Login page — shake on error */
+.animate-login-shake {
+  animation: login-shake 0.5s ease-in-out both;
+}
+
+/* Notification bell — wobble when new notification arrives */
+@keyframes bell-shake {
+  0%, 100% { transform: rotate(0deg); }
+  10%       { transform: rotate(-12deg); }
+  25%       { transform: rotate(10deg); }
+  40%       { transform: rotate(-8deg); }
+  55%       { transform: rotate(6deg); }
+  70%       { transform: rotate(-4deg); }
+  85%       { transform: rotate(2deg); }
+}
+.animate-bell-shake {
+  animation: bell-shake 0.6s ease-in-out;
+  transform-origin: top center;
+}
+
+/* Notification panel — slide in from the right */
+@keyframes slide-in-right {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+
+/* New notification item — slides down from above */
+@keyframes notification-in {
+  from { opacity: 0; transform: translateY(-10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-notification-in {
+  animation: notification-in 0.35s var(--ease-spring) both;
+}
+
+/* PWA safe area bottom padding */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 /* ============================================================
@@ -620,10 +712,20 @@
     transition-property: transform, box-shadow, border-color;
     transition-duration: var(--duration-normal);
     transition-timing-function: var(--ease-default);
+    cursor: pointer;
   }
   .card-interactive:hover {
     transform: translateY(-2px);
     box-shadow: var(--shadow-md);
+    border-color: var(--border-strong);
+  }
+  .card-interactive:active {
+    transform: translateY(0px) scale(0.98);
+    transition-duration: 100ms;
+  }
+  /* Dark mode: shadow com branco em vez de preto para não escurecer demais */
+  .dark .card-interactive:hover {
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.40), 0 2px 4px -2px rgb(0 0 0 / 0.30);
   }
 }
 
@@ -638,5 +740,10 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+  /* Cards: manter mudança de cor/borda, remover movimento */
+  .card-interactive:hover,
+  .card-interactive:active {
+    transform: none !important;
   }
 }

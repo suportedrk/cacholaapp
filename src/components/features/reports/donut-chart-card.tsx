@@ -5,17 +5,18 @@ import {
   ResponsiveContainer, Legend,
 } from 'recharts'
 import { cn } from '@/lib/utils'
+import { BRAND_GREEN, BRAND_BEIGE, CHART_COLORS as BRAND_CHART } from '@/lib/constants/brand-colors'
 
-// Paleta baseada na cor primária (#7C8D78) + variações
+// Paleta para donut charts (Recharts requer hex direto)
 export const CHART_COLORS = [
-  '#7C8D78', // verde sálvia primário
-  '#B5C4B1', // sálvia claro
-  '#4A5E46', // sálvia escuro
-  '#E3DAD1', // bege quente
-  '#C4B5A0', // bege médio
-  '#9C8B78', // bege escuro
-  '#6B9E8B', // verde-água
-  '#A8C5BD', // verde-água claro
+  BRAND_GREEN[500],        // verde sálvia primário
+  BRAND_GREEN[200],        // sálvia claro
+  BRAND_GREEN[700],        // sálvia escuro
+  BRAND_BEIGE[500],        // bege quente
+  BRAND_BEIGE[600],        // bege médio
+  BRAND_BEIGE[800],        // bege escuro
+  BRAND_CHART.tealMid,    // verde-água
+  BRAND_CHART.tealLight,  // verde-água claro
 ]
 
 type DonutItem = { name: string; value: number }

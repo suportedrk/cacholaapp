@@ -44,13 +44,6 @@ export default function EditarOrdemPage({
 
   return (
     <div className="space-y-6 max-w-3xl">
-      <Link
-        href={`/manutencao/${id}`}
-        className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Voltar para a ordem
-      </Link>
       <PageHeader
         title="Editar Ordem"
         description={`Editando: ${order.title}`}

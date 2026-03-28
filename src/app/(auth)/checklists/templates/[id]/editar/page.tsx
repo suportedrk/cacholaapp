@@ -98,19 +98,10 @@ export default function EditarTemplatePage() {
 
   return (
     <div className="space-y-6 max-w-2xl">
-      <div className="flex items-center gap-3">
-        <Link
-          href="/checklists/templates"
-          className="text-muted-foreground hover:text-foreground transition-colors"
-          aria-label="Voltar"
-        >
-          <ChevronLeft className="w-5 h-5" />
-        </Link>
-        <PageHeader
-          title="Editar Template"
-          description={template.title}
-        />
-      </div>
+      <PageHeader
+        title="Editar Template"
+        description={template.title}
+      />
 
       <div className="bg-card border border-border rounded-xl p-4 space-y-4">
         {/* Título */}
