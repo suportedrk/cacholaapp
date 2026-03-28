@@ -26,7 +26,7 @@ export const EventCard = memo(function EventCard({ event }: EventCardProps) {
       href={`/eventos/${event.id}`}
       className={cn(
         'group block bg-card rounded-xl border border-border p-4',
-        'hover:border-primary/40 hover:shadow-md transition-all duration-200',
+        'hover:border-primary/40 card-interactive',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
       )}
     >

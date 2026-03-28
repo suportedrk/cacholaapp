@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { usePathname } from 'next/navigation'
 import { Sidebar } from './sidebar'
 import { Navbar } from './navbar'
 
@@ -11,6 +12,7 @@ interface AppLayoutProps {
 const COLLAPSED_KEY = 'sidebar-collapsed'
 
 export function AppLayout({ children }: AppLayoutProps) {
+  const pathname = usePathname()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [scrolled, setScrolled] = useState(false)
@@ -59,9 +61,11 @@ export function AppLayout({ children }: AppLayoutProps) {
           scrolled={scrolled}
         />
 
-        {/* Conteúdo */}
+        {/* Conteúdo — key força remount ao navegar, acionando animate-page-enter */}
         <main ref={mainRef} className="flex-1 overflow-y-auto p-4 lg:p-6">
-          {children}
+          <div key={pathname} className="animate-page-enter">
+            {children}
+          </div>
         </main>
       </div>
     </div>

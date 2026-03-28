@@ -79,6 +79,7 @@ export default function DashboardPage() {
           description="eventos no mês atual"
           iconClass="icon-brand"
           isLoading={loadingStats}
+          className="animate-fade-up [animation-delay:0ms]"
         />
         <StatsCard
           title="Confirmados"
@@ -87,6 +88,7 @@ export default function DashboardPage() {
           description="aguardando realização"
           iconClass="icon-blue"
           isLoading={loadingStats}
+          className="animate-fade-up [animation-delay:50ms]"
         />
         <StatsCard
           title="Pendentes"
@@ -95,6 +97,7 @@ export default function DashboardPage() {
           description="aguardando confirmação"
           iconClass="icon-amber"
           isLoading={loadingStats}
+          className="animate-fade-up [animation-delay:100ms]"
         />
         <StatsCard
           title="Em Andamento"
@@ -103,6 +106,7 @@ export default function DashboardPage() {
           description="em preparo ou execução"
           iconClass="icon-green"
           isLoading={loadingStats}
+          className="animate-fade-up [animation-delay:150ms]"
         />
       </div>
 
@@ -115,6 +119,7 @@ export default function DashboardPage() {
           description="ordens em aberto"
           iconClass="icon-orange"
           isLoading={loadingMaintenanceStats}
+          className="animate-fade-up [animation-delay:200ms]"
           onClick={() => router.push('/manutencao')}
         />
         <StatsCard
@@ -125,6 +130,7 @@ export default function DashboardPage() {
           iconClass="icon-red"
           isLoading={loadingMaintenanceStats}
           onClick={() => router.push('/manutencao')}
+          className="animate-fade-up [animation-delay:250ms]"
         />
       </div>
 

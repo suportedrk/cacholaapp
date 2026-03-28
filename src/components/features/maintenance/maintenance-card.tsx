@@ -27,8 +27,7 @@ export const MaintenanceCard = memo(function MaintenanceCard({ order }: Props) {
   return (
     <Link href={`/manutencao/${order.id}`} className="block group">
       <article className={cn(
-        'bg-card rounded-xl border transition-all duration-150',
-        'hover:shadow-md hover:-translate-y-0.5',
+        'bg-card rounded-xl border card-interactive',
         'p-4 space-y-3',
         isOverdue
           ? 'border-red-300 bg-red-50/30'

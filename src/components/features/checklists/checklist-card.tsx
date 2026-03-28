@@ -37,7 +37,7 @@ export const ChecklistCard = memo(function ChecklistCard({ checklist }: Checklis
     <Link
       href={`/checklists/${checklist.id}`}
       className={cn(
-        'block bg-card border rounded-xl p-4 space-y-3 transition-shadow hover:shadow-md',
+        'block bg-card border rounded-xl p-4 space-y-3 card-interactive',
         isOverdue ? 'border-destructive/40 bg-destructive/5' : 'border-border'
       )}
     >

@@ -63,7 +63,7 @@ export const EquipmentCard = memo(function EquipmentCard({ equipment: eq, openMa
   return (
     <Link
       href={`/equipamentos/${eq.id}`}
-      className="block rounded-xl border bg-card p-4 hover:shadow-md transition-shadow group"
+      className="block rounded-xl border bg-card p-4 card-interactive group"
     >
       <div className="flex gap-3">
         {/* Foto ou ícone placeholder */}

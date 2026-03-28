@@ -143,6 +143,36 @@
   --color-beige-700: oklch(0.700 0.030 65);
   --color-beige-800: oklch(0.560 0.025 65);
   --color-beige-900: oklch(0.420 0.020 65);
+
+  /* ── Animações (keyframes registrados abaixo) ── */
+  --animate-page-enter: page-enter var(--duration-slow) var(--ease-out) both;
+  --animate-fade-up:    fade-up    0.4s                 var(--ease-out) both;
+  --animate-shimmer:    shimmer    1.5s ease-in-out     infinite;
+  --animate-scale-in:   scale-in   var(--duration-normal) var(--ease-bounce) both;
+}
+
+/* ============================================================
+   KEYFRAMES
+   ============================================================ */
+
+@keyframes page-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% center; }
+  100% { background-position: -200% center; }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1);    }
 }
 
 /* ============================================================
@@ -572,6 +602,29 @@
   .badge-purple { @apply bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800; }
   .badge-gray   { @apply bg-gray-100  text-gray-600   border-gray-200   dark:bg-gray-800/60   dark:text-gray-400   dark:border-gray-700; }
   .badge-brand  { @apply bg-primary/10 text-primary    border-primary/30  dark:bg-primary/20    dark:text-primary    dark:border-primary/40; }
+
+  /* Shimmer skeleton — substitui animate-pulse com efeito de gradiente deslizante */
+  .skeleton-shimmer {
+    background: linear-gradient(
+      90deg,
+      var(--muted)                                          25%,
+      color-mix(in oklch, var(--muted) 60%, var(--card))   50%,
+      var(--muted)                                          75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s ease-in-out infinite;
+  }
+
+  /* Hover lift para cards interativos — GPU only (transform + shadow) */
+  .card-interactive {
+    transition-property: transform, box-shadow, border-color;
+    transition-duration: var(--duration-normal);
+    transition-timing-function: var(--ease-default);
+  }
+  .card-interactive:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+  }
 }
 
 /* ============================================================
