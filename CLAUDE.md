@@ -624,6 +624,18 @@ Role:  super_admin (32 permissões)
 - [x] `src/app/(auth)/configuracoes/integracoes/ploomes/mapeamento/page.tsx`: página visual com 4 seções carregadas do banco
 - [x] 4 componentes mapping-*-card.tsx: Pipeline, Fields, Contact, Status
 
+### Fase 4 — Regra de Negócio: Filtro de Sync (2026-03-27)
+- **REGRA:** Deals no stage "Festa Fechada" são importados como eventos confirmados, **exceto** StatusId=2 (Perdido) que é ignorado (deal perdido = negócio não fechou = não há festa).
+  - StatusId=1 (Ganho) → `confirmed`
+  - StatusId=2 (Perdido) → **skip** (não importado — deal perdido não gera evento)
+  - StatusId=3 (Em aberto) → `confirmed`
+  - Antes o filtro usava `StatusId eq 1` (só "Ganhos"), trazendo apenas 4 deals. Agora: 200 encontrados, 4 importados, 196 Perdido ignorados.
+  - **Nota técnica:** `cancelled` foi removido do CHECK constraint em migration 006; status disponíveis: `pending`, `confirmed`, `preparing`, `in_progress`, `finished`, `post_event`.
+- [x] `src/lib/ploomes/sync.ts`: removido `StatusId eq ${statusId}` do OData `$filter`; deals com `StatusId === 2` recebem `continue` (skip)
+- [x] `supabase/migrations/015_ploomes_config.sql`: seed de `status_mappings` atualizado para array format `[{statusId, statusName, description, cacholaAction}]` com `cacholaAction: "skip"` para Perdido
+- [x] `src/components/features/ploomes/mapping-status-card.tsx`: reescrito para suportar novo formato array (+ backward compat com `Record<string,string>` legado); `skip` exibido como "Ignorado" em vermelho suave
+- [x] DB `ploomes_config.status_mappings` atualizado: Ganho→confirmed, Perdido→skip, Em aberto→confirmed
+
 ### Fase 3 — Bloco 6: Offline Mode (2026-03-27)
 - [x] `idb` instalado (4KB, Promise-based IndexedDB)
 - [x] `src/lib/offline-db.ts`: schema IDB tipado — `checklists` (snapshot), `checklist_items` (fila de sync com index `by-checklist`), `calendar_events` (cache read-only); singleton `getOfflineDb()` SSR-safe

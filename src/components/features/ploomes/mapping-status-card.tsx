@@ -3,35 +3,48 @@
 import { ArrowRight, CheckCircle2 } from 'lucide-react'
 import type { PloomesConfigRow } from '@/types/database.types'
 
+type StatusMappingEntry = {
+  statusId: number
+  statusName: string
+  description: string
+  cacholaAction: string
+}
+
 type Props = {
   config: PloomesConfigRow
 }
 
-// Status do sistema → cor do badge
 const EVENT_STATUS_COLORS: Record<string, string> = {
   confirmed: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
   pending:   'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
-  cancelled: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-  completed: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+  finished:  'bg-gray-100 text-gray-600 dark:bg-gray-800/40 dark:text-gray-400',
+  skip:      'bg-red-50 text-red-500 dark:bg-red-900/20 dark:text-red-400',
 }
 
 const EVENT_STATUS_LABELS: Record<string, string> = {
   confirmed: 'Confirmado',
   pending:   'Pendente',
-  cancelled: 'Cancelado',
-  completed: 'Concluído',
+  finished:  'Finalizado',
+  skip:      'Ignorado',
 }
 
-// Status Ploomes → cor do badge
 const PLOOMES_STATUS_COLORS: Record<string, string> = {
-  Won:    'bg-green-100 text-green-700',
-  Lost:   'bg-red-100 text-red-700',
-  Open:   'bg-blue-100 text-blue-700',
-  Paused: 'bg-gray-100 text-gray-700',
+  Ganho:      'bg-green-100 text-green-700',
+  Perdido:    'bg-red-100 text-red-700',
+  'Em aberto': 'bg-blue-100 text-blue-700',
 }
 
 export function MappingStatusCard({ config }: Props) {
-  const entries = Object.entries(config.status_mappings)
+  // status_mappings pode ser array (novo formato) ou objeto (legado)
+  const raw = config.status_mappings
+  const entries: StatusMappingEntry[] = Array.isArray(raw)
+    ? (raw as StatusMappingEntry[])
+    : Object.entries(raw as Record<string, string>).map(([statusName, cacholaAction], i) => ({
+        statusId: i + 1,
+        statusName,
+        description: '',
+        cacholaAction,
+      }))
 
   return (
     <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
@@ -43,9 +56,15 @@ export function MappingStatusCard({ config }: Props) {
         <div>
           <h3 className="text-sm font-semibold">Status do Deal</h3>
           <p className="text-xs text-muted-foreground">
-            Status do deal no Ploomes → status do evento no sistema
+            Status do deal no Ploomes → ação no evento do Cachola OS
           </p>
         </div>
+      </div>
+
+      {/* Nota de contexto */}
+      <div className="px-5 py-3 bg-primary/5 border-b border-border text-xs text-muted-foreground">
+        Deals no stage <span className="font-medium text-foreground">Festa Fechada</span> são importados
+        — exceto <span className="font-medium text-foreground">Perdido</span> (negócio não fechado).
       </div>
 
       {/* Rows */}
@@ -55,28 +74,38 @@ export function MappingStatusCard({ config }: Props) {
         </p>
       ) : (
         <div className="divide-y divide-border">
-          {entries.map(([ploomesStatus, eventStatus]) => (
-            <div key={ploomesStatus} className="flex items-center gap-4 px-5 py-3">
-              {/* Status Ploomes */}
-              <span
-                className={[
-                  'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
-                  PLOOMES_STATUS_COLORS[ploomesStatus] ?? 'bg-muted text-muted-foreground',
-                ].join(' ')}
-              >
-                {ploomesStatus}
+          {entries.map((entry) => (
+            <div key={entry.statusId} className="flex items-start gap-3 px-5 py-3">
+              {/* StatusId badge */}
+              <span className="shrink-0 inline-flex items-center justify-center h-5 w-5 rounded text-[10px] font-mono font-bold bg-muted text-muted-foreground mt-0.5">
+                {entry.statusId}
               </span>
 
-              <ArrowRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+              {/* Nome Ploomes */}
+              <div className="flex-1 min-w-0">
+                <span
+                  className={[
+                    'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
+                    PLOOMES_STATUS_COLORS[entry.statusName] ?? 'bg-muted text-muted-foreground',
+                  ].join(' ')}
+                >
+                  {entry.statusName}
+                </span>
+                {entry.description && (
+                  <p className="mt-0.5 text-xs text-muted-foreground">{entry.description}</p>
+                )}
+              </div>
 
-              {/* Status interno */}
+              <ArrowRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground mt-1" />
+
+              {/* Ação Cachola */}
               <span
                 className={[
-                  'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
-                  EVENT_STATUS_COLORS[eventStatus] ?? 'bg-muted text-muted-foreground',
+                  'shrink-0 inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
+                  EVENT_STATUS_COLORS[entry.cacholaAction] ?? 'bg-muted text-muted-foreground',
                 ].join(' ')}
               >
-                {EVENT_STATUS_LABELS[eventStatus] ?? eventStatus}
+                {EVENT_STATUS_LABELS[entry.cacholaAction] ?? entry.cacholaAction}
               </span>
             </div>
           ))}

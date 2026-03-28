@@ -121,12 +121,13 @@ SELECT
     "clientEmail": "Email",
     "clientPhone": "Phones[0].PhoneNumber"
   }'::jsonb,
-  -- status_mappings
-  '{
-    "Won":  "confirmed",
-    "Lost": "cancelled",
-    "Open": "pending"
-  }'::jsonb
+  -- status_mappings (array format: todos os deals no stage Festa Fechada são processados;
+  -- StatusId 2 (Perdido) é ignorado — deal perdido não gera evento)
+  '[
+    {"statusId": 1, "statusName": "Ganho",     "description": "Deal ganho — festa confirmada",             "cacholaAction": "confirmed"},
+    {"statusId": 2, "statusName": "Perdido",   "description": "Deal perdido — não importado",              "cacholaAction": "skip"},
+    {"statusId": 3, "statusName": "Em aberto", "description": "Deal em aberto no stage Festa Fechada — festa confirmada", "cacholaAction": "confirmed"}
+  ]'::jsonb
 FROM public.units u
 WHERE u.slug = 'pinheiros'
 ON CONFLICT (unit_id) DO NOTHING;

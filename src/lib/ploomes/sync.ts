@@ -199,14 +199,17 @@ export async function syncDeals(
 
     const pipelineId = dbConfig?.pipeline_id ?? DEFAULT_PIPELINE_ID
     const stageId    = dbConfig?.stage_id    ?? DEFAULT_STAGE_ID
-    const statusId   = dbConfig?.won_status_id ?? DEFAULT_STATUS_ID
+    // won_status_id não é mais usado como filtro — todos os deals no stage são importados.
+    // StatusId é tratado como metadado: 2 (Perdido) → cancelado; demais → confirmado.
 
     // ── 2. Buscar createdBy ──────────────────────────────────────
     const createdBy = options.triggeredByUserId ?? (await getSystemUserId(supabase))
 
     // ── 3. Buscar deals do Ploomes ───────────────────────────────
+    // Filtro: apenas pipeline + stage. Qualquer deal no stage "Festa Fechada"
+    // é uma festa confirmada no Cachola OS, independente do StatusId.
     const query = [
-      `$filter=PipelineId eq ${pipelineId} and StageId eq ${stageId} and StatusId eq ${statusId}`,
+      `$filter=PipelineId eq ${pipelineId} and StageId eq ${stageId}`,
       `$expand=OtherProperties,Contact($select=Id,Name,Email,Phones)`,
       `$select=Id,Title,ContactId,OwnerId,Amount,StageId,StatusId,CreateDate,LastUpdateDate,OtherProperties`,
       `$top=200`,
@@ -251,6 +254,10 @@ export async function syncDeals(
         const startTime = parsed.startTime || '08:00'
         const endTime   = parsed.endTime   || '12:00'
 
+        // StatusId 2 (Perdido no Ploomes) → deal não fechou, não criar evento
+        if (deal.StatusId === 2) continue
+        const eventStatus = 'confirmed' as const
+
         const eventPayload = {
           ploomes_deal_id: String(deal.Id),
           ploomes_url: parsed.ploomesUrl,
@@ -258,7 +265,7 @@ export async function syncDeals(
           date: eventDate,
           start_time: startTime,
           end_time: endTime,
-          status: 'confirmed' as const,
+          status: eventStatus,
           client_name: parsed.clientName,
           birthday_person: parsed.birthdayPerson ?? null,
           birthday_age: parsed.age ?? null,
