@@ -371,6 +371,7 @@ docker compose -f docker-compose.prod.yml logs -f app
 | `/relatorios` | `(auth)/relatorios/page.tsx` | ✅ funcional (Fase 3 Bloco 1) |
 | `/admin/logs` | `(auth)/admin/logs/page.tsx` | ✅ funcional (Fase 3 Bloco 4) |
 | `/configuracoes/integracoes/ploomes` | `(auth)/configuracoes/integracoes/ploomes/page.tsx` | ✅ funcional (Fase 4) |
+| `/configuracoes/integracoes/ploomes/mapeamento` | `(auth)/configuracoes/integracoes/ploomes/mapeamento/page.tsx` | ✅ funcional (Fase 4) |
 | `/login` | `(public)/login/page.tsx` | ✅ funcional |
 | `/recuperar-senha` | `(public)/recuperar-senha/page.tsx` | ✅ funcional |
 
@@ -581,31 +582,47 @@ Role:  super_admin (32 permissões)
 ### Fase 4 — Integração Ploomes CRM (2026-03-27)
 - [x] `supabase/migrations/014_ploomes_integration.sql`: UNIQUE constraint em `events.ploomes_deal_id`, nova coluna `events.ploomes_url TEXT`, tabela `ploomes_sync_log` com RLS (super_admin/diretor/gerente), índices por started_at/status/unit_id
 - [x] `.env.example`: `PLOOMES_USER_KEY`, `PLOOMES_API_URL`, `PLOOMES_PIPELINE_ID`, `PLOOMES_STAGE_FESTA_FECHADA_ID`, `PLOOMES_WON_STATUS_ID`, `PLOOMES_SYNC_INTERVAL_MINUTES`, `PLOOMES_WEBHOOK_SECRET` adicionados
-- [x] `src/lib/ploomes/types.ts`: `PloomesODataResponse<T>`, `PloomesDeal`, `PloomesContact`, `PloomesOtherProperty`, `PloomesAttachment`, `ParsedDeal`, `SyncResult`, `PloomesApiError`
+- [x] `src/lib/ploomes/types.ts`: `PloomesODataResponse<T>`, `PloomesDeal`, `PloomesContact`, `PloomesOtherProperty`, `PloomesAttachment`, `ParsedDeal`, `SyncResult`, `PloomesApiError`, `FieldMappingDef`
 - [x] `src/lib/ploomes/client.ts`: singleton HTTP com retry 3x (backoff exp.), timeout 30s, `ploomesGet`, `ploomesGetOne`, `ploomesPost`, `ploomesUpload`
 - [x] `src/lib/ploomes/field-mapping.ts`: `DEAL_FIELD_MAP` (9 campos customizados), `FIELD_LABELS`, `parseDeal()` — converte `OtherProperties[]` em `ParsedDeal` com parsers date/time/string/number
-- [x] `src/lib/ploomes/sync.ts`: `syncDeals(supabase, options)` — busca deals, resolve unit_id/venue_id (auto-cria venue se não existir), upsert em `events` via `ON CONFLICT (ploomes_deal_id)`, registra log em `ploomes_sync_log`, retorna `SyncResult`
+- [x] `src/lib/ploomes/sync.ts`: `syncDeals(supabase, options)` — carrega config do banco via `loadPloomesConfig()`, busca deals, resolve unit_id/venue_id (auto-cria venue), upsert em `events` via `ON CONFLICT (ploomes_deal_id)`, registra log; fallback para env vars
 - [x] `src/lib/ploomes/upload.ts`: `uploadFileToDeal(dealId, file, filename)` — multipart/form-data para `/Deals({id})/UploadFile`, retorna `PloomesAttachment`
 - [x] `src/app/api/ploomes/sync/route.ts`: POST — sync manual com auth + permissão + debounce 2min
 - [x] `src/app/api/ploomes/sync/status/route.ts`: GET — últimos 20 registros de `ploomes_sync_log`
+- [x] `src/app/api/ploomes/config/route.ts`: GET/POST/PATCH — CRUD de `ploomes_config` (pipeline_id, stage_id, won_status_id, field_mappings, contact_mappings, status_mappings, webhook_url)
+- [x] `src/app/api/ploomes/webhook-register/route.ts`: POST (super_admin) — registra webhook no Ploomes, persiste webhook_url em `ploomes_config`, idempotente
 - [x] `src/app/api/ploomes/deals/route.ts`: GET — proxy: lista deals do pipeline com `parseDeal`
 - [x] `src/app/api/ploomes/deals/[dealId]/route.ts`: GET — proxy: deal específico com campos parseados
 - [x] `src/app/api/ploomes/upload/[dealId]/route.ts`: POST — upload via FormData (PDF de checklist → Deal)
-- [x] `src/app/api/webhooks/ploomes/route.ts`: POST — valida `x-webhook-secret`, loga payload, dispara `syncDeals`
+- [x] `src/app/api/webhooks/ploomes/route.ts`: POST — valida `X-Ploomes-Validation-Key` (env `PLOOMES_VALIDATION_KEY`), filtra por Entity=Deal e Action Win/Update, ignora Create e outras entidades
 - [x] `src/app/api/cron/ploomes-sync/route.ts`: GET protegido por `CRON_SECRET` — sync global automático + notificação para admins após 3 falhas consecutivas
-- [x] `src/hooks/use-ploomes-sync.ts`: `usePloomesSyncStatus()` (polling 5s/30s), `useTriggerPloomesSync()` (mutation com toast), `usePloomesIntegrationActive(unitId)` — detecta se integração está ativa
+- [x] `src/hooks/use-ploomes-sync.ts`: `usePloomesSyncStatus()` (polling 5s/30s), `useTriggerPloomesSync()` (mutation com toast), `usePloomesIntegrationActive(unitId)`, `usePloomesConfig(unitId)` — carrega ploomes_config do banco
 - [x] `src/components/features/ploomes/ploomes-badge.tsx`: pill azul "Ploomes" clicável (abre deal) ou estático
 - [x] `src/components/features/ploomes/sync-status-card.tsx`: card com badge status, counters 4-grid, botão "Sincronizar Agora", timestamp, mensagem de erro
 - [x] `src/components/features/ploomes/sync-history-table.tsx`: tabela das últimas 20 syncs com status icons, contadores, duração
-- [x] `src/components/features/ploomes/field-mapping-card.tsx`: tabela read-only mostrando mapeamento FieldKey → campo no Cachola
 - [x] `src/components/features/ploomes/ploomes-event-details.tsx`: seção com fundo azul, campos do deal (read-only), link "Ver no Ploomes", Deal ID
-- [x] `src/app/(auth)/configuracoes/integracoes/ploomes/page.tsx`: página completa (SyncStatusCard + FieldMappingCard + SyncHistoryTable)
+- [x] `src/components/features/ploomes/mapping-pipeline-card.tsx`: card Pipeline/Funil (pipeline_id, stage_id, won_status_id) lidos do banco
+- [x] `src/components/features/ploomes/mapping-field-card.tsx`: tabela com todos os field_mappings do banco (FieldKey, campo interno, valueKey, parser)
+- [x] `src/components/features/ploomes/mapping-contact-card.tsx`: mapeamento contact_mappings (campo interno → Contact.campo)
+- [x] `src/components/features/ploomes/mapping-status-card.tsx`: mapeamento status_mappings com badges coloridos (Ploomes → evento)
+- [x] `src/app/(auth)/configuracoes/integracoes/ploomes/page.tsx`: página completa (SyncStatusCard + SyncHistoryTable + link para mapeamento)
+- [x] `src/app/(auth)/configuracoes/integracoes/ploomes/mapeamento/page.tsx`: 4 cards de mapeamento lidos de `ploomes_config`, skeleton, empty state
 - [x] `src/app/(auth)/configuracoes/page.tsx`: nova aba "Integrações" com link card para `/configuracoes/integracoes/ploomes`
 - [x] `src/components/features/events/event-card.tsx`: `PloomeBadge` exibido ao lado do status badge quando `ploomes_deal_id != null`
 - [x] `src/app/(auth)/eventos/[id]/page.tsx`: seção "Dados do Ploomes" inserida antes da equipe quando evento tem `ploomes_deal_id`
 - [x] `src/app/(auth)/eventos/page.tsx`: banner azul informativo quando integração ativa + botão "Novo Evento" oculto + empty state adaptado
 - [x] `src/app/(auth)/eventos/[id]/editar/page.tsx`: banner âmbar avisando que campos do Ploomes serão sobrescritos na próxima sync
-- [x] `src/types/database.types.ts`: `PloomesSyncLog` type + `ploomes_sync_log` em `Database.Tables` + `ploomes_url` em `Event` e `EventInsert`
+- [x] `src/types/database.types.ts`: `PloomesSyncLog`, `PloomesConfigRow` types + `ploomes_sync_log`, `ploomes_config` em `Database.Tables` + `ploomes_url` em `Event`
+
+### Fase 4 — Ploomes Config no Banco (2026-03-27)
+- [x] `supabase/migrations/015_ploomes_config.sql`: tabela `ploomes_config` (UNIQUE unit_id), campos pipeline/stage/won_status_id, field_mappings/contact_mappings/status_mappings JSONB, webhook_url, trigger updated_at, RLS (managers can select), seed Pinheiros com 9 campos customizados
+- [x] `src/lib/ploomes/sync.ts`: refatorado — `loadPloomesConfig(supabase, unitId)` lê do banco, fallback para env vars se sem config
+- [x] `src/app/api/ploomes/config/route.ts`: GET/POST/PATCH da tabela ploomes_config
+- [x] `src/app/api/ploomes/webhook-register/route.ts`: POST registra webhook no Ploomes via API (idempotente) + salva em ploomes_config
+- [x] `src/app/api/webhooks/ploomes/route.ts`: corrigido — `X-Ploomes-Validation-Key`, parse de Action/Entity/New/Old, ignora Create
+- [x] `.env.example`: `PLOOMES_VALIDATION_KEY`, `NEXT_PUBLIC_APP_URL`; pipeline/stage/status marcados deprecated
+- [x] `src/app/(auth)/configuracoes/integracoes/ploomes/mapeamento/page.tsx`: página visual com 4 seções carregadas do banco
+- [x] 4 componentes mapping-*-card.tsx: Pipeline, Fields, Contact, Status
 
 ### Fase 3 — Bloco 6: Offline Mode (2026-03-27)
 - [x] `idb` instalado (4KB, Promise-based IndexedDB)
@@ -717,4 +734,8 @@ Role:  super_admin (32 permissões)
 | Auto-criação de venues no sync | Se `venueName` do Ploomes não existe na tabela `venues` da unidade, a venue é criada automaticamente e o contador `venues_created` é incrementado no log de sync. |
 | `usePloomesIntegrationActive` baseado em histórico de sync | Considera integração ativa se houver pelo menos 1 sync com status 'success'. Não depende de config flag — detecta organicamente pelo histórico de uso. |
 | Cron Ploomes separado de check-alerts | Sync do Ploomes faz chamadas externas que podem levar 10-30s. Rota dedicada `/api/cron/ploomes-sync` evita timeout que afetaria as notificações internas da `/api/cron/check-alerts`. |
+| `ploomes_config` UNIQUE(unit_id) — 1 row por unidade | Config de pipeline/stage/status é por unidade. UNIQUE constraint garante upsert limpo. Fallback para env vars mantém retrocompatibilidade com deploys que ainda não rodaram migration 015. |
+| Webhook validado por `X-Ploomes-Validation-Key` (não `x-webhook-secret`) | Header padrão documentado pela Ploomes. O campo é renomeado de `PLOOMES_WEBHOOK_SECRET` para `PLOOMES_VALIDATION_KEY` para alinhar com a nomenclatura da API. |
+| Registro de webhook idempotente | `/api/ploomes/webhook-register` verifica se já existe webhook para a URL antes de criar. Evita duplicatas no Ploomes ao chamar o endpoint mais de uma vez. |
+| Página de mapeamento lê do banco (não hardcoded) | `ploomes/mapeamento/page.tsx` usa `usePloomesConfig(unitId)` → `/api/ploomes/config`. Quando o admin atualizar os mapeamentos no banco, a tela reflete automaticamente sem deploy. |
 | Notificação de falhas após 3 erros consecutivos | Cron verifica os últimos 3 logs de sync. Se todos falharam e não houve notificação similar nas últimas 2h, cria notificação interna para todos os super_admins via `create_notification` RPC. |

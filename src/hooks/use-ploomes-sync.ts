@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import type { PloomesConfigRow } from '@/types/database.types'
 
 // ── Types (espelham a resposta da API) ────────────────────────
 
@@ -90,6 +91,22 @@ export function useTriggerPloomesSync() {
     onError: (err) => {
       toast.error(err.message)
     },
+  })
+}
+
+// ── Hook: configuração Ploomes (ploomes_config) ───────────────
+
+export function usePloomesConfig(unitId: string | null) {
+  return useQuery<PloomesConfigRow | null>({
+    queryKey: ['ploomes', 'config', unitId],
+    queryFn: async () => {
+      const params = unitId ? `?unit_id=${unitId}` : ''
+      const res = await fetch(`/api/ploomes/config${params}`)
+      if (!res.ok) throw new Error('Erro ao buscar configuração Ploomes.')
+      const data = await res.json() as { config: PloomesConfigRow | null }
+      return data.config
+    },
+    staleTime: 5 * 60_000,
   })
 }
 

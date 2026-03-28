@@ -107,3 +107,13 @@ export type PloomesApiError = {
   message: string
   raw?: unknown
 }
+
+// ── Definição de mapeamento de campo ─────────────────────────
+// Referência de tipo para field_mappings no DEAL_FIELD_MAP (código)
+// (A versão para banco está em database.types.ts → PloomesConfigRow)
+export type FieldMappingDef = {
+  field: string
+  label: string
+  valueKey: 'DateTimeValue' | 'StringValue' | 'IntegerValue' | 'DecimalValue' | 'ObjectValueName'
+  parser: 'date' | 'time' | 'string' | 'number'
+}
