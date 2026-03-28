@@ -52,7 +52,7 @@ export function SyncStatusCard() {
             )}
           </div>
           <p className="text-xs text-muted-foreground">
-            Pipeline: Cachola Festas Fechadas — StageId {process.env.NEXT_PUBLIC_PLOOMES_STAGE_ID ?? '60004787'}
+            Pipeline: Cachola Festas Fechadas
           </p>
         </div>
 

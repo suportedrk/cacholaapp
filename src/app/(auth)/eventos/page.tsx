@@ -72,9 +72,14 @@ export default function EventosPage() {
       {!isLoading && !isError && !hasResults && (
         <EmptyState
           icon={CalendarX}
-          title="Nenhum evento encontrado"
-          description={ploomesActive ? 'Sincronize os eventos do Ploomes ou ajuste os filtros.' : 'Crie o primeiro evento ou ajuste os filtros de busca.'}
-          action={!ploomesActive ? { label: 'Criar Evento', onClick: () => router.push('/eventos/novo') } : undefined}
+          title={ploomesActive ? 'Aguardando sincronização com Ploomes' : 'Nenhum evento encontrado'}
+          description={ploomesActive
+            ? 'Seus eventos aparecerão aqui após a primeira sincronização com o Ploomes CRM.'
+            : 'Crie o primeiro evento ou ajuste os filtros de busca.'}
+          action={ploomesActive
+            ? { label: 'Configurar Ploomes', onClick: () => router.push('/configuracoes/integracoes/ploomes') }
+            : { label: 'Criar Evento', onClick: () => router.push('/eventos/novo') }
+          }
         />
       )}
 

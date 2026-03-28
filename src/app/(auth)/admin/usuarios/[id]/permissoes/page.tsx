@@ -1,8 +1,8 @@
 'use client'
 
-import { useParams, useRouter } from 'next/navigation'
+import { useParams } from 'next/navigation'
 
-import { ArrowLeft, Loader2, Shield } from 'lucide-react'
+import { Loader2, Shield } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 import { useUser } from '@/hooks/use-users'
 import { useUserPermissions, useUpdatePermission } from '@/hooks/use-permissions'
@@ -18,7 +18,6 @@ const ACTIONS: Action[] = ['view', 'create', 'edit', 'delete', 'export']
 
 export default function PermissoesUsuarioPage() {
   const params = useParams()
-  const router = useRouter()
   const id = params.id as string
 
   const { data: user, isLoading: userLoading } = useUser(id)
@@ -61,18 +60,9 @@ export default function PermissoesUsuarioPage() {
   return (
     <div className="max-w-4xl space-y-6">
       {/* Cabeçalho */}
-      <div className="flex items-center gap-3">
-        <button
-          onClick={() => router.push(`${ROUTES.users}/${id}`)}
-          className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-          aria-label="Voltar"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground tracking-tight">Permissões</h1>
-          <p className="mt-0.5 text-sm text-muted-foreground">Controle granular de acesso</p>
-        </div>
+      <div>
+        <h1 className="text-2xl font-semibold text-foreground tracking-tight">Permissões</h1>
+        <p className="mt-0.5 text-sm text-muted-foreground">Controle granular de acesso</p>
       </div>
 
       {/* Usuário */}

@@ -7,6 +7,7 @@ import { PageHeader } from '@/components/shared/page-header'
 import { ConfigTable, type ConfigItem } from '@/components/features/settings/config-table'
 import { GeneralSettingsTab } from '@/components/features/settings/general-settings-tab'
 import { BusinessHoursTab } from '@/components/features/settings/business-hours-tab'
+import { BrandIdentityTab } from '@/components/features/settings/brand-identity-tab'
 import {
   useEventTypes, useCreateEventType, useUpdateEventType, useDeleteEventType,
   usePackages, useCreatePackage, useUpdatePackage, useDeletePackage,
@@ -68,6 +69,7 @@ export default function ConfiguracoesPage() {
             <TabsTrigger value="categorias-equip">Categ. Equipamentos</TabsTrigger>
             <TabsTrigger value="horarios">Horários</TabsTrigger>
             <TabsTrigger value="geral">Geral</TabsTrigger>
+            <TabsTrigger value="identidade">Identidade Visual</TabsTrigger>
             <TabsTrigger value="integracoes">Integrações</TabsTrigger>
           </TabsList>
         </div>
@@ -158,6 +160,11 @@ export default function ConfiguracoesPage() {
           <GeneralSettingsTab />
         </TabsContent>
 
+        {/* ── Identidade Visual ── */}
+        <TabsContent value="identidade" className="mt-4">
+          <BrandIdentityTab />
+        </TabsContent>
+
         {/* ── Integrações ── */}
         <TabsContent value="integracoes" className="mt-4 space-y-3">
           <p className="text-sm text-muted-foreground">
@@ -165,7 +172,7 @@ export default function ConfiguracoesPage() {
           </p>
           <Link
             href="/configuracoes/integracoes/ploomes"
-            className="flex items-center justify-between rounded-xl border border-border bg-card p-4 hover:bg-muted/40 transition-colors group"
+            className="flex items-center justify-between rounded-xl border border-border bg-card p-4 card-interactive group"
           >
             <div className="space-y-0.5">
               <p className="font-medium text-sm group-hover:text-primary transition-colors">Ploomes CRM</p>

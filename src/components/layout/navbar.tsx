@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Menu, LogOut, User as UserIcon, Settings, WifiOff, Sun, Moon } from 'lucide-react'
+import { Menu, LogOut, User as UserIcon, Settings, WifiOff, Sun, Moon, Search } from 'lucide-react'
 import { useOnlineStatus } from '@/hooks/use-online-status'
 import { useTheme } from '@/components/theme-provider'
+import { useCommandPaletteStore } from '@/stores/command-palette-store'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,7 +16,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { NotificationBell } from './notification-bell'
-import { Breadcrumbs } from './breadcrumbs'
+import { Breadcrumbs, MobileBackButton } from './breadcrumbs'
 import { UnitSwitcher } from './unit-switcher'
 import { useAuth } from '@/hooks/use-auth'
 import { getInitials, getAvatarColor, cn } from '@/lib/utils'
@@ -31,6 +32,7 @@ export function Navbar({ onMenuClick, scrolled }: NavbarProps) {
   const { profile, signOut } = useAuth()
   const { isOnline } = useOnlineStatus()
   const { resolvedTheme, toggleTheme } = useTheme()
+  const openPalette = useCommandPaletteStore((s) => s.open)
   // All @base-ui DropdownMenuTrigger components must be deferred until after
   // hydration — MenuPrimitive.Trigger is not SSR-safe and causes tree mismatches.
   const [clientReady, setClientReady] = useState(false)
@@ -59,16 +61,22 @@ export function Navbar({ onMenuClick, scrolled }: NavbarProps) {
         <Menu className="w-5 h-5" />
       </button>
 
-      {/* Logo — mobile */}
-      <div className="lg:hidden flex items-center gap-2 mr-auto">
-        <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
-          <span className="text-xs font-bold text-primary-foreground">C</span>
-        </div>
-        <span className="font-semibold text-sm text-foreground">Cachola OS</span>
+      {/* Mobile: back button on sub-pages, logo on top-level */}
+      <div className="lg:hidden flex items-center gap-2 mr-auto min-w-0">
+        <MobileBackButton
+          fallback={
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center shrink-0">
+                <span className="text-xs font-bold text-primary-foreground">C</span>
+              </div>
+              <span className="font-semibold text-sm text-foreground">Cachola OS</span>
+            </div>
+          }
+        />
       </div>
 
       {/* Breadcrumbs — desktop */}
-      <div className="hidden lg:flex flex-1">
+      <div className="hidden lg:flex flex-1 min-w-0 overflow-hidden">
         <Breadcrumbs />
       </div>
 
@@ -76,7 +84,7 @@ export function Navbar({ onMenuClick, scrolled }: NavbarProps) {
       <div className="flex-1 lg:hidden" />
 
       {/* Ações direita — todos diferidos até pós-hidratação */}
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1 shrink-0">
         {clientReady && !isOnline && (
           <span
             className="flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800"
@@ -87,7 +95,27 @@ export function Navbar({ onMenuClick, scrolled }: NavbarProps) {
           </span>
         )}
 
-        {clientReady && <UnitSwitcher />}
+        {/* Busca / Command Palette */}
+        {clientReady && (
+          <button
+            onClick={openPalette}
+            className={cn(
+              'p-2 rounded-lg text-muted-foreground interactive',
+              'hover:bg-accent hover:text-foreground',
+              'min-h-[44px] min-w-[44px] flex items-center justify-center',
+            )}
+            aria-label="Abrir busca (Ctrl+K)"
+            title="Buscar (Ctrl+K)"
+          >
+            <Search className="w-4 h-4" />
+          </button>
+        )}
+
+        {clientReady && (
+          <span data-tour="unit-switcher">
+            <UnitSwitcher />
+          </span>
+        )}
 
         {/* Toggle de tema — sol/lua */}
         {clientReady && (
@@ -109,7 +137,11 @@ export function Navbar({ onMenuClick, scrolled }: NavbarProps) {
           </button>
         )}
 
-        {clientReady && <NotificationBell />}
+        {clientReady && (
+          <span data-tour="notifications">
+            <NotificationBell />
+          </span>
+        )}
 
         {/* Avatar + Dropdown — placeholder estático até montar */}
         {clientReady ? (

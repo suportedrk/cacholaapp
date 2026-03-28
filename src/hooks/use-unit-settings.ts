@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { useUnitStore } from '@/stores/unit-store'
 import type { UnitSettings, UnitSettingsData } from '@/types/database.types'
+import { BRAND_GREEN } from '@/lib/constants/brand-colors'
 
 // ─────────────────────────────────────────────────────────────
 // DEFAULTS
@@ -71,6 +72,17 @@ export function useUnitSettingsData(): UnitSettingsData {
       ...DEFAULT_UNIT_SETTINGS.event_defaults,
       ...data.settings.event_defaults,
     },
+  }
+}
+
+// Helper: retorna brand identity da unidade ativa
+export function useUnitBrand() {
+  const { data } = useUnitSettings()
+  const brand = data?.settings?.brand
+  return {
+    accentColor: brand?.accent_color ?? BRAND_GREEN[500],
+    logoPath:    brand?.logo_url ?? null,
+    displayName: brand?.display_name ?? null,
   }
 }
 

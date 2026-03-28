@@ -36,7 +36,7 @@ export default function RecuperarSenhaPage() {
   }
 
   return (
-    <main className="flex flex-1 items-center justify-center px-4 py-12">
+    <main className="min-h-svh flex items-center justify-center bg-background px-4 py-12">
       <div className="w-full max-w-sm">
 
         {/* Voltar */}

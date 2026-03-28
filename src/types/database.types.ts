@@ -152,6 +152,11 @@ export type UnitSettingsData = {
     min_gap_hours?: number                       // ex: 1
     default_start_time?: string                  // ex: "14:00"
   }
+  brand?: {
+    accent_color?: string   // hex ex: "#7C8D78"
+    logo_url?: string       // storage path em user-avatars/unit-logos/{unitId}/logo.jpg
+    display_name?: string   // nome curto exibido na sidebar
+  }
 }
 
 export type UnitSettings = {
@@ -280,6 +285,7 @@ export type User = {
       maintenance: boolean
       checklists: boolean
     }
+    onboarding_completed?: boolean
   }
   created_at: string
   updated_at: string

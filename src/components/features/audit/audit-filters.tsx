@@ -2,8 +2,8 @@
 
 import { Filter, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { DateInput } from '@/components/ui/date-input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useUsers } from '@/hooks/use-users'
 import type { AuditLogFilters } from '@/types/database.types'
@@ -62,22 +62,18 @@ export function AuditFilters({ filters, onChange }: AuditFiltersProps) {
         {/* Período: de */}
         <div className="space-y-1.5">
           <Label className="text-xs">De</Label>
-          <Input
-            type="date"
+          <DateInput
             value={filters.dateFrom ?? ''}
-            onChange={(e) => set({ dateFrom: e.target.value || undefined })}
-            className="h-8 text-sm"
+            onChange={(v) => set({ dateFrom: v || undefined })}
           />
         </div>
 
         {/* Período: até */}
         <div className="space-y-1.5">
           <Label className="text-xs">Até</Label>
-          <Input
-            type="date"
+          <DateInput
             value={filters.dateTo ?? ''}
-            onChange={(e) => set({ dateTo: e.target.value || undefined })}
-            className="h-8 text-sm"
+            onChange={(v) => set({ dateTo: v || undefined })}
           />
         </div>
 

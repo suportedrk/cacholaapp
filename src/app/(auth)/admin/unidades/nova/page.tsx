@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Loader2 } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -51,14 +51,9 @@ export default function NovaUnidadePage() {
   return (
     <div className="max-w-xl mx-auto space-y-6">
       {/* Cabeçalho */}
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" onClick={() => router.back()} aria-label="Voltar">
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground tracking-tight">Nova Unidade</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Cadastrar uma nova filial ou local de atendimento</p>
-        </div>
+      <div>
+        <h1 className="text-2xl font-semibold text-foreground tracking-tight">Nova Unidade</h1>
+        <p className="text-sm text-muted-foreground mt-0.5">Cadastrar uma nova filial ou local de atendimento</p>
       </div>
 
       {/* Formulário */}

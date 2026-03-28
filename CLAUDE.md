@@ -330,8 +330,8 @@ docker compose -f docker-compose.prod.yml logs -f app
 ### Fase 0 — Bloco 5: Layout Base (2026-03-26)
 - [x] `src/lib/providers.tsx`: QueryClientProvider + TooltipProvider + Sonner + ReactQueryDevtools
 - [x] `src/components/layout/sidebar.tsx`: fixed desktop / drawer mobile, nav items
-- [x] `src/components/layout/navbar.tsx`: hamburguer, breadcrumbs, NotificationBell, avatar + dropdown
-- [x] `src/components/layout/breadcrumbs.tsx`: geração automática por rota
+- [x] `src/components/layout/navbar.tsx`: hamburguer, breadcrumbs (desktop), MobileBackButton (mobile sub-pages) ou logo (top-level), NotificationBell, avatar + dropdown
+- [x] `src/components/layout/breadcrumbs.tsx`: geração automática por rota; exporta `Breadcrumbs` (desktop) + `MobileBackButton` (mobile, com `fallback` prop)
 - [x] `src/app/(auth)/layout.tsx` + `src/components/layout/app-layout.tsx`
 - [x] `src/app/(auth)/dashboard/page.tsx`: placeholder
 
@@ -445,11 +445,24 @@ docker compose -f docker-compose.prod.yml logs -f app
 - [x] `src/hooks/use-checklists.ts`: useChecklists (filtros+paginação), useChecklist, useEventChecklists, useCreateChecklist, useUpdateChecklistStatus, useDeleteChecklist, useUpdateChecklistItem (status/notes/photo+Storage), useChecklistTemplates, useChecklistTemplate, useCreateTemplate, useUpdateTemplate, useDeleteTemplate, useChecklistCategories
 - [x] `src/components/features/checklists/checklist-progress.tsx`: barra de progresso + calcProgress() exportado
 - [x] `src/components/features/checklists/checklist-card.tsx`: card com badge de status, progresso, overdue highlight + skeleton
-- [x] `src/components/features/checklists/checklist-item-row.tsx`: toque para ciclar status (pending→done→na), notas expandíveis, upload de foto com câmera
+- [x] `src/components/features/checklists/checklist-item-row.tsx`: toque para ciclar status (pending→done→na), notas expandíveis, upload de foto com câmera; polimento Prompt 7 (2026-03-28):
+  - Touch target 48px (`w-12 h-12`) com círculo visual interno (`w-7 h-7`) — nenhum clique acidental
+  - SVG inline com `animate-check-draw` (stroke-dashoffset 20→0 em 280ms) ao marcar done
+  - Flash verde overlay (`.animate-item-flash`) + haptic `navigator.vibrate(10)` ao concluir
+  - "Adicionar nota" / "Ver nota" como link de texto inline (não ícone isolado)
+  - Notas com `autoFocus` + botão "Fechar nota" inline
+  - Câmera apenas quando `onPhotoChange` fornecido (sem ícone morto no modo read-only)
 - [x] `src/components/features/checklists/sortable-template-items.tsx`: DnD reorder com @dnd-kit/core + @dnd-kit/sortable
 - [x] `src/components/features/checklists/add-checklist-modal.tsx`: modal de criação a partir de template
 - [x] `src/app/(auth)/checklists/page.tsx`: lista paginada com filtros de status + categoria
-- [x] `src/app/(auth)/checklists/[id]/page.tsx`: tela de preenchimento mobile-first (footer sticky + finalizar)
+- [x] `src/app/(auth)/checklists/[id]/page.tsx`: tela de preenchimento mobile-first (footer sticky + finalizar); polimento Prompt 7 (2026-03-28):
+  - Sticky sub-header: `-mx-4 lg:-mx-6` full-width dentro do `<main p-4>`, com título + evento + barra de progresso + contagem X/Y + badge de status
+  - `SaveIndicator`: "Salvando…" (animate-pulse) → "Salvo ✓" (2s auto-dismiss) via `useEffect` em `isUpdating`
+  - `EmptyState`: ícone ClipboardList + textos descritivos
+  - `CompletedBanner`: ícone CheckCircle2 com `animate-celebrate` (scale 0.4→1.12→1 bounce)
+  - Banner offline/syncing com dark mode completo
+  - Footer full-width `size="lg"` com contagem inline no botão
+  - `globals.css`: `@keyframes check-draw`, `item-flash-done`, `celebrate-check` + classes `.animate-check-draw` e `.animate-item-flash` + token `--animate-celebrate`
 - [x] `src/app/(auth)/checklists/templates/page.tsx`: lista de templates com editar/desativar
 - [x] `src/app/(auth)/checklists/templates/novo/page.tsx`: formulário de criação com DnD
 - [x] `src/app/(auth)/checklists/templates/[id]/editar/page.tsx`: formulário de edição com DnD
@@ -460,7 +473,21 @@ docker compose -f docker-compose.prod.yml logs -f app
 - [x] `src/components/features/dashboard/stats-card.tsx`: card de métrica com ícone, valor, loading skeleton
 - [x] `src/components/features/dashboard/next-event-card.tsx`: próximo evento com equipe + link direto
 - [x] `src/components/features/dashboard/event-quick-view.tsx`: Sheet drawer com detalhes do evento
-- [x] `src/components/features/dashboard/calendar-view.tsx`: calendário 3 visões (mês/semana/dia) com CSS Grid
+- [x] `src/components/features/dashboard/calendar-view.tsx`: calendário 3 visões (mês/semana/dia) com CSS Grid + polimento visual (Prompt 6 — 2026-03-28):
+  - Popover ao clicar número do dia (quando há eventos) via base-ui Popover com `render` prop
+  - Hoje: `bg-brand-50` na célula; círculo filled (light) / ring-2 (dark)
+  - Dia cheio (≥3 eventos): `border-l-2 border-l-primary/40 bg-primary/[0.03]`
+  - Hover nas células: `hover:bg-muted/30`
+  - Badge "N eventos" no header da visão mensal
+  - Botão "Hoje" quando fora do período atual (desktop)
+  - Toggle calendário/lista no mobile (ícones CalendarDays / LayoutList)
+  - `ListView` — visão lista para mobile: agrupa por data, sort por hora, touch targets 44px
+  - Transição slide direcionada ao trocar mês (`navDir` state + `animate-slide-left-in` / `animate-slide-right-in`)
+  - Skeleton granular por célula (skeleton-shimmer) substituindo animate-pulse
+  - Eventos `lost`: `opacity-60` + `line-through`; dot vermelho com opacity
+  - Dark mode completo: todos os pills/dots com variantes `dark:`
+  - `globals.css`: `@keyframes slide-left-in` + `slide-right-in` + tokens `--animate-slide-left-in/right-in`
+  - `popover.tsx`: `render` prop adicionada ao tipo de `PopoverTrigger`
 - [x] `src/app/(auth)/dashboard/page.tsx`: página completa substituindo placeholder
 
 ### Fase 2 — Bloco 1: Módulo de Manutenção (2026-03-27)
@@ -511,11 +538,13 @@ docker compose -f docker-compose.prod.yml logs -f app
 - [x] `src/app/(auth)/admin/unidades/[id]/page.tsx`: editar dados + gerenciar usuários vinculados (add/remove/change role)
 - [x] `src/app/(auth)/admin/usuarios/[id]/page.tsx`: seção Unidades Vinculadas — lista com change role + remove
 
-### Fase 2 — Bloco 2: Upload de Fotos (2026-03-27)
+### Fase 2 — Bloco 2: Upload de Fotos (2026-03-27 → polimento Prompt 8 2026-03-28)
 - [x] `src/hooks/use-signed-urls.ts`: `useSignedUrls(bucket, paths)` — batch `createSignedUrls`, staleTime 30min
-- [x] `src/components/shared/photo-upload.tsx`: Canvas compress (max 1200px, 80%), preview thumbnail, progress bar, dois botões (Câmera com `capture="environment"` + Galeria), `PhotoThumb` para exibir foto existente
+- [x] `src/components/shared/photo-upload.tsx`: **Prompt 8** — reescrita completa; exports: `compressImage`, `PhotoDropZone` (alias `PhotoUpload`), `PhotoThumb`
+  - `PhotoDropZone`: drop zone visual (border-dashed 2px, ícone Camera 32px, texto responsivo "Toque para tirar foto" mobile / "Arraste fotos ou clique" desktop), drag-and-drop com isDragOver, hover/dragover com `--color-brand-50` + `border-primary`; estados: `confirm` (Usar foto / Tirar outra), `uploading` (overlay 55% + % centralizado + progress bar h-1.5 + indicador "2.4 MB → 480 KB"), `success` (CheckCircle2 verde + `animate-scale-in` 1.3s), `error` (X vermelho + mensagem + botão "Tentar novamente"); dois inputs ocultos: câmera (`capture="environment"`) + galeria; link secundário "ou escolher da galeria"
+  - `PhotoThumb`: aspect-ratio 4:3 (era 80×80 fixo), hover `scale-[1.02]`, botão X sempre visível no mobile (`opacity-100 sm:opacity-0 sm:group-hover:opacity-100`), `hover:bg-red-500`
 - [x] `src/components/shared/photo-lightbox.tsx`: overlay fullscreen, prev/next, keyboard (Esc/Arrows), contador e label por foto
-- [x] `src/components/features/maintenance/photo-section.tsx`: grid before/during/after, signed URLs, PhotoUpload por seção, PhotoThumb clicável, PhotoLightbox, remove de Storage + DB
+- [x] `src/components/features/maintenance/photo-section.tsx`: **Prompt 8** — layout 2 colunas Antes|Depois (`grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x`) + Durante abaixo; badges `badge-gray`/`badge-green`/`badge-amber border`; `SectionColumn` sub-componente; estado vazio read-only (aspect-[4/3] border-dashed); usa `PhotoDropZone`
 - [x] `src/app/(auth)/manutencao/[id]/page.tsx`: substituído placeholder por `<PhotoSection orderId photos canEdit />`
 - [x] `src/app/(auth)/perfil/page.tsx`: avatar upload funcional — compressão (max 600px), upload para `user-avatars/{userId}/avatar.jpg`, signed URL 1 ano salva em `users.avatar_url`
 
@@ -688,6 +717,43 @@ Role:  super_admin (32 permissões)
 - [x] `src/hooks/use-dashboard.ts` `useCalendarEvents`: salva no IDB store `calendar_events` após cada fetch online; quando offline lê do IDB; retorna `isOffline` + `cachedAt` além de `data`/`isLoading`/`isError`; query desabilitada offline (`enabled: isOnline && ...`)
 - [x] `src/app/(auth)/dashboard/page.tsx`: banner amber no calendário quando offline com horário da última atualização (HH:MM)
 
+## AUDITORIA DE QUALIDADE UI/UX (2026-03-28)
+
+Varredura completa do codebase para consistência visual, acessibilidade e idioma.
+
+### Corrigido
+
+| Categoria | Arquivo | Correção |
+|-----------|---------|----------|
+| **Idioma (pt-BR)** | `src/components/ui/dialog.tsx` | `"Close"` → `"Fechar"` (sr-only + aria-label) |
+| **Idioma (pt-BR)** | `src/components/ui/sheet.tsx` | `"Close"` → `"Fechar"` (sr-only) |
+| **Idioma (pt-BR)** | `src/components/ui/command.tsx` | `"Command Palette"` → `"Paleta de Comandos"`, placeholder traduzido |
+| **Hex hardcoded** | `src/components/features/reports/donut-chart-card.tsx` | 8 hex → `BRAND_GREEN` / `BRAND_BEIGE` / `BRAND_CHART.tealMid/tealLight` |
+| **Hex hardcoded** | `src/hooks/use-unit-settings.ts` | `'#7C8D78'` → `BRAND_GREEN[500]` |
+| **Hex hardcoded** | `src/lib/constants/brand-colors.ts` | Adicionado `tealMid: '#6B9E8B'` e `tealLight: '#A8C5BD'` ao `CHART_COLORS` |
+| **Alt text** | `src/components/features/settings/brand-identity-tab.tsx` | `alt="Logo"` → `alt="Logo da unidade"` |
+| **Alt text** | `src/components/layout/sidebar.tsx` | `alt="Logo"` → `alt={\`Logo \${displayName \|\| APP_NAME}\`}` |
+| **Breadcrumb** | `src/components/layout/breadcrumbs.tsx` | Segmento `admin` ocultado via `HIDDEN_SEGMENTS`; hrefs preservados |
+| **Breadcrumb** | `src/app/(auth)/configuracoes/integracoes/ploomes/mapeamento/page.tsx` | Breadcrumb inline duplicado removido |
+
+### Exceções Legítimas (não corrigidas intencionalmente)
+
+| Arquivo | Razão |
+|---------|-------|
+| `src/app/global-error.tsx` | Inline styles obrigatórios — Tailwind não carrega em error boundary global |
+| `src/app/layout.tsx` `themeColor` | Meta tag do browser requer hex real |
+| `src/app/(auth)/dashboard/page.tsx` `STROKE` | Recharts sparkline requer hex |
+| `src/lib/utils/export.ts` | jsPDF desenha com RGB/hex diretamente |
+| `src/lib/constants/brand-colors.ts` | Arquivo de definição — hex aqui são intencionais |
+| `src/components/features/pwa/splash-screen.tsx` | Gradient inline sem Tailwind disponível |
+| `src/app/(public)/login/page.tsx` | BrandingPanel gradient inline intencional |
+| `src/components/features/settings/brand-identity-tab.tsx` `ACCENT_PRESETS` | São dados de cor (opções do color picker), não estilos |
+
+### Resultado TypeScript
+`npx tsc --noEmit` → **zero erros**
+
+---
+
 ## PROXIMOS PASSOS — FASE 1
 
 - [x] Bloco 1: Módulo de Eventos (CRUD completo + config tables)
@@ -756,7 +822,7 @@ Branch: `feat/ui-polish-foundation`
   - `scale-in`: escala 0.95→1 para modais (200ms bounce)
 - **Tokens Tailwind**: `animate-page-enter`, `animate-fade-up`, `animate-shimmer`, `animate-scale-in`
 - **`.skeleton-shimmer`**: substitui `animate-pulse` — gradiente `color-mix` dark-mode safe
-- **`.card-interactive`**: hover lift `-2px` + `shadow-md` — GPU only (transform + shadow)
+- **`.card-interactive`**: hover lift `translateY(-2px)` + `shadow-md` + `border-strong`; active `scale(0.98)`; dark mode shadow ajustado; `prefers-reduced-motion` suprime transform mantendo mudança de cor — GPU only
 - **`app-layout.tsx`**: `key={pathname}` no wrapper → `animate-page-enter` a cada navegação
 - **`button.tsx`**: `hover:scale-[1.02] active:scale-[0.98]` + `disabled:scale-100`
 - **Todos os cards**: migrados para `.card-interactive` (event, checklist, maintenance, equipment, stats)
@@ -770,12 +836,253 @@ Branch: `feat/ui-polish-foundation`
 - Mobile 375px verificado: sem scroll horizontal, filter chips wrapping, touch targets OK
 - TypeScript strict: zero erros em todo o polimento
 
+---
+
+## UI/UX CHANGELOG — Phase 2 (2026-03-28)
+
+Branch: `claude/optimistic-poitras`
+
+### Prompt 7 — Checklist Fill Page Polish (verificação)
+- Checklist fill page (`/checklists/[id]`) verificada com dados reais
+- Sticky sub-header full-width, touch target 48px, SVG `animate-check-draw`, haptic vibrate(10)
+- `SaveIndicator`: "Salvando…" → "Salvo ✓" (2s auto-dismiss); `CompletedBanner` com `animate-celebrate`
+
+### Prompt 8 — Photo Upload Polish
+- **`src/components/shared/photo-upload.tsx`** — State machine `idle|confirm|uploading|success|error`:
+  - Drop zone dashed border + Camera 32px; hover/dragover `bg-[var(--color-brand-50)]`
+  - "Toque para tirar foto" (mobile) / "Arraste fotos ou clique" (desktop)
+  - Confirm step: preview `aspect-[4/3]` + "Usar foto" / "Tirar outra"
+  - Progress overlay 55% + barra bottom + compression indicator "2.4 MB → 480 KB"
+  - Success: `CheckCircle2` verde + `animate-scale-in`, auto-reset 1.3s; Error: retry
+  - `PhotoThumb`: `aspect-[4/3]`, hover scale, remove btn `sm:opacity-0 sm:group-hover:opacity-100`
+- **`src/components/features/maintenance/photo-section.tsx`**:
+  - Grid 2 colunas `sm:grid-cols-2 divide-x` (Antes|Depois) + `border-t` row (Durante)
+  - Badges: `badge-gray` (Antes), `badge-green` (Depois), `badge-amber` (Durante)
+
+### Prompt 9 — Ploomes Mapping Page Redesign
+- **`src/app/(auth)/configuracoes/integracoes/ploomes/mapeamento/page.tsx`** — Reescrita completa:
+  - Breadcrumb + header com título + `SaveIndicator` inline
+  - `SyncMiniCard`: último sync + deal count + "Sincronizar agora" (usa `usePloomesSyncStatus`)
+  - **Section 1 — Funil & Estágio** (editável): Pipeline ID, Stage ID, Won Status ID com tooltips + ✓/⚠ indicators + badge "Configuração obrigatória"
+  - **Section 2 — Campos da Festa** (read-only): tabela de 9 campos de `DEAL_FIELD_MAP` com ✓/○ + badge "N/9 configurados"
+  - **Section 3 — Dados do Cliente** (editável): 3 inputs `Contact.[field]`
+  - **Section 4 — Status do Deal** (read-only): 3 linhas com pills coloridos + nota contextual azul
+  - Auto-save debounce 500ms; guard vs save na hidratação (compara com `config` do DB)
+  - Footer sticky: "Testar mapeamento" → chama `/api/ploomes/deals`, toast com título/data/cliente
+  - TypeScript strict: zero erros
+
+### Prompt 10 — Login Page Premium Branding
+- **`src/app/(public)/login/page.tsx`** — Reescrita completa com layout split desktop:
+  - `<div className="min-h-svh lg:grid lg:grid-cols-2">` — split 50/50 no desktop
+  - `BrandingPanel` (hidden mobile, `lg:flex`): gradiente `from-brand-500 to-beige-500` (light) / `from-brand-900 to-brand-700` (dark); dots pattern radial-gradient; 3 blobs decorativos; logo "C" com `bg-white/20 backdrop-blur-sm`; tagline "Gestão inteligente de buffets infantis"; 3 feature pills `Check + texto` com stagger `animate-fade-up` 0–380ms
+  - `LoginForm` (full-width mobile, metade desktop): logo mobile-only + heading + form card
+  - `ErrorAlert`: 5 tipos (`credentials/blocked/rate_limit/server/unconfirmed`) com ícones `AlertCircle/Clock/WifiOff`; botão "Tentar novamente" só no tipo `server`
+  - `classifyError(error: string): LoginError` — mapeia strings Supabase para tipos amigáveis em PT-BR
+  - Input email com `<Mail>` icon à esquerda; input senha com `<Lock>` + toggle `<Eye>/<EyeOff>` à direita
+  - Checkbox "Lembrar-me" + link "Esqueci minha senha → /recuperar-senha"
+  - `autocomplete="email"` + `autocomplete="current-password"` para gestor de senhas
+  - Submit state machine `'idle' | 'loading' | 'success'`: idle→`Entrar`, loading→`Loader2 spin + Entrando…`, success→`CheckCircle2 verde + Entrando…`
+  - `triggerShake()`: remove class → `void el.offsetHeight` (reflow) → add class → remove após 600ms
+  - Redirect: 700ms delay após success para mostrar feedback visual antes de navegar
+  - `callbackError` query param → exibe erro de link expirado automaticamente
+  - `aria-invalid`, `aria-describedby`, `role="alert"`, `aria-live="assertive"` — acessibilidade completa
+  - `animate-fade-up` com delays progressivos no form
+- **`src/app/globals.css`**: `@keyframes login-shake` (7-step translateX damping) + `.animate-login-shake` + `.pb-safe` (env safe-area-inset-bottom)
+- **`src/app/(public)/layout.tsx`**: simplificado para `<>{children}</>` — cada página pública controla seu próprio layout e fundo
+- **`src/app/(public)/recuperar-senha/page.tsx`**: `<main>` atualizado para `min-h-svh flex items-center justify-center bg-background` (compatível com layout transparente)
+
+### Prompt 11 — Onboarding / First-Use Experience
+- **`src/stores/onboarding-store.ts`** (novo): Zustand store — `welcomeOpen`, `tourActive`, `tourStep`; `setWelcomeOpen`, `startTour`, `nextTourStep`, `skipTour`; `TOUR_STEPS` array com 4 passos (sidebar/unit-switcher/calendar/notifications)
+- **`src/hooks/use-onboarding.ts`** (novo):
+  - `useOnboarding()`: verifica `profile.preferences.onboarding_completed` (DB) + `cachola-onboarding-done` (localStorage). Se falso → `setWelcomeOpen(true)` após 800ms delay
+  - `useCompleteOnboarding()`: mutation que escreve no DB + localStorage imediatamente (sem race condition)
+  - `useSetupChecklist()`: useQuery com 4 checks paralelos (ploomes_config pipeline_id, checklist_templates, equipment status, users count)
+- **`src/components/features/onboarding/welcome-modal.tsx`** (novo): `createPortal(document.body)` — 3 slides carousel (Calendar/CheckSquare/Wrench), greeting personalizado "Olá, [nome]!", dots de progresso clicáveis, "Pular ×" / "← Voltar" / "Próximo →" / "Começar →"; ao clicar Começar → marca onboarding completo + inicia tour após 400ms
+- **`src/components/features/onboarding/guided-tour.tsx`** (novo): `createPortal(document.body)` — spotlight via `box-shadow: 0 0 0 9999px rgba(0,0,0,0.65)` posicionado sobre `[data-tour="step-id"]`; tooltip card com `Arrow` (triângulo CSS), progresso dots, "Pular tour" / "Próximo →" / "Concluir"; posicionamento automático (above/below/right/left) baseado em `getBoundingClientRect()`; skip automático se elemento off-screen (sidebar fechada no mobile)
+- **`src/components/features/onboarding/setup-checklist-card.tsx`** (novo): visível para super_admin/diretor/gerente; borda `border-primary/20 bg-brand-50`; progresso bar; 4 items com CheckCircle2/Circle + link para cada configuração; dismissível via localStorage; oculto quando todos completos
+- **`src/types/database.types.ts`**: `User.preferences.onboarding_completed?: boolean` adicionado
+- **`src/components/layout/app-layout.tsx`**: `OnboardingLayer` (renders WelcomeModal + GuidedTour + executa useOnboarding) adicionado ao início do JSX
+- **`src/components/layout/sidebar.tsx`**: `data-tour="sidebar"` no `<aside>`
+- **`src/components/layout/navbar.tsx`**: `<span data-tour="unit-switcher">` em volta de `<UnitSwitcher>`; `<span data-tour="notifications">` em volta de `<NotificationBell>`
+- **`src/app/(auth)/dashboard/page.tsx`**: `<SetupChecklistCard />` após PageHeader; `<div data-tour="calendar">` em volta de `<CalendarView>`
+- **`src/app/(auth)/checklists/page.tsx`**: empty state sem filtros → "Crie seu primeiro checklist" + "Criar modelo de checklist"
+- **`src/app/(auth)/manutencao/page.tsx`**: empty state → "Registre sua primeira ordem de manutenção" + botão primary
+- **`src/app/(auth)/eventos/page.tsx`**: empty state Ploomes → "Aguardando sincronização com Ploomes" + "Configurar Ploomes"
+
+### Prompt 12 — Command Palette (Ctrl+K / ⌘K)
+- **`src/stores/command-palette-store.ts`** (novo): Zustand store com `persist` (localStorage `cachola-cmd-palette`) — `isOpen`, `recentItems[]`; `open/close/toggle`; `addRecent` (dedup por id, max 5, mais recente primeiro)
+- **`src/hooks/use-command-palette-search.ts`** (novo): `useCommandPaletteIndex(enabled)` — TanStack Query; 4 queries paralelas (events/checklists/maintenance_orders/equipment), filtradas por `activeUnitId`; `staleTime: 2min`; `gcTime: 5min`; ativado apenas quando palette está aberta
+- **`src/components/features/command-palette/command-palette.tsx`** (novo):
+  - `createPortal(document.body)` com overlay `bg-black/60 backdrop-blur-[6px]`
+  - Mobile: bottom sheet `items-end rounded-t-2xl max-h-[85svh]`; Desktop: centered `sm:pt-[12vh] sm:rounded-2xl sm:max-w-[560px] sm:max-h-[68vh]`
+  - `useDebounce(query, 200)` para debounce de busca; fuzzy search word-split
+  - 6 grupos: Recentes, Páginas (9), Ações rápidas (5), Eventos, Checklists, Manutenções, Equipamentos
+  - `flatResults` + `flatIdx` counter para mapeamento de `selectedIndex` cross-group
+  - Keyboard: ↑↓ navegar, Enter selecionar, Esc fechar; Ctrl+K / ⌘K listener global
+  - `handleSelect`: `addRecent` → `router.push` → `close()`; `ResultItem` com `scrollIntoView`
+  - Loading skeleton, empty state "Nenhum resultado", footer com hints kbd
+- **`src/components/layout/navbar.tsx`**: botão `<Search>` antes de `<UnitSwitcher>`; `openPalette` do store
+- **`src/components/layout/app-layout.tsx`**: `<CommandPalette />` ao lado de `<OnboardingLayer />`
+- **Fix**: `IndexChecklist.name → IndexChecklist.title` (campo real da tabela `checklists` é `title`)
+
+### Prompt 13 — Dashboard KPIs com Sparklines e Tendências
+- **`src/hooks/use-dashboard.ts`** — novos tipos `SparkPoint`, `KpiMetric`, `DashboardKpis` + hook `useDashboardKpis()`:
+  - 4 queries paralelas: events (6m), maintenance_orders (all), checklists (all), next event
+  - `buildMonths(now, 6)` → array `['yyyy-MM' × 6]` oldest first
+  - `trendPct(curr, prev)` → % change rounded, `null` quando prev=0
+  - Events: agrupados por mês — `count`, `confirmed`, `guests` (cap 9999 para dados corrompidos do Ploomes)
+  - Conversion: `Math.round((confirmed / count) * 100)` por mês
+  - Guests: soma de `guest_count` válidos (0 < gc ≤ 9999)
+  - Maintenance: `value` = currently open (status != completed/cancelled); spark = created/month
+  - Checklists: `value` = currently pending; spark = created/month
+  - `nextEventDays`: `differenceInCalendarDays(parseISO(date + 'T12:00:00'), now)` — mínimo 0
+  - `staleTime: 2min`; imports adicionados: `subMonths`, `differenceInCalendarDays`, `parseISO`
+- **`src/components/features/dashboard/kpi-card.tsx`** (novo):
+  - `TrendBadge`: pill verde (TrendingUp ↑), vermelho (TrendingDown ↓), cinza (Minus —)
+  - `KpiCardSkeleton`: header + value + sparkline skeleton
+  - `KpiCard`: Link clicável (`card-interactive` + `hover:border-primary/30`)
+  - Layout: `icon + label` esquerda, `TrendBadge` direita; `text-3xl value`; sparkline 80px
+  - Recharts `AreaChart` sem eixos, sem grid, sem tooltip — `type="monotone"` + `strokeWidth={2}`
+  - `linearGradient` com `stopOpacity 0.25→0.02` para fill suave
+  - `IntersectionObserver` → `isInView` → `isAnimationActive` — sparkline desenha ao entrar viewport
+  - `animationDuration={800}` + `animationEasing="ease-out"`
+  - `gradId = kpi-grad-${label}` único por card para evitar conflitos SVG
+- **`src/app/(auth)/dashboard/page.tsx`** — substituição completa dos 2 grids de `StatsCard`:
+  - Grid único `grid-cols-2 md:grid-cols-3 gap-3` com 6 `KpiCard`s
+  - Cores de stroke hex (Recharts): `BRAND_GREEN[500]`, `#16A34A`, `#D97706`, `#DC2626`, `#EA580C`
+  - Manutenção: `icon-red` + `STROKE.red` quando `value > 5`, senão `icon-orange` + `STROKE.orange`
+  - "Próximo Evento": valor formatado "Hoje!" / "1 dia" / "N dias" / "—"; reusa events.spark
+  - Imports: `useDashboardKpis`, `KpiCard`, `BRAND_GREEN`; removidos `StatsCard`, `useDashboardStats`, `useDashboardMaintenanceStats`
+  - Stagger `animate-fade-up` com delays 0–250ms (50ms cada)
+
+### Prompt 14 — Centro de Notificações Slide-Over
+- **`src/app/globals.css`** — 3 novos `@keyframes`:
+  - `bell-shake`: rotação amortecida 12°→-10°→… em 0.6s — `transform-origin: top center`
+  - `slide-in-right`: `translateX(100%)→translateX(0)` para entrada do painel
+  - `notification-in`: `opacity:0 translateY(-10px)→opacity:1 translateY(0)` para novos itens
+  - Classes: `.animate-bell-shake`, `.animate-notification-in`
+- **`src/hooks/use-notifications.ts`** — melhorias:
+  - Limite aumentado `20 → 50`
+  - Adicionado `deleteNotification` mutation (DELETE por id)
+  - Exportados `isError`, `refetch`, `deleteNotification`
+- **`src/components/layout/notification-bell.tsx`** — reescrita completa:
+  - `createPortal(document.body)` slide-over — `translate-x-full → translate-x-0` (300ms transition)
+  - Mobile: painel fullscreen; Desktop: 380px fixo à direita (`fixed inset-y-0 right-0 w-[380px]`)
+  - Overlay `bg-black/40 backdrop-blur-sm` com `onClick` para fechar
+  - **Filter chips** (`FilterChip`): Todas | Eventos | Manutenção | Checklists | Sistema — com badge de não-lidos por categoria
+  - **`NotificationItem`**:
+    - Ícone 40px `rounded-full` com cor semântica por tipo (Calendar=brand, Wrench=orange, etc.)
+    - Dot azul absoluto (`left-1.5`) para não-lidas
+    - Desktop hover: ações "Lida" + "Arquivar" aparecem (`opacity-0 → opacity-100 group-hover`)
+    - Mobile swipe: `onTouchStart/End`, delta < -55px → `swiped=true` → `-translate-x-[120px]` revela botões absolutos
+  - **Archive com undo** (padrão sonner): `archivedIds` Set + `archiveTimeouts` Map + 4s `setTimeout` antes do DELETE real; toast "Arquivada" com botão "Desfazer" cancela o timeout
+  - **Bell shake + áudio**: `prevUnreadRef` compara contagem anterior — ao aumentar, adiciona `.animate-bell-shake` (remove após 700ms) + beep via Web Audio API (2 tons: 880Hz→440Hz)
+  - **Auto-toast**: quando painel fechado e nova notificação chega (Realtime) → `toast(title, { description })`
+  - **`animate-notification-in`**: itens novos detectados comparando `prevIdsRef` vs IDs atuais; `isInitialLoad` ref evita animação no mount
+  - **Header**: título "Notificações" + contagem não-lidas + botão "Marcar todas lidas" (só quando há não-lidas) + botão fechar `×`
+  - **Footer**: botão "Ver todas" (link `/admin/logs`) + "Limpar tudo" quando há notificações arquivadas
+  - **Estados**: skeleton (5 items) no loading; empty state por filtro ativo; error state com retry
+
+### Prompt 15 — Detalhe do Evento: Timeline Visual + Redesign
+- **`src/components/features/events/event-timeline.tsx`** (novo):
+  - `deriveTimeline(event, checklists)` — deriva marcos a partir de dados disponíveis:
+    - "Evento criado / importado do Ploomes" (`event.created_at`)
+    - "Checklist X atribuído" (por `checklist.created_at`, sorted ASC)
+    - "Checklist X concluído" (quando `status==='completed'`, usa `updated_at`)
+    - "Data do evento" / "Evento hoje!" / "Evento realizado" (`event.date + start_time`)
+    - "Desmontagem / Pós-evento" (apenas após `eventStart` passar, usa `end_time`)
+  - `TimelineDot`: círculo 32px, cores semânticas — `bg-green-500` (done), `bg-primary animate-pulse` (current), `bg-muted` (future); sombra ring `color-mix` no current
+  - Linha vertical conectora (`absolute left-4 top-8 w-0.5`) — verde quando `done`, `bg-border` quando future
+  - Itens com link: `<Link href={item.link}>` envolve o item (checklists linkam para `/checklists/[id]`)
+  - `ExternalLink` mini inline no título quando o item tem link
+  - Avatar responsável (mini, `size="sm"`) + nome (primeiro nome, hidden no mobile)
+  - `isInitialMount` detectado por `status===current` — destaque visual com `shadow-[0_0_0_4px_…]`
+- **`src/hooks/use-maintenance.ts`** — novo `useEventMaintenances(eventId)`:
+  - Filtra `maintenance_orders` por `event_id`; usa `MAINTENANCE_LIST_SELECT`; `staleTime: 30s`
+- **`src/app/(auth)/eventos/[id]/page.tsx`** — reescrita completa:
+  - **Top nav**: `<ArrowLeft>` + action buttons à direita (status dropdown + Editar + Excluir)
+  - **Hero Header** card: título grande + `client_name` subtítulo + badge strip (status | data | horário | salão | convidados) + botão "Ploomes" ghost com `<ExternalLink>` (condicionado a `ploomes_url`)
+  - **Info Grid** 2 colunas: `InfoCard` "Dados do Cliente" + "Dados da Festa"; `InfoRow` helper (ícone + texto)
+  - **Ploomes** seção: `<PloomesEventDetails>` mantido (condicionado a `ploomes_deal_id`)
+  - **Linha do Tempo** seção: `<EventTimeline event checklists />`
+  - **Checklists** seção: `<SectionHeader count action>` + `<ChecklistCard>` list + empty state
+  - **Manutenções Relacionadas** seção: apenas se `maintenances.length > 0`; cards com `<MaintenanceStatusBadge>` + `<MaintenancePriorityBadge>` + link para `/manutencao/[id]`
+  - **Equipe** seção: grid `sm:grid-cols-2` com avatares
+  - `InfoCard` helper: `filled` prop → `bg-brand-50 border-primary/20` (dark mode incluso)
+  - `SectionHeader` helper: título + count badge + action slot
+
+### Prompt 16 — Keyboard Shortcuts + PWA Install Experience
+
+#### Tarefa A — Keyboard Shortcuts
+- **`src/stores/shortcuts-store.ts`** (novo): Zustand store — `isOpen`, `open/close/toggle` para o cheat sheet modal
+- **`src/hooks/use-keyboard-shortcuts.ts`** (novo):
+  - Escuta `keydown` global; skip quando `isEditable()` (INPUT/TEXTAREA/SELECT/contenteditable) ou Command Palette aberta
+  - `Ctrl+/` / `⌘/` e `?` → `toggleShortcuts()`
+  - `N` → click programático em `[aria-label="Notificações"]` (sem extrair para store)
+  - `G` → inicia sequência; `seqRef.current = 'g'` + timeout 1s
+  - `G + D/C/M/E/S` → `router.push` para dashboard/checklists/manutencao/equipamentos/configuracoes
+- **`src/components/features/keyboard-shortcuts/shortcuts-modal.tsx`** (novo):
+  - `createPortal(document.body)` com overlay `bg-black/60 backdrop-blur-[6px]`
+  - Detecta Mac via `navigator.platform` → mostra `⌘` vs `Ctrl`
+  - Grid 2 colunas `sm:grid-cols-2`; grupos "Navegação" e "Painéis"
+  - `<Kbd>` component: `bg-muted border border-border rounded text-[0.65rem] font-mono shadow-[0_1px_0_0_…]`
+  - Fechar com Esc ou clique no overlay
+  - `animate-scale-in` na entrada
+
+#### Tarefa B — PWA Install Experience
+- **`src/hooks/use-pwa-install.ts`** (novo):
+  - Captura `beforeinstallprompt`, previne o default nativo
+  - Detecta standalone (`(display-mode: standalone)`) e não mostra se já instalado
+  - Timing: visitas (localStorage `cachola-pwa-visits`) e tempo desde primeira visita (`cachola-pwa-first-visit`)
+  - Banner aparece após ≥3 visitas OU ≥2min da primeira visita
+  - Dismiss salva timestamp em `cachola-pwa-dismissed` (valida por 30 dias)
+  - Expõe `showBanner`, `canInstall`, `install()`, `dismiss()`
+- **`src/components/features/pwa/install-banner.tsx`** (novo):
+  - Fixed bottom, `z-50`, `sm:w-80` no canto direito
+  - Logo "C" 40×40 + textos + botão "Instalar" + `<X>` dismiss
+  - `animate-scale-in` na entrada
+- **`src/components/features/pwa/splash-screen.tsx`** (novo):
+  - Aparece APENAS quando `display-mode: standalone` (PWA instalado)
+  - `z-[9999]`, gradiente inline `#7C8D78 → #E3DAD1`
+  - Logo "C" 80×80 `rounded-[1.5rem]` + nome + spinner `animate-spin`
+  - `animate-scale-in` no conteúdo; fade-out via `opacity-0 transition-opacity` após 1.2s; remove-from-DOM após 1.6s
+- **`public/manifest.json`** — atualizado: `background_color` `#FAFAF8` → `#E3DAD1`, `orientation` `portrait-primary` → `portrait`
+- **`src/components/layout/app-layout.tsx`** — adicionado:
+  - `<KeyboardLayer />` (chama `useKeyboardShortcuts()`, retorna `null`)
+  - `<ShortcutsModal />`
+  - `<SplashScreen />`
+  - `<InstallBanner />`
+
+### Prompt 17 — Personalização Visual por Unidade + PDF Templates (2026-03-28)
+
+#### Tarefa A — Personalização Visual por Unidade
+- **`src/types/database.types.ts`**: `UnitSettingsData` ganhou campo `brand?: { accent_color?, logo_url?, display_name? }` — sem nova migration (já é JSONB)
+- **`src/hooks/use-unit-settings.ts`**: hook `useUnitBrand()` exportado — retorna `{ accentColor, logoPath, displayName }` com fallback para `#7C8D78`
+- **`src/components/layout/unit-accent-wrapper.tsx`** (novo): aplica `style={{ '--primary': accentColor }}` como CSS custom property override; todas as utilities Tailwind `bg-primary / text-primary / border-primary` herdam via cascade; `transition-colors duration-300` na troca de unidade
+- **`src/components/features/settings/brand-identity-tab.tsx`** (novo):
+  - Seção "Logo da Unidade": upload (max 2MB, preview imediato, compressão para max 400px via `compressImage`), armazenado em `user-avatars/unit-logos/{unitId}/logo.jpg`, fallback letra inicial
+  - Seção "Nome de Exibição": input text livre (max 30 chars)
+  - Seção "Cor de Destaque": 8 presets (Verde Sálvia/Floresta/Azul Ardósia/Marinho/Terracota/Bordô/Âmbar/Cinza) + color picker `<input type="color">` + input hex manual; preview inline do botão com a cor selecionada
+  - `hasChanges` guard — botão "Salvar" habilitado só quando há mudança vs. estado salvo
+  - Salva via `useUpdateUnitSettings()` mergeando campo `brand` nos settings existentes
+- **`src/components/layout/sidebar.tsx`**: `useSidebarLogo()` helper — lê `useUnitBrand()`, gera public URL via `getPublicUrl()`; logo `<Image>` quando disponível, fallback letra inicial de `displayName`; texto da sidebar usa `displayName || APP_NAME`
+- **`src/app/(auth)/configuracoes/page.tsx`**: aba "Identidade Visual" adicionada com `<BrandIdentityTab />`
+- **`src/components/layout/app-layout.tsx`**: toda a árvore envolvida em `<UnitAccentWrapper>` — accentColor ativo propagado para toda a UI
+
+#### Tarefa B — PDF Templates Profissionais
+- **`src/lib/utils/export.ts`** — 3 novas funções programáticas (sem html2canvas):
+  - `hexToRgb(hex)`: helper interno converte hex → RGB tuple
+  - `addPdfHeader(pdf, title, unitName, period, accentHex, pageW, margin)`: cabeçalho com barra colorida accent + "Cachola OS" + unidade + data + título; retorna Y após header
+  - `addPdfFooter(pdf, pageW, margin, pageH)`: rodapé "Gerado por Cachola OS" + "Página N de M"
+  - **`exportReportPDF(config: ReportPdfConfig)`**: PDF A4 landscape para relatórios; colunas configuráveis com `align` e `width`; header accent colorido; linhas alternadas (#F8F8F8); separador horizontal; paginação automática; tipos `ReportPdfColumn`, `ReportPdfConfig` exportados
+  - **`exportChecklistPDF(config: ChecklistPdfConfig)`**: PDF A4 portrait para checklist concluído; box de dados do evento (cliente/salão/data); sumário (concluídos/pendentes/N/A/responsável); itens com símbolo ✓/○/— colorido (verde/cinza), notas indentadas "↳ nota", done_by + done_at à direita; separador por item; linha de assinatura + timestamp; paginação automática; tipo `ChecklistPdfItem`, `ChecklistPdfConfig` exportados
+
 ### Padrões Estabelecidos
 | Item | Padrão |
 |------|--------|
 | Ícones em cards | `.icon-{cor}` — NUNCA `bg-*-50` |
 | Badges/pills | `.badge-{cor} border` — NUNCA hex direto |
-| Hover em cards | `.card-interactive` — substituir `hover:shadow-md hover:-translate-y-*` manual |
+| Hover em cards | `.card-interactive` — NUNCA usar `hover:shadow-md hover:-translate-y-*` manual; classe tem cursor, lift, border, active e reduced-motion |
 | Select "Todos" | `value={null}` + `<SelectItem value="all">` (base-ui renderiza placeholder) |
 | Botão com link | `<Link className={cn(buttonVariants(...))}>` (base-ui Button não suporta `asChild`) |
 | TooltipTrigger | Usar `render` prop para elemento custom; sem `asChild` |

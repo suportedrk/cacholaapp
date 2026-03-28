@@ -20,7 +20,7 @@ export function useNotifications() {
     })
   }, [])
 
-  // ── Query: últimas 20 notificações ──
+  // ── Query: últimas 50 notificações ──
   const query = useQuery({
     queryKey: ['notifications', userId],
     enabled: !!userId,
@@ -31,7 +31,7 @@ export function useNotifications() {
         .select('*')
         .eq('user_id', userId!)
         .order('created_at', { ascending: false })
-        .limit(20)
+        .limit(50)
       if (error) throw error
       return data as AppNotification[]
     },
@@ -95,6 +95,21 @@ export function useNotifications() {
     },
   })
 
+  // ── Mutation: deletar (arquivar) notificação ──
+  const deleteNotification = useMutation({
+    mutationFn: async (notificationId: string) => {
+      const supabase = createClient()
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('id', notificationId)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['notifications', userId] })
+    },
+  })
+
   const notifications = query.data ?? []
   const unreadCount = notifications.filter((n) => !n.is_read).length
 
@@ -102,8 +117,11 @@ export function useNotifications() {
     notifications,
     unreadCount,
     isLoading: query.isLoading,
+    isError: query.isError,
+    refetch: () => query.refetch(),
     markRead: (id: string) => markRead.mutate(id),
     markAllRead: () => markAllRead.mutate(),
     isMarkingAll: markAllRead.isPending,
+    deleteNotification: (id: string) => deleteNotification.mutate(id),
   }
 }

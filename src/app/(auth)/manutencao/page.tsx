@@ -2,6 +2,7 @@
 
 import { useState, Suspense } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Plus, Wrench } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { PageHeader } from '@/components/shared/page-header'
@@ -15,6 +16,7 @@ import { useSectors } from '@/hooks/use-sectors'
 // CONTEÚDO PRINCIPAL
 // ─────────────────────────────────────────────────────────────
 function ManutencaoContent() {
+  const router = useRouter()
   const [filters, setFilters] = useState<Filters>({
     status: ['open', 'in_progress', 'waiting_parts'], // default: excluir concluídas
     page: 1,
@@ -57,8 +59,9 @@ function ManutencaoContent() {
       ) : orders.length === 0 ? (
         <EmptyState
           icon={Wrench}
-          title="Nenhuma ordem encontrada"
-          description="Nenhuma ordem corresponde aos filtros selecionados. Tente ajustar ou limpar os filtros."
+          title="Registre sua primeira ordem de manutenção"
+          description="Controle manutenções preventivas e corretivas em um só lugar. Comece registrando uma nova ordem."
+          action={{ label: 'Nova ordem de manutenção', onClick: () => router.push('/manutencao/nova') }}
         />
       ) : (
         <>

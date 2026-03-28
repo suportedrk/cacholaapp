@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { ArrowLeft, Loader2, Users, Building2 } from 'lucide-react'
+import { Loader2, Users, Building2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -99,14 +99,9 @@ export default function EditarUnidadePage() {
   return (
     <div className="max-w-2xl mx-auto space-y-8">
       {/* Cabeçalho */}
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" onClick={() => router.back()}>
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground tracking-tight">{unit.name}</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Editar dados da unidade</p>
-        </div>
+      <div>
+        <h1 className="text-2xl font-semibold text-foreground tracking-tight">{unit.name}</h1>
+        <p className="text-sm text-muted-foreground mt-0.5">Editar dados da unidade</p>
       </div>
 
       {/* Formulário de dados */}
