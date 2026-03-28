@@ -77,32 +77,36 @@ export default function DashboardPage() {
           value={stats?.thisMonth}
           icon={Calendar}
           description="eventos no mês atual"
-          iconClass="bg-primary/10 text-primary"
+          iconClass="icon-brand"
           isLoading={loadingStats}
+          className="animate-fade-up [animation-delay:0ms]"
         />
         <StatsCard
           title="Confirmados"
           value={stats?.confirmed}
           icon={CheckCircle2}
           description="aguardando realização"
-          iconClass="bg-blue-50 text-blue-600"
+          iconClass="icon-blue"
           isLoading={loadingStats}
+          className="animate-fade-up [animation-delay:50ms]"
         />
         <StatsCard
           title="Pendentes"
           value={stats?.pending}
           icon={Clock4}
           description="aguardando confirmação"
-          iconClass="bg-amber-50 text-amber-600"
+          iconClass="icon-amber"
           isLoading={loadingStats}
+          className="animate-fade-up [animation-delay:100ms]"
         />
         <StatsCard
           title="Em Andamento"
           value={stats?.active}
           icon={Zap}
           description="em preparo ou execução"
-          iconClass="bg-green-50 text-green-600"
+          iconClass="icon-green"
           isLoading={loadingStats}
+          className="animate-fade-up [animation-delay:150ms]"
         />
       </div>
 
@@ -113,8 +117,9 @@ export default function DashboardPage() {
           value={maintenanceStats?.open}
           icon={Wrench}
           description="ordens em aberto"
-          iconClass="bg-orange-50 text-orange-600"
+          iconClass="icon-orange"
           isLoading={loadingMaintenanceStats}
+          className="animate-fade-up [animation-delay:200ms]"
           onClick={() => router.push('/manutencao')}
         />
         <StatsCard
@@ -122,9 +127,10 @@ export default function DashboardPage() {
           value={maintenanceStats?.urgentToday}
           icon={AlertTriangle}
           description="emergenciais ou atrasadas"
-          iconClass="bg-red-50 text-red-600"
+          iconClass="icon-red"
           isLoading={loadingMaintenanceStats}
           onClick={() => router.push('/manutencao')}
+          className="animate-fade-up [animation-delay:250ms]"
         />
       </div>
 

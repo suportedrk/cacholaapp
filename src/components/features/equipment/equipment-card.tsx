@@ -14,10 +14,10 @@ import type { Equipment } from '@/types/database.types'
 // ─────────────────────────────────────────────────────────────
 
 const STATUS_CONFIG: Record<Equipment['status'], { label: string; className: string }> = {
-  active:   { label: 'Ativo',        className: 'bg-green-100 text-green-700' },
-  inactive: { label: 'Inativo',      className: 'bg-gray-100 text-gray-600' },
-  in_repair:{ label: 'Em Reparo',    className: 'bg-amber-100 text-amber-700' },
-  retired:  { label: 'Aposentado',   className: 'bg-red-100 text-red-700' },
+  active:   { label: 'Ativo',        className: 'badge-green  border' },
+  inactive: { label: 'Inativo',      className: 'badge-gray   border' },
+  in_repair:{ label: 'Em Reparo',    className: 'badge-amber  border' },
+  retired:  { label: 'Aposentado',   className: 'badge-red    border' },
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -63,7 +63,7 @@ export const EquipmentCard = memo(function EquipmentCard({ equipment: eq, openMa
   return (
     <Link
       href={`/equipamentos/${eq.id}`}
-      className="block rounded-xl border bg-card p-4 hover:shadow-md transition-shadow group"
+      className="block rounded-xl border bg-card p-4 card-interactive group"
     >
       <div className="flex gap-3">
         {/* Foto ou ícone placeholder */}

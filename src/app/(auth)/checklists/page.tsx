@@ -2,20 +2,21 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ClipboardList, SlidersHorizontal, X } from 'lucide-react'
+import { ClipboardList, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { PageHeader } from '@/components/shared/page-header'
 import { EmptyState } from '@/components/shared/empty-state'
 import { ChecklistCard, ChecklistCardSkeleton } from '@/components/features/checklists/checklist-card'
+import { FilterChip } from '@/components/shared/filter-chip'
 import { useChecklists, useChecklistCategories, type ChecklistFilters } from '@/hooks/use-checklists'
-import { cn } from '@/lib/utils'
 import type { ChecklistStatus } from '@/types/database.types'
+import type { FilterChipColor } from '@/components/shared/filter-chip'
 
-const STATUS_OPTIONS: { value: ChecklistStatus; label: string }[] = [
-  { value: 'pending',     label: 'Pendente'     },
-  { value: 'in_progress', label: 'Em Andamento' },
-  { value: 'completed',   label: 'Concluído'    },
-  { value: 'cancelled',   label: 'Cancelado'    },
+const STATUS_OPTIONS: { value: ChecklistStatus; label: string; color: FilterChipColor }[] = [
+  { value: 'pending',     label: 'Pendente',     color: 'amber' },
+  { value: 'in_progress', label: 'Em Andamento', color: 'blue'  },
+  { value: 'completed',   label: 'Concluído',    color: 'green' },
+  { value: 'cancelled',   label: 'Cancelado',    color: 'gray'  },
 ]
 
 export default function ChecklistsPage() {
@@ -59,55 +60,37 @@ export default function ChecklistsPage() {
 
       {/* ── Filtros ── */}
       <div className="space-y-2">
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <SlidersHorizontal className="w-3.5 h-3.5" />
-          <span>Status:</span>
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          {STATUS_OPTIONS.map(({ value, label }) => {
-            const active = filters.status?.includes(value) ?? false
-            return (
-              <button
-                key={value}
-                onClick={() => toggleStatus(value)}
-                className={cn(
-                  'px-2.5 py-1 text-xs font-medium rounded-full border transition-colors',
-                  active
-                    ? 'bg-primary text-primary-foreground border-primary'
-                    : 'bg-background text-muted-foreground border-border hover:bg-muted'
-                )}
-              >
-                {label}
-              </button>
-            )
-          })}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs text-muted-foreground">Status:</span>
+          {STATUS_OPTIONS.map(({ value, label, color }) => (
+            <FilterChip
+              key={value}
+              label={label}
+              color={color}
+              active={filters.status?.includes(value) ?? false}
+              onClick={() => toggleStatus(value)}
+            />
+          ))}
         </div>
 
         {categories.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mt-1">
-            {categories.map((cat) => {
-              const active = filters.categoryId === cat.id
-              return (
-                <button
-                  key={cat.id}
-                  onClick={() =>
-                    setFilters((f) => ({
-                      ...f,
-                      categoryId: active ? undefined : cat.id,
-                      page: 1,
-                    }))
-                  }
-                  className={cn(
-                    'px-2.5 py-1 text-xs font-medium rounded-full border transition-colors',
-                    active
-                      ? 'bg-secondary text-secondary-foreground border-secondary'
-                      : 'bg-background text-muted-foreground border-border hover:bg-muted'
-                  )}
-                >
-                  {cat.name}
-                </button>
-              )
-            })}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs text-muted-foreground">Categoria:</span>
+            {categories.map((cat) => (
+              <FilterChip
+                key={cat.id}
+                label={cat.name}
+                color="gray"
+                active={filters.categoryId === cat.id}
+                onClick={() =>
+                  setFilters((f) => ({
+                    ...f,
+                    categoryId: filters.categoryId === cat.id ? undefined : cat.id,
+                    page: 1,
+                  }))
+                }
+              />
+            ))}
           </div>
         )}
 

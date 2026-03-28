@@ -12,7 +12,7 @@ export function PloomeBadge({ url, className, size = 'sm' }: Props) {
     <span
       className={cn(
         'inline-flex items-center gap-1 rounded-full border font-medium',
-        'border-blue-200 bg-blue-50 text-blue-700',
+        'badge-blue border',
         size === 'xs' ? 'px-1.5 py-0.5 text-[10px]' : 'px-2 py-0.5 text-xs',
         className,
       )}

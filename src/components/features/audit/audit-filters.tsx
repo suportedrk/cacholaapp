@@ -85,14 +85,14 @@ export function AuditFilters({ filters, onChange }: AuditFiltersProps) {
         <div className="space-y-1.5">
           <Label className="text-xs">Usuário</Label>
           <Select
-            value={filters.userId ?? '__all__'}
-            onValueChange={(v: string | null) => set({ userId: (v && v !== '__all__') ? v : undefined })}
+            value={filters.userId ?? null}
+            onValueChange={(v: string | null) => set({ userId: (v && v !== 'all') ? v : undefined })}
           >
-            <SelectTrigger className="h-8 text-sm">
+            <SelectTrigger className="h-9 text-sm">
               <SelectValue placeholder="Todos" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="__all__">Todos</SelectItem>
+              <SelectItem value="all">Todos</SelectItem>
               {users.map((u) => (
                 <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
               ))}
@@ -104,14 +104,14 @@ export function AuditFilters({ filters, onChange }: AuditFiltersProps) {
         <div className="space-y-1.5">
           <Label className="text-xs">Módulo</Label>
           <Select
-            value={filters.module ?? '__all__'}
-            onValueChange={(v: string | null) => set({ module: (v && v !== '__all__') ? v : undefined })}
+            value={filters.module ?? null}
+            onValueChange={(v: string | null) => set({ module: (v && v !== 'all') ? v : undefined })}
           >
-            <SelectTrigger className="h-8 text-sm">
+            <SelectTrigger className="h-9 text-sm">
               <SelectValue placeholder="Todos" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="__all__">Todos</SelectItem>
+              <SelectItem value="all">Todos</SelectItem>
               {MODULES.map((m) => (
                 <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
               ))}
@@ -123,14 +123,14 @@ export function AuditFilters({ filters, onChange }: AuditFiltersProps) {
         <div className="space-y-1.5">
           <Label className="text-xs">Ação</Label>
           <Select
-            value={filters.action ?? '__all__'}
-            onValueChange={(v: string | null) => set({ action: (v && v !== '__all__') ? v : undefined })}
+            value={filters.action ?? null}
+            onValueChange={(v: string | null) => set({ action: (v && v !== 'all') ? v : undefined })}
           >
-            <SelectTrigger className="h-8 text-sm">
+            <SelectTrigger className="h-9 text-sm">
               <SelectValue placeholder="Todas" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="__all__">Todas</SelectItem>
+              <SelectItem value="all">Todas</SelectItem>
               {ACTIONS.map((a) => (
                 <SelectItem key={a.value} value={a.value}>{a.label}</SelectItem>
               ))}

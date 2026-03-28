@@ -2,13 +2,13 @@ import { cn } from '@/lib/utils'
 import type { EventStatus } from '@/types/database.types'
 
 const STATUS_CONFIG: Record<EventStatus, { label: string; className: string }> = {
-  pending:     { label: 'Pendente',      className: 'bg-amber-50 text-amber-700 border-amber-200' },
-  confirmed:   { label: 'Confirmado',    className: 'bg-blue-50 text-blue-700 border-blue-200' },
-  preparing:   { label: 'Em Preparo',    className: 'bg-purple-50 text-purple-700 border-purple-200' },
-  in_progress: { label: 'Em Andamento',  className: 'bg-green-50 text-green-700 border-green-200' },
-  finished:    { label: 'Finalizado',    className: 'bg-gray-100 text-gray-600 border-gray-200' },
-  post_event:  { label: 'Pós-Evento',   className: 'bg-gray-100 text-gray-500 border-gray-200' },
-  lost:        { label: 'Perdido',       className: 'bg-gray-100 text-gray-400 border-gray-200' },
+  pending:     { label: 'Pendente',     className: 'badge-amber' },
+  confirmed:   { label: 'Confirmado',   className: 'badge-blue' },
+  preparing:   { label: 'Em Preparo',   className: 'badge-purple' },
+  in_progress: { label: 'Em Andamento', className: 'badge-green' },
+  finished:    { label: 'Finalizado',   className: 'badge-gray' },
+  post_event:  { label: 'Pós-Evento',   className: 'badge-gray' },
+  lost:        { label: 'Perdido',      className: 'badge-gray' },
 }
 
 const DOT_COLOR: Record<EventStatus, string> = {

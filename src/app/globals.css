@@ -10,60 +10,169 @@
    TAILWIND THEME — mapeia CSS vars para utilities
    ============================================================ */
 @theme inline {
-  /* Shadcn base */
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-mono);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
-  --color-card: var(--card);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
+  /* ── Shadcn base ── */
+  --color-background:          var(--background);
+  --color-foreground:          var(--foreground);
+  --font-sans:                 var(--font-sans);
+  --font-mono:                 var(--font-mono);
+  --color-ring:                var(--ring);
+  --color-input:               var(--input);
+  --color-border:              var(--border);
+  --color-destructive:         var(--destructive);
+  --color-accent-foreground:   var(--accent-foreground);
+  --color-accent:              var(--accent);
+  --color-muted-foreground:    var(--muted-foreground);
+  --color-muted:               var(--muted);
+  --color-secondary-foreground:var(--secondary-foreground);
+  --color-secondary:           var(--secondary);
+  --color-primary-foreground:  var(--primary-foreground);
+  --color-primary:             var(--primary);
+  --color-popover-foreground:  var(--popover-foreground);
+  --color-popover:             var(--popover);
+  --color-card-foreground:     var(--card-foreground);
+  --color-card:                var(--card);
+  --color-sidebar-ring:                  var(--sidebar-ring);
+  --color-sidebar-border:                var(--sidebar-border);
+  --color-sidebar-accent-foreground:     var(--sidebar-accent-foreground);
+  --color-sidebar-accent:                var(--sidebar-accent);
+  --color-sidebar-primary-foreground:    var(--sidebar-primary-foreground);
+  --color-sidebar-primary:               var(--sidebar-primary);
+  --color-sidebar-foreground:            var(--sidebar-foreground);
+  --color-sidebar:                       var(--sidebar);
 
-  /* Radius */
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  /* ── Border radius ── */
+  --radius-none: 0;
+  --radius-sm:   0.25rem;   /*  4px — chips, badges */
+  --radius-md:   0.5rem;    /*  8px — botões, inputs */
+  --radius-lg:   0.75rem;   /* 12px — cards */
+  --radius-xl:   1rem;      /* 16px — containers */
+  --radius-2xl:  1.25rem;
+  --radius-full: 9999px;    /* pills, avatares */
 
-  /* Cachola brand extras para utility classes */
-  --color-brand-primary: var(--brand-primary);
-  --color-brand-primary-dark: var(--brand-primary-dark);
-  --color-brand-primary-light: var(--brand-primary-light);
-  --color-brand-secondary: var(--brand-secondary);
-  --color-surface-primary: var(--surface-primary);
+  /* ── Sombras (hierarquia de elevação) ── */
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.10), 0 1px 2px -1px rgb(0 0 0 / 0.10);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.10), 0 2px 4px -2px rgb(0 0 0 / 0.10);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.10), 0 4px 6px -4px rgb(0 0 0 / 0.10);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.10), 0 8px 10px -6px rgb(0 0 0 / 0.10);
+
+  /* ── Z-index semântico ── */
+  --z-base:     0;
+  --z-dropdown: 10;
+  --z-sticky:   20;
+  --z-overlay:  30;
+  --z-modal:    40;
+  --z-toast:    50;
+  --z-tooltip:  60;
+
+  /* ── Cachola — Superfícies ── */
+  --color-surface-primary:   var(--surface-primary);
   --color-surface-secondary: var(--surface-secondary);
-  --color-surface-tertiary: var(--surface-tertiary);
-  --color-text-primary: var(--text-primary);
-  --color-text-secondary: var(--text-secondary);
-  --color-text-tertiary: var(--text-tertiary);
-  --color-status-success: var(--status-success);
-  --color-status-warning: var(--status-warning);
-  --color-status-danger: var(--status-danger);
-  --color-status-info: var(--status-info);
+  --color-surface-tertiary:  var(--surface-tertiary);
+  --color-surface-inverse:   var(--surface-inverse);
+
+  /* ── Cachola — Texto ── */
+  --color-text-primary:    var(--text-primary);
+  --color-text-secondary:  var(--text-secondary);
+  --color-text-tertiary:   var(--text-tertiary);
+  --color-text-inverse:    var(--text-inverse);
+  --color-text-link:       var(--text-link);
+  --color-text-link-hover: var(--text-link-hover);
+
+  /* ── Cachola — Bordas semânticas ── */
+  --color-border-default: var(--border-default);
+  --color-border-strong:  var(--border-strong);
+  --color-border-focus:   var(--border-focus);
+
+  /* ── Cachola — Status (tokens completos) ── */
+  --color-status-success:        var(--status-success);
+  --color-status-warning:        var(--status-warning);
+  --color-status-danger:         var(--status-danger);
+  --color-status-info:           var(--status-info);
+  --color-status-error-bg:       var(--status-error-bg);
+  --color-status-error-text:     var(--status-error-text);
+  --color-status-error-border:   var(--status-error-border);
+  --color-status-success-bg:     var(--status-success-bg);
+  --color-status-success-text:   var(--status-success-text);
+  --color-status-success-border: var(--status-success-border);
+  --color-status-warning-bg:     var(--status-warning-bg);
+  --color-status-warning-text:   var(--status-warning-text);
+  --color-status-warning-border: var(--status-warning-border);
+  --color-status-info-bg:        var(--status-info-bg);
+  --color-status-info-text:      var(--status-info-text);
+  --color-status-info-border:    var(--status-info-border);
+
+  /* ── Cachola — Interativos ── */
+  --color-interactive-primary:         var(--interactive-primary);
+  --color-interactive-primary-hover:   var(--interactive-primary-hover);
+  --color-interactive-primary-text:    var(--interactive-primary-text);
+  --color-interactive-secondary:       var(--interactive-secondary);
+  --color-interactive-secondary-hover: var(--interactive-secondary-hover);
+  --color-interactive-secondary-text:  var(--interactive-secondary-text);
+  --color-interactive-ghost-hover:     var(--interactive-ghost-hover);
+  --color-interactive-danger:          var(--interactive-danger);
+  --color-interactive-danger-hover:    var(--interactive-danger-hover);
+  --color-interactive-danger-text:     var(--interactive-danger-text);
+
+  /* ── Cachola — Brand (verde sálvia) ── */
+  --color-brand-primary:       var(--brand-primary);
+  --color-brand-primary-dark:  var(--brand-primary-dark);
+  --color-brand-primary-light: var(--brand-primary-light);
+  --color-brand-secondary:     var(--brand-secondary);
+
+  /* Rampa verde sálvia 50–900 (base: #7C8D78 = oklch 0.567 0.044 144) */
+  --color-brand-50:  oklch(0.975 0.010 144);
+  --color-brand-100: oklch(0.940 0.018 144);
+  --color-brand-200: oklch(0.880 0.028 144);
+  --color-brand-300: oklch(0.770 0.036 144);
+  --color-brand-400: oklch(0.667 0.041 144);
+  --color-brand-500: oklch(0.567 0.044 144);
+  --color-brand-600: oklch(0.487 0.044 144);
+  --color-brand-700: oklch(0.410 0.044 144);
+  --color-brand-800: oklch(0.330 0.044 144);
+  --color-brand-900: oklch(0.260 0.040 144);
+
+  /* Rampa bege quente 50–900 (base: #E3DAD1 = oklch 0.876 0.026 65) */
+  --color-beige-50:  oklch(0.980 0.008 65);
+  --color-beige-100: oklch(0.963 0.012 65);
+  --color-beige-200: oklch(0.942 0.015 65);
+  --color-beige-300: oklch(0.920 0.020 65);
+  --color-beige-400: oklch(0.900 0.023 65);
+  --color-beige-500: oklch(0.876 0.026 65);
+  --color-beige-600: oklch(0.797 0.030 65);
+  --color-beige-700: oklch(0.700 0.030 65);
+  --color-beige-800: oklch(0.560 0.025 65);
+  --color-beige-900: oklch(0.420 0.020 65);
+
+  /* ── Animações (keyframes registrados abaixo) ── */
+  --animate-page-enter: page-enter var(--duration-slow) var(--ease-out) both;
+  --animate-fade-up:    fade-up    0.4s                 var(--ease-out) both;
+  --animate-shimmer:    shimmer    1.5s ease-in-out     infinite;
+  --animate-scale-in:   scale-in   var(--duration-normal) var(--ease-bounce) both;
+}
+
+/* ============================================================
+   KEYFRAMES
+   ============================================================ */
+
+@keyframes page-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% center; }
+  100% { background-position: -200% center; }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1);    }
 }
 
 /* ============================================================
@@ -74,14 +183,76 @@
    Background   (#FAFAF8) → oklch(0.981 0.004 106)
    ============================================================ */
 :root {
-  /* — Raio global — */
+  /* ── Raio global (base para shadcn) ── */
   --radius: 0.625rem;
 
-  /* — Fontes — */
+  /* ── Fontes ── */
   --font-sans: var(--font-inter), system-ui, -apple-system, sans-serif;
   --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
 
-  /* — Shadcn/UI overrides com cores Cachola — */
+  /* ── Tipografia — escala de tamanho ── */
+  --text-xs:   0.75rem;    /* 12px */
+  --text-sm:   0.875rem;   /* 14px */
+  --text-base: 1rem;       /* 16px */
+  --text-lg:   1.125rem;   /* 18px */
+  --text-xl:   1.25rem;    /* 20px */
+  --text-2xl:  1.5rem;     /* 24px */
+  --text-3xl:  1.875rem;   /* 30px */
+  --text-4xl:  2.25rem;    /* 36px */
+
+  /* ── Tipografia — pesos ── */
+  --font-regular:  400;
+  --font-medium:   500;
+  --font-semibold: 600;
+  --font-bold:     700;
+
+  /* ── Tipografia — line-heights ── */
+  --leading-tight:   1.25;
+  --leading-snug:    1.375;
+  --leading-normal:  1.5;
+  --leading-relaxed: 1.625;
+
+  /* ── Tipografia — letter-spacing ── */
+  --tracking-tight:  -0.025em;
+  --tracking-normal:  0;
+  --tracking-wide:    0.025em;
+
+  /* ── Espaçamento ── */
+  --space-0:    0;
+  --space-0-5:  0.125rem;  /*  2px */
+  --space-1:    0.25rem;   /*  4px */
+  --space-1-5:  0.375rem;  /*  6px */
+  --space-2:    0.5rem;    /*  8px */
+  --space-3:    0.75rem;   /* 12px */
+  --space-4:    1rem;      /* 16px */
+  --space-5:    1.25rem;   /* 20px */
+  --space-6:    1.5rem;    /* 24px */
+  --space-8:    2rem;      /* 32px */
+  --space-10:   2.5rem;    /* 40px */
+  --space-12:   3rem;      /* 48px */
+  --space-16:   4rem;      /* 64px */
+  --space-20:   5rem;      /* 80px */
+  --space-24:   6rem;      /* 96px */
+
+  /* ── Transições ── */
+  --duration-fast:   100ms;
+  --duration-normal: 200ms;
+  --duration-slow:   300ms;
+  --ease-default: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-in:      cubic-bezier(0.4, 0, 1, 1);
+  --ease-out:     cubic-bezier(0, 0, 0.2, 1);
+  --ease-bounce:  cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* ── Z-index (como CSS vars para uso fora do Tailwind) ── */
+  --z-base:     0;
+  --z-dropdown: 10;
+  --z-sticky:   20;
+  --z-overlay:  30;
+  --z-modal:    40;
+  --z-toast:    50;
+  --z-tooltip:  60;
+
+  /* ── Shadcn/UI overrides com cores Cachola ── */
   --background: oklch(0.981 0.004 106);        /* #FAFAF8 — fundo geral */
   --foreground: oklch(0.131 0 0);              /* #1A1A1A — texto principal */
 
@@ -100,17 +271,17 @@
   --muted: oklch(0.946 0.006 65);              /* bege mais suave */
   --muted-foreground: oklch(0.487 0.018 264);  /* #6B7280 */
 
-  --accent: oklch(0.876 0.026 65);             /* bege quente (accent = secondary) */
+  --accent: oklch(0.876 0.026 65);             /* bege quente */
   --accent-foreground: oklch(0.131 0 0);
 
-  --destructive: oklch(0.577 0.245 27.325);    /* vermelho padrão */
+  --destructive: oklch(0.577 0.245 27.325);    /* vermelho */
 
   --border: oklch(0.897 0.012 65);             /* borda suave bege */
   --input: oklch(0.897 0.012 65);
   --ring: oklch(0.567 0.044 144);              /* verde sálvia no focus */
 
-  /* — Sidebar — */
-  --sidebar: oklch(0.946 0.006 65);            /* fundo sidebar — bege muito suave */
+  /* ── Sidebar ── */
+  --sidebar: oklch(0.946 0.006 65);
   --sidebar-foreground: oklch(0.131 0 0);
   --sidebar-primary: oklch(0.567 0.044 144);
   --sidebar-primary-foreground: oklch(1 0 0);
@@ -119,43 +290,81 @@
   --sidebar-border: oklch(0.897 0.012 65);
   --sidebar-ring: oklch(0.567 0.044 144);
 
-  /* ============================================================
-     TOKENS CACHOLA (Design System)
-     ============================================================ */
+  /* ════════════════════════════════════════════
+     DESIGN SYSTEM TOKENS — LIGHT MODE
+     ════════════════════════════════════════════ */
 
-  /* — Brand — */
-  --brand-primary: oklch(0.567 0.044 144);      /* #7C8D78 verde sálvia */
-  --brand-primary-dark: oklch(0.487 0.044 144); /* ~15% mais escuro */
-  --brand-primary-light: oklch(0.667 0.038 144); /* ~15% mais claro */
-  --brand-secondary: oklch(0.876 0.026 65);      /* #E3DAD1 bege quente */
+  /* ── Brand ── */
+  --brand-primary:       oklch(0.567 0.044 144); /* #7C8D78 verde sálvia */
+  --brand-primary-dark:  oklch(0.487 0.044 144);
+  --brand-primary-light: oklch(0.667 0.038 144);
+  --brand-secondary:     oklch(0.876 0.026 65);  /* #E3DAD1 bege quente */
   --brand-secondary-dark: oklch(0.797 0.03 65);
   --brand-secondary-light: oklch(0.942 0.015 65);
 
-  /* — Superfícies — */
-  --surface-primary: oklch(0.981 0.004 106);    /* #FAFAF8 */
+  /* ── Superfícies ── */
+  --surface-primary:   oklch(0.981 0.004 106);  /* #FAFAF8 */
   --surface-secondary: oklch(1 0 0);            /* #FFFFFF */
-  --surface-tertiary: oklch(0.946 0.006 65);    /* bege suave */
-  --surface-inverse: oklch(0.131 0 0);          /* escuro */
+  --surface-tertiary:  oklch(0.946 0.006 65);   /* bege suave */
+  --surface-inverse:   oklch(0.131 0 0);        /* escuro */
 
-  /* — Texto — */
-  --text-primary: oklch(0.131 0 0);             /* #1A1A1A */
-  --text-secondary: oklch(0.487 0.018 264);     /* #6B7280 */
-  --text-tertiary: oklch(0.633 0.012 264);      /* placeholder */
-  --text-inverse: oklch(1 0 0);
-  --text-link: oklch(0.567 0.044 144);
+  /* ── Texto ── */
+  --text-primary:    oklch(0.131 0 0);           /* #1A1A1A */
+  --text-secondary:  oklch(0.487 0.018 264);     /* #6B7280 */
+  --text-tertiary:   oklch(0.633 0.012 264);     /* placeholder */
+  --text-inverse:    oklch(1 0 0);
+  --text-link:       oklch(0.567 0.044 144);
   --text-link-hover: oklch(0.487 0.044 144);
 
-  /* — Status — */
-  --status-success: oklch(0.548 0.186 142);     /* #22C55E */
-  --status-warning: oklch(0.723 0.157 78);      /* #F59E0B */
-  --status-danger: oklch(0.577 0.245 27);       /* #EF4444 */
-  --status-info: oklch(0.546 0.243 264);        /* #3B82F6 */
+  /* ── Bordas semânticas ── */
+  --border-default: oklch(0.918 0.006 65);
+  --border-strong:  oklch(0.870 0.010 65);
+  --border-focus:   oklch(0.567 0.044 144);      /* verde sálvia */
+
+  /* ── Status — tokens simples ── */
+  --status-success: oklch(0.548 0.186 142);      /* verde */
+  --status-warning: oklch(0.723 0.157 78);       /* âmbar */
+  --status-danger:  oklch(0.577 0.245 27);       /* vermelho */
+  --status-info:    oklch(0.546 0.243 264);      /* azul */
+
+  /* ── Status — tokens compostos (bg / text / border) ── */
+  --status-error-bg:       oklch(0.971 0.013 17);
+  --status-error-text:     oklch(0.445 0.177 26);
+  --status-error-border:   oklch(0.637 0.237 25);
+
+  --status-success-bg:     oklch(0.982 0.018 156);
+  --status-success-text:   oklch(0.527 0.154 150);
+  --status-success-border: oklch(0.723 0.219 150);
+
+  --status-warning-bg:     oklch(0.987 0.020 95);
+  --status-warning-text:   oklch(0.666 0.154 78);
+  --status-warning-border: oklch(0.769 0.188 70);
+
+  --status-info-bg:        oklch(0.961 0.021 253);
+  --status-info-text:      oklch(0.488 0.168 255);
+  --status-info-border:    oklch(0.623 0.214 260);
+
+  /* ── Interativos ── */
+  --interactive-primary:         oklch(0.567 0.044 144); /* verde sálvia */
+  --interactive-primary-hover:   oklch(0.487 0.044 144);
+  --interactive-primary-text:    oklch(1 0 0);
+
+  --interactive-secondary:       oklch(0.946 0.006 65);
+  --interactive-secondary-hover: oklch(0.897 0.012 65);
+  --interactive-secondary-text:  oklch(0.131 0 0);
+
+  --interactive-ghost-hover:     oklch(0.946 0.006 65);
+
+  --interactive-danger:          oklch(0.577 0.245 27);
+  --interactive-danger-hover:    oklch(0.445 0.177 26);
+  --interactive-danger-text:     oklch(1 0 0);
 }
 
 /* ============================================================
    DARK MODE
    ============================================================ */
-.dark {
+.dark,
+[data-theme="dark"] {
   --background: oklch(0.095 0 0);
   --foreground: oklch(0.985 0 0);
 
@@ -165,7 +374,7 @@
   --popover: oklch(0.145 0 0);
   --popover-foreground: oklch(0.985 0 0);
 
-  --primary: oklch(0.667 0.038 144);           /* verde sálvia mais claro no dark */
+  --primary: oklch(0.667 0.038 144);           /* verde sálvia mais claro */
   --primary-foreground: oklch(0.095 0 0);
 
   --secondary: oklch(0.2 0.012 65);
@@ -192,18 +401,62 @@
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.667 0.038 144);
 
-  /* Design System tokens — dark */
-  --brand-primary: oklch(0.667 0.038 144);
-  --surface-primary: oklch(0.095 0 0);
+  /* ── Brand dark ── */
+  --brand-primary:       oklch(0.667 0.038 144);
+  --brand-primary-dark:  oklch(0.567 0.044 144);
+  --brand-primary-light: oklch(0.770 0.036 144);
+  --brand-secondary:     oklch(0.2 0.012 65);
+
+  /* ── Superfícies dark ── */
+  --surface-primary:   oklch(0.095 0 0);
   --surface-secondary: oklch(0.145 0 0);
-  --surface-tertiary: oklch(0.2 0.012 65);
-  --surface-inverse: oklch(0.985 0 0);
-  --text-primary: oklch(0.985 0 0);
-  --text-secondary: oklch(0.633 0.012 264);
-  --text-tertiary: oklch(0.45 0.012 264);
-  --text-inverse: oklch(0.095 0 0);
-  --text-link: oklch(0.667 0.038 144);
-  --text-link-hover: oklch(0.72 0.035 144);
+  --surface-tertiary:  oklch(0.2 0.012 65);
+  --surface-inverse:   oklch(0.985 0 0);
+
+  /* ── Texto dark ── */
+  --text-primary:    oklch(0.985 0 0);
+  --text-secondary:  oklch(0.633 0.012 264);
+  --text-tertiary:   oklch(0.45 0.012 264);
+  --text-inverse:    oklch(0.095 0 0);
+  --text-link:       oklch(0.667 0.038 144);
+  --text-link-hover: oklch(0.770 0.036 144);
+
+  /* ── Bordas dark ── */
+  --border-default: oklch(1 0 0 / 12%);
+  --border-strong:  oklch(1 0 0 / 20%);
+  --border-focus:   oklch(0.667 0.038 144);
+
+  /* ── Status dark — compostos ── */
+  --status-error-bg:       oklch(0.20 0.06 20);
+  --status-error-text:     oklch(0.82 0.14 20);
+  --status-error-border:   oklch(0.50 0.20 20);
+
+  --status-success-bg:     oklch(0.18 0.06 145);
+  --status-success-text:   oklch(0.80 0.14 145);
+  --status-success-border: oklch(0.55 0.18 145);
+
+  --status-warning-bg:     oklch(0.18 0.05 75);
+  --status-warning-text:   oklch(0.82 0.12 75);
+  --status-warning-border: oklch(0.65 0.16 75);
+
+  --status-info-bg:        oklch(0.18 0.05 255);
+  --status-info-text:      oklch(0.78 0.14 255);
+  --status-info-border:    oklch(0.60 0.18 255);
+
+  /* ── Interativos dark ── */
+  --interactive-primary:         oklch(0.667 0.038 144);
+  --interactive-primary-hover:   oklch(0.770 0.036 144);
+  --interactive-primary-text:    oklch(0.095 0 0);
+
+  --interactive-secondary:       oklch(0.219 0 0);
+  --interactive-secondary-hover: oklch(0.333 0 0);
+  --interactive-secondary-text:  oklch(0.985 0 0);
+
+  --interactive-ghost-hover:     oklch(0.219 0 0);
+
+  --interactive-danger:          oklch(0.704 0.191 22);
+  --interactive-danger-hover:    oklch(0.82 0.14 20);
+  --interactive-danger-text:     oklch(0.095 0 0);
 }
 
 /* ============================================================
@@ -245,10 +498,11 @@
   }
   ::-webkit-scrollbar-thumb {
     @apply rounded-full;
-    background-color: oklch(0.897 0.012 65);
+    background-color: var(--border-default);
   }
   ::-webkit-scrollbar-thumb:hover {
-    background-color: oklch(0.567 0.044 144 / 50%);
+    background-color: var(--brand-primary);
+    opacity: 0.5;
   }
 }
 
@@ -256,7 +510,14 @@
    UTILITÁRIOS GLOBAIS
    ============================================================ */
 @layer utilities {
-  /* Transições suaves padrão */
+  /* Transição padrão para todos os elementos interativos */
+  .interactive {
+    transition-property: color, background-color, border-color, box-shadow, opacity, transform;
+    transition-duration: var(--duration-normal);
+    transition-timing-function: var(--ease-default);
+  }
+
+  /* Alias legado */
   .transition-default {
     @apply transition-all duration-200 ease-in-out;
   }
@@ -264,5 +525,118 @@
   /* Focus ring padrão acessível */
   .focus-ring {
     @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
+  }
+
+  /* Estilos de texto compostos (Design System §1.2) */
+  .text-heading-1 {
+    font-size: var(--text-4xl);
+    font-weight: var(--font-bold);
+    line-height: var(--leading-tight);
+    letter-spacing: var(--tracking-tight);
+  }
+  .text-heading-2 {
+    font-size: var(--text-3xl);
+    font-weight: var(--font-semibold);
+    line-height: var(--leading-tight);
+  }
+  .text-heading-3 {
+    font-size: var(--text-2xl);
+    font-weight: var(--font-semibold);
+    line-height: var(--leading-snug);
+  }
+  .text-heading-4 {
+    font-size: var(--text-xl);
+    font-weight: var(--font-semibold);
+    line-height: var(--leading-snug);
+  }
+  .text-body-lg {
+    font-size: var(--text-lg);
+    font-weight: var(--font-regular);
+    line-height: var(--leading-relaxed);
+  }
+  .text-body {
+    font-size: var(--text-base);
+    font-weight: var(--font-regular);
+    line-height: var(--leading-normal);
+  }
+  .text-body-sm {
+    font-size: var(--text-sm);
+    font-weight: var(--font-regular);
+    line-height: var(--leading-normal);
+  }
+  .text-caption {
+    font-size: var(--text-xs);
+    font-weight: var(--font-medium);
+    line-height: var(--leading-normal);
+  }
+  .text-code {
+    font-size: var(--text-sm);
+    font-family: var(--font-mono);
+    line-height: var(--leading-normal);
+  }
+
+  /*
+   * ICON CONTAINERS COLORIDOS — use SEMPRE estas classes em ícones dentro de cards.
+   * NUNCA use bg-*-50 diretamente — esses tints claros quebram no dark mode.
+   * Padrão: .icon-{cor} aplica bg + text adaptados a light e dark automaticamente.
+   */
+  .icon-brand  { @apply bg-primary/10     text-primary                              dark:bg-primary/20 dark:text-primary; }
+  .icon-blue   { @apply bg-blue-100       text-blue-600   dark:bg-blue-900/40       dark:text-blue-400; }
+  .icon-green  { @apply bg-green-100      text-green-600  dark:bg-green-900/40      dark:text-green-400; }
+  .icon-amber  { @apply bg-amber-100      text-amber-600  dark:bg-amber-900/40      dark:text-amber-400; }
+  .icon-orange { @apply bg-orange-100     text-orange-600 dark:bg-orange-900/40     dark:text-orange-400; }
+  .icon-red    { @apply bg-red-100        text-red-600    dark:bg-red-900/40        dark:text-red-400; }
+  .icon-purple { @apply bg-purple-100     text-purple-600 dark:bg-purple-900/40     dark:text-purple-400; }
+  .icon-gray   { @apply bg-muted          text-muted-foreground; }
+
+  /*
+   * STATUS / TYPE BADGES — use SEMPRE estas classes em pills de status.
+   * NUNCA use bg-*-50 diretamente — quebram no dark mode.
+   * Padrão: .badge-{cor} aplica bg + text + border adaptados a light e dark.
+   */
+  .badge-blue   { @apply bg-blue-50   text-blue-700   border-blue-200   dark:bg-blue-900/30   dark:text-blue-300   dark:border-blue-800; }
+  .badge-green  { @apply bg-green-50  text-green-700  border-green-200  dark:bg-green-900/30  dark:text-green-300  dark:border-green-800; }
+  .badge-amber  { @apply bg-amber-50  text-amber-700  border-amber-200  dark:bg-amber-900/30  dark:text-amber-300  dark:border-amber-800; }
+  .badge-orange { @apply bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-800; }
+  .badge-red    { @apply bg-red-50    text-red-700    border-red-200    dark:bg-red-900/30    dark:text-red-300    dark:border-red-800; }
+  .badge-purple { @apply bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800; }
+  .badge-gray   { @apply bg-gray-100  text-gray-600   border-gray-200   dark:bg-gray-800/60   dark:text-gray-400   dark:border-gray-700; }
+  .badge-brand  { @apply bg-primary/10 text-primary    border-primary/30  dark:bg-primary/20    dark:text-primary    dark:border-primary/40; }
+
+  /* Shimmer skeleton — substitui animate-pulse com efeito de gradiente deslizante */
+  .skeleton-shimmer {
+    background: linear-gradient(
+      90deg,
+      var(--muted)                                          25%,
+      color-mix(in oklch, var(--muted) 60%, var(--card))   50%,
+      var(--muted)                                          75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s ease-in-out infinite;
+  }
+
+  /* Hover lift para cards interativos — GPU only (transform + shadow) */
+  .card-interactive {
+    transition-property: transform, box-shadow, border-color;
+    transition-duration: var(--duration-normal);
+    transition-timing-function: var(--ease-default);
+  }
+  .card-interactive:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+  }
+}
+
+/* ============================================================
+   PREFERS-REDUCED-MOTION
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

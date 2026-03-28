@@ -59,8 +59,8 @@ export default function ConfiguracoesPage() {
       />
 
       <Tabs defaultValue="tipos">
-        <div className="w-full overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <TabsList className="w-max gap-1">
+        <div className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <TabsList className="min-w-max">
             <TabsTrigger value="tipos">Tipos de Evento</TabsTrigger>
             <TabsTrigger value="pacotes">Pacotes</TabsTrigger>
             <TabsTrigger value="saloes">Salões</TabsTrigger>

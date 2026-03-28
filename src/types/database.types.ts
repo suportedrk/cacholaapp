@@ -96,7 +96,7 @@ export type EventStatus =
   | 'in_progress' // Em Andamento (evento acontecendo)
   | 'finished'    // Finalizado
   | 'post_event'  // Pós-Evento (limpeza, devolução, avaliação)
-  | 'lost'        // Perdido (deal perdido no Ploomes — mantido para estatísticas)
+  | 'lost'        // Perdido (via Ploomes StatusId=3 — oculto por padrão na UI)
 
 export type ChecklistStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled'
 export type ChecklistItemStatus = 'pending' | 'done' | 'na'

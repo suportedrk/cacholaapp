@@ -3,29 +3,33 @@
 import { useRef, useEffect, useState } from 'react'
 import { Search, X } from 'lucide-react'
 import { Input } from '@/components/ui/input'
-import { cn } from '@/lib/utils'
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select'
+import { FilterChip } from '@/components/shared/filter-chip'
 import type { MaintenanceFilters } from '@/hooks/use-maintenance'
 import type { MaintenanceType, MaintenanceStatus, MaintenancePriority } from '@/types/database.types'
 import type { Sector } from '@/types/database.types'
+import type { FilterChipColor } from '@/components/shared/filter-chip'
 
-const TYPE_OPTIONS: { value: MaintenanceType; label: string }[] = [
-  { value: 'emergency', label: 'Emergencial' },
-  { value: 'punctual',  label: 'Pontual' },
-  { value: 'recurring', label: 'Recorrente' },
+const TYPE_OPTIONS: { value: MaintenanceType; label: string; color: FilterChipColor }[] = [
+  { value: 'emergency', label: 'Emergencial', color: 'red'   },
+  { value: 'punctual',  label: 'Pontual',     color: 'amber' },
+  { value: 'recurring', label: 'Recorrente',  color: 'brand' },
 ]
 
-const STATUS_OPTIONS: { value: MaintenanceStatus; label: string }[] = [
-  { value: 'open',          label: 'Aberta' },
-  { value: 'in_progress',   label: 'Em Andamento' },
-  { value: 'waiting_parts', label: 'Aguardando Peças' },
-  { value: 'completed',     label: 'Concluída' },
+const STATUS_OPTIONS: { value: MaintenanceStatus; label: string; color: FilterChipColor }[] = [
+  { value: 'open',          label: 'Aberta',            color: 'blue'   },
+  { value: 'in_progress',   label: 'Em Andamento',      color: 'purple' },
+  { value: 'waiting_parts', label: 'Aguardando Peças',  color: 'amber'  },
+  { value: 'completed',     label: 'Concluída',         color: 'green'  },
 ]
 
-const PRIORITY_OPTIONS: { value: MaintenancePriority; label: string }[] = [
-  { value: 'critical', label: 'Crítica' },
-  { value: 'high',     label: 'Alta' },
-  { value: 'medium',   label: 'Média' },
-  { value: 'low',      label: 'Baixa' },
+const PRIORITY_OPTIONS: { value: MaintenancePriority; label: string; color: FilterChipColor }[] = [
+  { value: 'critical', label: 'Crítica', color: 'red'   },
+  { value: 'high',     label: 'Alta',    color: 'orange' },
+  { value: 'medium',   label: 'Média',   color: 'brand'  },
+  { value: 'low',      label: 'Baixa',   color: 'gray'   },
 ]
 
 interface Props {
@@ -95,92 +99,75 @@ export function MaintenanceFilters({ filters, sectors, onFiltersChange }: Props)
           <button
             type="button"
             onClick={() => handleSearch('')}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
         )}
       </div>
 
-      {/* Pills de tipo */}
-      <div className="flex flex-wrap gap-2">
-        <span className="text-xs text-muted-foreground self-center">Tipo:</span>
+      {/* Tipo */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs text-muted-foreground">Tipo:</span>
         {TYPE_OPTIONS.map((opt) => (
-          <button
+          <FilterChip
             key={opt.value}
-            type="button"
+            label={opt.label}
+            color={opt.color}
+            active={filters.type?.includes(opt.value) ?? false}
             onClick={() => toggleArrayFilter('type', opt.value)}
-            className={cn(
-              'px-3 py-1 rounded-full text-xs font-medium transition-all duration-150 border',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-              filters.type?.includes(opt.value)
-                ? 'bg-primary text-primary-foreground border-primary'
-                : 'bg-card text-muted-foreground border-border hover:border-primary/50'
-            )}
-          >
-            {opt.label}
-          </button>
+          />
         ))}
       </div>
 
-      {/* Pills de status */}
-      <div className="flex flex-wrap gap-2">
-        <span className="text-xs text-muted-foreground self-center">Status:</span>
+      {/* Status */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs text-muted-foreground">Status:</span>
         {STATUS_OPTIONS.map((opt) => (
-          <button
+          <FilterChip
             key={opt.value}
-            type="button"
+            label={opt.label}
+            color={opt.color}
+            active={filters.status?.includes(opt.value) ?? false}
             onClick={() => toggleArrayFilter('status', opt.value)}
-            className={cn(
-              'px-3 py-1 rounded-full text-xs font-medium transition-all duration-150 border',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-              filters.status?.includes(opt.value)
-                ? 'bg-primary text-primary-foreground border-primary'
-                : 'bg-card text-muted-foreground border-border hover:border-primary/50'
-            )}
-          >
-            {opt.label}
-          </button>
+          />
         ))}
       </div>
 
       {/* Prioridade + Setor */}
-      <div className="flex flex-wrap gap-3">
-        {/* Prioridade pills */}
-        <div className="flex flex-wrap gap-2">
-          <span className="text-xs text-muted-foreground self-center">Prioridade:</span>
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs text-muted-foreground">Prioridade:</span>
           {PRIORITY_OPTIONS.map((opt) => (
-            <button
+            <FilterChip
               key={opt.value}
-              type="button"
+              label={opt.label}
+              color={opt.color}
+              active={filters.priority?.includes(opt.value) ?? false}
               onClick={() => toggleArrayFilter('priority', opt.value)}
-              className={cn(
-                'px-3 py-1 rounded-full text-xs font-medium transition-all duration-150 border',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                filters.priority?.includes(opt.value)
-                  ? 'bg-primary text-primary-foreground border-primary'
-                  : 'bg-card text-muted-foreground border-border hover:border-primary/50'
-              )}
-            >
-              {opt.label}
-            </button>
+            />
           ))}
         </div>
 
-        {/* Setor select */}
         {sectors.length > 0 && (
           <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">Setor:</span>
-            <select
-              value={filters.sectorId ?? ''}
-              onChange={(e) => onFiltersChange({ ...filters, sectorId: e.target.value || undefined, page: 1 })}
-              className="text-xs border border-border rounded-md px-2 py-1 bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            <span className="text-xs text-muted-foreground shrink-0">Setor:</span>
+            <Select
+              value={filters.sectorId ?? null}
+              onValueChange={(v) =>
+                onFiltersChange({ ...filters, sectorId: (v && v !== 'all') ? v : undefined, page: 1 })
+              }
             >
-              <option value="">Todos</option>
-              {sectors.map((s) => (
-                <option key={s.id} value={s.id}>{s.name}</option>
-              ))}
-            </select>
+              <SelectTrigger className="h-8 text-xs w-36">
+                <SelectValue placeholder="Todos" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                {sectors.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         )}
       </div>

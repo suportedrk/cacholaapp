@@ -80,6 +80,16 @@ src/
 - **LEIA ANTES** de criar qualquer componente visual
 - **Tokens aplicados** em `src/app/globals.css`
 
+### Foundation Layer (feat/ui-polish-foundation — 2026-03-28)
+
+| Artefato | Descrição |
+|----------|-----------|
+| `src/app/globals.css` | Todos os tokens CSS §1.1–1.5 + dark mode completo + `.interactive` + `prefers-reduced-motion` |
+| `src/components/theme-provider.tsx` | ThemeProvider + `useTheme()` — light/dark/system, localStorage, prefers-color-scheme |
+| `src/app/layout.tsx` | Script anti-FOUC inline + `<ThemeProvider>` no root |
+| `src/components/layout/navbar.tsx` | Toggle Sol/Lua (`<Sun>/<Moon>`) integrado ao `useTheme()` |
+| `src/lib/constants/brand-colors.ts` | Hex centralizados para Recharts/html2canvas/e-mails |
+
 ### Cores da Marca
 
 | Token | oklch | Hex | Uso |
@@ -91,10 +101,32 @@ src/
 | `--brand-primary-dark` | `oklch(0.487 0.044 144)` | ~`#697a65` | Hover de primário |
 | `--brand-primary-light` | `oklch(0.667 0.038 144)` | ~`#8fa08b` | Backgrounds sutis |
 
+### Rampas de Cor (novas)
+- **`bg-brand-50` … `bg-brand-900`** — Verde sálvia completo (50–900)
+- **`bg-beige-50` … `bg-beige-900`** — Bege quente completo (50–900)
+
+### Tokens Semânticos Disponíveis (Tailwind utilities)
+- **Superfícies:** `bg-surface-primary`, `bg-surface-secondary`, `bg-surface-tertiary`, `bg-surface-inverse`
+- **Texto:** `text-text-primary`, `text-text-secondary`, `text-text-tertiary`, `text-text-inverse`, `text-text-link`
+- **Bordas:** `border-border-default`, `border-border-strong`, `border-border-focus`
+- **Status:** `bg-status-error-bg`, `text-status-error-text`, `border-status-error-border` (e success/warning/info)
+- **Interativos:** `bg-interactive-primary`, `hover:bg-interactive-primary-hover` etc.
+- **Sombras:** `shadow-xs`, `shadow-sm`, `shadow-md`, `shadow-lg`, `shadow-xl`
+- **Z-index:** `z-dropdown` (10), `z-sticky` (20), `z-overlay` (30), `z-modal` (40), `z-toast` (50), `z-tooltip` (60)
+
 ### Convenção de Cores
-- NUNCA usar hex diretamente na UI
-- SEMPRE usar tokens semânticos: `bg-primary`, `text-foreground`, `border-border`, etc.
-- Tailwind v4: as classes utilitárias são geradas via `@theme inline {}` em globals.css
+- NUNCA usar hex diretamente na UI — sempre tokens semânticos Tailwind
+- **Exceções legítimas** (hex obrigatório): Recharts color props, html2canvas, HTML de e-mail
+  → Usar `CHART_COLORS` / `BRAND_GREEN` / `BRAND_BEIGE` de `src/lib/constants/brand-colors.ts`
+- Tailwind v4: classes utilitárias geradas via `@theme inline {}` em globals.css
+
+### Dark Mode
+- Toggle no navbar (ícone Sol/Lua) — salvo em `localStorage` com chave `cachola-theme`
+- Valores: `'light'` | `'dark'` | `'system'` (default)
+- Sistema: `prefers-color-scheme` como fallback quando `'system'`
+- Anti-FOUC: script inline no `<head>` antes da hidratação React
+- CSS: `.dark` e `[data-theme="dark"]` aplicados no `<html>`
+- `prefers-reduced-motion`: todas as transições/animações desabilitadas globalmente
 
 ---
 
@@ -678,6 +710,77 @@ Role:  super_admin (32 permissões)
 > ```bash
 > npx supabase gen types typescript --local > src/types/database.types.ts
 > ```
+
+---
+
+## UI/UX CHANGELOG — Polimento Visual (2026-03-28)
+
+Série de 5 prompts que implementou o sistema visual completo do Cachola OS.
+Branch: `feat/ui-polish-foundation`
+
+### Prompt 1 — Foundation Layer
+- `globals.css`: tokens CSS completos (cores, sombras, z-index, tipografia, espaçamento, transições)
+- `ThemeProvider` + toggle Sol/Lua + anti-FOUC script inline
+- `.icon-{cor}` e `.badge-{cor}` — utilitários semânticos adaptados a dark mode
+- PloomeBadge: corrigido dark mode (`badge-blue border` em vez de hex hardcoded)
+
+### Prompt 2 — Componentes Base Polish
+- **FilterChip** (`src/components/shared/filter-chip.tsx`): novo componente reutilizável
+  — cores semânticas por tipo (brand/amber/red/green/blue/purple/orange/gray)
+  — estado ativo usa `.badge-{cor}`, inativo usa ghost outlined
+  — touch target 44px, `aria-pressed`
+- **Tabs** (`src/components/ui/tabs.tsx`): variante `line` como default
+  — underline 2px em `bg-primary` na aba ativa, sem bg sólido
+- **Input/Select** (`src/components/ui/input.tsx`, `select.tsx`): h-10 (40px), hover border
+- **Migração `__all__`→`null`**: Select base-ui renderiza value raw; `null` = placeholder
+  — aplicado em `equipamentos/page.tsx`, `audit-filters.tsx`
+- **Badges dark mode**: checklist-card, equipment-card migrados para `.badge-*`
+
+### Prompt 3 — Sidebar + Navbar + Layout
+- **Sidebar colapsável** (`sidebar.tsx`):
+  — 240px expandida / 64px colapsada (desktop), drawer mobile com overlay
+  — Labels ocultam via `lg:opacity-0 lg:w-0` ao colapsar
+  — Tooltips com `render` prop (base-ui não suporta `asChild` em Trigger)
+  — Botão toggle ChevronLeft/Right no footer
+  — Estado persistido em `localStorage` (`sidebar-collapsed`)
+  — Grupos de navegação com section labels (`NAV_GROUPS` em `nav-items.ts`)
+- **AppLayout** (`app-layout.tsx`): `sidebarCollapsed` state + `mainRef` scroll tracking
+- **Navbar** (`navbar.tsx`): h-12 mobile / h-14 desktop; `shadow-sm` condicional ao rolar
+- **Tooltip.tsx**: `render?: ReactElement` adicionado ao tipo de `TooltipTrigger`
+
+### Prompt 4 — Animações e Micro-interações
+- **globals.css** — 4 `@keyframes`:
+  - `page-enter`: fade + slide-up 8px (300ms) — page transitions
+  - `fade-up`: para stagger no dashboard (400ms)
+  - `shimmer`: gradiente deslizante para skeleton (1.5s infinite)
+  - `scale-in`: escala 0.95→1 para modais (200ms bounce)
+- **Tokens Tailwind**: `animate-page-enter`, `animate-fade-up`, `animate-shimmer`, `animate-scale-in`
+- **`.skeleton-shimmer`**: substitui `animate-pulse` — gradiente `color-mix` dark-mode safe
+- **`.card-interactive`**: hover lift `-2px` + `shadow-md` — GPU only (transform + shadow)
+- **`app-layout.tsx`**: `key={pathname}` no wrapper → `animate-page-enter` a cada navegação
+- **`button.tsx`**: `hover:scale-[1.02] active:scale-[0.98]` + `disabled:scale-100`
+- **Todos os cards**: migrados para `.card-interactive` (event, checklist, maintenance, equipment, stats)
+- **Dashboard stagger**: 6 stats cards com `animate-fade-up` e delays 0–250ms (50ms cada)
+- **Reduced motion**: coberto pela regra global já existente (`0.01ms !important`)
+
+### Prompt 5 — Polimento Final
+- **`src/app/not-found.tsx`**: página 404 estilizada com ícone Compass + `animate-page-enter`
+- **`src/app/(auth)/error.tsx`**: error boundary para rotas auth — ícone destrutivo, "Tentar novamente" + "Dashboard"
+- **`src/app/global-error.tsx`**: error boundary global (inclui `<html>/<body>`) — fallback inline CSS
+- Mobile 375px verificado: sem scroll horizontal, filter chips wrapping, touch targets OK
+- TypeScript strict: zero erros em todo o polimento
+
+### Padrões Estabelecidos
+| Item | Padrão |
+|------|--------|
+| Ícones em cards | `.icon-{cor}` — NUNCA `bg-*-50` |
+| Badges/pills | `.badge-{cor} border` — NUNCA hex direto |
+| Hover em cards | `.card-interactive` — substituir `hover:shadow-md hover:-translate-y-*` manual |
+| Select "Todos" | `value={null}` + `<SelectItem value="all">` (base-ui renderiza placeholder) |
+| Botão com link | `<Link className={cn(buttonVariants(...))}>` (base-ui Button não suporta `asChild`) |
+| TooltipTrigger | Usar `render` prop para elemento custom; sem `asChild` |
+| Page transition | `key={pathname}` no wrapper dentro de `<main>` + `animate-page-enter` |
+| Skeleton | `<Skeleton>` usa `.skeleton-shimmer` — adapta a dark mode via `color-mix` |
 
 ---
 

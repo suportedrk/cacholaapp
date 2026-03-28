@@ -1059,7 +1059,52 @@ Mapeamento shadcn → Design System:
 ❌ !important (exceto prefers-reduced-motion)
 ❌ Layout com position absolute/fixed quando flex/grid resolve
 ❌ Animações sem prefers-reduced-motion fallback
+❌ bg-*-50 / bg-*-100 em ícones de card — quebram no dark mode (fundo claro em tela escura)
 ```
+
+### Ícones coloridos em cards — padrão obrigatório
+
+Para containers de ícone dentro de cards (ex: StatsCard, cards de módulo), **NUNCA** use
+`bg-blue-50 text-blue-600` diretamente. Use as classes utilitárias de `globals.css`:
+
+```tsx
+// ✅ CORRETO — adapta automaticamente a light e dark
+<div className="icon-blue">   <Icon /></div>
+<div className="icon-amber">  <Icon /></div>
+<div className="icon-green">  <Icon /></div>
+<div className="icon-orange"> <Icon /></div>
+<div className="icon-red">    <Icon /></div>
+<div className="icon-purple"> <Icon /></div>
+<div className="icon-brand">  <Icon /></div>
+<div className="icon-gray">   <Icon /></div>
+
+// ❌ ERRADO — bg-*-50 é tint claro, fica estranho no dark mode
+<div className="bg-blue-50 text-blue-600"><Icon /></div>
+```
+
+Essas classes estão definidas em `src/app/globals.css` → `@layer utilities` → seção `ICON CONTAINERS`.
+
+### Status / Type Badges — padrão obrigatório
+
+Para pills de status e tipo (ex: EventStatusBadge, MaintenanceTypeBadge), **NUNCA** use
+`bg-blue-50 text-blue-700 border-blue-200` diretamente. Use as classes `.badge-{cor}`:
+
+```tsx
+// ✅ CORRETO — adapta a light e dark automaticamente
+className: 'badge-blue border'     // Aberta, Confirmado
+className: 'badge-green border'    // Concluído, Recorrente
+className: 'badge-amber border'    // Pendente, Aguardando
+className: 'badge-orange border'   // Alta prioridade
+className: 'badge-red border'      // Emergencial, Crítico
+className: 'badge-purple border'   // Em Preparo, Em Andamento
+className: 'badge-gray border'     // Cancelado, Finalizado
+
+// ❌ ERRADO — bg-*-50 é tint claro, fica branco/claro no dark mode
+className: 'bg-blue-50 text-blue-700 border border-blue-200'
+```
+
+Componentes que usam este padrão: `event-status-badge.tsx`, `maintenance-type-badge.tsx`,
+`maintenance-status-badge.tsx`. Ao criar novos badges, usar sempre `.badge-{cor}`.
 
 ---
 

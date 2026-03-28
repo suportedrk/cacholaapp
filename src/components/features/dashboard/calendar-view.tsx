@@ -38,6 +38,7 @@ const EVENT_PILL: Record<EventStatus, string> = {
   in_progress: 'bg-green-100 text-green-800 border-l-2 border-l-green-500',
   finished:    'bg-gray-100 text-gray-500 border-l-2 border-l-gray-300',
   post_event:  'bg-gray-50  text-gray-400 border-l-2 border-l-gray-200',
+  lost:        'bg-gray-50  text-gray-400 border-l-2 border-l-gray-200',
 }
 
 const EVENT_DOT: Record<EventStatus, string> = {
@@ -47,6 +48,7 @@ const EVENT_DOT: Record<EventStatus, string> = {
   in_progress: 'bg-green-500',
   finished:    'bg-gray-400',
   post_event:  'bg-gray-300',
+  lost:        'bg-gray-300',
 }
 
 const WEEK_HEADERS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']

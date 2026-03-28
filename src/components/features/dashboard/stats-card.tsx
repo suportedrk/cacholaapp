@@ -7,9 +7,10 @@ interface StatsCardProps {
   value: number | undefined
   icon: LucideIcon
   description?: string
-  iconClass?: string  // e.g. 'bg-blue-50 text-blue-600'
+  iconClass?: string
   isLoading?: boolean
   onClick?: () => void
+  className?: string
 }
 
 export function StatsCard({
@@ -20,10 +21,11 @@ export function StatsCard({
   iconClass,
   isLoading,
   onClick,
+  className,
 }: StatsCardProps) {
   if (isLoading) {
     return (
-      <div className="bg-card border border-border rounded-xl p-4 space-y-3">
+      <div className={cn('bg-card border border-border rounded-xl p-4 space-y-3', className)}>
         <div className="flex items-center justify-between">
           <Skeleton className="h-3.5 w-24" />
           <Skeleton className="h-9 w-9 rounded-lg" />
@@ -37,8 +39,9 @@ export function StatsCard({
   return (
     <div
       className={cn(
-        'bg-card border border-border rounded-xl p-4 space-y-2',
-        onClick && 'cursor-pointer hover:bg-muted/30 transition-colors'
+        'bg-card border border-border rounded-xl p-4 space-y-2 card-interactive',
+        onClick && 'cursor-pointer hover:bg-muted/30',
+        className,
       )}
       onClick={onClick}
     >
