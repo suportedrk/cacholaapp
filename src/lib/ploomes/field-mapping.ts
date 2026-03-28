@@ -26,16 +26,19 @@ type FieldDef = {
 }
 
 // ── Mapa central ─────────────────────────────────────────────
+// FieldKey: GUID completo conforme retornado pela API Ploomes.
+// A API retorna o GUID completo (ex: deal_7CE92372-4576-498E-B8F6-E7A863348288).
+// O lookup em parseDeal() usa startsWith() como fallback para chaves parciais.
 export const DEAL_FIELD_MAP: Record<string, FieldDef> = {
-  deal_7CE92372: { field: 'eventDate',      label: 'Data da Festa',     valueKey: 'DateTimeValue',   parser: 'date'   },
-  deal_30E82221: { field: 'startTime',      label: 'Horário Início',    valueKey: 'DateTimeValue',   parser: 'time'   },
-  deal_FD135180: { field: 'endTime',        label: 'Horário Fim',       valueKey: 'DateTimeValue',   parser: 'time'   },
-  deal_2C5D41C4: { field: 'birthdayPerson', label: 'Aniversariante',    valueKey: 'StringValue',     parser: 'string' },
-  deal_36E32E61: { field: 'age',            label: 'Idade',             valueKey: 'IntegerValue',    parser: 'number' },
-  deal_05EE1763: { field: 'guestCount',     label: 'Nº Pessoas',        valueKey: 'IntegerValue',    parser: 'number' },
-  deal_A583075F: { field: 'unitName',       label: 'Unidade',           valueKey: 'ObjectValueName', parser: 'string' },
-  deal_40C1C918: { field: 'venueName',      label: 'Casa/Espaço',       valueKey: 'ObjectValueName', parser: 'string' },
-  deal_9910A472: { field: 'theme',          label: 'Tema',              valueKey: 'StringValue',     parser: 'string' },
+  'deal_7CE92372-4576-498E-B8F6-E7A863348288': { field: 'eventDate',      label: 'Data da Festa',   valueKey: 'DateTimeValue',   parser: 'date'   },
+  'deal_30E82221-76E2-4882-BB33-F7FB96AC861E': { field: 'startTime',      label: 'Horário Início',  valueKey: 'DateTimeValue',   parser: 'time'   },
+  'deal_FD135180-0186-46F1-8AB7-F0E1C02171B3': { field: 'endTime',        label: 'Horário Fim',     valueKey: 'DateTimeValue',   parser: 'time'   },
+  'deal_2C5D41C4-C1AC-41AE-AAB9-CD12F0B61AAD': { field: 'birthdayPerson', label: 'Aniversariante',  valueKey: 'StringValue',     parser: 'string' },
+  'deal_36E32E61-DB58-441A-9788-E63B5C01BCEE': { field: 'age',            label: 'Idade',           valueKey: 'IntegerValue',    parser: 'number' },
+  'deal_05EE1763-7254-4C41-B419-365794B1CA06': { field: 'guestCount',     label: 'Nº Pessoas',      valueKey: 'IntegerValue',    parser: 'number' },
+  'deal_A583075F-D19C-4034-A479-36625C621660': { field: 'unitName',       label: 'Unidade',         valueKey: 'ObjectValueName', parser: 'string' },
+  'deal_40C1C918-85ED-4B7D-870D-FDE6A4FB5D9D': { field: 'venueName',      label: 'Casa/Espaço',     valueKey: 'ObjectValueName', parser: 'string' },
+  'deal_9910A472-3609-4457-86F7-114A8A35A331': { field: 'theme',          label: 'Tema',            valueKey: 'ObjectValueName', parser: 'string' },
 } as const
 
 /** Rótulos legíveis por field name — útil para exibição no frontend */
@@ -86,8 +89,15 @@ export function parseDeal(deal: PloomesDeal): ParsedDeal {
     ploomesUrl: `${PLOOMES_APP_URL}/negocios/${deal.Id}`,
   }
 
+  // Pré-calcular lookup por prefixo para suportar GUIDs parciais ou completos
+  const mapKeys = Object.keys(DEAL_FIELD_MAP)
+
   for (const prop of deal.OtherProperties ?? []) {
-    const def = DEAL_FIELD_MAP[prop.FieldKey]
+    // Tenta match exato primeiro, depois por prefixo (FieldKey pode ser GUID completo)
+    const matchedKey = DEAL_FIELD_MAP[prop.FieldKey]
+      ? prop.FieldKey
+      : mapKeys.find((k) => prop.FieldKey.startsWith(k) || k.startsWith(prop.FieldKey))
+    const def = matchedKey ? DEAL_FIELD_MAP[matchedKey] : undefined
     if (!def) continue
     const value = parseRawValue(prop, def)
     if (value !== undefined) {
