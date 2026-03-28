@@ -122,30 +122,24 @@ export function Sidebar({ isOpen, isCollapsed, onClose, onToggleCollapse }: Side
                       ? pathname === '/dashboard'
                       : pathname.startsWith(item.href)
 
-                  const linkEl = (
-                    <Link
-                      href={item.href}
-                      onClick={onClose}
-                      aria-current={isActive ? 'page' : undefined}
-                      className={cn(
-                        'flex items-center rounded-lg min-h-[44px]',
-                        'transition-all duration-150',
-                        // padding e gap: desktop collapsed → centralizado
-                        'gap-3 px-3 py-2',
-                        isCollapsed && 'lg:justify-center lg:px-0 lg:gap-0',
-                        // cores
-                        isActive
-                          ? 'bg-primary/10 text-primary dark:bg-primary/20'
-                          : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-                      )}
-                    >
+                  const linkClassName = cn(
+                    'flex items-center rounded-lg min-h-[44px]',
+                    'transition-all duration-150',
+                    'gap-3 px-3 py-2',
+                    isCollapsed && 'lg:justify-center lg:px-0 lg:gap-0',
+                    isActive
+                      ? 'bg-primary/10 text-primary dark:bg-primary/20'
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                  )
+
+                  const linkChildren = (
+                    <>
                       <item.icon
                         className={cn(
                           'w-5 h-5 shrink-0',
                           isActive ? 'text-primary' : 'text-muted-foreground',
                         )}
                       />
-                      {/* Label — esconde no desktop collapsed */}
                       <span className={cn(
                         'text-sm font-medium truncate',
                         'transition-[opacity,width] duration-150 overflow-hidden',
@@ -153,7 +147,6 @@ export function Sidebar({ isOpen, isCollapsed, onClose, onToggleCollapse }: Side
                       )}>
                         {item.label}
                       </span>
-                      {/* Badge — esconde no desktop collapsed */}
                       {item.badge != null && item.badge > 0 && (
                         <span className={cn(
                           'ml-auto text-xs font-medium rounded-full px-1.5 py-0.5',
@@ -164,19 +157,38 @@ export function Sidebar({ isOpen, isCollapsed, onClose, onToggleCollapse }: Side
                           {item.badge > 99 ? '99+' : item.badge}
                         </span>
                       )}
-                    </Link>
+                    </>
                   )
 
                   // Tooltip só ativo quando collapsed (desktop)
                   return isCollapsed ? (
                     <Tooltip key={item.href}>
-                      <TooltipTrigger asChild>{linkEl}</TooltipTrigger>
+                      <TooltipTrigger
+                        render={
+                          <Link
+                            href={item.href}
+                            onClick={onClose}
+                            aria-current={isActive ? 'page' : undefined}
+                            className={linkClassName}
+                          />
+                        }
+                      >
+                        {linkChildren}
+                      </TooltipTrigger>
                       <TooltipContent side="right" sideOffset={8}>
                         {item.label}
                       </TooltipContent>
                     </Tooltip>
                   ) : (
-                    <span key={item.href}>{linkEl}</span>
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={onClose}
+                      aria-current={isActive ? 'page' : undefined}
+                      className={linkClassName}
+                    >
+                      {linkChildren}
+                    </Link>
                   )
                 })}
               </div>
@@ -201,23 +213,21 @@ export function Sidebar({ isOpen, isCollapsed, onClose, onToggleCollapse }: Side
 
           {/* Botão collapse — apenas desktop */}
           <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                onClick={onToggleCollapse}
-                className={cn(
-                  'hidden lg:flex items-center justify-center',
-                  'p-1.5 rounded-md',
-                  'text-muted-foreground hover:text-foreground hover:bg-muted',
-                  'transition-colors ml-auto',
-                  isCollapsed && 'lg:ml-0',
-                )}
-                aria-label={isCollapsed ? 'Expandir menu' : 'Colapsar menu'}
-              >
-                {isCollapsed
-                  ? <ChevronRight className="w-4 h-4" />
-                  : <ChevronLeft className="w-4 h-4" />
-                }
-              </button>
+            <TooltipTrigger
+              onClick={onToggleCollapse}
+              className={cn(
+                'hidden lg:flex items-center justify-center',
+                'p-1.5 rounded-md',
+                'text-muted-foreground hover:text-foreground hover:bg-muted',
+                'transition-colors ml-auto',
+                isCollapsed && 'lg:ml-0',
+              )}
+              aria-label={isCollapsed ? 'Expandir menu' : 'Colapsar menu'}
+            >
+              {isCollapsed
+                ? <ChevronRight className="w-4 h-4" />
+                : <ChevronLeft className="w-4 h-4" />
+              }
             </TooltipTrigger>
             <TooltipContent side="right" sideOffset={8}>
               {isCollapsed ? 'Expandir menu' : 'Colapsar menu'}
