@@ -538,6 +538,46 @@ docker compose -f docker-compose.prod.yml logs -f app
 - [x] `src/app/(auth)/admin/unidades/[id]/page.tsx`: editar dados + gerenciar usuários vinculados (add/remove/change role)
 - [x] `src/app/(auth)/admin/usuarios/[id]/page.tsx`: seção Unidades Vinculadas — lista com change role + remove
 
+### Manutenção — Schema Expandido (Migration 017 — 2026-03-28)
+
+#### Tipos de manutenção
+- `emergency`: resolução imediata (brinquedo quebrou durante evento)
+- `punctual`: tem prazo definido (trocar lâmpada)
+- `recurring`: tarefas rotineiras de curto prazo (limpar banheiro toda segunda)
+- `preventive`: plano de manutenção programada com checklist técnico (revisão ar-cond. a cada 6 meses)
+
+#### Tabelas novas
+- `maintenance_suppliers`: fornecedores/empresas (unit_id, company_name, cnpj, category, rating 1–5)
+- `supplier_contacts`: contatos N:1 do fornecedor (name, role, phone, whatsapp, is_primary)
+- `supplier_documents`: documentos do fornecedor com vencimento (file_url, expires_at)
+- `maintenance_costs`: custos com workflow de aprovação (amount, cost_type, status: pending→approved/rejected)
+
+#### Novas colunas em maintenance_orders
+- `supplier_id`: FK para maintenance_suppliers (nullable)
+- `cost_estimate`: estimativa de custo DECIMAL(10,2) (nullable)
+- `completed_at`: timestamp de conclusão para cálculo de SLA (nullable)
+- `preventive_plan`: JSONB `{ frequency, interval, checklist_items[], last_performed_at, next_due_date, advance_notice_days, linked_equipment_id }`
+
+#### Diferença recurrence_rule vs preventive_plan
+- `recurrence_rule` → tarefas rotineiras de curto prazo (semanal/quinzenal)
+- `preventive_plan` → manutenção programada médio/longo prazo com checklist técnico
+
+#### Buckets Storage
+- `supplier-documents`: documentos de fornecedores (10MB, PDF/imagem/doc, privado)
+- `maintenance-receipts`: comprovantes de custos (10MB, PDF/imagem, privado)
+
+#### Workflow de custos (maintenance_costs)
+1. Técnico registra custo (`status: pending`) com comprovante
+2. Gerente aprova ou reprova (`status: approved/rejected`) com motivo em `review_notes`
+3. Financeiro visualiza custos aprovados (filtro por status)
+
+#### Notificações de custos (src/lib/notifications.ts)
+- `cost_submitted`: técnico submeteu → notifica gerentes da unidade
+- `cost_approved`: gerente aprovou → notifica técnico que submeteu
+- `cost_rejected`: gerente rejeitou → notifica técnico (com motivo)
+
+---
+
 ### Fase 2 — Bloco 2: Upload de Fotos (2026-03-27 → polimento Prompt 8 2026-03-28)
 - [x] `src/hooks/use-signed-urls.ts`: `useSignedUrls(bucket, paths)` — batch `createSignedUrls`, staleTime 30min
 - [x] `src/components/shared/photo-upload.tsx`: **Prompt 8** — reescrita completa; exports: `compressImage`, `PhotoDropZone` (alias `PhotoUpload`), `PhotoThumb`
