@@ -4,12 +4,23 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 import { Search, X, SlidersHorizontal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { EventStatusBadge, STATUS_CONFIG } from '@/components/shared/event-status-badge'
+import { FilterChip } from '@/components/shared/filter-chip'
+import { STATUS_CONFIG } from '@/components/shared/event-status-badge'
 import type { EventStatus } from '@/types/database.types'
 import type { EventFilters } from '@/hooks/use-events'
-import { cn } from '@/lib/utils'
+import type { FilterChipColor } from '@/components/shared/filter-chip'
 
 const ALL_STATUSES = Object.keys(STATUS_CONFIG) as EventStatus[]
+
+const STATUS_COLOR: Record<EventStatus, FilterChipColor> = {
+  pending:     'amber',
+  confirmed:   'blue',
+  preparing:   'purple',
+  in_progress: 'brand',
+  finished:    'gray',
+  post_event:  'gray',
+  lost:        'gray',
+}
 
 interface EventFiltersProps {
   filters: EventFilters
@@ -19,7 +30,6 @@ interface EventFiltersProps {
 export function EventFiltersBar({ filters, onFiltersChange }: EventFiltersProps) {
   const [searchInput, setSearchInput] = useState(filters.search ?? '')
 
-  // Refs para evitar closures stale no timer de debounce
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const filtersRef = useRef(filters)
   const onFiltersChangeRef = useRef(onFiltersChange)
@@ -29,7 +39,6 @@ export function EventFiltersBar({ filters, onFiltersChange }: EventFiltersProps)
     onFiltersChangeRef.current = onFiltersChange
   })
 
-  // Limpa o timer ao desmontar
   useEffect(() => () => {
     if (debounceTimer.current) clearTimeout(debounceTimer.current)
   }, [])
@@ -71,7 +80,7 @@ export function EventFiltersBar({ filters, onFiltersChange }: EventFiltersProps)
             placeholder="Buscar por cliente, aniversariante..."
             value={searchInput}
             onChange={(e) => handleSearchChange(e.target.value)}
-            className="pl-9 h-10"
+            className="pl-9"
           />
           {searchInput && (
             <button
@@ -84,46 +93,36 @@ export function EventFiltersBar({ filters, onFiltersChange }: EventFiltersProps)
         </div>
         {hasActiveFilters && (
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
-            className="h-10 px-3 text-sm shrink-0"
+            className="h-10 px-3 text-sm shrink-0 gap-1"
             onClick={() => {
               setSearchInput('')
               if (debounceTimer.current) clearTimeout(debounceTimer.current)
               onFiltersChange({ page: 1 })
             }}
           >
-            <X className="w-3.5 h-3.5 mr-1" />
+            <X className="w-3.5 h-3.5" />
             Limpar
           </Button>
         )}
       </div>
 
-      {/* Linha 2: filtros de status (pills clicáveis) */}
-      <div className="flex flex-wrap gap-2">
-        <span className="inline-flex items-center gap-1 text-xs text-muted-foreground self-center">
+      {/* Linha 2: filtros de status */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
           <SlidersHorizontal className="w-3.5 h-3.5" />
           Status:
         </span>
-        {ALL_STATUSES.map((status) => {
-          const active = filters.status?.includes(status) ?? false
-          return (
-            <button
-              key={status}
-              onClick={() => toggleStatus(status)}
-              className={cn(
-                'transition-all duration-150',
-                active ? 'opacity-100 scale-100' : 'opacity-60 hover:opacity-80'
-              )}
-            >
-              <EventStatusBadge
-                status={status}
-                size="sm"
-                className={active ? 'ring-2 ring-offset-1 ring-current' : ''}
-              />
-            </button>
-          )
-        })}
+        {ALL_STATUSES.map((status) => (
+          <FilterChip
+            key={status}
+            label={STATUS_CONFIG[status].label}
+            active={filters.status?.includes(status) ?? false}
+            color={STATUS_COLOR[status]}
+            onClick={() => toggleStatus(status)}
+          />
+        ))}
       </div>
     </div>
   )

@@ -571,6 +571,7 @@
   .badge-red    { @apply bg-red-50    text-red-700    border-red-200    dark:bg-red-900/30    dark:text-red-300    dark:border-red-800; }
   .badge-purple { @apply bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800; }
   .badge-gray   { @apply bg-gray-100  text-gray-600   border-gray-200   dark:bg-gray-800/60   dark:text-gray-400   dark:border-gray-700; }
+  .badge-brand  { @apply bg-primary/10 text-primary    border-primary/30  dark:bg-primary/20    dark:text-primary    dark:border-primary/40; }
 }
 
 /* ============================================================

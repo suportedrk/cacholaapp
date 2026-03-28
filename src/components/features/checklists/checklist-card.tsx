@@ -16,10 +16,10 @@ const STATUS_LABEL: Record<ChecklistStatus, string> = {
 }
 
 const STATUS_CLASS: Record<ChecklistStatus, string> = {
-  pending:     'bg-amber-50 text-amber-700 border-amber-200',
-  in_progress: 'bg-blue-50 text-blue-700 border-blue-200',
-  completed:   'bg-green-50 text-green-700 border-green-200',
-  cancelled:   'bg-gray-100 text-gray-500 border-gray-200',
+  pending:     'badge-amber',
+  in_progress: 'badge-blue',
+  completed:   'badge-green',
+  cancelled:   'badge-gray',
 }
 
 interface ChecklistCardProps {
@@ -61,7 +61,7 @@ export const ChecklistCard = memo(function ChecklistCard({ checklist }: Checklis
         <span
           className={cn(
             'inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full border shrink-0',
-            STATUS_CLASS[checklist.status]
+            STATUS_CLASS[checklist.status],
           )}
         >
           {STATUS_LABEL[checklist.status]}
