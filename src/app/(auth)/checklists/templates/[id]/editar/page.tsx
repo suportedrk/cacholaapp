@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
-import { ChevronLeft } from 'lucide-react'
+import { ChevronLeft, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -11,6 +11,16 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { PageHeader } from '@/components/shared/page-header'
 import { SortableTemplateItems, type TemplateItemDraft } from '@/components/features/checklists/sortable-template-items'
 import { useChecklistTemplate, useUpdateTemplate, useChecklistCategories } from '@/hooks/use-checklists'
+import { useUsers } from '@/hooks/use-users'
+import { PRIORITY_LABELS } from '@/types/database.types'
+import type { Priority } from '@/types/database.types'
+
+function fmtMin(m: number) {
+  if (m < 60) return `${m}min`
+  const h = Math.floor(m / 60)
+  const r = m % 60
+  return r ? `${h}h ${r}min` : `${h}h`
+}
 
 export default function EditarTemplatePage() {
   const { id } = useParams<{ id: string }>()
@@ -19,11 +29,23 @@ export default function EditarTemplatePage() {
   const { data: template, isLoading, isError } = useChecklistTemplate(id)
   const updateTemplate = useUpdateTemplate()
   const { data: categories = [] } = useChecklistCategories()
+  const { data: users = [] } = useUsers()
 
-  const [title, setTitle] = useState('')
-  const [categoryId, setCategoryId] = useState('')
-  const [items, setItems] = useState<TemplateItemDraft[]>([])
-  const [initialized, setInitialized] = useState(false)
+  const [title,           setTitle]           = useState('')
+  const [categoryId,      setCategoryId]      = useState('')
+  const [description,     setDescription]     = useState('')
+  const [defaultPriority, setDefaultPriority] = useState<Priority>('medium')
+  const [items,           setItems]           = useState<TemplateItemDraft[]>([])
+  const [initialized,     setInitialized]     = useState(false)
+
+  const totalMinutes = useMemo(
+    () => items.reduce((s, i) => s + (i.defaultEstimatedMinutes ?? 0), 0),
+    [items],
+  )
+
+  const userOptions = users
+    .filter((u) => u.is_active)
+    .map((u) => ({ id: u.id, name: u.name }))
 
   // Preencher formulário quando o template carregar
   /* eslint-disable react-hooks/set-state-in-effect */
@@ -31,11 +53,26 @@ export default function EditarTemplatePage() {
     if (template && !initialized) {
       setTitle(template.title)
       setCategoryId(template.category_id ?? '')
+      setDescription(template.description ?? '')
+      setDefaultPriority((template.default_priority as Priority) ?? 'medium')
       setItems(
-        template.template_items.map((item) => ({
-          tempId: item.id,
-          description: item.description,
-        }))
+        template.template_items
+          .slice()
+          .sort((a, b) => a.sort_order - b.sort_order)
+          .map((item) => {
+            // default_assigned_to is JSONB { type, value } — extract userId if type==='user'
+            const assignedTo = item.default_assigned_to as { type: string; value: string } | null
+            return {
+              tempId:                  item.id,
+              description:             item.description,
+              defaultPriority:         (item.default_priority as Priority) ?? 'medium',
+              defaultEstimatedMinutes: item.default_estimated_minutes ?? null,
+              defaultAssignedToUserId: assignedTo?.type === 'user' ? assignedTo.value : null,
+              notesTemplate:           item.notes_template ?? null,
+              requiresPhoto:           item.requires_photo ?? false,
+              isRequired:              item.is_required ?? true,
+            }
+          }),
       )
       setInitialized(true)
     }
@@ -48,12 +85,23 @@ export default function EditarTemplatePage() {
     if (!isValid) return
     await updateTemplate.mutateAsync({
       id,
-      title: title.trim(),
-      categoryId: categoryId || null,
-      isActive: template?.is_active ?? true,
+      title:                    title.trim(),
+      categoryId:               categoryId || null,
+      isActive:                 template?.is_active ?? true,
+      description:              description.trim() || undefined,
+      defaultPriority,
+      estimatedDurationMinutes: totalMinutes || undefined,
       items: items
         .filter((i) => i.description.trim())
-        .map((i, idx) => ({ description: i.description.trim(), sort_order: idx })),
+        .map((i, idx) => ({
+          description:             i.description.trim(),
+          sort_order:              idx,
+          defaultPriority:         i.defaultPriority,
+          defaultEstimatedMinutes: i.defaultEstimatedMinutes ?? undefined,
+          notesTemplate:           i.notesTemplate ?? undefined,
+          requiresPhoto:           i.requiresPhoto,
+          isRequired:              i.isRequired,
+        })),
     })
     router.push('/checklists/templates')
   }
@@ -68,11 +116,15 @@ export default function EditarTemplatePage() {
         </div>
         <div className="bg-card border border-border rounded-xl p-4 space-y-4">
           <Skeleton className="h-9 w-full" />
-          <Skeleton className="h-9 w-full" />
+          <Skeleton className="h-16 w-full" />
+          <div className="grid grid-cols-2 gap-3">
+            <Skeleton className="h-9" />
+            <Skeleton className="h-9" />
+          </div>
         </div>
         <div className="bg-card border border-border rounded-xl p-4 space-y-3">
           {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-10 rounded-lg" />
+            <Skeleton key={i} className="h-11 rounded-xl" />
           ))}
         </div>
       </div>
@@ -103,6 +155,7 @@ export default function EditarTemplatePage() {
         description={template.title}
       />
 
+      {/* Dados do Template */}
       <div className="bg-card border border-border rounded-xl p-4 space-y-4">
         {/* Título */}
         <div className="space-y-1.5">
@@ -116,47 +169,71 @@ export default function EditarTemplatePage() {
           />
         </div>
 
-        {/* Categoria */}
-        {categories.length > 0 && (
+        {/* Descrição */}
+        <div className="space-y-1.5">
+          <Label htmlFor="tpl-desc">Descrição</Label>
+          <textarea
+            id="tpl-desc"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Descreva quando e como usar este template..."
+            rows={2}
+            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+          />
+        </div>
+
+        {/* Categoria + Prioridade padrão */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {categories.length > 0 && (
+            <div className="space-y-1.5">
+              <Label htmlFor="tpl-category">Categoria</Label>
+              <select
+                id="tpl-category"
+                value={categoryId}
+                onChange={(e) => setCategoryId(e.target.value)}
+                className="w-full h-9 rounded-lg border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="">Sem categoria</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div className="space-y-1.5">
-            <Label htmlFor="tpl-category">Categoria</Label>
+            <Label htmlFor="tpl-priority">Prioridade padrão</Label>
             <select
-              id="tpl-category"
-              value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
+              id="tpl-priority"
+              value={defaultPriority}
+              onChange={(e) => setDefaultPriority(e.target.value as Priority)}
               className="w-full h-9 rounded-lg border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             >
-              <option value="">Sem categoria</option>
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>{cat.name}</option>
+              {(Object.keys(PRIORITY_LABELS) as Priority[]).map((p) => (
+                <option key={p} value={p}>{PRIORITY_LABELS[p]}</option>
               ))}
             </select>
           </div>
-        )}
-
-        {/* Status */}
-        <div className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            id="tpl-active"
-            checked={true}
-            disabled
-            className="rounded border-border"
-          />
-          <Label htmlFor="tpl-active" className="text-sm font-normal text-muted-foreground cursor-default">
-            Template ativo
-          </Label>
         </div>
       </div>
 
       {/* Itens */}
       <div className="bg-card border border-border rounded-xl p-4 space-y-3">
-        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-          Itens do Template
-        </h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+            Itens do Template
+          </h3>
+          {totalMinutes > 0 && (
+            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Clock className="w-3 h-3" />
+              Total: ~{fmtMin(totalMinutes)}
+            </span>
+          )}
+        </div>
         <SortableTemplateItems
           items={items}
           onChange={setItems}
+          users={userOptions}
           disabled={updateTemplate.isPending}
         />
       </div>
