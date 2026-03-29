@@ -771,6 +771,44 @@ Regras de recorrência com colunas explícitas (melhor para queries e índices):
 #### globals.css
 - `@keyframes task-complete`: slide-right + max-height collapse 400ms; `.animate-task-complete`; `prefers-reduced-motion` guard
 
+### Checklists — P10 Exportar PDF (Prompt 10 — 2026-03-29)
+
+#### Arquivo novo: `src/lib/utils/checklist-report-pdf.ts`
+Módulo standalone de geração de PDF (A4 portrait, jsPDF dinâmico):
+- `ChecklistReportItem`, `ChecklistReportPhoto`, `ChecklistReportCommentGroup`, `ChecklistReportOptions` exportados
+- `generateChecklistReportPDF(opts)` async — 4 seções:
+  1. **INFORMACOES GERAIS**: box duas colunas com dados do checklist/evento
+  2. **ITENS DO CHECKLIST**: tabela #/Descricao/Status/Responsavel/Tempo com linhas alternadas e notas indentadas
+  3. **EVIDENCIAS FOTOGRAFICAS** (opcional): fotos full-width com legenda e metadados
+  4. **OBSERVACOES E COMENTARIOS** (opcional): agrupados por item, autor+data em bold
+  5. **ASSINATURAS** (opcional): linhas Responsavel + Supervisor + Data + timestamp
+- `drawPageBar()`: barra superior 9mm com cor primária, nome da unidade e data
+- `drawSection(y, label)`: título de seção com underline na cor accent
+- `checkSpace(y, needed)`: auto page-break com footer + nova barra
+- `drawFooter()`: "Gerado por Cachola OS" + "Pagina N de M"
+- Imagens recebidas como `dataUrl` base64 JPEG já redimensionadas
+- `pdf.save(filename + '.pdf')` auto-download
+
+#### Componente novo: `src/app/(auth)/checklists/[id]/components/export-pdf-modal.tsx`
+Modal `createPortal(document.body)` com overlay + painel centrado:
+- 3 toggles: Evidências fotográficas / Observações e comentários / Área de assinaturas
+- Opção de fotos desabilitada automaticamente quando não há fotos registradas
+- `handleGenerate()` async com 4 etapas:
+  1. Monta `ChecklistReportItem[]` dos `checklist_items` (com `RichChecklistItem` cast)
+  2. Busca signed URLs do bucket `checklist-photos` → `resizeImageForPdf(url, 1200, 900)` via Canvas API
+  3. Batch-fetch comentários via `.in('item_id', itemIds)` com join `users!checklist_item_comments_user_id_fkey`
+  4. Chama `generateChecklistReportPDF(opts)`
+- Progress indicator: "Processando foto N de M…" / "Carregando comentários…" / "Gerando PDF…"
+- `resizeImageForPdf(url, maxW, maxH)` helper: `globalThis.Image()` (evita conflito com lucide `Image`)
+- Usa `useUnitStore((s) => s.activeUnit)` para nome da unidade no cabeçalho
+- Botão "Gerar PDF" desabilitado durante geração + spinner `Loader2`
+
+#### Integração em `checklist-detail-header.tsx`
+- Importa `ExportPdfModal`
+- `exportPdfOpen` state adicionado
+- Menu item "Exportar PDF" → `setExportPdfOpen(true)` (substituiu placeholder)
+- `<ExportPdfModal>` renderizado no final do JSX (normal header + completed banner)
+
 ### Fase 2 — Bloco 1: Módulo de Manutenção (2026-03-27)
 - [x] `supabase/migrations/009_fase2_maintenance.sql`: tabela `sectors` (8 setores seed), `maintenance_orders` atualizado (sector_id FK, recurrence_rule JSONB, tipo emergency/punctual/recurring), buckets privados `maintenance-photos` + `user-avatars` com RLS Storage
 - [x] `src/types/database.types.ts`: Sector, RecurrenceRule, MaintenanceWithDetails, MaintenanceForList, CalendarMaintenance, DashboardMaintenanceStats, MaintenanceType atualizado
