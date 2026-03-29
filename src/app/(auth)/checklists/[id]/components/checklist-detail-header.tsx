@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
   MoreVertical, Copy, FileText, Trash2, CalendarDays,
-  ChevronDown, ChevronUp, CheckCircle2,
+  ChevronDown, ChevronUp, CheckCircle2, ClipboardCopy,
 } from 'lucide-react'
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
@@ -14,13 +14,14 @@ import {
 import { Button } from '@/components/ui/button'
 import { UserAvatar } from '@/components/shared/user-avatar'
 import { ConfirmDialog } from '@/components/shared/confirm-dialog'
-import { useDuplicateChecklist, useDeleteChecklist } from '@/hooks/use-checklists'
+import { useDeleteChecklist } from '@/hooks/use-checklists'
 import { cn } from '@/lib/utils'
 import {
   PRIORITY_LABELS, PRIORITY_COLORS, CHECKLIST_TYPE_LABELS,
   CHECKLIST_STATUS_LABELS,
 } from '@/types/database.types'
 import type { ChecklistWithItems, Priority } from '@/types/database.types'
+import { DuplicateChecklistModal } from './duplicate-checklist-modal'
 
 // ─────────────────────────────────────────────────────────────
 // PROGRESS RING
@@ -103,10 +104,10 @@ export function ChecklistDetailHeader({
   justSaved,
 }: ChecklistDetailHeaderProps) {
   const router = useRouter()
-  const [descOpen, setDescOpen] = useState(false)
-  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [descOpen,      setDescOpen]      = useState(false)
+  const [deleteOpen,    setDeleteOpen]    = useState(false)
+  const [duplicateOpen, setDuplicateOpen] = useState(false)
 
-  const { mutate: duplicate, isPending: isDuplicating } = useDuplicateChecklist()
   const { mutate: deleteChecklist, isPending: isDeleting } = useDeleteChecklist()
 
   const isCompleted = checklist.status === 'completed'
@@ -125,13 +126,6 @@ export function ChecklistDetailHeader({
     return m ? `${h}h ${m}min` : `${h}h`
   }
 
-  function handleDuplicate() {
-    duplicate(
-      { sourceChecklistId: checklist.id, createdBy: currentUserId },
-      { onSuccess: (newId) => router.push(`/checklists/${newId}`) },
-    )
-  }
-
   function handleDelete() {
     deleteChecklist(checklist.id, {
       onSuccess: () => router.push('/checklists'),
@@ -141,38 +135,47 @@ export function ChecklistDetailHeader({
   // ─────── completed banner ────────────────────────────────────
   if (isCompleted) {
     return (
-      <div className="rounded-2xl bg-green-50 border border-green-200 dark:bg-green-950/30 dark:border-green-900/40 p-5 flex items-center gap-4">
-        <div className="relative shrink-0">
-          <ProgressRing pct={pct} size={56} strokeWidth={5} label />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-0.5">
-            <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400" />
-            <h2 className="text-sm font-semibold text-green-800 dark:text-green-300">
-              Concluído!
-            </h2>
+      <>
+        <div className="rounded-2xl bg-green-50 border border-green-200 dark:bg-green-950/30 dark:border-green-900/40 p-5 flex items-center gap-4">
+          <div className="relative shrink-0">
+            <ProgressRing pct={pct} size={56} strokeWidth={5} label />
           </div>
-          <p className="text-xs text-green-700 dark:text-green-400">
-            {done} de {total} ite{total !== 1 ? 'ns' : 'm'} · {pct}% concluído{pct !== 100 ? 's' : ''}
-          </p>
-          {checklist.completed_by_user && (
-            <p className="text-xs text-green-600/70 dark:text-green-500 mt-0.5">
-              por {checklist.completed_by_user.name.split(' ')[0]}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-0.5">
+              <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400" />
+              <h2 className="text-sm font-semibold text-green-800 dark:text-green-300">
+                Concluído!
+              </h2>
+            </div>
+            <p className="text-xs text-green-700 dark:text-green-400">
+              {done} de {total} ite{total !== 1 ? 'ns' : 'm'} · {pct}% concluído{pct !== 100 ? 's' : ''}
             </p>
-          )}
+            {checklist.completed_by_user && (
+              <p className="text-xs text-green-600/70 dark:text-green-500 mt-0.5">
+                por {checklist.completed_by_user.name.split(' ')[0]}
+              </p>
+            )}
+          </div>
+          {/* Duplicate after completion */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setDuplicateOpen(true)}
+            className="shrink-0 gap-1.5"
+          >
+            <Copy className="w-3.5 h-3.5" />
+            Duplicar
+          </Button>
         </div>
-        {/* Duplicate after completion */}
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleDuplicate}
-          disabled={isDuplicating}
-          className="shrink-0 gap-1.5"
-        >
-          <Copy className="w-3.5 h-3.5" />
-          Duplicar
-        </Button>
-      </div>
+
+        {/* Duplicate modal (completed banner) */}
+        <DuplicateChecklistModal
+          open={duplicateOpen}
+          onClose={() => setDuplicateOpen(false)}
+          checklist={checklist}
+          onDuplicated={(newId) => router.push(`/checklists/${newId}`)}
+        />
+      </>
     )
   }
 
@@ -237,8 +240,7 @@ export function ChecklistDetailHeader({
             />
             <DropdownMenuContent align="end" className="w-48">
               <DropdownMenuItem
-                onClick={handleDuplicate}
-                disabled={isDuplicating}
+                onClick={() => setDuplicateOpen(true)}
                 className="gap-2"
               >
                 <Copy className="w-4 h-4" />
@@ -291,6 +293,20 @@ export function ChecklistDetailHeader({
           </span>
         </div>
 
+        {/* Duplicado de... indicator */}
+        {checklist.duplicated_from_checklist && (
+          <div className="flex items-center gap-1.5 mt-2 text-xs text-muted-foreground">
+            <ClipboardCopy className="w-3 h-3 shrink-0" />
+            <span>Duplicado de</span>
+            <Link
+              href={`/checklists/${checklist.duplicated_from}`}
+              className="hover:text-foreground underline truncate"
+            >
+              {checklist.duplicated_from_checklist.title}
+            </Link>
+          </div>
+        )}
+
         {/* Description (collapsible) */}
         {checklist.description && (
           <div className="mt-3 border-t border-border/60 pt-3">
@@ -332,6 +348,14 @@ export function ChecklistDetailHeader({
         destructive
         loading={isDeleting}
         onConfirm={handleDelete}
+      />
+
+      {/* Duplicate modal */}
+      <DuplicateChecklistModal
+        open={duplicateOpen}
+        onClose={() => setDuplicateOpen(false)}
+        checklist={checklist}
+        onDuplicated={(newId) => router.push(`/checklists/${newId}`)}
       />
     </div>
   )

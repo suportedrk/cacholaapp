@@ -3,6 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
+import { differenceInDays, addDays, parseISO } from 'date-fns'
 import type {
   ChecklistForList, ChecklistWithItems,
   ChecklistItemStatus, ChecklistStatus, ChecklistType, Priority,
@@ -38,6 +39,7 @@ const CHECKLIST_DETAIL_SELECT = `
   event:events!checklists_event_id_fkey(id, title, date, start_time, end_time, status),
   template:checklist_templates!checklists_template_id_fkey(id, title),
   recurrence:checklist_recurrence!checklists_recurrence_id_fkey(id, frequency, day_of_week, is_active, next_generation_at),
+  duplicated_from_checklist:checklists!checklists_duplicated_from_fkey(id, title),
   checklist_items(
     *,
     assigned_user:users!checklist_items_assigned_to_fkey(id, name, avatar_url),
@@ -461,6 +463,9 @@ export function useDuplicateChecklist() {
       newAssignedTo,
       newDueDate,
       createdBy,
+      copyPriorities  = true,
+      copyAssignees   = true,
+      copyDeadlines   = false,
     }: {
       sourceChecklistId: string
       targetEventId?: string
@@ -468,6 +473,12 @@ export function useDuplicateChecklist() {
       newAssignedTo?: string
       newDueDate?: string
       createdBy?: string
+      /** Preservar priority de cada item (default: true) */
+      copyPriorities?: boolean
+      /** Preservar assigned_to de cada item (default: true) */
+      copyAssignees?: boolean
+      /** Recalcular due_at dos itens com base no offset relativo ao prazo do checklist (default: false) */
+      copyDeadlines?: boolean
     }) => {
       const supabase = createClient()
 
@@ -504,22 +515,35 @@ export function useDuplicateChecklist() {
 
       if (clErr) throw clErr
 
-      // Copiar itens — limpos (sem status/fotos anteriores), preservando config
+      // Copiar itens — limpos (sem status/fotos anteriores), preservando config conforme opções
       if (src.checklist_items?.length) {
-        const items = src.checklist_items.map((i) => ({
-          checklist_id: newCl.id,
-          description: i.description,
-          sort_order: i.sort_order,
-          status: 'pending' as ChecklistItemStatus,
-          is_done: false,
-          priority: i.priority,
-          estimated_minutes: i.estimated_minutes,
-          assigned_to: i.assigned_to,
-          notes: null,
-          photo_url: null,
-          done_by: null,
-          done_at: null,
-        }))
+        const items = src.checklist_items.map((i) => {
+          // Recalcular due_at via offset relativo ao prazo do checklist
+          let itemDueAt: string | null = null
+          if (copyDeadlines && i.due_at) {
+            if (newDueDate && src.due_date) {
+              const offset = differenceInDays(parseISO(i.due_at), parseISO(src.due_date))
+              itemDueAt = addDays(parseISO(newDueDate), offset).toISOString()
+            } else {
+              itemDueAt = i.due_at
+            }
+          }
+          return {
+            checklist_id: newCl.id,
+            description: i.description,
+            sort_order: i.sort_order,
+            status: 'pending' as ChecklistItemStatus,
+            is_done: false,
+            priority: copyPriorities ? i.priority : ('medium' as Priority),
+            estimated_minutes: i.estimated_minutes,
+            assigned_to: copyAssignees ? i.assigned_to : null,
+            notes: null,
+            photo_url: null,
+            done_by: null,
+            done_at: null,
+            due_at: itemDueAt,
+          }
+        })
         const { error: itemsErr } = await supabase.from('checklist_items').insert(items)
         if (itemsErr) throw itemsErr
       }
