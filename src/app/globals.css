@@ -290,6 +290,24 @@
   animation: var(--animate-fade-slide-up);
 }
 
+/* Task item complete — slide-right + collapse */
+@keyframes task-complete {
+  0%   { opacity: 1; transform: translateX(0);    max-height: 120px; padding-top: inherit; padding-bottom: inherit; margin-bottom: inherit; }
+  40%  { opacity: 0; transform: translateX(20px); max-height: 120px; }
+  100% { opacity: 0; transform: translateX(20px); max-height: 0;     padding-top: 0; padding-bottom: 0; margin-bottom: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  @keyframes task-complete {
+    0%   { opacity: 1; max-height: 120px; }
+    100% { opacity: 0; max-height: 0; padding-top: 0; padding-bottom: 0; margin-bottom: 0; }
+  }
+}
+.animate-task-complete {
+  animation: task-complete 400ms ease-in forwards;
+  overflow: hidden;
+  pointer-events: none;
+}
+
 /* PWA safe area bottom padding */
 .pb-safe {
   padding-bottom: env(safe-area-inset-bottom, 0px);

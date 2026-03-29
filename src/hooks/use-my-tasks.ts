@@ -97,3 +97,31 @@ export function useMyTasks(userId: string | null, filters: MyTaskFilters = {}) {
     },
   })
 }
+
+// ─────────────────────────────────────────────────────────────
+// CONTAGEM DE TAREFAS CONCLUÍDAS NOS ÚLTIMOS 7 DIAS
+// ─────────────────────────────────────────────────────────────
+export function useMyCompletedTasksCount(userId: string | null) {
+  const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
+
+  return useQuery({
+    queryKey: ['my-completed-tasks-count', userId],
+    enabled: !!userId && isSessionReady,
+    retry: RETRY,
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      const supabase = createClient()
+      const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+
+      const { count, error } = await supabase
+        .from('checklist_items')
+        .select('id', { count: 'exact', head: true })
+        .eq('done_by', userId!)
+        .eq('status', 'done')
+        .gte('updated_at', since)
+
+      if (error) throw error
+      return count ?? 0
+    },
+  })
+}
