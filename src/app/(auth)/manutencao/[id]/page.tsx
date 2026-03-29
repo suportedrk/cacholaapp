@@ -7,7 +7,7 @@ import { format, isPast, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import {
   ArrowLeft, Calendar, Edit, MapPin, RefreshCw,
-  Trash2, User, Wrench, CheckCircle2, AlertTriangle,
+  Trash2, User, Wrench, CheckCircle2, AlertTriangle, DollarSign, Plus,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
@@ -27,7 +27,11 @@ import { MaintenanceTypeBadge } from '@/components/features/maintenance/maintena
 import { MaintenanceStatusBadge, MaintenancePriorityBadge } from '@/components/features/maintenance/maintenance-status-badge'
 import { MaintenanceTimeline } from '@/components/features/maintenance/maintenance-timeline'
 import { PhotoSection } from '@/components/features/maintenance/photo-section'
+import { CostCard, CostCardSkeleton } from '@/components/features/maintenance/cost-card'
+import { CostFormModal } from '@/components/features/maintenance/cost-form-modal'
 import { cn } from '@/lib/utils'
+import { useState } from 'react'
+import { useOrderCosts, useCurrentUser, MANAGER_ROLES, formatBRL } from '@/hooks/use-maintenance-costs'
 import type { MaintenanceStatus } from '@/types/database.types'
 
 const FREQ_LABEL: Record<string, string> = {
@@ -46,10 +50,17 @@ export default function DetalheOrdemPage({
   const { id } = use(params)
   const router = useRouter()
 
+  const [costFormOpen, setCostFormOpen] = useState(false)
+
   const { data: order, isLoading, isError } = useMaintenanceOrder(id)
-  const changeStatus = useChangeMaintenanceStatus()
-  const completeOrder = useCompleteMaintenanceOrder()
-  const deleteOrder = useDeleteMaintenanceOrder()
+  const changeStatus   = useChangeMaintenanceStatus()
+  const completeOrder  = useCompleteMaintenanceOrder()
+  const deleteOrder    = useDeleteMaintenanceOrder()
+  const { data: costs = [], isLoading: costsLoading } = useOrderCosts(id)
+  const { data: currentUser } = useCurrentUser()
+
+  const currentUserId = currentUser?.id ?? null
+  const canApprove    = !!currentUser && (MANAGER_ROLES as readonly string[]).includes(currentUser.role)
 
   if (isLoading) return <OrderSkeleton />
 
@@ -280,6 +291,85 @@ export default function DetalheOrdemPage({
         canEdit={canComplete}
       />
 
+      {/* Custos */}
+      <div className="bg-card rounded-xl border border-border p-4 space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+            <DollarSign className="w-4 h-4 text-primary" />
+            Custos
+          </h2>
+          <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => setCostFormOpen(true)}>
+            <Plus className="w-3 h-3" />
+            Registrar
+          </Button>
+        </div>
+        <Separator />
+        {costsLoading ? (
+          <div className="space-y-2">
+            <CostCardSkeleton />
+            <CostCardSkeleton />
+          </div>
+        ) : costs.length === 0 ? (
+          <p className="text-sm text-muted-foreground italic">Nenhum custo registrado.</p>
+        ) : (
+          <>
+            <div className="space-y-2">
+              {costs.map((cost) => (
+                <CostCard
+                  key={cost.id}
+                  cost={cost}
+                  currentUserId={currentUserId}
+                  canApprove={canApprove}
+                />
+              ))}
+            </div>
+
+            {/* Totalizadores */}
+            {(() => {
+              const approved = costs.filter((c) => c.status === 'approved').reduce((s, c) => s + Number(c.amount), 0)
+              const pending  = costs.filter((c) => c.status === 'pending').reduce((s, c) => s + Number(c.amount), 0)
+              const estimate = order.cost_estimate ? Number(order.cost_estimate) : null
+              const pct      = estimate && approved > 0 ? Math.min(Math.round((approved / estimate) * 100), 100) : null
+
+              return (
+                <div className="rounded-lg bg-muted/30 border border-border p-3 space-y-2 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Total aprovado</span>
+                    <span className="font-semibold text-green-600 dark:text-green-400">{formatBRL(approved)}</span>
+                  </div>
+                  {pending > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Pendente de aprovação</span>
+                      <span className="font-semibold text-amber-600 dark:text-amber-400">{formatBRL(pending)}</span>
+                    </div>
+                  )}
+                  {estimate !== null && (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Estimativa</span>
+                        <span className="font-medium">{formatBRL(estimate)}</span>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-muted-foreground">
+                          <span>Realizado</span>
+                          <span>{pct ?? 0}%</span>
+                        </div>
+                        <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                          <div
+                            className="h-full bg-green-500 rounded-full transition-all duration-500"
+                            style={{ width: `${pct ?? 0}%` }}
+                          />
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )
+            })()}
+          </>
+        )}
+      </div>
+
       {/* Timeline */}
       <div className="bg-card rounded-xl border border-border p-4 space-y-3">
         <h2 className="text-sm font-semibold text-foreground">Histórico</h2>
@@ -298,6 +388,12 @@ export default function DetalheOrdemPage({
         <span>·</span>
         <span>{format(new Date(order.created_at), "d 'de' MMM 'de' yyyy 'às' HH:mm", { locale: ptBR })}</span>
       </div>
+
+      <CostFormModal
+        open={costFormOpen}
+        onOpenChange={setCostFormOpen}
+        preOrderId={order.id}
+      />
     </div>
   )
 }

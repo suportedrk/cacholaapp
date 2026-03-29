@@ -641,6 +641,41 @@ docker compose -f docker-compose.prod.yml logs -f app
 
 ---
 
+### Manutenção — Custos e Prestação de Contas (Prompt 5 — 2026-03-28)
+
+#### Hooks (`src/hooks/use-maintenance-costs.ts`)
+- `useMaintCosts(filters)`: lista com relações order/submitter/reviewer; pending primeiro; filtros status/tipo/período
+- `useOrderCosts(orderId)`: custos de uma ordem específica (usado no detalhe da OS)
+- `useCostsSummary()`: 3 KPIs em queries paralelas — `pendingCount`, `approvedSum` (mês), `totalSum` (mês)
+- `useCurrentUser()`: perfil atual para checar role/id (permission gate nos componentes)
+- `useSubmitCost()`: insere com `status='pending'`, invalida queries de custos + stats
+- `useApproveCost()`: update para `approved` + `reviewed_by/at`
+- `useRejectCost({ costId, review_notes })`: update para `rejected` + motivo obrigatório
+- `useDeleteCost({ costId, receiptUrl })`: remove registro + storage best-effort
+- `useUploadReceipt()`: upload para `maintenance-receipts` com fake progress 12%/180ms→85%
+- Exports: `COST_TYPE_LABELS`, `PERIOD_OPTIONS`, `MANAGER_ROLES`, `formatBRL()`
+
+#### Componentes
+- `src/components/features/maintenance/costs-tab.tsx`: aba Custos — 3 KPI cards (Pendentes/Aprovados/Total), filtros período+status+tipo, lista de `CostCard`, EmptyState, botão "Registrar Custo"
+- `src/components/features/maintenance/cost-card.tsx`: card com `border-l-4` por status (amber/green/red), comprovante (gera signed URL on-demand via `createSignedUrl`), ações contextuais, motivo em alert banner vermelho quando rejeitado; `CostCardSkeleton`
+- `src/components/features/maintenance/cost-form-modal.tsx`: Dialog com select ordem, descrição, currency input (máscara R$ centavos→decimal), select tipo, upload comprovante, notas
+- `src/components/features/maintenance/reject-cost-modal.tsx`: Dialog com textarea motivo (mín 10 chars), contador de caracteres
+
+#### Permissões
+- **Registrar:** qualquer usuário autenticado com acesso ao módulo
+- **Aprovar/Reprovar:** `MANAGER_ROLES = ['super_admin', 'diretor', 'gerente']` + `submitted_by !== currentUserId`
+- **Cancelar:** apenas autor (`isOwnCost && status==='pending'`) quando não for gerente (gerentes veem "Aguarda revisão")
+
+#### Integrações
+- `maintenance-tabs.tsx`: aba Custos → `<CostsTab />` (substituiu PlaceholderTab)
+- `manutencao/[id]/page.tsx`: seção "Custos" com lista inline, totalizadores (aprovado/pendente/estimativa) e barra de progresso vs `cost_estimate`
+- Input monetário: máscara centavos (`15000` → `"150,00"`), salvo como decimal `150.00`
+
+#### Buckets Storage
+- `maintenance-receipts`: comprovantes de custo (privado, path `{userId}/{timestamp}_{filename}`)
+
+---
+
 ### Fase 2 — Bloco 2: Upload de Fotos (2026-03-27 → polimento Prompt 8 2026-03-28)
 - [x] `src/hooks/use-signed-urls.ts`: `useSignedUrls(bucket, paths)` — batch `createSignedUrls`, staleTime 30min
 - [x] `src/components/shared/photo-upload.tsx`: **Prompt 8** — reescrita completa; exports: `compressImage`, `PhotoDropZone` (alias `PhotoUpload`), `PhotoThumb`
