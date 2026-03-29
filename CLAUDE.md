@@ -708,6 +708,48 @@ docker compose -f docker-compose.prod.yml logs -f app
 
 ---
 
+### Manutenção — Kanban Board + Detalhe Polido (Prompt 7 — 2026-03-28)
+
+#### Kanban Board
+- `src/components/features/maintenance/kanban-board.tsx` (novo): DnD com `@dnd-kit/core`
+  — `DndContext` + `DragOverlay` + `PointerSensor`(8px) + `TouchSensor`(delay 250ms)
+  — 4 colunas: open(brand) / in_progress(amber) / waiting_parts(purple) / completed(green)
+  — `KanbanColumn`: `useDroppable({ id: status })`, coluna tintada em hover via `group-data-[over=true]`
+  — `onDragEnd`: dropping em `completed` → `useCompleteMaintenanceOrder`; outros → `useChangeMaintenanceStatus`
+  — Optimistic update via `queryClient.setQueryData` + rollback em `onError`
+  — Fetch com `pageSize: 300` incluindo todos os status (sem paginação no kanban)
+  — `DragOverlay` renderiza `KanbanCardContent` com `shadow` flag (rotate-1 scale-1.02)
+- `src/components/features/maintenance/kanban-card.tsx` (novo): `KanbanCardContent` + `KanbanCard`
+  — `KanbanCardContent` puro (visual only — reusado no DragOverlay sem hooks)
+  — `KanbanCard` com `useDraggable` + click → navigate + DropdownMenu de ações
+  — `onPointerDown` stop propagation no menu para não ativar DnD
+  — Pill de tipo + PriorityBadge + título 2-line + assignee first name + due date + SLA bar
+
+#### View Toggle (maintenance-tabs.tsx)
+- `ViewToggle` component: `[☰ Lista] [▦ Kanban]`, `hidden md:flex` (mobile always list)
+- `viewMode` persistido em localStorage (`maintenance-view-mode`)
+- Em modo Kanban: status filter oculto (`hideStatus` prop em `MaintenanceFilters`)
+- Kanban recebe apenas `search/type/priority/sectorId` (status gerenciado pelas colunas)
+
+#### Detalhe da Ordem Polido (manutencao/[id]/page.tsx)
+- `MAINTENANCE_DETAIL_SELECT` expandido: `supplier:maintenance_suppliers!supplier_id(id, company_name, category)`
+- Card "Localização & Contexto": link fornecedor (`/manutencao/fornecedores/[id]`) + link evento (`/eventos/[id]`) com ícone `ExternalLink`
+- Card "Responsável & Datas": `completed_at` com data/hora + `formatResolutionTime()` (< 1h/Xh/X dias)
+- Select de status inclui `completed` (além de open/in_progress/waiting_parts)
+- Seção "Plano de Manutenção Preventiva": frequência, intervalo, próxima data, aviso, last performed, checklist técnico
+
+#### Timeline Combinada (maintenance-timeline.tsx)
+- 3 queries paralelas via `Promise.all`: audit_logs (com user join) + maintenance_costs + maintenance_photos
+- `TimelineEvent` union type com `kind: 'audit' | 'cost' | 'photo'`
+- `TimelineDot` semântico por tipo: DollarSign(verde)/Image(azul)/Plus(brand)/AlertCircle(red)/RefreshCw(muted)
+- Renderização contextual: status change → "Status alterado para X" / "Ordem concluída" com CheckCircle2
+- Custo: valor BRL + status colorido (approved=verde/rejected=vermelho/pending=âmbar) + tipo
+- Foto: label do tipo (Antes/Depois/Durante)
+- Actor avatar + nome (quando disponível via audit_logs.user join)
+- Ordenado DESC por `createdAt`; deduplicado por `id`
+
+---
+
 ### Fase 2 — Bloco 2: Upload de Fotos (2026-03-27 → polimento Prompt 8 2026-03-28)
 - [x] `src/hooks/use-signed-urls.ts`: `useSignedUrls(bucket, paths)` — batch `createSignedUrls`, staleTime 30min
 - [x] `src/components/shared/photo-upload.tsx`: **Prompt 8** — reescrita completa; exports: `compressImage`, `PhotoDropZone` (alias `PhotoUpload`), `PhotoThumb`

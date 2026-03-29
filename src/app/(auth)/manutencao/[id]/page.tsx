@@ -8,6 +8,7 @@ import { ptBR } from 'date-fns/locale'
 import {
   ArrowLeft, Calendar, Edit, MapPin, RefreshCw,
   Trash2, User, Wrench, CheckCircle2, AlertTriangle, DollarSign, Plus,
+  Building2, CalendarDays, Clock, Shield, ExternalLink,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
@@ -23,6 +24,7 @@ import {
   useCompleteMaintenanceOrder,
   useDeleteMaintenanceOrder,
 } from '@/hooks/use-maintenance'
+import { differenceInHours, differenceInDays } from 'date-fns'
 import { MaintenanceTypeBadge } from '@/components/features/maintenance/maintenance-type-badge'
 import { MaintenanceStatusBadge, MaintenancePriorityBadge } from '@/components/features/maintenance/maintenance-status-badge'
 import { MaintenanceTimeline } from '@/components/features/maintenance/maintenance-timeline'
@@ -38,6 +40,14 @@ const FREQ_LABEL: Record<string, string> = {
   daily: 'Diário', weekly: 'Semanal', monthly: 'Mensal',
 }
 const DAY_NAMES = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+
+function formatResolutionTime(createdAt: string, completedAt: string): string {
+  const hours = differenceInHours(new Date(completedAt), new Date(createdAt))
+  if (hours < 1) return '< 1h'
+  if (hours < 24) return `${hours}h`
+  const days = differenceInDays(new Date(completedAt), new Date(createdAt))
+  return `${days} dia${days !== 1 ? 's' : ''}`
+}
 
 // ─────────────────────────────────────────────────────────────
 // PÁGINA
@@ -178,6 +188,7 @@ export default function DetalheOrdemPage({
                 <SelectItem value="open">Aberta</SelectItem>
                 <SelectItem value="in_progress">Em Andamento</SelectItem>
                 <SelectItem value="waiting_parts">Aguardando Peças</SelectItem>
+                <SelectItem value="completed">Concluída</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -188,7 +199,7 @@ export default function DetalheOrdemPage({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Localização */}
         <div className="bg-card rounded-xl border border-border p-4 space-y-3">
-          <h2 className="text-sm font-semibold text-foreground">Localização</h2>
+          <h2 className="text-sm font-semibold text-foreground">Localização & Contexto</h2>
           <Separator />
           {order.sector ? (
             <div className="flex items-center gap-2 text-sm">
@@ -203,20 +214,45 @@ export default function DetalheOrdemPage({
               <Wrench className="w-4 h-4 text-muted-foreground shrink-0" />
               <Link
                 href={`/equipamentos/${order.equipment.id}`}
-                className="text-primary hover:underline font-medium"
+                className="text-primary hover:underline font-medium inline-flex items-center gap-1"
               >
                 {order.equipment.name}
+                <ExternalLink className="w-3 h-3" />
               </Link>
               {order.equipment.location && (
                 <span className="text-muted-foreground">— {order.equipment.location}</span>
               )}
             </div>
           )}
+          {(order as any).supplier && (
+            <div className="flex items-center gap-2 text-sm">
+              <Building2 className="w-4 h-4 text-muted-foreground shrink-0" />
+              <Link
+                href={`/manutencao/fornecedores/${(order as any).supplier.id}`}
+                className="text-primary hover:underline font-medium inline-flex items-center gap-1"
+              >
+                {(order as any).supplier.company_name}
+                <ExternalLink className="w-3 h-3" />
+              </Link>
+            </div>
+          )}
+          {(order as any).event && (
+            <div className="flex items-center gap-2 text-sm">
+              <CalendarDays className="w-4 h-4 text-muted-foreground shrink-0" />
+              <Link
+                href={`/eventos/${(order as any).event.id}`}
+                className="text-primary hover:underline font-medium inline-flex items-center gap-1"
+              >
+                {(order as any).event.title}
+                <ExternalLink className="w-3 h-3" />
+              </Link>
+            </div>
+          )}
         </div>
 
-        {/* Responsável */}
+        {/* Responsável e Datas */}
         <div className="bg-card rounded-xl border border-border p-4 space-y-3">
-          <h2 className="text-sm font-semibold text-foreground">Responsável</h2>
+          <h2 className="text-sm font-semibold text-foreground">Responsável & Datas</h2>
           <Separator />
           {order.assigned_user ? (
             <div className="flex items-center gap-3">
@@ -242,6 +278,25 @@ export default function DetalheOrdemPage({
                 <span>
                   Prazo: {format(parseISO(order.due_date), "d 'de' MMMM 'de' yyyy", { locale: ptBR })}
                   {isOverdue && ' — ATRASADA'}
+                </span>
+              </div>
+            </>
+          )}
+          {order.status === 'completed' && (order as any).completed_at && (
+            <>
+              <Separator />
+              <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
+                <span>
+                  Concluída em {format(new Date((order as any).completed_at), "d 'de' MMM 'de' yyyy 'às' HH:mm", { locale: ptBR })}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Clock className="w-4 h-4 shrink-0" />
+                <span>
+                  Tempo de resolução: <span className="font-medium text-foreground">
+                    {formatResolutionTime(order.created_at, (order as any).completed_at)}
+                  </span>
                 </span>
               </div>
             </>
@@ -281,6 +336,80 @@ export default function DetalheOrdemPage({
               </p>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Plano Preventivo */}
+      {order.type === 'preventive' && (order as any).preventive_plan && (
+        <div className="bg-card rounded-xl border border-border p-4 space-y-3">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+            <Shield className="w-4 h-4 text-blue-600" />
+            Plano de Manutenção Preventiva
+          </h2>
+          <Separator />
+          {(() => {
+            const plan = (order as any).preventive_plan as {
+              frequency?: string
+              interval?: number
+              checklist_items?: string[]
+              last_performed_at?: string
+              next_due_date?: string
+              advance_notice_days?: number
+            }
+            return (
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                  {plan.frequency && (
+                    <div>
+                      <p className="text-xs text-muted-foreground">Frequência</p>
+                      <p className="font-medium">{FREQ_LABEL[plan.frequency] ?? plan.frequency}</p>
+                    </div>
+                  )}
+                  {plan.interval && (
+                    <div>
+                      <p className="text-xs text-muted-foreground">Intervalo</p>
+                      <p className="font-medium">A cada {plan.interval}</p>
+                    </div>
+                  )}
+                  {plan.next_due_date && (
+                    <div>
+                      <p className="text-xs text-muted-foreground">Próxima data</p>
+                      <p className="font-medium">
+                        {format(parseISO(plan.next_due_date), "d MMM yyyy", { locale: ptBR })}
+                      </p>
+                    </div>
+                  )}
+                  {plan.advance_notice_days !== undefined && (
+                    <div>
+                      <p className="text-xs text-muted-foreground">Aviso antecipado</p>
+                      <p className="font-medium">{plan.advance_notice_days} dias</p>
+                    </div>
+                  )}
+                  {plan.last_performed_at && (
+                    <div>
+                      <p className="text-xs text-muted-foreground">Última realização</p>
+                      <p className="font-medium">
+                        {format(new Date(plan.last_performed_at), "d MMM yyyy", { locale: ptBR })}
+                      </p>
+                    </div>
+                  )}
+                </div>
+                {plan.checklist_items && plan.checklist_items.length > 0 && (
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-2">Itens do checklist técnico</p>
+                    <ul className="space-y-1">
+                      {plan.checklist_items.map((item, idx) => (
+                        <li key={idx} className="flex items-center gap-2 text-sm">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )
+          })()}
         </div>
       )}
 

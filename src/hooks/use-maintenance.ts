@@ -36,7 +36,8 @@ const MAINTENANCE_DETAIL_SELECT = `
   creator:users!maintenance_orders_created_by_fkey(id, name, avatar_url),
   event:events(id, title, date),
   maintenance_photos(*),
-  equipment(id, name, category, location)
+  equipment(id, name, category, location),
+  supplier:maintenance_suppliers!supplier_id(id, company_name, category)
 ` as const
 
 // ─────────────────────────────────────────────────────────────

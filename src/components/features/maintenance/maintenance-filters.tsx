@@ -37,9 +37,10 @@ interface Props {
   filters: MaintenanceFilters
   sectors: Sector[]
   onFiltersChange: (f: MaintenanceFilters) => void
+  hideStatus?: boolean
 }
 
-export function MaintenanceFilters({ filters, sectors, onFiltersChange }: Props) {
+export function MaintenanceFilters({ filters, sectors, onFiltersChange, hideStatus = false }: Props) {
   const [searchInput, setSearchInput] = useState(filters.search ?? '')
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const filtersRef = useRef(filters)
@@ -121,19 +122,21 @@ export function MaintenanceFilters({ filters, sectors, onFiltersChange }: Props)
         ))}
       </div>
 
-      {/* Status */}
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs text-muted-foreground">Status:</span>
-        {STATUS_OPTIONS.map((opt) => (
-          <FilterChip
-            key={opt.value}
-            label={opt.label}
-            color={opt.color}
-            active={filters.status?.includes(opt.value) ?? false}
-            onClick={() => toggleArrayFilter('status', opt.value)}
-          />
-        ))}
-      </div>
+      {/* Status — hidden in kanban mode */}
+      {!hideStatus && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs text-muted-foreground">Status:</span>
+          {STATUS_OPTIONS.map((opt) => (
+            <FilterChip
+              key={opt.value}
+              label={opt.label}
+              color={opt.color}
+              active={filters.status?.includes(opt.value) ?? false}
+              onClick={() => toggleArrayFilter('status', opt.value)}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Prioridade + Setor */}
       <div className="flex flex-wrap items-center gap-3">

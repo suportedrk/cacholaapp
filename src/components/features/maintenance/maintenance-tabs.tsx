@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, Suspense } from 'react'
+import { useState, Suspense, useEffect } from 'react'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
-import { ClipboardList, Building2, DollarSign, Clock, Wrench } from 'lucide-react'
+import { ClipboardList, Building2, DollarSign, Clock, Wrench, LayoutList, LayoutGrid } from 'lucide-react'
 import { SupplierList } from './supplier-list'
 import { CostsTab } from './costs-tab'
 import { HistoryTab } from './history-tab'
@@ -10,10 +10,15 @@ import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/shared/empty-state'
 import { MaintenanceCard, MaintenanceCardSkeleton } from './maintenance-card'
 import { MaintenanceFilters } from './maintenance-filters'
+import { KanbanBoard } from './kanban-board'
 import { cn } from '@/lib/utils'
 import { useMaintenanceOrders, type MaintenanceFilters as Filters } from '@/hooks/use-maintenance'
 import { useSectors } from '@/hooks/use-sectors'
 import { useRouter as useNextRouter } from 'next/navigation'
+
+type ViewMode = 'list' | 'kanban'
+
+const VIEW_MODE_KEY = 'maintenance-view-mode'
 
 // ─────────────────────────────────────────────────────────────
 // TAB DEFINITIONS
@@ -28,17 +33,68 @@ const TABS = [
 type TabId = typeof TABS[number]['id']
 
 // ─────────────────────────────────────────────────────────────
+// VIEW TOGGLE
+// ─────────────────────────────────────────────────────────────
+function ViewToggle({ mode, onChange }: { mode: ViewMode; onChange: (m: ViewMode) => void }) {
+  return (
+    <div className="hidden md:flex items-center gap-0.5 bg-muted rounded-lg p-0.5">
+      <button
+        type="button"
+        onClick={() => onChange('list')}
+        className={cn(
+          'flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors',
+          mode === 'list'
+            ? 'bg-card text-foreground shadow-xs'
+            : 'text-muted-foreground hover:text-foreground',
+        )}
+      >
+        <LayoutList className="w-3.5 h-3.5" />
+        Lista
+      </button>
+      <button
+        type="button"
+        onClick={() => onChange('kanban')}
+        className={cn(
+          'flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors',
+          mode === 'kanban'
+            ? 'bg-card text-foreground shadow-xs'
+            : 'text-muted-foreground hover:text-foreground',
+        )}
+      >
+        <LayoutGrid className="w-3.5 h-3.5" />
+        Kanban
+      </button>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────
 // ORDERS TAB CONTENT
 // ─────────────────────────────────────────────────────────────
 function OrdersTabContent() {
   const router = useNextRouter()
+
+  // View mode persisted in localStorage
+  const [viewMode, setViewMode] = useState<ViewMode>('list')
+  useEffect(() => {
+    const saved = localStorage.getItem(VIEW_MODE_KEY)
+    if (saved === 'kanban' || saved === 'list') setViewMode(saved)
+  }, [])
+
+  function changeView(m: ViewMode) {
+    setViewMode(m)
+    localStorage.setItem(VIEW_MODE_KEY, m)
+  }
+
   const [filters, setFilters] = useState<Filters>({
     status: ['open', 'in_progress', 'waiting_parts'],
     page: 1,
     pageSize: 12,
   })
 
-  const { data, isLoading, isError } = useMaintenanceOrders(filters)
+  const { data, isLoading, isError } = useMaintenanceOrders(
+    viewMode === 'kanban' ? { ...filters, status: undefined } : filters
+  )
   const { data: sectors = [] } = useSectors(true)
 
   const orders     = data?.data ?? []
@@ -53,61 +109,82 @@ function OrdersTabContent() {
     )
   }
 
+  // Kanban-mode filters (no status row)
+  const kanbanFilters = {
+    search:   filters.search,
+    type:     filters.type,
+    priority: filters.priority,
+    sectorId: filters.sectorId,
+  }
+
   return (
-    <div className="space-y-6">
-      {/* Filtros */}
+    <div className="space-y-4">
+      {/* Filters + View toggle row */}
       <div className="bg-card rounded-xl border border-border p-4">
-        <MaintenanceFilters
-          filters={filters}
-          sectors={sectors}
-          onFiltersChange={setFilters}
-        />
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <MaintenanceFilters
+              filters={filters}
+              sectors={sectors}
+              onFiltersChange={setFilters}
+              hideStatus={viewMode === 'kanban'}
+            />
+          </div>
+          <ViewToggle mode={viewMode} onChange={changeView} />
+        </div>
       </div>
 
-      {/* Lista */}
-      {isLoading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <MaintenanceCardSkeleton key={i} />
-          ))}
-        </div>
-      ) : orders.length === 0 ? (
-        <EmptyState
-          icon={Wrench}
-          title="Registre sua primeira ordem de manutenção"
-          description="Controle manutenções preventivas e corretivas em um só lugar. Comece registrando uma nova ordem."
-          action={{ label: 'Nova ordem de manutenção', onClick: () => router.push('/manutencao/nova') }}
-        />
+      {/* Kanban */}
+      {viewMode === 'kanban' ? (
+        <KanbanBoard filters={kanbanFilters} />
       ) : (
+        /* Lista */
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-            {orders.map((order) => (
-              <MaintenanceCard key={order.id} order={order} />
-            ))}
-          </div>
-
-          {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2 pt-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setFilters((f) => ({ ...f, page: (f.page ?? 1) - 1 }))}
-                disabled={page <= 1}
-              >
-                Anterior
-              </Button>
-              <span className="text-sm text-muted-foreground">
-                {page} / {totalPages}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setFilters((f) => ({ ...f, page: (f.page ?? 1) + 1 }))}
-                disabled={page >= totalPages}
-              >
-                Próxima
-              </Button>
+          {isLoading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <MaintenanceCardSkeleton key={i} />
+              ))}
             </div>
+          ) : orders.length === 0 ? (
+            <EmptyState
+              icon={Wrench}
+              title="Registre sua primeira ordem de manutenção"
+              description="Controle manutenções preventivas e corretivas em um só lugar. Comece registrando uma nova ordem."
+              action={{ label: 'Nova ordem de manutenção', onClick: () => router.push('/manutencao/nova') }}
+            />
+          ) : (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                {orders.map((order) => (
+                  <MaintenanceCard key={order.id} order={order} />
+                ))}
+              </div>
+
+              {totalPages > 1 && (
+                <div className="flex items-center justify-center gap-2 pt-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setFilters((f) => ({ ...f, page: (f.page ?? 1) - 1 }))}
+                    disabled={page <= 1}
+                  >
+                    Anterior
+                  </Button>
+                  <span className="text-sm text-muted-foreground">
+                    {page} / {totalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setFilters((f) => ({ ...f, page: (f.page ?? 1) + 1 }))}
+                    disabled={page >= totalPages}
+                  >
+                    Próxima
+                  </Button>
+                </div>
+              )}
+            </>
           )}
         </>
       )}
