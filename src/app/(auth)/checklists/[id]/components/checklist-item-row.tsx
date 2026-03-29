@@ -7,12 +7,13 @@ import {
 import { ptBR } from 'date-fns/locale'
 import {
   Camera, MessageSquare, Minus, X,
-  User, Calendar, MoreVertical, Clock,
+  User, Calendar, MoreVertical, Clock, MessageCircle,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { UserAvatar } from '@/components/shared/user-avatar'
 import { ItemAssignPopover, type AssignedUser } from './item-assign-popover'
 import { ItemDeadlinePopover } from './item-deadline-popover'
+import { ItemCommentsSheet } from './item-comments-sheet'
 import { useUpdateChecklistItem } from '@/hooks/use-checklists'
 import type { ChecklistItem, ChecklistItemStatus, Priority, User as UserType } from '@/types/database.types'
 import { PRIORITY_LABELS, PRIORITY_COLORS } from '@/types/database.types'
@@ -96,9 +97,11 @@ export function ChecklistItemRow({
   const [notesOpen,    setNotesOpen]    = useState(!!item.notes)
   const [localNotes,   setLocalNotes]   = useState(item.notes ?? '')
   const [justDone,     setJustDone]     = useState(false)
-  const [assignOpen,   setAssignOpen]   = useState(false)
-  const [deadlineOpen, setDeadlineOpen] = useState(false)
-  const [menuOpen,     setMenuOpen]     = useState(false)
+  const [assignOpen,    setAssignOpen]    = useState(false)
+  const [deadlineOpen,  setDeadlineOpen]  = useState(false)
+  const [menuOpen,      setMenuOpen]      = useState(false)
+  const [commentsOpen,  setCommentsOpen]  = useState(false)
+  const [commentsCount, setCommentsCount] = useState(0)
 
   const fileInputRef  = useRef<HTMLInputElement>(null)
   const notesTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
@@ -376,7 +379,26 @@ export function ChecklistItemRow({
 
           {/* ── Right actions ── */}
           <div className="flex flex-col items-center gap-0.5 shrink-0 pt-1.5">
-            {/* Camera (always visible on mobile, hover on desktop) */}
+            {/* Comments button */}
+            <button
+              onClick={() => setCommentsOpen(true)}
+              className={cn(
+                'relative flex items-center justify-center w-8 h-8 rounded-lg transition-colors',
+                commentsCount > 0
+                  ? 'text-primary bg-primary/10'
+                  : 'text-muted-foreground hover:bg-muted',
+              )}
+              aria-label={`Comentários${commentsCount > 0 ? ` (${commentsCount})` : ''}`}
+            >
+              <MessageCircle className="w-4 h-4" />
+              {commentsCount > 0 && (
+                <span className="absolute -top-1 -right-1 flex items-center justify-center w-4 h-4 rounded-full bg-primary text-[9px] font-bold text-primary-foreground">
+                  {commentsCount > 9 ? '9+' : commentsCount}
+                </span>
+              )}
+            </button>
+
+            {/* Camera */}
             {onPhotoChange && !disabled && (
               <button
                 onClick={() => fileInputRef.current?.click()}
@@ -472,6 +494,14 @@ export function ChecklistItemRow({
         onClose={() => setDeadlineOpen(false)}
         currentDueAt={localDueAt}
         onSetDeadline={handleSetDeadline}
+      />
+      <ItemCommentsSheet
+        open={commentsOpen}
+        onClose={() => setCommentsOpen(false)}
+        itemId={item.id}
+        itemDescription={item.description}
+        checklistId={checklistId}
+        onCommentsCount={setCommentsCount}
       />
     </>
   )
