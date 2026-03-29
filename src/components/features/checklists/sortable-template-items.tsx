@@ -205,7 +205,7 @@ function SortableItem({
 
       {/* ── Expanded config ── */}
       {expanded && (
-        <div className="border-t border-border/60 bg-muted/20 px-3 pb-3 pt-3 space-y-3 rounded-b-xl">
+        <div className="border-t border-border/60 bg-muted/20 px-3 pb-3 pt-3 space-y-3 rounded-b-xl animate-fade-up" style={{ animationDuration: '150ms', animationFillMode: 'backwards' }}>
           {/* Row 1: Priority + Estimated time + Required */}
           <div className="grid grid-cols-3 gap-2">
             <div className="space-y-1">

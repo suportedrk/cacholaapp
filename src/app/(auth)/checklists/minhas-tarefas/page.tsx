@@ -135,16 +135,18 @@ function TaskCard({ task, onComplete, completing }: TaskCardProps) {
         completing && 'animate-task-complete',
       )}
     >
-      {/* Checkbox */}
+      {/* Checkbox — 44px tap zone wrapper */}
       <button
         aria-label="Marcar como concluído"
         onClick={() => onComplete(task.id)}
-        className={cn(
-          'mt-0.5 w-5 h-5 rounded-full border-2 border-border shrink-0',
+        className="shrink-0 flex items-center justify-center w-11 h-11 -m-2 rounded-xl"
+      >
+        <span className={cn(
+          'w-5 h-5 rounded-full border-2 border-border',
           'hover:border-primary hover:bg-primary/10 transition-colors',
           'flex items-center justify-center',
-        )}
-      />
+        )} />
+      </button>
 
       {/* Content */}
       <div className="flex-1 min-w-0 space-y-1">

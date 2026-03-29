@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
@@ -22,7 +23,7 @@ import {
 } from '@/types/database.types'
 import type { ChecklistWithItems, Priority } from '@/types/database.types'
 import { DuplicateChecklistModal } from './duplicate-checklist-modal'
-import { ExportPdfModal } from './export-pdf-modal'
+const ExportPdfModal = dynamic(() => import('./export-pdf-modal').then((m) => ({ default: m.ExportPdfModal })), { ssr: false })
 
 // ─────────────────────────────────────────────────────────────
 // PROGRESS RING
