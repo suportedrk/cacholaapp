@@ -192,6 +192,79 @@ export function useEventsInfinite(filters: EventFiltersInfinite) {
 }
 
 // ─────────────────────────────────────────────────────────────
+// KPIs DA PÁGINA DE EVENTOS (checklist % + pendentes sem checklist)
+// ─────────────────────────────────────────────────────────────
+export function useEventsKpis() {
+  const { activeUnitId } = useUnitStore()
+  const isSessionReady   = useAuthReadyStore((s) => s.isSessionReady)
+
+  return useQuery({
+    queryKey: ['events-kpis', activeUnitId],
+    enabled:  isSessionReady,
+    staleTime: 2 * 60 * 1000,
+    retry: (failureCount, error: unknown) => {
+      const st = (error as { status?: number })?.status
+      if (st === 401 || st === 403) return false
+      return failureCount < 3
+    },
+    queryFn: async () => {
+      const supabase = createClient()
+      const now      = new Date()
+      const weekRange = getTabDateRange('week', now)!
+      // Próximos 7 dias para "pendentes sem checklist"
+      const todayStr  = format(now, 'yyyy-MM-dd')
+      const in7days   = format(new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd')
+
+      // 1) Eventos da semana com checklists (para calcular % médio)
+      let weekQuery = supabase
+        .from('events')
+        .select('id, checklists(id, status, checklist_items(id, status))')
+        .gte('date', weekRange.start)
+        .lte('date', weekRange.end)
+        .neq('status', 'lost')
+      if (activeUnitId) weekQuery = weekQuery.eq('unit_id', activeUnitId)
+
+      // 2) Eventos próximos 7 dias sem nenhum checklist
+      let pendingQuery = supabase
+        .from('events')
+        .select('id, checklists(id)')
+        .gte('date', todayStr)
+        .lte('date', in7days)
+        .neq('status', 'lost')
+      if (activeUnitId) pendingQuery = pendingQuery.eq('unit_id', activeUnitId)
+
+      const [{ data: weekEvents }, { data: upcomingEvents }] = await Promise.all([
+        weekQuery,
+        pendingQuery,
+      ])
+
+      // Calcular % médio de checklists da semana
+      let checklistPct = 0
+      if (weekEvents && weekEvents.length > 0) {
+        const progresses = weekEvents.map((ev) => {
+          const raw = ev as unknown as { checklists?: Array<{ checklist_items?: Array<{ status: string }> }> }
+          const items = raw.checklists?.flatMap((c) => c.checklist_items ?? []) ?? []
+          if (items.length === 0) return null
+          const done = items.filter((i) => i.status === 'done').length
+          return Math.round((done / items.length) * 100)
+        }).filter((p): p is number => p !== null)
+        checklistPct = progresses.length > 0
+          ? Math.round(progresses.reduce((a, b) => a + b, 0) / progresses.length)
+          : 0
+      }
+
+      // Contar eventos futuros sem nenhum checklist
+      const pendingCount = (upcomingEvents ?? []).filter((ev) => {
+        const raw = ev as unknown as { checklists?: Array<{ id: string }> }
+        return !raw.checklists || raw.checklists.length === 0
+      }).length
+
+      return { checklistPct, pendingCount }
+    },
+  })
+}
+
+// ─────────────────────────────────────────────────────────────
 // LISTAR EVENTOS
 // ─────────────────────────────────────────────────────────────
 export function useEvents(filters: EventFilters = {}) {

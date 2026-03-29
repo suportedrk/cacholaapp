@@ -308,6 +308,20 @@
   pointer-events: none;
 }
 
+/* Event checklist progress bar — animate from 0 to target width on mount */
+@keyframes progress-fill {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+.animate-progress-fill {
+  animation: progress-fill 600ms ease-out forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-progress-fill {
+    animation: none;
+  }
+}
+
 /* PWA safe area bottom padding */
 .pb-safe {
   padding-bottom: env(safe-area-inset-bottom, 0px);

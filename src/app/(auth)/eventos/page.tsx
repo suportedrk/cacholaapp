@@ -11,7 +11,8 @@ import { FilterChip } from '@/components/shared/filter-chip'
 import { EventCard, EventCardSkeleton } from '@/components/features/events/event-card'
 import { EventTemporalTabs } from '@/components/features/events/event-temporal-tabs'
 import { EventDayGroup } from '@/components/features/events/event-day-group'
-import { useEventsInfinite, useEventsTabCounts, type TabKey } from '@/hooks/use-events'
+import { EventsKpiCards } from '@/components/features/events/events-kpi-cards'
+import { useEventsInfinite, useEventsTabCounts, useEventsKpis, type TabKey } from '@/hooks/use-events'
 import { usePloomesIntegrationActive } from '@/hooks/use-ploomes-sync'
 import { useUnitStore } from '@/stores/unit-store'
 import { useDebounce } from '@/hooks/use-debounce'
@@ -95,6 +96,7 @@ function EventosContent() {
 
   const { data: ploomesActive } = usePloomesIntegrationActive(activeUnitId)
   const { data: tabCounts, isLoading: countsLoading } = useEventsTabCounts()
+  const { data: kpis, isLoading: kpisLoading } = useEventsKpis()
 
   const {
     data,
@@ -147,6 +149,15 @@ function EventosContent() {
           </p>
         </div>
       )}
+
+      {/* KPI Cards */}
+      <EventsKpiCards
+        tabCounts={tabCounts}
+        checklistPct={kpis?.checklistPct}
+        pendingCount={kpis?.pendingCount}
+        isLoading={kpisLoading || countsLoading}
+        onTabChange={handleTabChange}
+      />
 
       {/* Abas temporais */}
       <EventTemporalTabs

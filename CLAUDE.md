@@ -1355,6 +1355,36 @@ Role:  super_admin (32 permissões)
 - [x] `src/components/features/ploomes/mapping-status-card.tsx`: suporte a `cacholaStatus` (novo) + `cacholaAction` (legado); `lost` renderizado como "Perdido" cinza
 - [x] `supabase/migrations/015_ploomes_config.sql`: seed `status_mappings` com formato correto (1=Em aberto→confirmed, 2=Ganho→confirmed, 3=Perdido→lost)
 
+### Eventos — Redesign Listagem P1 + P2 (2026-03-29)
+
+#### P1 — Abas Temporais + Agrupamento por Dia
+- `supabase/migrations/019_events_extra_fields.sql`: ADD `client_phone`, `client_email`, `theme` a `events`
+- `src/types/database.types.ts`: `Event` + `EventInsert` com novos campos; `EventForList` type (Event + joins com checklists)
+- `src/hooks/use-events.ts`:
+  - `TabKey` = `'today' | 'week' | 'month' | 'all'`; `getTabDateRange()` exportado
+  - `EVENT_FOR_LIST_SELECT` com join de checklists + checklist_items
+  - `useEventsTabCounts()`: 4 queries COUNT paralelas (staleTime 2min)
+  - `useEventsInfinite(filters)`: `useInfiniteQuery` offset-based, page 20
+  - `useEventsKpis()`: % médio de checklists da semana + count próximos 7 dias sem checklist
+- `src/components/features/events/event-temporal-tabs.tsx` (NOVO): pills com scroll horizontal, badge de contagem, scroll ativo para a aba selecionada
+- `src/components/features/events/event-day-group.tsx` (NOVO): separador com "Hoje", "Amanhã" ou data completa pt-BR
+- `src/app/(auth)/eventos/page.tsx`: reescrita completa — `EventosContent` wrappado em `<Suspense>`, abas temporais + chips de status + busca com debounce + agrupamento por data + load more + 3 empty states
+
+#### P2 — Cards Enriquecidos + KPI Cards
+- `src/lib/ploomes/sync.ts`: `eventPayload` agora inclui `client_phone`, `client_email`, `theme` do ParsedDeal
+- `src/components/features/events/events-kpi-cards.tsx` (NOVO): grid 2×2→4 colunas; cards: Festas hoje / Esta semana / Checklists % (success/warning) / Sem checklist (warning se >0); clicáveis → muda aba; skeleton loading
+- `src/components/features/events/event-card.tsx`: reescrita completa:
+  - Avatar 48px com iniciais, cor hash-based (`getAvatarColor()`)
+  - Badge "Hoje" (pulsando) quando `isToday(event.date)`
+  - Badge "Sem checklist" (âmbar) para eventos futuros sem checklists vinculados
+  - Tema da festa (`event.theme`) com ícone Tag
+  - Contato (phone/email) sempre visível mobile, expande em hover no desktop (`sm:max-h-0 sm:group-hover:max-h-14`)
+  - Barra de progresso com `animate-progress-fill` (scaleX 0→1)
+  - Skeleton atualizado com avatar circle
+- `src/app/globals.css`: `@keyframes progress-fill` (scaleX 0→1, 600ms ease-out) + `.animate-progress-fill` + `prefers-reduced-motion` guard
+- `src/app/(auth)/eventos/page.tsx`: `EventsKpiCards` renderizado entre PageHeader e abas temporais
+- Fix: `src/hooks/use-auth.ts` — `signIn()` retorna `error.message` raw (inglês) para `classifyError()` funcionar corretamente na página de login
+
 ### Fase 3 — Bloco 6: Offline Mode (2026-03-27)
 - [x] `idb` instalado (4KB, Promise-based IndexedDB)
 - [x] `src/lib/offline-db.ts`: schema IDB tipado — `checklists` (snapshot), `checklist_items` (fila de sync com index `by-checklist`), `calendar_events` (cache read-only); singleton `getOfflineDb()` SSR-safe

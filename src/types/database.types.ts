@@ -369,9 +369,12 @@ export type Event = {
   venue_id: string | null
   status: EventStatus
   client_name: string
+  client_phone: string | null  // migration 019
+  client_email: string | null  // migration 019
   birthday_person: string | null
   birthday_age: number | null
   guest_count: number | null
+  theme: string | null         // migration 019
   notes: string | null
   created_by: string
   created_at: string
@@ -386,9 +389,12 @@ export type EventInsert = {
   end_time: string
   status?: EventStatus
   client_name: string
+  client_phone?: string | null
+  client_email?: string | null
   birthday_person?: string | null
   birthday_age?: number | null
   guest_count?: number | null
+  theme?: string | null
   notes?: string | null
   event_type_id?: string | null
   package_id?: string | null
