@@ -128,13 +128,10 @@ export function useAuth() {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
 
       if (error) {
-        const message =
-          error.message === 'Invalid login credentials'
-            ? 'E-mail ou senha incorretos'
-            : 'Erro ao fazer login. Tente novamente.'
-
-        setState((prev) => ({ ...prev, loading: false, error: message }))
-        return { success: false, error: message }
+        // Retorna a mensagem bruta em inglês do Supabase para que classifyError() no
+        // login page possa classificar corretamente (credentials / server / rate_limit etc.)
+        setState((prev) => ({ ...prev, loading: false, error: error.message }))
+        return { success: false, error: error.message }
       }
 
       setState((prev) => ({ ...prev, loading: false, error: null }))
