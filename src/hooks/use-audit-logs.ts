@@ -3,15 +3,18 @@
 import { useInfiniteQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useUnitStore } from '@/stores/unit-store'
+import { useAuthReadyStore } from '@/stores/auth-store'
 import type { AuditLogWithUser, AuditLogFilters } from '@/types/database.types'
 
 const PAGE_SIZE = 100
 
 export function useAuditLogs(filters: AuditLogFilters = {}) {
   const { activeUnitId } = useUnitStore()
+  const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
 
   return useInfiniteQuery({
     queryKey: ['audit-logs', activeUnitId, filters],
+    enabled: isSessionReady,
     queryFn: async ({ pageParam }) => {
       const supabase = createClient()
 

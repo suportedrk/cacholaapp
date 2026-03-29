@@ -63,12 +63,12 @@ export default function EquipamentosPage() {
           />
         </div>
 
-        <Select value={category || '__all__'} onValueChange={(v: string | null) => setCategory(v === '__all__' ? '' : (v ?? ''))}>
+        <Select value={category || null} onValueChange={(v: string | null) => setCategory(v === 'all' ? '' : (v ?? ''))}>
           <SelectTrigger className="w-full sm:w-48">
-            <SelectValue placeholder="Categoria" />
+            <SelectValue placeholder="Todas as categorias" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="__all__">Todas as categorias</SelectItem>
+            <SelectItem value="all">Todas as categorias</SelectItem>
             {categories.map((c) => (
               <SelectItem key={c} value={c}>{c}</SelectItem>
             ))}

@@ -1,9 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Plus, FileText, Pencil, Trash2, ChevronLeft } from 'lucide-react'
+import { Plus, FileText, Pencil, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { PageHeader } from '@/components/shared/page-header'
 import { EmptyState } from '@/components/shared/empty-state'
@@ -21,28 +20,19 @@ export default function TemplatesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Link
-          href="/checklists"
-          className="text-muted-foreground hover:text-foreground transition-colors"
-          aria-label="Voltar"
-        >
-          <ChevronLeft className="w-5 h-5" />
-        </Link>
-        <PageHeader
-          title="Templates de Checklist"
-          description="Crie modelos reutilizáveis para seus checklists"
-          actions={
-            <Button
-              size="sm"
-              onClick={() => router.push('/checklists/templates/novo')}
-            >
-              <Plus className="w-3.5 h-3.5 mr-1" />
-              Novo Template
-            </Button>
-          }
-        />
-      </div>
+      <PageHeader
+        title="Templates de Checklist"
+        description="Crie modelos reutilizáveis para seus checklists"
+        actions={
+          <Button
+            size="sm"
+            onClick={() => router.push('/checklists/templates/novo')}
+          >
+            <Plus className="w-3.5 h-3.5 mr-1" />
+            Novo Template
+          </Button>
+        }
+      />
 
       {/* Loading */}
       {isLoading && (

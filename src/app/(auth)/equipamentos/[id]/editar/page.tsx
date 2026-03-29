@@ -4,7 +4,6 @@ import { use } from 'react'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { buttonVariants } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
 import { PageHeader } from '@/components/shared/page-header'
 import { useEquipmentItem } from '@/hooks/use-equipment'
 import { EquipmentForm } from '@/components/features/equipment/equipment-form'
@@ -38,12 +37,6 @@ export default function EditarEquipamentoPage({ params }: { params: Promise<{ id
       <PageHeader
         title="Editar Equipamento"
         description={equipment.name}
-        actions={
-          <Link href={`/equipamentos/${id}`} className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }))}>
-            <ArrowLeft className="w-4 h-4 mr-1.5" />
-            Voltar
-          </Link>
-        }
       />
       <div className="rounded-xl border bg-card p-6">
         <EquipmentForm equipment={equipment} />

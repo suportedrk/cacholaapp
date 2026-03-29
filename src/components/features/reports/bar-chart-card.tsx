@@ -73,7 +73,7 @@ export function BarChartCard({
           Nenhum dado no período
         </div>
       ) : (
-        <ResponsiveContainer width="100%" height={height}>
+        <ResponsiveContainer width="100%" height={height} debounce={50}>
           <BarChart data={data} margin={{ top: 4, right: 8, left: -8, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
             <XAxis

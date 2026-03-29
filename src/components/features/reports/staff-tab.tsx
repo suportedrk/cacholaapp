@@ -7,6 +7,7 @@ import { ReportStatsCard } from './report-stats-card'
 import { HorizontalBarChartCard } from './horizontal-bar-chart-card'
 import { ExportButton } from './export-button'
 import type { ReportFilters } from '@/types/database.types'
+import { CHART_COLORS } from '@/lib/constants/brand-colors'
 
 type StaffTabProps = {
   filters:  ReportFilters
@@ -85,13 +86,13 @@ export function StaffTab({ filters, unitName }: StaffTabProps) {
           title="Eventos por colaborador"
           data={eventsData}
           loading={byEvents.isLoading}
-          color="#7C8D78"
+          color={CHART_COLORS.staffEvents}
         />
         <HorizontalBarChartCard
           title="Checklists concluídos por colaborador"
           data={checklistsData}
           loading={byChecklists.isLoading}
-          color="#6B9E8B"
+          color={CHART_COLORS.staffChecklists}
         />
       </div>
 

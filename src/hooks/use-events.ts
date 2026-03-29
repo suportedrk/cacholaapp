@@ -6,6 +6,7 @@ import type { EventWithDetails, EventInsert, EventUpdate, EventStatus } from '@/
 import { toast } from 'sonner'
 import { notifyEventCreated, notifyStatusChanged } from '@/lib/notifications'
 import { useUnitStore } from '@/stores/unit-store'
+import { useAuthReadyStore } from '@/stores/auth-store'
 
 const EVENT_WITH_DETAILS_SELECT = `
   *,
@@ -37,9 +38,11 @@ export type EventFilters = {
 export function useEvents(filters: EventFilters = {}) {
   const { search, status, dateFrom, dateTo, page = 1, pageSize = 12 } = filters
   const { activeUnitId } = useUnitStore()
+  const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
 
   return useQuery({
     queryKey: ['events', filters, activeUnitId],
+    enabled: isSessionReady,
     queryFn: async () => {
       const supabase = createClient()
 
@@ -60,8 +63,11 @@ export function useEvents(filters: EventFilters = {}) {
       }
 
       // Filtro por status
+      // Por padrão (sem filtro), 'lost' é excluído — o usuário precisa selecionar explicitamente
       if (status?.length) {
         query = query.in('status', status)
+      } else {
+        query = query.neq('status', 'lost')
       }
 
       // Filtro por período

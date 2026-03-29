@@ -2,104 +2,263 @@
 
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { X } from 'lucide-react'
-import { NAV_ITEMS } from './nav-items'
+import Image from 'next/image'
+import { X, ChevronLeft, ChevronRight } from 'lucide-react'
+import { NAV_GROUPS } from './nav-items'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { APP_NAME } from '@/lib/constants'
+import { useUnitBrand } from '@/hooks/use-unit-settings'
+import { createClient } from '@/lib/supabase/client'
 
 interface SidebarProps {
   isOpen: boolean
+  isCollapsed: boolean
   onClose: () => void
+  onToggleCollapse: () => void
 }
 
-export function Sidebar({ isOpen, onClose }: SidebarProps) {
+function useSidebarLogo() {
+  const { logoPath, displayName, accentColor } = useUnitBrand()
+  if (!logoPath) return { logoUrl: null, displayName, accentColor }
+
+  const { data } = createClient().storage.from('user-avatars').getPublicUrl(logoPath)
+  return { logoUrl: data.publicUrl, displayName, accentColor }
+}
+
+export function Sidebar({ isOpen, isCollapsed, onClose, onToggleCollapse }: SidebarProps) {
   const pathname = usePathname()
+  const { logoUrl, displayName } = useSidebarLogo()
 
   return (
     <>
-      {/* Overlay mobile */}
+      {/* ── Overlay mobile ── */}
       {isOpen && (
         <div
-          className="fixed inset-0 z-30 bg-surface-inverse/50 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-30 bg-black/50 backdrop-blur-[2px] lg:hidden"
           onClick={onClose}
           aria-hidden="true"
         />
       )}
 
-      {/* Sidebar */}
+      {/* ── Sidebar ── */}
       <aside
+        data-tour="sidebar"
         className={cn(
-          // Base
-          'fixed top-0 left-0 z-40 h-full w-64 flex flex-col',
-          'bg-sidebar border-r border-sidebar-border',
-          'transition-transform duration-300 ease-in-out',
-          // Mobile: slide in/out
-          'lg:translate-x-0 lg:static lg:z-auto',
-          isOpen ? 'translate-x-0' : '-translate-x-full'
+          // base
+          'fixed top-0 left-0 h-full z-40 flex flex-col',
+          'bg-card border-r border-border',
+          // transição de largura + transform
+          'transition-[width,transform] duration-300 ease-in-out overflow-hidden',
+          // mobile: largura fixa 240px, slide por transform
+          'w-64',
+          isOpen ? 'translate-x-0' : '-translate-x-full',
+          // desktop: estática, largura controlada pelo estado
+          'lg:static lg:translate-x-0 lg:z-auto',
+          isCollapsed ? 'lg:w-16' : 'lg:w-64',
         )}
         aria-label="Navegação principal"
       >
-        {/* Header da sidebar */}
-        <div className="flex items-center justify-between h-16 px-4 border-b border-sidebar-border shrink-0">
-          <Link href="/dashboard" className="flex items-center gap-2" onClick={onClose}>
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0">
-              <span className="text-sm font-bold text-primary-foreground">C</span>
+        {/* ── Header ── */}
+        <div className={cn(
+          'flex items-center h-14 shrink-0 border-b border-border',
+          'transition-[padding] duration-300',
+          isCollapsed ? 'lg:justify-center lg:px-0 px-4' : 'px-4',
+        )}>
+          {/* Logo link — desktop collapsed mostra só ícone */}
+          <Link
+            href="/dashboard"
+            onClick={onClose}
+            className={cn(
+              'flex items-center gap-2 min-w-0',
+              isCollapsed && 'lg:justify-center',
+            )}
+          >
+            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0 overflow-hidden">
+              {logoUrl ? (
+                <Image
+                  src={logoUrl}
+                  alt={`Logo ${displayName || APP_NAME}`}
+                  width={32}
+                  height={32}
+                  className="w-full h-full object-cover"
+                  unoptimized
+                />
+              ) : (
+                <span className="text-sm font-bold text-primary-foreground">
+                  {(displayName || APP_NAME).charAt(0).toUpperCase()}
+                </span>
+              )}
             </div>
-            <span className="font-semibold text-foreground text-sm">{APP_NAME}</span>
+            <span className={cn(
+              'font-semibold text-foreground text-sm truncate',
+              'transition-[opacity,width] duration-150 overflow-hidden',
+              isCollapsed ? 'lg:opacity-0 lg:w-0' : 'opacity-100 w-auto',
+            )}>
+              {displayName || APP_NAME}
+            </span>
           </Link>
 
           {/* Fechar no mobile */}
           <button
             onClick={onClose}
-            className="lg:hidden p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+            className={cn(
+              'lg:hidden ml-auto p-1.5 rounded-md',
+              'text-muted-foreground hover:text-foreground hover:bg-muted',
+              'transition-colors',
+            )}
             aria-label="Fechar menu"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Navegação */}
-        <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-0.5">
-          {NAV_ITEMS.map((item) => {
-            const isActive =
-              item.href === '/dashboard'
-                ? pathname === '/dashboard'
-                : pathname.startsWith(item.href)
+        {/* ── Navegação ── */}
+        <nav className="flex-1 overflow-y-auto overflow-x-hidden py-3">
+          {NAV_GROUPS.map((group, gi) => (
+            <div key={gi} className={gi > 0 ? 'mt-1' : ''}>
+              {/* Label de seção */}
+              {group.label && (
+                <>
+                  {/* Desktop colapsado: apenas divisor */}
+                  <div className={cn(
+                    'hidden lg:block mx-3 h-px bg-border my-2',
+                    isCollapsed ? 'lg:block' : 'lg:hidden',
+                  )} />
+                  {/* Desktop expandido + mobile: label texto */}
+                  <p className={cn(
+                    'px-4 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60',
+                    'transition-[opacity,height] duration-150 overflow-hidden',
+                    isCollapsed ? 'lg:opacity-0 lg:h-0 lg:py-0' : 'opacity-100',
+                  )}>
+                    {group.label}
+                  </p>
+                </>
+              )}
 
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={onClose}
-                className={cn(
-                  'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium',
-                  'transition-colors duration-150',
-                  'min-h-[44px]', // área de toque mínima
-                  isActive
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
-                )}
-                aria-current={isActive ? 'page' : undefined}
-              >
-                <item.icon
-                  className={cn('w-5 h-5 shrink-0', isActive ? 'text-primary-foreground' : 'text-muted-foreground')}
-                />
-                <span className="truncate">{item.label}</span>
-                {item.badge != null && item.badge > 0 && (
-                  <span className="ml-auto text-xs font-medium bg-primary/20 text-primary px-1.5 py-0.5 rounded-full">
-                    {item.badge > 99 ? '99+' : item.badge}
-                  </span>
-                )}
-              </Link>
-            )
-          })}
+              {/* Items */}
+              <div className="px-2 space-y-0.5">
+                {group.items.map((item) => {
+                  const isActive =
+                    item.href === '/dashboard'
+                      ? pathname === '/dashboard'
+                      : pathname.startsWith(item.href)
+
+                  const linkClassName = cn(
+                    'flex items-center rounded-lg min-h-[44px]',
+                    'transition-all duration-150',
+                    'gap-3 px-3 py-2',
+                    isCollapsed && 'lg:justify-center lg:px-0 lg:gap-0',
+                    isActive
+                      ? 'bg-primary/10 text-primary dark:bg-primary/20'
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                  )
+
+                  const linkChildren = (
+                    <>
+                      <item.icon
+                        className={cn(
+                          'w-5 h-5 shrink-0',
+                          isActive ? 'text-primary' : 'text-muted-foreground',
+                        )}
+                      />
+                      <span className={cn(
+                        'text-sm font-medium truncate',
+                        'transition-[opacity,width] duration-150 overflow-hidden',
+                        isCollapsed ? 'lg:opacity-0 lg:w-0' : 'opacity-100 w-auto',
+                      )}>
+                        {item.label}
+                      </span>
+                      {item.badge != null && item.badge > 0 && (
+                        <span className={cn(
+                          'ml-auto text-xs font-medium rounded-full px-1.5 py-0.5',
+                          'bg-primary/20 text-primary',
+                          'transition-[opacity,width] duration-150 overflow-hidden',
+                          isCollapsed ? 'lg:opacity-0 lg:w-0 lg:px-0' : 'opacity-100',
+                        )}>
+                          {item.badge > 99 ? '99+' : item.badge}
+                        </span>
+                      )}
+                    </>
+                  )
+
+                  // Tooltip só ativo quando collapsed (desktop)
+                  return isCollapsed ? (
+                    <Tooltip key={item.href}>
+                      <TooltipTrigger
+                        render={
+                          <Link
+                            href={item.href}
+                            onClick={onClose}
+                            aria-current={isActive ? 'page' : undefined}
+                            className={linkClassName}
+                          />
+                        }
+                      >
+                        {linkChildren}
+                      </TooltipTrigger>
+                      <TooltipContent side="right" sideOffset={8}>
+                        {item.label}
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={onClose}
+                      aria-current={isActive ? 'page' : undefined}
+                      className={linkClassName}
+                    >
+                      {linkChildren}
+                    </Link>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
         </nav>
 
-        {/* Rodapé da sidebar */}
-        <div className="px-4 py-3 border-t border-sidebar-border shrink-0">
-          <p className="text-xs text-muted-foreground text-center">
+        {/* ── Footer ── */}
+        <div className={cn(
+          'shrink-0 border-t border-border',
+          'flex items-center px-4 py-3',
+          isCollapsed && 'lg:justify-center lg:px-2',
+        )}>
+          {/* Versão — esconde quando collapsed */}
+          <span className={cn(
+            'text-xs text-muted-foreground',
+            'transition-[opacity,width] duration-150 overflow-hidden',
+            isCollapsed ? 'lg:opacity-0 lg:w-0' : 'opacity-100 w-auto',
+          )}>
             v{process.env.NEXT_PUBLIC_APP_VERSION ?? '0.1.0'}
-          </p>
+          </span>
+
+          {/* Botão collapse — apenas desktop */}
+          <Tooltip>
+            <TooltipTrigger
+              onClick={onToggleCollapse}
+              className={cn(
+                'hidden lg:flex items-center justify-center',
+                'p-1.5 rounded-md',
+                'text-muted-foreground hover:text-foreground hover:bg-muted',
+                'transition-colors ml-auto',
+                isCollapsed && 'lg:ml-0',
+              )}
+              aria-label={isCollapsed ? 'Expandir menu' : 'Colapsar menu'}
+            >
+              {isCollapsed
+                ? <ChevronRight className="w-4 h-4" />
+                : <ChevronLeft className="w-4 h-4" />
+              }
+            </TooltipTrigger>
+            <TooltipContent side="right" sideOffset={8}>
+              {isCollapsed ? 'Expandir menu' : 'Colapsar menu'}
+            </TooltipContent>
+          </Tooltip>
         </div>
       </aside>
     </>

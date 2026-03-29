@@ -80,6 +80,16 @@ src/
 - **LEIA ANTES** de criar qualquer componente visual
 - **Tokens aplicados** em `src/app/globals.css`
 
+### Foundation Layer (feat/ui-polish-foundation — 2026-03-28)
+
+| Artefato | Descrição |
+|----------|-----------|
+| `src/app/globals.css` | Todos os tokens CSS §1.1–1.5 + dark mode completo + `.interactive` + `prefers-reduced-motion` |
+| `src/components/theme-provider.tsx` | ThemeProvider + `useTheme()` — light/dark/system, localStorage, prefers-color-scheme |
+| `src/app/layout.tsx` | Script anti-FOUC inline + `<ThemeProvider>` no root |
+| `src/components/layout/navbar.tsx` | Toggle Sol/Lua (`<Sun>/<Moon>`) integrado ao `useTheme()` |
+| `src/lib/constants/brand-colors.ts` | Hex centralizados para Recharts/html2canvas/e-mails |
+
 ### Cores da Marca
 
 | Token | oklch | Hex | Uso |
@@ -91,10 +101,32 @@ src/
 | `--brand-primary-dark` | `oklch(0.487 0.044 144)` | ~`#697a65` | Hover de primário |
 | `--brand-primary-light` | `oklch(0.667 0.038 144)` | ~`#8fa08b` | Backgrounds sutis |
 
+### Rampas de Cor (novas)
+- **`bg-brand-50` … `bg-brand-900`** — Verde sálvia completo (50–900)
+- **`bg-beige-50` … `bg-beige-900`** — Bege quente completo (50–900)
+
+### Tokens Semânticos Disponíveis (Tailwind utilities)
+- **Superfícies:** `bg-surface-primary`, `bg-surface-secondary`, `bg-surface-tertiary`, `bg-surface-inverse`
+- **Texto:** `text-text-primary`, `text-text-secondary`, `text-text-tertiary`, `text-text-inverse`, `text-text-link`
+- **Bordas:** `border-border-default`, `border-border-strong`, `border-border-focus`
+- **Status:** `bg-status-error-bg`, `text-status-error-text`, `border-status-error-border` (e success/warning/info)
+- **Interativos:** `bg-interactive-primary`, `hover:bg-interactive-primary-hover` etc.
+- **Sombras:** `shadow-xs`, `shadow-sm`, `shadow-md`, `shadow-lg`, `shadow-xl`
+- **Z-index:** `z-dropdown` (10), `z-sticky` (20), `z-overlay` (30), `z-modal` (40), `z-toast` (50), `z-tooltip` (60)
+
 ### Convenção de Cores
-- NUNCA usar hex diretamente na UI
-- SEMPRE usar tokens semânticos: `bg-primary`, `text-foreground`, `border-border`, etc.
-- Tailwind v4: as classes utilitárias são geradas via `@theme inline {}` em globals.css
+- NUNCA usar hex diretamente na UI — sempre tokens semânticos Tailwind
+- **Exceções legítimas** (hex obrigatório): Recharts color props, html2canvas, HTML de e-mail
+  → Usar `CHART_COLORS` / `BRAND_GREEN` / `BRAND_BEIGE` de `src/lib/constants/brand-colors.ts`
+- Tailwind v4: classes utilitárias geradas via `@theme inline {}` em globals.css
+
+### Dark Mode
+- Toggle no navbar (ícone Sol/Lua) — salvo em `localStorage` com chave `cachola-theme`
+- Valores: `'light'` | `'dark'` | `'system'` (default)
+- Sistema: `prefers-color-scheme` como fallback quando `'system'`
+- Anti-FOUC: script inline no `<head>` antes da hidratação React
+- CSS: `.dark` e `[data-theme="dark"]` aplicados no `<html>`
+- `prefers-reduced-motion`: todas as transições/animações desabilitadas globalmente
 
 ---
 
@@ -298,8 +330,8 @@ docker compose -f docker-compose.prod.yml logs -f app
 ### Fase 0 — Bloco 5: Layout Base (2026-03-26)
 - [x] `src/lib/providers.tsx`: QueryClientProvider + TooltipProvider + Sonner + ReactQueryDevtools
 - [x] `src/components/layout/sidebar.tsx`: fixed desktop / drawer mobile, nav items
-- [x] `src/components/layout/navbar.tsx`: hamburguer, breadcrumbs, NotificationBell, avatar + dropdown
-- [x] `src/components/layout/breadcrumbs.tsx`: geração automática por rota
+- [x] `src/components/layout/navbar.tsx`: hamburguer, breadcrumbs (desktop), MobileBackButton (mobile sub-pages) ou logo (top-level), NotificationBell, avatar + dropdown
+- [x] `src/components/layout/breadcrumbs.tsx`: geração automática por rota; exporta `Breadcrumbs` (desktop) + `MobileBackButton` (mobile, com `fallback` prop)
 - [x] `src/app/(auth)/layout.tsx` + `src/components/layout/app-layout.tsx`
 - [x] `src/app/(auth)/dashboard/page.tsx`: placeholder
 
@@ -361,6 +393,8 @@ docker compose -f docker-compose.prod.yml logs -f app
 | `/manutencao/nova` | `(auth)/manutencao/nova/page.tsx` | ✅ funcional (Fase 2 Bloco 1) |
 | `/manutencao/[id]` | `(auth)/manutencao/[id]/page.tsx` | ✅ funcional (Fase 2 Bloco 1) |
 | `/manutencao/[id]/editar` | `(auth)/manutencao/[id]/editar/page.tsx` | ✅ funcional (Fase 2 Bloco 1) |
+| `/manutencao/fornecedores/novo` | `(auth)/manutencao/fornecedores/novo/page.tsx` | ✅ funcional (Prompt 4) |
+| `/manutencao/fornecedores/[id]` | `(auth)/manutencao/fornecedores/[id]/page.tsx` | ✅ funcional (Prompt 4) |
 | `/admin/unidades` | `(auth)/admin/unidades/page.tsx` | ✅ funcional (Fase 2.5) |
 | `/admin/unidades/nova` | `(auth)/admin/unidades/nova/page.tsx` | ✅ funcional (Fase 2.5) |
 | `/admin/unidades/[id]` | `(auth)/admin/unidades/[id]/page.tsx` | ✅ funcional (Fase 2.5) |
@@ -370,6 +404,8 @@ docker compose -f docker-compose.prod.yml logs -f app
 | `/equipamentos/[id]/editar` | `(auth)/equipamentos/[id]/editar/page.tsx` | ✅ funcional (Fase 3 Bloco 2) |
 | `/relatorios` | `(auth)/relatorios/page.tsx` | ✅ funcional (Fase 3 Bloco 1) |
 | `/admin/logs` | `(auth)/admin/logs/page.tsx` | ✅ funcional (Fase 3 Bloco 4) |
+| `/configuracoes/integracoes/ploomes` | `(auth)/configuracoes/integracoes/ploomes/page.tsx` | ✅ funcional (Fase 4) |
+| `/configuracoes/integracoes/ploomes/mapeamento` | `(auth)/configuracoes/integracoes/ploomes/mapeamento/page.tsx` | ✅ funcional (Fase 4) |
 | `/login` | `(public)/login/page.tsx` | ✅ funcional |
 | `/recuperar-senha` | `(public)/recuperar-senha/page.tsx` | ✅ funcional |
 
@@ -411,11 +447,24 @@ docker compose -f docker-compose.prod.yml logs -f app
 - [x] `src/hooks/use-checklists.ts`: useChecklists (filtros+paginação), useChecklist, useEventChecklists, useCreateChecklist, useUpdateChecklistStatus, useDeleteChecklist, useUpdateChecklistItem (status/notes/photo+Storage), useChecklistTemplates, useChecklistTemplate, useCreateTemplate, useUpdateTemplate, useDeleteTemplate, useChecklistCategories
 - [x] `src/components/features/checklists/checklist-progress.tsx`: barra de progresso + calcProgress() exportado
 - [x] `src/components/features/checklists/checklist-card.tsx`: card com badge de status, progresso, overdue highlight + skeleton
-- [x] `src/components/features/checklists/checklist-item-row.tsx`: toque para ciclar status (pending→done→na), notas expandíveis, upload de foto com câmera
+- [x] `src/components/features/checklists/checklist-item-row.tsx`: toque para ciclar status (pending→done→na), notas expandíveis, upload de foto com câmera; polimento Prompt 7 (2026-03-28):
+  - Touch target 48px (`w-12 h-12`) com círculo visual interno (`w-7 h-7`) — nenhum clique acidental
+  - SVG inline com `animate-check-draw` (stroke-dashoffset 20→0 em 280ms) ao marcar done
+  - Flash verde overlay (`.animate-item-flash`) + haptic `navigator.vibrate(10)` ao concluir
+  - "Adicionar nota" / "Ver nota" como link de texto inline (não ícone isolado)
+  - Notas com `autoFocus` + botão "Fechar nota" inline
+  - Câmera apenas quando `onPhotoChange` fornecido (sem ícone morto no modo read-only)
 - [x] `src/components/features/checklists/sortable-template-items.tsx`: DnD reorder com @dnd-kit/core + @dnd-kit/sortable
 - [x] `src/components/features/checklists/add-checklist-modal.tsx`: modal de criação a partir de template
 - [x] `src/app/(auth)/checklists/page.tsx`: lista paginada com filtros de status + categoria
-- [x] `src/app/(auth)/checklists/[id]/page.tsx`: tela de preenchimento mobile-first (footer sticky + finalizar)
+- [x] `src/app/(auth)/checklists/[id]/page.tsx`: tela de preenchimento mobile-first (footer sticky + finalizar); polimento Prompt 7 (2026-03-28):
+  - Sticky sub-header: `-mx-4 lg:-mx-6` full-width dentro do `<main p-4>`, com título + evento + barra de progresso + contagem X/Y + badge de status
+  - `SaveIndicator`: "Salvando…" (animate-pulse) → "Salvo ✓" (2s auto-dismiss) via `useEffect` em `isUpdating`
+  - `EmptyState`: ícone ClipboardList + textos descritivos
+  - `CompletedBanner`: ícone CheckCircle2 com `animate-celebrate` (scale 0.4→1.12→1 bounce)
+  - Banner offline/syncing com dark mode completo
+  - Footer full-width `size="lg"` com contagem inline no botão
+  - `globals.css`: `@keyframes check-draw`, `item-flash-done`, `celebrate-check` + classes `.animate-check-draw` e `.animate-item-flash` + token `--animate-celebrate`
 - [x] `src/app/(auth)/checklists/templates/page.tsx`: lista de templates com editar/desativar
 - [x] `src/app/(auth)/checklists/templates/novo/page.tsx`: formulário de criação com DnD
 - [x] `src/app/(auth)/checklists/templates/[id]/editar/page.tsx`: formulário de edição com DnD
@@ -426,7 +475,21 @@ docker compose -f docker-compose.prod.yml logs -f app
 - [x] `src/components/features/dashboard/stats-card.tsx`: card de métrica com ícone, valor, loading skeleton
 - [x] `src/components/features/dashboard/next-event-card.tsx`: próximo evento com equipe + link direto
 - [x] `src/components/features/dashboard/event-quick-view.tsx`: Sheet drawer com detalhes do evento
-- [x] `src/components/features/dashboard/calendar-view.tsx`: calendário 3 visões (mês/semana/dia) com CSS Grid
+- [x] `src/components/features/dashboard/calendar-view.tsx`: calendário 3 visões (mês/semana/dia) com CSS Grid + polimento visual (Prompt 6 — 2026-03-28):
+  - Popover ao clicar número do dia (quando há eventos) via base-ui Popover com `render` prop
+  - Hoje: `bg-brand-50` na célula; círculo filled (light) / ring-2 (dark)
+  - Dia cheio (≥3 eventos): `border-l-2 border-l-primary/40 bg-primary/[0.03]`
+  - Hover nas células: `hover:bg-muted/30`
+  - Badge "N eventos" no header da visão mensal
+  - Botão "Hoje" quando fora do período atual (desktop)
+  - Toggle calendário/lista no mobile (ícones CalendarDays / LayoutList)
+  - `ListView` — visão lista para mobile: agrupa por data, sort por hora, touch targets 44px
+  - Transição slide direcionada ao trocar mês (`navDir` state + `animate-slide-left-in` / `animate-slide-right-in`)
+  - Skeleton granular por célula (skeleton-shimmer) substituindo animate-pulse
+  - Eventos `lost`: `opacity-60` + `line-through`; dot vermelho com opacity
+  - Dark mode completo: todos os pills/dots com variantes `dark:`
+  - `globals.css`: `@keyframes slide-left-in` + `slide-right-in` + tokens `--animate-slide-left-in/right-in`
+  - `popover.tsx`: `render` prop adicionada ao tipo de `PopoverTrigger`
 - [x] `src/app/(auth)/dashboard/page.tsx`: página completa substituindo placeholder
 
 ### Fase 2 — Bloco 1: Módulo de Manutenção (2026-03-27)
@@ -477,11 +540,253 @@ docker compose -f docker-compose.prod.yml logs -f app
 - [x] `src/app/(auth)/admin/unidades/[id]/page.tsx`: editar dados + gerenciar usuários vinculados (add/remove/change role)
 - [x] `src/app/(auth)/admin/usuarios/[id]/page.tsx`: seção Unidades Vinculadas — lista com change role + remove
 
-### Fase 2 — Bloco 2: Upload de Fotos (2026-03-27)
+### Manutenção — Schema Expandido (Migration 017 — 2026-03-28)
+
+#### Tipos de manutenção
+- `emergency`: resolução imediata (brinquedo quebrou durante evento)
+- `punctual`: tem prazo definido (trocar lâmpada)
+- `recurring`: tarefas rotineiras de curto prazo (limpar banheiro toda segunda)
+- `preventive`: plano de manutenção programada com checklist técnico (revisão ar-cond. a cada 6 meses)
+
+#### Tabelas novas
+- `maintenance_suppliers`: fornecedores/empresas (unit_id, company_name, cnpj, category, rating 1–5)
+- `supplier_contacts`: contatos N:1 do fornecedor (name, role, phone, whatsapp, is_primary)
+- `supplier_documents`: documentos do fornecedor com vencimento (file_url, expires_at)
+- `maintenance_costs`: custos com workflow de aprovação (amount, cost_type, status: pending→approved/rejected)
+
+#### Novas colunas em maintenance_orders
+- `supplier_id`: FK para maintenance_suppliers (nullable)
+- `cost_estimate`: estimativa de custo DECIMAL(10,2) (nullable)
+- `completed_at`: timestamp de conclusão para cálculo de SLA (nullable)
+- `preventive_plan`: JSONB `{ frequency, interval, checklist_items[], last_performed_at, next_due_date, advance_notice_days, linked_equipment_id }`
+
+#### Diferença recurrence_rule vs preventive_plan
+- `recurrence_rule` → tarefas rotineiras de curto prazo (semanal/quinzenal)
+- `preventive_plan` → manutenção programada médio/longo prazo com checklist técnico
+
+#### Buckets Storage
+- `supplier-documents`: documentos de fornecedores (10MB, PDF/imagem/doc, privado)
+- `maintenance-receipts`: comprovantes de custos (10MB, PDF/imagem, privado)
+
+#### Workflow de custos (maintenance_costs)
+1. Técnico registra custo (`status: pending`) com comprovante
+2. Gerente aprova ou reprova (`status: approved/rejected`) com motivo em `review_notes`
+3. Financeiro visualiza custos aprovados (filtro por status)
+
+#### Notificações de custos (src/lib/notifications.ts)
+- `cost_submitted`: técnico submeteu → notifica gerentes da unidade
+- `cost_approved`: gerente aprovou → notifica técnico que submeteu
+- `cost_rejected`: gerente rejeitou → notifica técnico (com motivo)
+
+### Manutenção — Dashboard / KPIs (Prompt 2 — 2026-03-28)
+
+#### API
+- `GET /api/maintenance/stats?unit_id=X` — retorna KPIs + dados de gráficos
+- 10 queries em `Promise.all`; processamento de gaps semanais e médias no JS
+- Auth: cookie-based via `createClient()` server (padrão do projeto)
+
+#### Hook
+- `useMaintenanceStats()` em `src/hooks/use-maintenance-stats.ts`
+- `staleTime: 2min`, `enabled: !!activeUnitId && isSessionReady`
+- `retry`: não retenta 401/403
+
+#### Componentes
+- `MaintenanceKPIs`: 5 cards — abertas, atrasadas, concluídas (mês), tempo médio, custos (mês)
+  - Grid: `grid-cols-2 sm:grid-cols-3 lg:grid-cols-5`; card 5 tem `col-span-2 sm:col-span-1`
+  - Variante `error` (fundo vermelho) no card Atrasadas quando `count > 0`
+  - Sub-texto emergenciais (vermelho) e pendentes de aprovação (âmbar)
+  - Counter animation: `requestAnimationFrame` com ease-out cúbico (500ms)
+- `MaintenanceCharts`: AreaChart semanal + barras CSS por tipo/setor
+  - AreaChart: Recharts `ResponsiveContainer` 140px, gradiente `#22C55E`
+  - Barras CSS: `transition-width 500ms ease-out`, delay por índice
+  - Stagger de entrada: `animationDelay` 0–50ms, `animationFillMode: backwards`
+
+#### Cores por tipo (hex — Recharts/CSS)
+- `emergency`=#EF4444, `punctual`=#F59E0B, `recurring`=#22C55E, `preventive`=#3B82F6
+- Setores: `BRAND_GREEN[500]` (#7C8D78)
+
+#### Animação `fadeSlideUp`
+- `@keyframes fade-slide-up` em `globals.css`; `prefers-reduced-motion` sem translateY
+- Token: `--animate-fade-slide-up`; classe: `.animate-fade-slide-up`
+
+### Manutenção — Fornecedores (Prompt 4 — 2026-03-28)
+
+#### Hooks (`src/hooks/use-suppliers.ts`)
+- `useSuppliers(filters)`: lista com `*, contacts:supplier_contacts(*), documents_count:supplier_documents(count)`
+- `useSupplier(id)`: detalhe com `*, contacts:supplier_contacts(*), documents:supplier_documents(*)`
+- `useCreateSupplier`, `useUpdateSupplier`, `useDeleteSupplier`
+- `useCreateContact`, `useUpdateContact`, `useDeleteContact` — lógica de contato principal (batch update is_primary=false antes)
+- `useUploadSupplierDocument`: fake progress interval 12%/180ms→85%, snap 100% ao concluir; path `{supplierId}/{timestamp}_{safeFilename}`
+- `useDeleteSupplierDocument`: remove registro + storage (best-effort)
+- Exports: `SUPPLIER_CATEGORIES`, `SupplierFilters`, `SupplierWithCounts`, `SupplierWithDetails`, `SupplierInsert`, `ContactInsert`
+
+#### Componentes
+- `src/components/features/maintenance/supplier-rating.tsx`: 5 estrelas, hover preview, nullable (clicar estrela selecionada remove rating)
+- `src/components/features/maintenance/supplier-card.tsx`: avatar Building2, category color badge, primary contact, doc/contact counts, CNPJ mono, `SupplierCardSkeleton`
+- `src/components/features/maintenance/supplier-form.tsx`: form criação/edição com CNPJ+phone mascarados, rating stars, category select, is_active Switch
+- `src/components/features/maintenance/contact-list.tsx`: lista inline de contatos com add/edit/delete; badge "Principal" (estrela âmbar); ConfirmDialog para exclusão
+- `src/components/features/maintenance/supplier-document-section.tsx`: upload com progress bar, badges de vencimento (vermelho=vencido, âmbar≤30 dias), view por tipo (lightbox imagens, window.open PDFs), `formatBytes` helper
+- `src/components/features/maintenance/supplier-list.tsx`: busca debounce 300ms, filtro categoria Select, FilterChips status Ativo/Inativo, grid `lg:grid-cols-2`
+
+#### Páginas
+- `src/app/(auth)/manutencao/fornecedores/novo/page.tsx`: form de criação → redirect para `/manutencao/fornecedores/[id]`
+- `src/app/(auth)/manutencao/fornecedores/[id]/page.tsx`: 3 sections (Dados da Empresa, Contatos, Documentos), inline edit, delete com ConfirmDialog
+
+#### Integrações
+- `maintenance-tabs.tsx`: aba Fornecedores → `<SupplierList />` (substituiu PlaceholderTab)
+- `maintenance-form.tsx`: campo `supplier_id` (select fornecedores ativos), campo `cost_estimate`, tipo `preventive` adicionado
+
+#### Buckets Storage
+- `supplier-documents`: documentos de fornecedores (privado, path `{supplierId}/{timestamp}_{filename}`)
+
+---
+
+### Manutenção — Custos e Prestação de Contas (Prompt 5 — 2026-03-28)
+
+#### Hooks (`src/hooks/use-maintenance-costs.ts`)
+- `useMaintCosts(filters)`: lista com relações order/submitter/reviewer; pending primeiro; filtros status/tipo/período
+- `useOrderCosts(orderId)`: custos de uma ordem específica (usado no detalhe da OS)
+- `useCostsSummary()`: 3 KPIs em queries paralelas — `pendingCount`, `approvedSum` (mês), `totalSum` (mês)
+- `useCurrentUser()`: perfil atual para checar role/id (permission gate nos componentes)
+- `useSubmitCost()`: insere com `status='pending'`, invalida queries de custos + stats
+- `useApproveCost()`: update para `approved` + `reviewed_by/at`
+- `useRejectCost({ costId, review_notes })`: update para `rejected` + motivo obrigatório
+- `useDeleteCost({ costId, receiptUrl })`: remove registro + storage best-effort
+- `useUploadReceipt()`: upload para `maintenance-receipts` com fake progress 12%/180ms→85%
+- Exports: `COST_TYPE_LABELS`, `PERIOD_OPTIONS`, `MANAGER_ROLES`, `formatBRL()`
+
+#### Componentes
+- `src/components/features/maintenance/costs-tab.tsx`: aba Custos — 3 KPI cards (Pendentes/Aprovados/Total), filtros período+status+tipo, lista de `CostCard`, EmptyState, botão "Registrar Custo"
+- `src/components/features/maintenance/cost-card.tsx`: card com `border-l-4` por status (amber/green/red), comprovante (gera signed URL on-demand via `createSignedUrl`), ações contextuais, motivo em alert banner vermelho quando rejeitado; `CostCardSkeleton`
+- `src/components/features/maintenance/cost-form-modal.tsx`: Dialog com select ordem, descrição, currency input (máscara R$ centavos→decimal), select tipo, upload comprovante, notas
+- `src/components/features/maintenance/reject-cost-modal.tsx`: Dialog com textarea motivo (mín 10 chars), contador de caracteres
+
+#### Permissões
+- **Registrar:** qualquer usuário autenticado com acesso ao módulo
+- **Aprovar/Reprovar:** `MANAGER_ROLES = ['super_admin', 'diretor', 'gerente']` + `submitted_by !== currentUserId`
+- **Cancelar:** apenas autor (`isOwnCost && status==='pending'`) quando não for gerente (gerentes veem "Aguarda revisão")
+
+#### Integrações
+- `maintenance-tabs.tsx`: aba Custos → `<CostsTab />` (substituiu PlaceholderTab)
+- `manutencao/[id]/page.tsx`: seção "Custos" com lista inline, totalizadores (aprovado/pendente/estimativa) e barra de progresso vs `cost_estimate`
+- Input monetário: máscara centavos (`15000` → `"150,00"`), salvo como decimal `150.00`
+
+#### Buckets Storage
+- `maintenance-receipts`: comprovantes de custo (privado, path `{userId}/{timestamp}_{filename}`)
+
+### Manutenção — Histórico Consolidado (Prompt 6 — 2026-03-28)
+
+#### API
+- `GET /api/maintenance/history-summary?unit_id=X[&date_from&date_to&type&sector_id&supplier_id]`
+- KPIs: `total_completed`, `avg_resolution_hours`, `total_cost_approved`, `avg_cost_per_order`
+- Chart: `by_month[]` — últimos 12 meses fixos (count + cost), com filtros type/sector/supplier aplicados
+- Auth: cookie-based, retorna 401 sem sessão
+
+#### Hooks (`src/hooks/use-maintenance-history.ts`)
+- `useMaintenanceHistory(filters)` — `useInfiniteQuery`, 20/batch, offset pagination, status=completed
+- `useHistorySummary(filters)` — fetch para API route, `staleTime: 2min`
+- `formatResolutionTime(hours)` — `< 1h → Xmin`, `< 24h → Xh`, `>= 24h → X dias`
+- `calcResolutionHours(created_at, completed_at)` — diferença em horas, null se sem completed_at
+- `HistoryFilters` type: `date_from`, `date_to`, `type[]`, `sector_id`, `supplier_id`
+
+#### Componentes
+- `src/components/features/maintenance/history-timeline.tsx`: timeline vertical agrupada por mês
+  — `groupByMonth()` via `format(parseISO(completed_at), 'MMMM yyyy')`
+  — Dot colorido por tipo (vermelho/âmbar/verde/azul) + linha conectora `bg-border`
+  — Card com ícone, título, setor, fornecedor, data conclusão, tempo de resolução
+  — `HistoryTimelineSkeleton` incluído
+- `src/components/features/maintenance/history-tab.tsx`: aba completa
+  — 4 KPI cards (2×2 mobile, 4×1 desktop)
+  — Recharts `ComposedChart`: `Bar` (count, eixo Y esquerdo) + `Line` (cost, eixo Y direito)
+  — Filtros: date range inputs + type `FilterChip`s + sector `Select` + supplier `Select`
+  — Export Excel (`exportToExcel`) + PDF (`exportReportPDF`) — botões aparecem só quando há dados
+  — Load-more button (hasNextPage via useInfiniteQuery)
+  — Empty state (HistoryIcon), skeleton, error state
+
+#### Integração
+- `maintenance-tabs.tsx`: aba Histórico → `<HistoryTab />` (substituiu `PlaceholderTab`)
+
+---
+
+### Manutenção — Kanban Board + Detalhe Polido (Prompt 7 — 2026-03-28)
+
+#### Kanban Board
+- `src/components/features/maintenance/kanban-board.tsx` (novo): DnD com `@dnd-kit/core`
+  — `DndContext` + `DragOverlay` + `PointerSensor`(8px) + `TouchSensor`(delay 250ms)
+  — 4 colunas: open(brand) / in_progress(amber) / waiting_parts(purple) / completed(green)
+  — `KanbanColumn`: `useDroppable({ id: status })`, coluna tintada em hover via `group-data-[over=true]`
+  — `onDragEnd`: dropping em `completed` → `useCompleteMaintenanceOrder`; outros → `useChangeMaintenanceStatus`
+  — Optimistic update via `queryClient.setQueryData` + rollback em `onError`
+  — Fetch com `pageSize: 300` incluindo todos os status (sem paginação no kanban)
+  — `DragOverlay` renderiza `KanbanCardContent` com `shadow` flag (rotate-1 scale-1.02)
+- `src/components/features/maintenance/kanban-card.tsx` (novo): `KanbanCardContent` + `KanbanCard`
+  — `KanbanCardContent` puro (visual only — reusado no DragOverlay sem hooks)
+  — `KanbanCard` com `useDraggable` + click → navigate + DropdownMenu de ações
+  — `onPointerDown` stop propagation no menu para não ativar DnD
+  — Pill de tipo + PriorityBadge + título 2-line + assignee first name + due date + SLA bar
+
+#### View Toggle (maintenance-tabs.tsx)
+- `ViewToggle` component: `[☰ Lista] [▦ Kanban]`, `hidden md:flex` (mobile always list)
+- `viewMode` persistido em localStorage (`maintenance-view-mode`)
+- Em modo Kanban: status filter oculto (`hideStatus` prop em `MaintenanceFilters`)
+- Kanban recebe apenas `search/type/priority/sectorId` (status gerenciado pelas colunas)
+
+#### Detalhe da Ordem Polido (manutencao/[id]/page.tsx)
+- `MAINTENANCE_DETAIL_SELECT` expandido: `supplier:maintenance_suppliers!supplier_id(id, company_name, category)`
+- Card "Localização & Contexto": link fornecedor (`/manutencao/fornecedores/[id]`) + link evento (`/eventos/[id]`) com ícone `ExternalLink`
+- Card "Responsável & Datas": `completed_at` com data/hora + `formatResolutionTime()` (< 1h/Xh/X dias)
+- Select de status inclui `completed` (além de open/in_progress/waiting_parts)
+- Seção "Plano de Manutenção Preventiva": frequência, intervalo, próxima data, aviso, last performed, checklist técnico
+
+#### Timeline Combinada (maintenance-timeline.tsx)
+- 3 queries paralelas via `Promise.all`: audit_logs (com user join) + maintenance_costs + maintenance_photos
+- `TimelineEvent` union type com `kind: 'audit' | 'cost' | 'photo'`
+- `TimelineDot` semântico por tipo: DollarSign(verde)/Image(azul)/Plus(brand)/AlertCircle(red)/RefreshCw(muted)
+- Renderização contextual: status change → "Status alterado para X" / "Ordem concluída" com CheckCircle2
+- Custo: valor BRL + status colorido (approved=verde/rejected=vermelho/pending=âmbar) + tipo
+- Foto: label do tipo (Antes/Depois/Durante)
+- Actor avatar + nome (quando disponível via audit_logs.user join)
+- Ordenado DESC por `createdAt`; deduplicado por `id`
+
+---
+
+### Manutenção — Mobile UX, Preventivas e SLA (Prompt 8 — 2026-03-28)
+
+#### Quick Actions Bar (mobile-only)
+- `src/components/features/maintenance/quick-actions-bar.tsx` (novo): barra fixa `md:hidden` com 3 botões (Foto / Status / Custo)
+  — Foto: input `capture="environment"` → `compressImage(file, 1200, 0.8)` → upload `maintenance-photos/{orderId}/quick-{ts}.jpg` → `useAddMaintenancePhoto`
+  — Status: abre `StatusBottomSheet`; "completed" delega a `useCompleteMaintenanceOrder`
+  — Custo: abre `QuickCostSheet`
+  — `paddingBottom: max(12px, env(safe-area-inset-bottom))` — safe area iOS/Android
+- `src/components/features/maintenance/status-bottom-sheet.tsx` (novo): Sheet `side="bottom"` rounded-t-2xl; grid 2×2 de status com ícones e cores semânticas; status atual desabilitado com checkmark
+- `src/components/features/maintenance/quick-cost-sheet.tsx` (novo): formulário simplificado inline; `text-base` (evita zoom iOS); máscara R$; upload de comprovante por câmera; usa `useSubmitCost` + `useUploadReceipt`
+- `src/app/(auth)/manutencao/[id]/page.tsx`: `<QuickActionsBar>` integrado + `pb-24 md:pb-0` no container
+
+#### Overdue Banner
+- `src/components/features/maintenance/overdue-banner.tsx` (novo): banner não-dismissível com `status-error-*` tokens; `border-l-4 border-red-500`; mostra count + maxDaysOverdue; botão "Ver atrasadas" chama `onViewOverdue`
+- `src/hooks/use-maintenance.ts`: `useOverdueOrders()` adicionado — conta ordens com `due_date < today` e `status` não concluído/cancelado
+
+#### Preventive Schedule
+- `src/components/features/maintenance/preventive-schedule.tsx` (novo): seção colapsável "Próximas Preventivas"; auto-expande se item vence em ≤14 dias; `formatFrequency()` human-labels; `countdownInfo()` — verde >14d / âmbar 7-14d / vermelho ≤7d/atrasado; oculto se sem itens
+- `src/hooks/use-maintenance.ts`: `useUpcomingPreventives()` adicionado — tipo `preventive`, status não concluído, sort client-side por `preventive_plan?.next_due_date`
+- `src/components/features/maintenance/maintenance-tabs.tsx`: `<OverdueBanner>` + `<PreventiveSchedule>` acima dos filtros em modo lista
+
+#### SLA Card
+- `src/components/features/maintenance/sla-card.tsx` (novo): `SlaBar` colorida (verde/âmbar/vermelho) + `animate-pulse-sla` quando atrasada; grid 2×2 com Criada/Prazo/Decorrido/Restante; banner vermelho interno quando atrasada; `formatDuration(ms)` helper
+- `src/app/(auth)/manutencao/[id]/page.tsx`: `<SlaCard>` entre info grid e seção preventiva, condicional a `due_date && status !== 'cancelled'`
+
+#### globals.css
+- `@keyframes pulse-sla` (1.5s ease-in-out) + `.animate-pulse-sla` + `prefers-reduced-motion` guard
+
+---
+
+### Fase 2 — Bloco 2: Upload de Fotos (2026-03-27 → polimento Prompt 8 2026-03-28)
 - [x] `src/hooks/use-signed-urls.ts`: `useSignedUrls(bucket, paths)` — batch `createSignedUrls`, staleTime 30min
-- [x] `src/components/shared/photo-upload.tsx`: Canvas compress (max 1200px, 80%), preview thumbnail, progress bar, dois botões (Câmera com `capture="environment"` + Galeria), `PhotoThumb` para exibir foto existente
+- [x] `src/components/shared/photo-upload.tsx`: **Prompt 8** — reescrita completa; exports: `compressImage`, `PhotoDropZone` (alias `PhotoUpload`), `PhotoThumb`
+  - `PhotoDropZone`: drop zone visual (border-dashed 2px, ícone Camera 32px, texto responsivo "Toque para tirar foto" mobile / "Arraste fotos ou clique" desktop), drag-and-drop com isDragOver, hover/dragover com `--color-brand-50` + `border-primary`; estados: `confirm` (Usar foto / Tirar outra), `uploading` (overlay 55% + % centralizado + progress bar h-1.5 + indicador "2.4 MB → 480 KB"), `success` (CheckCircle2 verde + `animate-scale-in` 1.3s), `error` (X vermelho + mensagem + botão "Tentar novamente"); dois inputs ocultos: câmera (`capture="environment"`) + galeria; link secundário "ou escolher da galeria"
+  - `PhotoThumb`: aspect-ratio 4:3 (era 80×80 fixo), hover `scale-[1.02]`, botão X sempre visível no mobile (`opacity-100 sm:opacity-0 sm:group-hover:opacity-100`), `hover:bg-red-500`
 - [x] `src/components/shared/photo-lightbox.tsx`: overlay fullscreen, prev/next, keyboard (Esc/Arrows), contador e label por foto
-- [x] `src/components/features/maintenance/photo-section.tsx`: grid before/during/after, signed URLs, PhotoUpload por seção, PhotoThumb clicável, PhotoLightbox, remove de Storage + DB
+- [x] `src/components/features/maintenance/photo-section.tsx`: **Prompt 8** — layout 2 colunas Antes|Depois (`grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x`) + Durante abaixo; badges `badge-gray`/`badge-green`/`badge-amber border`; `SectionColumn` sub-componente; estado vazio read-only (aspect-[4/3] border-dashed); usa `PhotoDropZone`
 - [x] `src/app/(auth)/manutencao/[id]/page.tsx`: substituído placeholder por `<PhotoSection orderId photos canEdit />`
 - [x] `src/app/(auth)/perfil/page.tsx`: avatar upload funcional — compressão (max 600px), upload para `user-avatars/{userId}/avatar.jpg`, signed URL 1 ano salva em `users.avatar_url`
 
@@ -577,6 +882,71 @@ Role:  super_admin (32 permissões)
 - [x] `event-card.tsx`, `maintenance-card.tsx`, `checklist-card.tsx`, `equipment-card.tsx`: React.memo nos 4 card components de lista
 - [x] `@next/bundle-analyzer` instalado; `next.config.ts` com `withBundleAnalyzer(enabled: ANALYZE==='true')` — uso: `ANALYZE=true npm run build`
 
+### Fase 4 — Integração Ploomes CRM (2026-03-27)
+- [x] `supabase/migrations/014_ploomes_integration.sql`: UNIQUE constraint em `events.ploomes_deal_id`, nova coluna `events.ploomes_url TEXT`, tabela `ploomes_sync_log` com RLS (super_admin/diretor/gerente), índices por started_at/status/unit_id
+- [x] `.env.example`: `PLOOMES_USER_KEY`, `PLOOMES_API_URL`, `PLOOMES_PIPELINE_ID`, `PLOOMES_STAGE_FESTA_FECHADA_ID`, `PLOOMES_WON_STATUS_ID`, `PLOOMES_SYNC_INTERVAL_MINUTES`, `PLOOMES_WEBHOOK_SECRET` adicionados
+- [x] `src/lib/ploomes/types.ts`: `PloomesODataResponse<T>`, `PloomesDeal`, `PloomesContact`, `PloomesOtherProperty`, `PloomesAttachment`, `ParsedDeal`, `SyncResult`, `PloomesApiError`, `FieldMappingDef`
+- [x] `src/lib/ploomes/client.ts`: singleton HTTP com retry 3x (backoff exp.), timeout 30s, `ploomesGet`, `ploomesGetOne`, `ploomesPost`, `ploomesUpload`
+- [x] `src/lib/ploomes/field-mapping.ts`: `DEAL_FIELD_MAP` (9 campos customizados), `FIELD_LABELS`, `parseDeal()` — converte `OtherProperties[]` em `ParsedDeal` com parsers date/time/string/number
+- [x] `src/lib/ploomes/sync.ts`: `syncDeals(supabase, options)` — carrega config do banco via `loadPloomesConfig()`, busca deals, resolve unit_id/venue_id (auto-cria venue), upsert em `events` via `ON CONFLICT (ploomes_deal_id)`, registra log; fallback para env vars
+- [x] `src/lib/ploomes/upload.ts`: `uploadFileToDeal(dealId, file, filename)` — multipart/form-data para `/Deals({id})/UploadFile`, retorna `PloomesAttachment`
+- [x] `src/app/api/ploomes/sync/route.ts`: POST — sync manual com auth + permissão + debounce 2min
+- [x] `src/app/api/ploomes/sync/status/route.ts`: GET — últimos 20 registros de `ploomes_sync_log`
+- [x] `src/app/api/ploomes/config/route.ts`: GET/POST/PATCH — CRUD de `ploomes_config` (pipeline_id, stage_id, won_status_id, field_mappings, contact_mappings, status_mappings, webhook_url)
+- [x] `src/app/api/ploomes/webhook-register/route.ts`: POST (super_admin) — registra webhook no Ploomes, persiste webhook_url em `ploomes_config`, idempotente
+- [x] `src/app/api/ploomes/deals/route.ts`: GET — proxy: lista deals do pipeline com `parseDeal`
+- [x] `src/app/api/ploomes/deals/[dealId]/route.ts`: GET — proxy: deal específico com campos parseados
+- [x] `src/app/api/ploomes/upload/[dealId]/route.ts`: POST — upload via FormData (PDF de checklist → Deal)
+- [x] `src/app/api/webhooks/ploomes/route.ts`: POST — valida `X-Ploomes-Validation-Key` (env `PLOOMES_VALIDATION_KEY`), filtra por Entity=Deal e Action Win/Update, ignora Create e outras entidades
+- [x] `src/app/api/cron/ploomes-sync/route.ts`: GET protegido por `CRON_SECRET` — sync global automático + notificação para admins após 3 falhas consecutivas
+- [x] `src/hooks/use-ploomes-sync.ts`: `usePloomesSyncStatus()` (polling 5s/30s), `useTriggerPloomesSync()` (mutation com toast), `usePloomesIntegrationActive(unitId)`, `usePloomesConfig(unitId)` — carrega ploomes_config do banco
+- [x] `src/components/features/ploomes/ploomes-badge.tsx`: pill azul "Ploomes" clicável (abre deal) ou estático
+- [x] `src/components/features/ploomes/sync-status-card.tsx`: card com badge status, counters 4-grid, botão "Sincronizar Agora", timestamp, mensagem de erro
+- [x] `src/components/features/ploomes/sync-history-table.tsx`: tabela das últimas 20 syncs com status icons, contadores, duração
+- [x] `src/components/features/ploomes/ploomes-event-details.tsx`: seção com fundo azul, campos do deal (read-only), link "Ver no Ploomes", Deal ID
+- [x] `src/components/features/ploomes/mapping-pipeline-card.tsx`: card Pipeline/Funil (pipeline_id, stage_id, won_status_id) lidos do banco
+- [x] `src/components/features/ploomes/mapping-field-card.tsx`: tabela com todos os field_mappings do banco (FieldKey, campo interno, valueKey, parser)
+- [x] `src/components/features/ploomes/mapping-contact-card.tsx`: mapeamento contact_mappings (campo interno → Contact.campo)
+- [x] `src/components/features/ploomes/mapping-status-card.tsx`: mapeamento status_mappings com badges coloridos (Ploomes → evento)
+- [x] `src/app/(auth)/configuracoes/integracoes/ploomes/page.tsx`: página completa (SyncStatusCard + SyncHistoryTable + link para mapeamento)
+- [x] `src/app/(auth)/configuracoes/integracoes/ploomes/mapeamento/page.tsx`: 4 cards de mapeamento lidos de `ploomes_config`, skeleton, empty state
+- [x] `src/app/(auth)/configuracoes/page.tsx`: nova aba "Integrações" com link card para `/configuracoes/integracoes/ploomes`
+- [x] `src/components/features/events/event-card.tsx`: `PloomeBadge` exibido ao lado do status badge quando `ploomes_deal_id != null`
+- [x] `src/app/(auth)/eventos/[id]/page.tsx`: seção "Dados do Ploomes" inserida antes da equipe quando evento tem `ploomes_deal_id`
+- [x] `src/app/(auth)/eventos/page.tsx`: banner azul informativo quando integração ativa + botão "Novo Evento" oculto + empty state adaptado
+- [x] `src/app/(auth)/eventos/[id]/editar/page.tsx`: banner âmbar avisando que campos do Ploomes serão sobrescritos na próxima sync
+- [x] `src/types/database.types.ts`: `PloomesSyncLog`, `PloomesConfigRow` types + `ploomes_sync_log`, `ploomes_config` em `Database.Tables` + `ploomes_url` em `Event`
+
+### Fase 4 — Ploomes Config no Banco (2026-03-27)
+- [x] `supabase/migrations/015_ploomes_config.sql`: tabela `ploomes_config` (UNIQUE unit_id), campos pipeline/stage/won_status_id, field_mappings/contact_mappings/status_mappings JSONB, webhook_url, trigger updated_at, RLS (managers can select), seed Pinheiros com 9 campos customizados
+- [x] `src/lib/ploomes/sync.ts`: refatorado — `loadPloomesConfig(supabase, unitId)` lê do banco, fallback para env vars se sem config
+- [x] `src/app/api/ploomes/config/route.ts`: GET/POST/PATCH da tabela ploomes_config
+- [x] `src/app/api/ploomes/webhook-register/route.ts`: POST registra webhook no Ploomes via API (idempotente) + salva em ploomes_config
+- [x] `src/app/api/webhooks/ploomes/route.ts`: corrigido — `X-Ploomes-Validation-Key`, parse de Action/Entity/New/Old, ignora Create
+- [x] `.env.example`: `PLOOMES_VALIDATION_KEY`, `NEXT_PUBLIC_APP_URL`; pipeline/stage/status marcados deprecated
+- [x] `src/app/(auth)/configuracoes/integracoes/ploomes/mapeamento/page.tsx`: página visual com 4 seções carregadas do banco
+- [x] 4 componentes mapping-*-card.tsx: Pipeline, Fields, Contact, Status
+
+### Fase 4 — Status 'lost' + Paginação Ploomes (2026-03-27)
+- **StatusId no Ploomes (padrão global):** 1=Em aberto, 2=Ganho, 3=Perdido (NOT 1=Ganho como assumido originalmente)
+- **REGRA:** Todos os deals no stage "Festa Fechada" são importados.
+  - StatusId=1 (Em aberto) → `confirmed` (negociação aberta mas no stage fechada = festa confirmada)
+  - StatusId=2 (Ganho) → `confirmed` (a maioria dos deals — ~642 de 654)
+  - StatusId=3 (Perdido) → `lost` (mantido para estatísticas, oculto por padrão na UI)
+- **Paginação OData:** loop `$top=100 + $skip=N` até `page.length < 100`; total: 654 deals (646 confirmed + 8 lost)
+- **'lost' na UI:** filtro "Perdido" separado do grupo principal (após separador vertical), desativado por padrão; cards com `opacity-60` e título `line-through`; excluído de contadores do dashboard e do calendário
+- **Nota técnica:** `cancelled` foi removido do CHECK em migration 006; `lost` adicionado em migration 016
+- [x] `supabase/migrations/016_events_status_lost.sql`: ADD `lost` ao CHECK constraint de `events.status`; ADD `deals_removed INTEGER DEFAULT 0` ao `ploomes_sync_log`
+- [x] `src/types/database.types.ts`: `EventStatus` += `'lost'`; `PloomesSyncLog` += `deals_removed`; `SyncResult` += `dealsMarkedLost`
+- [x] `src/components/shared/event-status-badge.tsx`: STATUS_CONFIG e DOT_COLOR com entrada `lost` (cinza suave)
+- [x] `src/lib/ploomes/sync.ts`: paginação OData com loop `$skip`; `StatusId===3→lost`, demais→`confirmed`; `dealsMarkedLost` counter; error log no sync_log INSERT
+- [x] `src/components/features/events/event-filters.tsx`: `MAIN_STATUSES` sem `lost`; badge "Perdido" após separador, desativado por padrão
+- [x] `src/components/features/events/event-card.tsx`: `opacity-60` + `line-through` no título quando `status==='lost'`
+- [x] `src/hooks/use-events.ts`: sem filtro de status → `neq('status','lost')` por padrão
+- [x] `src/hooks/use-dashboard.ts`: `useDashboardStats` e `useNextEvent` excluem `lost`; `useCalendarEvents` exclui `lost`
+- [x] `src/components/features/ploomes/mapping-status-card.tsx`: suporte a `cacholaStatus` (novo) + `cacholaAction` (legado); `lost` renderizado como "Perdido" cinza
+- [x] `supabase/migrations/015_ploomes_config.sql`: seed `status_mappings` com formato correto (1=Em aberto→confirmed, 2=Ganho→confirmed, 3=Perdido→lost)
+
 ### Fase 3 — Bloco 6: Offline Mode (2026-03-27)
 - [x] `idb` instalado (4KB, Promise-based IndexedDB)
 - [x] `src/lib/offline-db.ts`: schema IDB tipado — `checklists` (snapshot), `checklist_items` (fila de sync com index `by-checklist`), `calendar_events` (cache read-only); singleton `getOfflineDb()` SSR-safe
@@ -588,6 +958,43 @@ Role:  super_admin (32 permissões)
 - [x] `src/components/layout/navbar.tsx`: badge amber "Offline" com ícone WifiOff — visível apenas quando offline, rótulo oculto em mobile (apenas ícone)
 - [x] `src/hooks/use-dashboard.ts` `useCalendarEvents`: salva no IDB store `calendar_events` após cada fetch online; quando offline lê do IDB; retorna `isOffline` + `cachedAt` além de `data`/`isLoading`/`isError`; query desabilitada offline (`enabled: isOnline && ...`)
 - [x] `src/app/(auth)/dashboard/page.tsx`: banner amber no calendário quando offline com horário da última atualização (HH:MM)
+
+## AUDITORIA DE QUALIDADE UI/UX (2026-03-28)
+
+Varredura completa do codebase para consistência visual, acessibilidade e idioma.
+
+### Corrigido
+
+| Categoria | Arquivo | Correção |
+|-----------|---------|----------|
+| **Idioma (pt-BR)** | `src/components/ui/dialog.tsx` | `"Close"` → `"Fechar"` (sr-only + aria-label) |
+| **Idioma (pt-BR)** | `src/components/ui/sheet.tsx` | `"Close"` → `"Fechar"` (sr-only) |
+| **Idioma (pt-BR)** | `src/components/ui/command.tsx` | `"Command Palette"` → `"Paleta de Comandos"`, placeholder traduzido |
+| **Hex hardcoded** | `src/components/features/reports/donut-chart-card.tsx` | 8 hex → `BRAND_GREEN` / `BRAND_BEIGE` / `BRAND_CHART.tealMid/tealLight` |
+| **Hex hardcoded** | `src/hooks/use-unit-settings.ts` | `'#7C8D78'` → `BRAND_GREEN[500]` |
+| **Hex hardcoded** | `src/lib/constants/brand-colors.ts` | Adicionado `tealMid: '#6B9E8B'` e `tealLight: '#A8C5BD'` ao `CHART_COLORS` |
+| **Alt text** | `src/components/features/settings/brand-identity-tab.tsx` | `alt="Logo"` → `alt="Logo da unidade"` |
+| **Alt text** | `src/components/layout/sidebar.tsx` | `alt="Logo"` → `alt={\`Logo \${displayName \|\| APP_NAME}\`}` |
+| **Breadcrumb** | `src/components/layout/breadcrumbs.tsx` | Segmento `admin` ocultado via `HIDDEN_SEGMENTS`; hrefs preservados |
+| **Breadcrumb** | `src/app/(auth)/configuracoes/integracoes/ploomes/mapeamento/page.tsx` | Breadcrumb inline duplicado removido |
+
+### Exceções Legítimas (não corrigidas intencionalmente)
+
+| Arquivo | Razão |
+|---------|-------|
+| `src/app/global-error.tsx` | Inline styles obrigatórios — Tailwind não carrega em error boundary global |
+| `src/app/layout.tsx` `themeColor` | Meta tag do browser requer hex real |
+| `src/app/(auth)/dashboard/page.tsx` `STROKE` | Recharts sparkline requer hex |
+| `src/lib/utils/export.ts` | jsPDF desenha com RGB/hex diretamente |
+| `src/lib/constants/brand-colors.ts` | Arquivo de definição — hex aqui são intencionais |
+| `src/components/features/pwa/splash-screen.tsx` | Gradient inline sem Tailwind disponível |
+| `src/app/(public)/login/page.tsx` | BrandingPanel gradient inline intencional |
+| `src/components/features/settings/brand-identity-tab.tsx` `ACCENT_PRESETS` | São dados de cor (opções do color picker), não estilos |
+
+### Resultado TypeScript
+`npx tsc --noEmit` → **zero erros**
+
+---
 
 ## PROXIMOS PASSOS — FASE 1
 
@@ -605,11 +1012,324 @@ Role:  super_admin (32 permissões)
 - [x] Fase 3 Bloco 4: Logs de Auditoria (useInfiniteQuery cursor-based, diff visual, filtros, permissão)
 - [x] Fase 3 Bloco 5: Otimizações de Performance (select específico, staleTime, React.memo, bundle analyzer)
 - [x] Fase 3 Bloco 6: Offline Mode (IDB checklists R/W com sync queue + calendário read-only cached)
+- [x] Fase 4: Integração Ploomes CRM (lib cliente, sync, upload, cron, webhook, UI completa)
 
 > **NOTA:** Após subir o Supabase com `docker compose up -d`, regenerar os tipos com:
 > ```bash
 > npx supabase gen types typescript --local > src/types/database.types.ts
 > ```
+
+---
+
+## UI/UX CHANGELOG — Polimento Visual (2026-03-28)
+
+Série de 5 prompts que implementou o sistema visual completo do Cachola OS.
+Branch: `feat/ui-polish-foundation`
+
+### Prompt 1 — Foundation Layer
+- `globals.css`: tokens CSS completos (cores, sombras, z-index, tipografia, espaçamento, transições)
+- `ThemeProvider` + toggle Sol/Lua + anti-FOUC script inline
+- `.icon-{cor}` e `.badge-{cor}` — utilitários semânticos adaptados a dark mode
+- PloomeBadge: corrigido dark mode (`badge-blue border` em vez de hex hardcoded)
+
+### Prompt 2 — Componentes Base Polish
+- **FilterChip** (`src/components/shared/filter-chip.tsx`): novo componente reutilizável
+  — cores semânticas por tipo (brand/amber/red/green/blue/purple/orange/gray)
+  — estado ativo usa `.badge-{cor}`, inativo usa ghost outlined
+  — touch target 44px, `aria-pressed`
+- **Tabs** (`src/components/ui/tabs.tsx`): variante `line` como default
+  — underline 2px em `bg-primary` na aba ativa, sem bg sólido
+- **Input/Select** (`src/components/ui/input.tsx`, `select.tsx`): h-10 (40px), hover border
+- **Migração `__all__`→`null`**: Select base-ui renderiza value raw; `null` = placeholder
+  — aplicado em `equipamentos/page.tsx`, `audit-filters.tsx`
+- **Badges dark mode**: checklist-card, equipment-card migrados para `.badge-*`
+
+### Prompt 3 — Sidebar + Navbar + Layout
+- **Sidebar colapsável** (`sidebar.tsx`):
+  — 240px expandida / 64px colapsada (desktop), drawer mobile com overlay
+  — Labels ocultam via `lg:opacity-0 lg:w-0` ao colapsar
+  — Tooltips com `render` prop (base-ui não suporta `asChild` em Trigger)
+  — Botão toggle ChevronLeft/Right no footer
+  — Estado persistido em `localStorage` (`sidebar-collapsed`)
+  — Grupos de navegação com section labels (`NAV_GROUPS` em `nav-items.ts`)
+- **AppLayout** (`app-layout.tsx`): `sidebarCollapsed` state + `mainRef` scroll tracking
+- **Navbar** (`navbar.tsx`): h-12 mobile / h-14 desktop; `shadow-sm` condicional ao rolar
+- **Tooltip.tsx**: `render?: ReactElement` adicionado ao tipo de `TooltipTrigger`
+
+### Prompt 4 — Animações e Micro-interações
+- **globals.css** — 4 `@keyframes`:
+  - `page-enter`: fade + slide-up 8px (300ms) — page transitions
+  - `fade-up`: para stagger no dashboard (400ms)
+  - `shimmer`: gradiente deslizante para skeleton (1.5s infinite)
+  - `scale-in`: escala 0.95→1 para modais (200ms bounce)
+- **Tokens Tailwind**: `animate-page-enter`, `animate-fade-up`, `animate-shimmer`, `animate-scale-in`
+- **`.skeleton-shimmer`**: substitui `animate-pulse` — gradiente `color-mix` dark-mode safe
+- **`.card-interactive`**: hover lift `translateY(-2px)` + `shadow-md` + `border-strong`; active `scale(0.98)`; dark mode shadow ajustado; `prefers-reduced-motion` suprime transform mantendo mudança de cor — GPU only
+- **`app-layout.tsx`**: `key={pathname}` no wrapper → `animate-page-enter` a cada navegação
+- **`button.tsx`**: `hover:scale-[1.02] active:scale-[0.98]` + `disabled:scale-100`
+- **Todos os cards**: migrados para `.card-interactive` (event, checklist, maintenance, equipment, stats)
+- **Dashboard stagger**: 6 stats cards com `animate-fade-up` e delays 0–250ms (50ms cada)
+- **Reduced motion**: coberto pela regra global já existente (`0.01ms !important`)
+
+### Prompt 5 — Polimento Final
+- **`src/app/not-found.tsx`**: página 404 estilizada com ícone Compass + `animate-page-enter`
+- **`src/app/(auth)/error.tsx`**: error boundary para rotas auth — ícone destrutivo, "Tentar novamente" + "Dashboard"
+- **`src/app/global-error.tsx`**: error boundary global (inclui `<html>/<body>`) — fallback inline CSS
+- Mobile 375px verificado: sem scroll horizontal, filter chips wrapping, touch targets OK
+- TypeScript strict: zero erros em todo o polimento
+
+---
+
+## UI/UX CHANGELOG — Phase 2 (2026-03-28)
+
+Branch: `claude/optimistic-poitras`
+
+### Prompt 7 — Checklist Fill Page Polish (verificação)
+- Checklist fill page (`/checklists/[id]`) verificada com dados reais
+- Sticky sub-header full-width, touch target 48px, SVG `animate-check-draw`, haptic vibrate(10)
+- `SaveIndicator`: "Salvando…" → "Salvo ✓" (2s auto-dismiss); `CompletedBanner` com `animate-celebrate`
+
+### Prompt 8 — Photo Upload Polish
+- **`src/components/shared/photo-upload.tsx`** — State machine `idle|confirm|uploading|success|error`:
+  - Drop zone dashed border + Camera 32px; hover/dragover `bg-[var(--color-brand-50)]`
+  - "Toque para tirar foto" (mobile) / "Arraste fotos ou clique" (desktop)
+  - Confirm step: preview `aspect-[4/3]` + "Usar foto" / "Tirar outra"
+  - Progress overlay 55% + barra bottom + compression indicator "2.4 MB → 480 KB"
+  - Success: `CheckCircle2` verde + `animate-scale-in`, auto-reset 1.3s; Error: retry
+  - `PhotoThumb`: `aspect-[4/3]`, hover scale, remove btn `sm:opacity-0 sm:group-hover:opacity-100`
+- **`src/components/features/maintenance/photo-section.tsx`**:
+  - Grid 2 colunas `sm:grid-cols-2 divide-x` (Antes|Depois) + `border-t` row (Durante)
+  - Badges: `badge-gray` (Antes), `badge-green` (Depois), `badge-amber` (Durante)
+
+### Prompt 9 — Ploomes Mapping Page Redesign
+- **`src/app/(auth)/configuracoes/integracoes/ploomes/mapeamento/page.tsx`** — Reescrita completa:
+  - Breadcrumb + header com título + `SaveIndicator` inline
+  - `SyncMiniCard`: último sync + deal count + "Sincronizar agora" (usa `usePloomesSyncStatus`)
+  - **Section 1 — Funil & Estágio** (editável): Pipeline ID, Stage ID, Won Status ID com tooltips + ✓/⚠ indicators + badge "Configuração obrigatória"
+  - **Section 2 — Campos da Festa** (read-only): tabela de 9 campos de `DEAL_FIELD_MAP` com ✓/○ + badge "N/9 configurados"
+  - **Section 3 — Dados do Cliente** (editável): 3 inputs `Contact.[field]`
+  - **Section 4 — Status do Deal** (read-only): 3 linhas com pills coloridos + nota contextual azul
+  - Auto-save debounce 500ms; guard vs save na hidratação (compara com `config` do DB)
+  - Footer sticky: "Testar mapeamento" → chama `/api/ploomes/deals`, toast com título/data/cliente
+  - TypeScript strict: zero erros
+
+### Prompt 10 — Login Page Premium Branding
+- **`src/app/(public)/login/page.tsx`** — Reescrita completa com layout split desktop:
+  - `<div className="min-h-svh lg:grid lg:grid-cols-2">` — split 50/50 no desktop
+  - `BrandingPanel` (hidden mobile, `lg:flex`): gradiente `from-brand-500 to-beige-500` (light) / `from-brand-900 to-brand-700` (dark); dots pattern radial-gradient; 3 blobs decorativos; logo "C" com `bg-white/20 backdrop-blur-sm`; tagline "Gestão inteligente de buffets infantis"; 3 feature pills `Check + texto` com stagger `animate-fade-up` 0–380ms
+  - `LoginForm` (full-width mobile, metade desktop): logo mobile-only + heading + form card
+  - `ErrorAlert`: 5 tipos (`credentials/blocked/rate_limit/server/unconfirmed`) com ícones `AlertCircle/Clock/WifiOff`; botão "Tentar novamente" só no tipo `server`
+  - `classifyError(error: string): LoginError` — mapeia strings Supabase para tipos amigáveis em PT-BR
+  - Input email com `<Mail>` icon à esquerda; input senha com `<Lock>` + toggle `<Eye>/<EyeOff>` à direita
+  - Checkbox "Lembrar-me" + link "Esqueci minha senha → /recuperar-senha"
+  - `autocomplete="email"` + `autocomplete="current-password"` para gestor de senhas
+  - Submit state machine `'idle' | 'loading' | 'success'`: idle→`Entrar`, loading→`Loader2 spin + Entrando…`, success→`CheckCircle2 verde + Entrando…`
+  - `triggerShake()`: remove class → `void el.offsetHeight` (reflow) → add class → remove após 600ms
+  - Redirect: 700ms delay após success para mostrar feedback visual antes de navegar
+  - `callbackError` query param → exibe erro de link expirado automaticamente
+  - `aria-invalid`, `aria-describedby`, `role="alert"`, `aria-live="assertive"` — acessibilidade completa
+  - `animate-fade-up` com delays progressivos no form
+- **`src/app/globals.css`**: `@keyframes login-shake` (7-step translateX damping) + `.animate-login-shake` + `.pb-safe` (env safe-area-inset-bottom)
+- **`src/app/(public)/layout.tsx`**: simplificado para `<>{children}</>` — cada página pública controla seu próprio layout e fundo
+- **`src/app/(public)/recuperar-senha/page.tsx`**: `<main>` atualizado para `min-h-svh flex items-center justify-center bg-background` (compatível com layout transparente)
+
+### Prompt 11 — Onboarding / First-Use Experience
+- **`src/stores/onboarding-store.ts`** (novo): Zustand store — `welcomeOpen`, `tourActive`, `tourStep`; `setWelcomeOpen`, `startTour`, `nextTourStep`, `skipTour`; `TOUR_STEPS` array com 4 passos (sidebar/unit-switcher/calendar/notifications)
+- **`src/hooks/use-onboarding.ts`** (novo):
+  - `useOnboarding()`: verifica `profile.preferences.onboarding_completed` (DB) + `cachola-onboarding-done` (localStorage). Se falso → `setWelcomeOpen(true)` após 800ms delay
+  - `useCompleteOnboarding()`: mutation que escreve no DB + localStorage imediatamente (sem race condition)
+  - `useSetupChecklist()`: useQuery com 4 checks paralelos (ploomes_config pipeline_id, checklist_templates, equipment status, users count)
+- **`src/components/features/onboarding/welcome-modal.tsx`** (novo): `createPortal(document.body)` — 3 slides carousel (Calendar/CheckSquare/Wrench), greeting personalizado "Olá, [nome]!", dots de progresso clicáveis, "Pular ×" / "← Voltar" / "Próximo →" / "Começar →"; ao clicar Começar → marca onboarding completo + inicia tour após 400ms
+- **`src/components/features/onboarding/guided-tour.tsx`** (novo): `createPortal(document.body)` — spotlight via `box-shadow: 0 0 0 9999px rgba(0,0,0,0.65)` posicionado sobre `[data-tour="step-id"]`; tooltip card com `Arrow` (triângulo CSS), progresso dots, "Pular tour" / "Próximo →" / "Concluir"; posicionamento automático (above/below/right/left) baseado em `getBoundingClientRect()`; skip automático se elemento off-screen (sidebar fechada no mobile)
+- **`src/components/features/onboarding/setup-checklist-card.tsx`** (novo): visível para super_admin/diretor/gerente; borda `border-primary/20 bg-brand-50`; progresso bar; 4 items com CheckCircle2/Circle + link para cada configuração; dismissível via localStorage; oculto quando todos completos
+- **`src/types/database.types.ts`**: `User.preferences.onboarding_completed?: boolean` adicionado
+- **`src/components/layout/app-layout.tsx`**: `OnboardingLayer` (renders WelcomeModal + GuidedTour + executa useOnboarding) adicionado ao início do JSX
+- **`src/components/layout/sidebar.tsx`**: `data-tour="sidebar"` no `<aside>`
+- **`src/components/layout/navbar.tsx`**: `<span data-tour="unit-switcher">` em volta de `<UnitSwitcher>`; `<span data-tour="notifications">` em volta de `<NotificationBell>`
+- **`src/app/(auth)/dashboard/page.tsx`**: `<SetupChecklistCard />` após PageHeader; `<div data-tour="calendar">` em volta de `<CalendarView>`
+- **`src/app/(auth)/checklists/page.tsx`**: empty state sem filtros → "Crie seu primeiro checklist" + "Criar modelo de checklist"
+- **`src/app/(auth)/manutencao/page.tsx`**: empty state → "Registre sua primeira ordem de manutenção" + botão primary
+- **`src/app/(auth)/eventos/page.tsx`**: empty state Ploomes → "Aguardando sincronização com Ploomes" + "Configurar Ploomes"
+
+### Prompt 12 — Command Palette (Ctrl+K / ⌘K)
+- **`src/stores/command-palette-store.ts`** (novo): Zustand store com `persist` (localStorage `cachola-cmd-palette`) — `isOpen`, `recentItems[]`; `open/close/toggle`; `addRecent` (dedup por id, max 5, mais recente primeiro)
+- **`src/hooks/use-command-palette-search.ts`** (novo): `useCommandPaletteIndex(enabled)` — TanStack Query; 4 queries paralelas (events/checklists/maintenance_orders/equipment), filtradas por `activeUnitId`; `staleTime: 2min`; `gcTime: 5min`; ativado apenas quando palette está aberta
+- **`src/components/features/command-palette/command-palette.tsx`** (novo):
+  - `createPortal(document.body)` com overlay `bg-black/60 backdrop-blur-[6px]`
+  - Mobile: bottom sheet `items-end rounded-t-2xl max-h-[85svh]`; Desktop: centered `sm:pt-[12vh] sm:rounded-2xl sm:max-w-[560px] sm:max-h-[68vh]`
+  - `useDebounce(query, 200)` para debounce de busca; fuzzy search word-split
+  - 6 grupos: Recentes, Páginas (9), Ações rápidas (5), Eventos, Checklists, Manutenções, Equipamentos
+  - `flatResults` + `flatIdx` counter para mapeamento de `selectedIndex` cross-group
+  - Keyboard: ↑↓ navegar, Enter selecionar, Esc fechar; Ctrl+K / ⌘K listener global
+  - `handleSelect`: `addRecent` → `router.push` → `close()`; `ResultItem` com `scrollIntoView`
+  - Loading skeleton, empty state "Nenhum resultado", footer com hints kbd
+- **`src/components/layout/navbar.tsx`**: botão `<Search>` antes de `<UnitSwitcher>`; `openPalette` do store
+- **`src/components/layout/app-layout.tsx`**: `<CommandPalette />` ao lado de `<OnboardingLayer />`
+- **Fix**: `IndexChecklist.name → IndexChecklist.title` (campo real da tabela `checklists` é `title`)
+
+### Prompt 13 — Dashboard KPIs com Sparklines e Tendências
+- **`src/hooks/use-dashboard.ts`** — novos tipos `SparkPoint`, `KpiMetric`, `DashboardKpis` + hook `useDashboardKpis()`:
+  - 4 queries paralelas: events (6m), maintenance_orders (all), checklists (all), next event
+  - `buildMonths(now, 6)` → array `['yyyy-MM' × 6]` oldest first
+  - `trendPct(curr, prev)` → % change rounded, `null` quando prev=0
+  - Events: agrupados por mês — `count`, `confirmed`, `guests` (cap 9999 para dados corrompidos do Ploomes)
+  - Conversion: `Math.round((confirmed / count) * 100)` por mês
+  - Guests: soma de `guest_count` válidos (0 < gc ≤ 9999)
+  - Maintenance: `value` = currently open (status != completed/cancelled); spark = created/month
+  - Checklists: `value` = currently pending; spark = created/month
+  - `nextEventDays`: `differenceInCalendarDays(parseISO(date + 'T12:00:00'), now)` — mínimo 0
+  - `staleTime: 2min`; imports adicionados: `subMonths`, `differenceInCalendarDays`, `parseISO`
+- **`src/components/features/dashboard/kpi-card.tsx`** (novo):
+  - `TrendBadge`: pill verde (TrendingUp ↑), vermelho (TrendingDown ↓), cinza (Minus —)
+  - `KpiCardSkeleton`: header + value + sparkline skeleton
+  - `KpiCard`: Link clicável (`card-interactive` + `hover:border-primary/30`)
+  - Layout: `icon + label` esquerda, `TrendBadge` direita; `text-3xl value`; sparkline 80px
+  - Recharts `AreaChart` sem eixos, sem grid, sem tooltip — `type="monotone"` + `strokeWidth={2}`
+  - `linearGradient` com `stopOpacity 0.25→0.02` para fill suave
+  - `IntersectionObserver` → `isInView` → `isAnimationActive` — sparkline desenha ao entrar viewport
+  - `animationDuration={800}` + `animationEasing="ease-out"`
+  - `gradId = kpi-grad-${label}` único por card para evitar conflitos SVG
+- **`src/app/(auth)/dashboard/page.tsx`** — substituição completa dos 2 grids de `StatsCard`:
+  - Grid único `grid-cols-2 md:grid-cols-3 gap-3` com 6 `KpiCard`s
+  - Cores de stroke hex (Recharts): `BRAND_GREEN[500]`, `#16A34A`, `#D97706`, `#DC2626`, `#EA580C`
+  - Manutenção: `icon-red` + `STROKE.red` quando `value > 5`, senão `icon-orange` + `STROKE.orange`
+  - "Próximo Evento": valor formatado "Hoje!" / "1 dia" / "N dias" / "—"; reusa events.spark
+  - Imports: `useDashboardKpis`, `KpiCard`, `BRAND_GREEN`; removidos `StatsCard`, `useDashboardStats`, `useDashboardMaintenanceStats`
+  - Stagger `animate-fade-up` com delays 0–250ms (50ms cada)
+
+### Prompt 14 — Centro de Notificações Slide-Over
+- **`src/app/globals.css`** — 3 novos `@keyframes`:
+  - `bell-shake`: rotação amortecida 12°→-10°→… em 0.6s — `transform-origin: top center`
+  - `slide-in-right`: `translateX(100%)→translateX(0)` para entrada do painel
+  - `notification-in`: `opacity:0 translateY(-10px)→opacity:1 translateY(0)` para novos itens
+  - Classes: `.animate-bell-shake`, `.animate-notification-in`
+- **`src/hooks/use-notifications.ts`** — melhorias:
+  - Limite aumentado `20 → 50`
+  - Adicionado `deleteNotification` mutation (DELETE por id)
+  - Exportados `isError`, `refetch`, `deleteNotification`
+- **`src/components/layout/notification-bell.tsx`** — reescrita completa:
+  - `createPortal(document.body)` slide-over — `translate-x-full → translate-x-0` (300ms transition)
+  - Mobile: painel fullscreen; Desktop: 380px fixo à direita (`fixed inset-y-0 right-0 w-[380px]`)
+  - Overlay `bg-black/40 backdrop-blur-sm` com `onClick` para fechar
+  - **Filter chips** (`FilterChip`): Todas | Eventos | Manutenção | Checklists | Sistema — com badge de não-lidos por categoria
+  - **`NotificationItem`**:
+    - Ícone 40px `rounded-full` com cor semântica por tipo (Calendar=brand, Wrench=orange, etc.)
+    - Dot azul absoluto (`left-1.5`) para não-lidas
+    - Desktop hover: ações "Lida" + "Arquivar" aparecem (`opacity-0 → opacity-100 group-hover`)
+    - Mobile swipe: `onTouchStart/End`, delta < -55px → `swiped=true` → `-translate-x-[120px]` revela botões absolutos
+  - **Archive com undo** (padrão sonner): `archivedIds` Set + `archiveTimeouts` Map + 4s `setTimeout` antes do DELETE real; toast "Arquivada" com botão "Desfazer" cancela o timeout
+  - **Bell shake + áudio**: `prevUnreadRef` compara contagem anterior — ao aumentar, adiciona `.animate-bell-shake` (remove após 700ms) + beep via Web Audio API (2 tons: 880Hz→440Hz)
+  - **Auto-toast**: quando painel fechado e nova notificação chega (Realtime) → `toast(title, { description })`
+  - **`animate-notification-in`**: itens novos detectados comparando `prevIdsRef` vs IDs atuais; `isInitialLoad` ref evita animação no mount
+  - **Header**: título "Notificações" + contagem não-lidas + botão "Marcar todas lidas" (só quando há não-lidas) + botão fechar `×`
+  - **Footer**: botão "Ver todas" (link `/admin/logs`) + "Limpar tudo" quando há notificações arquivadas
+  - **Estados**: skeleton (5 items) no loading; empty state por filtro ativo; error state com retry
+
+### Prompt 15 — Detalhe do Evento: Timeline Visual + Redesign
+- **`src/components/features/events/event-timeline.tsx`** (novo):
+  - `deriveTimeline(event, checklists)` — deriva marcos a partir de dados disponíveis:
+    - "Evento criado / importado do Ploomes" (`event.created_at`)
+    - "Checklist X atribuído" (por `checklist.created_at`, sorted ASC)
+    - "Checklist X concluído" (quando `status==='completed'`, usa `updated_at`)
+    - "Data do evento" / "Evento hoje!" / "Evento realizado" (`event.date + start_time`)
+    - "Desmontagem / Pós-evento" (apenas após `eventStart` passar, usa `end_time`)
+  - `TimelineDot`: círculo 32px, cores semânticas — `bg-green-500` (done), `bg-primary animate-pulse` (current), `bg-muted` (future); sombra ring `color-mix` no current
+  - Linha vertical conectora (`absolute left-4 top-8 w-0.5`) — verde quando `done`, `bg-border` quando future
+  - Itens com link: `<Link href={item.link}>` envolve o item (checklists linkam para `/checklists/[id]`)
+  - `ExternalLink` mini inline no título quando o item tem link
+  - Avatar responsável (mini, `size="sm"`) + nome (primeiro nome, hidden no mobile)
+  - `isInitialMount` detectado por `status===current` — destaque visual com `shadow-[0_0_0_4px_…]`
+- **`src/hooks/use-maintenance.ts`** — novo `useEventMaintenances(eventId)`:
+  - Filtra `maintenance_orders` por `event_id`; usa `MAINTENANCE_LIST_SELECT`; `staleTime: 30s`
+- **`src/app/(auth)/eventos/[id]/page.tsx`** — reescrita completa:
+  - **Top nav**: `<ArrowLeft>` + action buttons à direita (status dropdown + Editar + Excluir)
+  - **Hero Header** card: título grande + `client_name` subtítulo + badge strip (status | data | horário | salão | convidados) + botão "Ploomes" ghost com `<ExternalLink>` (condicionado a `ploomes_url`)
+  - **Info Grid** 2 colunas: `InfoCard` "Dados do Cliente" + "Dados da Festa"; `InfoRow` helper (ícone + texto)
+  - **Ploomes** seção: `<PloomesEventDetails>` mantido (condicionado a `ploomes_deal_id`)
+  - **Linha do Tempo** seção: `<EventTimeline event checklists />`
+  - **Checklists** seção: `<SectionHeader count action>` + `<ChecklistCard>` list + empty state
+  - **Manutenções Relacionadas** seção: apenas se `maintenances.length > 0`; cards com `<MaintenanceStatusBadge>` + `<MaintenancePriorityBadge>` + link para `/manutencao/[id]`
+  - **Equipe** seção: grid `sm:grid-cols-2` com avatares
+  - `InfoCard` helper: `filled` prop → `bg-brand-50 border-primary/20` (dark mode incluso)
+  - `SectionHeader` helper: título + count badge + action slot
+
+### Prompt 16 — Keyboard Shortcuts + PWA Install Experience
+
+#### Tarefa A — Keyboard Shortcuts
+- **`src/stores/shortcuts-store.ts`** (novo): Zustand store — `isOpen`, `open/close/toggle` para o cheat sheet modal
+- **`src/hooks/use-keyboard-shortcuts.ts`** (novo):
+  - Escuta `keydown` global; skip quando `isEditable()` (INPUT/TEXTAREA/SELECT/contenteditable) ou Command Palette aberta
+  - `Ctrl+/` / `⌘/` e `?` → `toggleShortcuts()`
+  - `N` → click programático em `[aria-label="Notificações"]` (sem extrair para store)
+  - `G` → inicia sequência; `seqRef.current = 'g'` + timeout 1s
+  - `G + D/C/M/E/S` → `router.push` para dashboard/checklists/manutencao/equipamentos/configuracoes
+- **`src/components/features/keyboard-shortcuts/shortcuts-modal.tsx`** (novo):
+  - `createPortal(document.body)` com overlay `bg-black/60 backdrop-blur-[6px]`
+  - Detecta Mac via `navigator.platform` → mostra `⌘` vs `Ctrl`
+  - Grid 2 colunas `sm:grid-cols-2`; grupos "Navegação" e "Painéis"
+  - `<Kbd>` component: `bg-muted border border-border rounded text-[0.65rem] font-mono shadow-[0_1px_0_0_…]`
+  - Fechar com Esc ou clique no overlay
+  - `animate-scale-in` na entrada
+
+#### Tarefa B — PWA Install Experience
+- **`src/hooks/use-pwa-install.ts`** (novo):
+  - Captura `beforeinstallprompt`, previne o default nativo
+  - Detecta standalone (`(display-mode: standalone)`) e não mostra se já instalado
+  - Timing: visitas (localStorage `cachola-pwa-visits`) e tempo desde primeira visita (`cachola-pwa-first-visit`)
+  - Banner aparece após ≥3 visitas OU ≥2min da primeira visita
+  - Dismiss salva timestamp em `cachola-pwa-dismissed` (valida por 30 dias)
+  - Expõe `showBanner`, `canInstall`, `install()`, `dismiss()`
+- **`src/components/features/pwa/install-banner.tsx`** (novo):
+  - Fixed bottom, `z-50`, `sm:w-80` no canto direito
+  - Logo "C" 40×40 + textos + botão "Instalar" + `<X>` dismiss
+  - `animate-scale-in` na entrada
+- **`src/components/features/pwa/splash-screen.tsx`** (novo):
+  - Aparece APENAS quando `display-mode: standalone` (PWA instalado)
+  - `z-[9999]`, gradiente inline `#7C8D78 → #E3DAD1`
+  - Logo "C" 80×80 `rounded-[1.5rem]` + nome + spinner `animate-spin`
+  - `animate-scale-in` no conteúdo; fade-out via `opacity-0 transition-opacity` após 1.2s; remove-from-DOM após 1.6s
+- **`public/manifest.json`** — atualizado: `background_color` `#FAFAF8` → `#E3DAD1`, `orientation` `portrait-primary` → `portrait`
+- **`src/components/layout/app-layout.tsx`** — adicionado:
+  - `<KeyboardLayer />` (chama `useKeyboardShortcuts()`, retorna `null`)
+  - `<ShortcutsModal />`
+  - `<SplashScreen />`
+  - `<InstallBanner />`
+
+### Prompt 17 — Personalização Visual por Unidade + PDF Templates (2026-03-28)
+
+#### Tarefa A — Personalização Visual por Unidade
+- **`src/types/database.types.ts`**: `UnitSettingsData` ganhou campo `brand?: { accent_color?, logo_url?, display_name? }` — sem nova migration (já é JSONB)
+- **`src/hooks/use-unit-settings.ts`**: hook `useUnitBrand()` exportado — retorna `{ accentColor, logoPath, displayName }` com fallback para `#7C8D78`
+- **`src/components/layout/unit-accent-wrapper.tsx`** (novo): aplica `style={{ '--primary': accentColor }}` como CSS custom property override; todas as utilities Tailwind `bg-primary / text-primary / border-primary` herdam via cascade; `transition-colors duration-300` na troca de unidade
+- **`src/components/features/settings/brand-identity-tab.tsx`** (novo):
+  - Seção "Logo da Unidade": upload (max 2MB, preview imediato, compressão para max 400px via `compressImage`), armazenado em `user-avatars/unit-logos/{unitId}/logo.jpg`, fallback letra inicial
+  - Seção "Nome de Exibição": input text livre (max 30 chars)
+  - Seção "Cor de Destaque": 8 presets (Verde Sálvia/Floresta/Azul Ardósia/Marinho/Terracota/Bordô/Âmbar/Cinza) + color picker `<input type="color">` + input hex manual; preview inline do botão com a cor selecionada
+  - `hasChanges` guard — botão "Salvar" habilitado só quando há mudança vs. estado salvo
+  - Salva via `useUpdateUnitSettings()` mergeando campo `brand` nos settings existentes
+- **`src/components/layout/sidebar.tsx`**: `useSidebarLogo()` helper — lê `useUnitBrand()`, gera public URL via `getPublicUrl()`; logo `<Image>` quando disponível, fallback letra inicial de `displayName`; texto da sidebar usa `displayName || APP_NAME`
+- **`src/app/(auth)/configuracoes/page.tsx`**: aba "Identidade Visual" adicionada com `<BrandIdentityTab />`
+- **`src/components/layout/app-layout.tsx`**: toda a árvore envolvida em `<UnitAccentWrapper>` — accentColor ativo propagado para toda a UI
+
+#### Tarefa B — PDF Templates Profissionais
+- **`src/lib/utils/export.ts`** — 3 novas funções programáticas (sem html2canvas):
+  - `hexToRgb(hex)`: helper interno converte hex → RGB tuple
+  - `addPdfHeader(pdf, title, unitName, period, accentHex, pageW, margin)`: cabeçalho com barra colorida accent + "Cachola OS" + unidade + data + título; retorna Y após header
+  - `addPdfFooter(pdf, pageW, margin, pageH)`: rodapé "Gerado por Cachola OS" + "Página N de M"
+  - **`exportReportPDF(config: ReportPdfConfig)`**: PDF A4 landscape para relatórios; colunas configuráveis com `align` e `width`; header accent colorido; linhas alternadas (#F8F8F8); separador horizontal; paginação automática; tipos `ReportPdfColumn`, `ReportPdfConfig` exportados
+  - **`exportChecklistPDF(config: ChecklistPdfConfig)`**: PDF A4 portrait para checklist concluído; box de dados do evento (cliente/salão/data); sumário (concluídos/pendentes/N/A/responsável); itens com símbolo ✓/○/— colorido (verde/cinza), notas indentadas "↳ nota", done_by + done_at à direita; separador por item; linha de assinatura + timestamp; paginação automática; tipo `ChecklistPdfItem`, `ChecklistPdfConfig` exportados
+
+### Padrões Estabelecidos
+| Item | Padrão |
+|------|--------|
+| Ícones em cards | `.icon-{cor}` — NUNCA `bg-*-50` |
+| Badges/pills | `.badge-{cor} border` — NUNCA hex direto |
+| Hover em cards | `.card-interactive` — NUNCA usar `hover:shadow-md hover:-translate-y-*` manual; classe tem cursor, lift, border, active e reduced-motion |
+| Select "Todos" | `value={null}` + `<SelectItem value="all">` (base-ui renderiza placeholder) |
+| Botão com link | `<Link className={cn(buttonVariants(...))}>` (base-ui Button não suporta `asChild`) |
+| TooltipTrigger | Usar `render` prop para elemento custom; sem `asChild` |
+| Page transition | `key={pathname}` no wrapper dentro de `<main>` + `animate-page-enter` |
+| Skeleton | `<Skeleton>` usa `.skeleton-shimmer` — adapta a dark mode via `color-mix` |
 
 ---
 
@@ -680,3 +1400,14 @@ Role:  super_admin (32 permissões)
 | Upload de foto desabilitado offline | `File` não é serializable para IDB de forma prática (Blob + metadata complexo). Botão de câmera desabilitado quando `isOffline`, `onPhotoChange` passa `undefined`. |
 | `useCalendarEvents` com `enabled: isOnline` | Evita query desnecessária ao Supabase quando offline. IDB serve como fallback via `useState` + `useEffect` separados — não mistura com o `queryFn`. |
 | Cache key do calendário inclui `activeUnitId` | Garante que trocar de unidade offline não sirva cache de outra unidade. Formato: `dateFrom::dateTo::unitId\|all`. |
+| `syncDeals` aceita SupabaseClient como parâmetro | Evita dependência direta de `cookies()` (next/headers) no sync.ts. A API route cria o client e passa para a função. Reutilizável em cron, manual e webhook. |
+| Ploomes IDs armazenados como TEXT | IDs do Ploomes são inteiros grandes. TEXT é mais seguro que bigint no TypeScript e evita problemas com IDs > MAX_INT32. Coluna `ploomes_deal_id TEXT` já existia desde migration 001. |
+| `ploomes_deal_id` UNIQUE permite múltiplos NULLs | PostgreSQL permite múltiplas linhas com NULL em coluna UNIQUE. Eventos manuais (sem deal_id) coexistem sem conflito. Upsert usa `ON CONFLICT (ploomes_deal_id)`. |
+| Auto-criação de venues no sync | Se `venueName` do Ploomes não existe na tabela `venues` da unidade, a venue é criada automaticamente e o contador `venues_created` é incrementado no log de sync. |
+| `usePloomesIntegrationActive` baseado em histórico de sync | Considera integração ativa se houver pelo menos 1 sync com status 'success'. Não depende de config flag — detecta organicamente pelo histórico de uso. |
+| Cron Ploomes separado de check-alerts | Sync do Ploomes faz chamadas externas que podem levar 10-30s. Rota dedicada `/api/cron/ploomes-sync` evita timeout que afetaria as notificações internas da `/api/cron/check-alerts`. |
+| `ploomes_config` UNIQUE(unit_id) — 1 row por unidade | Config de pipeline/stage/status é por unidade. UNIQUE constraint garante upsert limpo. Fallback para env vars mantém retrocompatibilidade com deploys que ainda não rodaram migration 015. |
+| Webhook validado por `X-Ploomes-Validation-Key` (não `x-webhook-secret`) | Header padrão documentado pela Ploomes. O campo é renomeado de `PLOOMES_WEBHOOK_SECRET` para `PLOOMES_VALIDATION_KEY` para alinhar com a nomenclatura da API. |
+| Registro de webhook idempotente | `/api/ploomes/webhook-register` verifica se já existe webhook para a URL antes de criar. Evita duplicatas no Ploomes ao chamar o endpoint mais de uma vez. |
+| Página de mapeamento lê do banco (não hardcoded) | `ploomes/mapeamento/page.tsx` usa `usePloomesConfig(unitId)` → `/api/ploomes/config`. Quando o admin atualizar os mapeamentos no banco, a tela reflete automaticamente sem deploy. |
+| Notificação de falhas após 3 erros consecutivos | Cron verifica os últimos 3 logs de sync. Se todos falharam e não houve notificação similar nas últimas 2h, cria notificação interna para todos os super_admins via `create_notification` RPC. |

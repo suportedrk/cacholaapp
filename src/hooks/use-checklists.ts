@@ -10,6 +10,7 @@ import type {
 } from '@/types/database.types'
 import { notifyChecklistAssigned, notifyChecklistCompleted } from '@/lib/notifications'
 import { useUnitStore } from '@/stores/unit-store'
+import { useAuthReadyStore } from '@/stores/auth-store'
 
 // ─────────────────────────────────────────────────────────────
 // FILTROS DA LISTA
@@ -29,9 +30,11 @@ export type ChecklistFilters = {
 export function useChecklists(filters: ChecklistFilters = {}) {
   const { eventId, assignedTo, status, categoryId, page = 1, pageSize = 20 } = filters
   const { activeUnitId } = useUnitStore()
+  const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
 
   return useQuery({
     queryKey: ['checklists', filters, activeUnitId],
+    enabled: isSessionReady,
     queryFn: async () => {
       const supabase = createClient()
 
@@ -346,8 +349,10 @@ export function useUpdateChecklistItem() {
 // ─────────────────────────────────────────────────────────────
 export function useChecklistTemplates(onlyActive = true) {
   const { activeUnitId } = useUnitStore()
+  const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
   return useQuery({
     queryKey: ['checklist-templates', onlyActive, activeUnitId],
+    enabled: isSessionReady,
     queryFn: async () => {
       const supabase = createClient()
       let query = supabase

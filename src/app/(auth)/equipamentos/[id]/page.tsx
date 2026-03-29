@@ -84,9 +84,6 @@ export default function EquipamentoDetailPage({ params }: { params: Promise<{ id
     <div className="flex flex-col gap-6 max-w-2xl">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Link href="/equipamentos" className={cn(buttonVariants({ variant: 'ghost', size: 'icon-sm' }))}>
-          <ArrowLeft className="w-4 h-4" />
-        </Link>
         <div className="flex-1 min-w-0">
           <h1 className="text-xl font-semibold text-foreground truncate">{equipment.name}</h1>
           {equipment.category && (

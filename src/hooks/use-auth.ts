@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { User, Session } from '@supabase/supabase-js'
 import type { User as AppUser, UserUnitWithUnit } from '@/types/database.types'
 import { useUnitStore } from '@/stores/unit-store'
+import { useAuthReadyStore } from '@/stores/auth-store'
 
 interface AuthState {
   user: User | null
@@ -89,6 +90,9 @@ export function useAuth() {
         loading: false,
         error: null,
       })
+
+      // Sinaliza que a sessão foi verificada — libera todas as queries
+      useAuthReadyStore.getState().setSessionReady()
     })
 
     // Listener de mudanças de auth

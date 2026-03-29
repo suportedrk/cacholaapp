@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { User, UserUpdate } from '@/types/database.types'
 import type { UserRole } from '@/types/database.types'
 import { toast } from 'sonner'
+import { useAuthReadyStore } from '@/stores/auth-store'
 
 const supabase = createClient()
 
@@ -13,8 +14,10 @@ const supabase = createClient()
 // ─────────────────────────────────────────────────────────────
 
 export function useUsers(filters?: { role?: UserRole; isActive?: boolean; search?: string }) {
+  const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
   return useQuery({
     queryKey: ['users', filters],
+    enabled: isSessionReady,
     queryFn: async () => {
       // Omite `preferences` (JSONB grande) — não necessário em listas
       let query = supabase

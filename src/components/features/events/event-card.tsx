@@ -6,6 +6,7 @@ import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Calendar, Clock, MapPin, Users, Package } from 'lucide-react'
 import { EventStatusBadge } from '@/components/shared/event-status-badge'
+import { PloomeBadge } from '@/components/features/ploomes/ploomes-badge'
 import { cn } from '@/lib/utils'
 import type { EventWithDetails } from '@/types/database.types'
 
@@ -20,13 +21,16 @@ export const EventCard = memo(function EventCard({ event }: EventCardProps) {
   // Formatar hora: "14:00"
   const formatTime = (t: string) => t.slice(0, 5)
 
+  const isLost = event.status === 'lost'
+
   return (
     <Link
       href={`/eventos/${event.id}`}
       className={cn(
         'group block bg-card rounded-xl border border-border p-4',
-        'hover:border-primary/40 hover:shadow-md transition-all duration-200',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
+        'hover:border-primary/40 card-interactive',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        isLost && 'opacity-60'
       )}
     >
       {/* Header: data + status */}
@@ -38,12 +42,18 @@ export const EventCard = memo(function EventCard({ event }: EventCardProps) {
           <Clock className="w-3.5 h-3.5" />
           <span>{formatTime(event.start_time)} – {formatTime(event.end_time)}</span>
         </div>
-        <EventStatusBadge status={event.status} size="sm" />
+        <div className="flex items-center gap-1.5">
+          {event.ploomes_deal_id && <PloomeBadge size="xs" />}
+          <EventStatusBadge status={event.status} size="sm" />
+        </div>
       </div>
 
       {/* Título e cliente */}
       <div className="mb-3">
-        <h3 className="font-semibold text-foreground text-base leading-tight group-hover:text-primary transition-colors line-clamp-1">
+        <h3 className={cn(
+          'font-semibold text-foreground text-base leading-tight group-hover:text-primary transition-colors line-clamp-1',
+          isLost && 'line-through text-muted-foreground'
+        )}>
           {event.title}
         </h3>
         <p className="text-sm text-muted-foreground mt-0.5 line-clamp-1">

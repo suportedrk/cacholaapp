@@ -292,3 +292,71 @@ export async function notifyMaintenanceCompleted(
     `/manutencao/${orderId}`
   )
 }
+
+// CUSTO SUBMETIDO → notifica gerentes da unidade
+// ─────────────────────────────────────────────────────────────
+export async function notifyCostSubmitted(
+  supabase: SupabaseClient,
+  orderId: string,
+  costDescription: string,
+  unitId: string,
+  submittedByUserId: string
+): Promise<void> {
+  const { data: managers } = await (supabase as any)
+    .from('user_units')
+    .select('user_id')
+    .eq('unit_id', unitId)
+    .in('role', ['gerente', 'diretor', 'super_admin'])
+
+  if (!managers?.length) return
+
+  for (const m of managers) {
+    if (m.user_id === submittedByUserId) continue
+    await insert(supabase, m.user_id, 'cost_submitted',
+      'Novo custo para aprovação',
+      `"${costDescription}" aguarda sua aprovação`,
+      `/manutencao/${orderId}`
+    )
+  }
+}
+
+// CUSTO APROVADO → notifica técnico que submeteu
+// ─────────────────────────────────────────────────────────────
+export async function notifyCostApproved(
+  supabase: SupabaseClient,
+  orderId: string,
+  costDescription: string,
+  submittedByUserId: string,
+  reviewerUserId: string
+): Promise<void> {
+  if (submittedByUserId === reviewerUserId) return
+
+  await insert(supabase, submittedByUserId, 'cost_approved',
+    'Custo aprovado',
+    `"${costDescription}" foi aprovado`,
+    `/manutencao/${orderId}`
+  )
+}
+
+// CUSTO REJEITADO → notifica técnico que submeteu (com motivo)
+// ─────────────────────────────────────────────────────────────
+export async function notifyCostRejected(
+  supabase: SupabaseClient,
+  orderId: string,
+  costDescription: string,
+  submittedByUserId: string,
+  reviewerUserId: string,
+  reviewNotes?: string
+): Promise<void> {
+  if (submittedByUserId === reviewerUserId) return
+
+  const body = reviewNotes
+    ? `"${costDescription}" foi reprovado: ${reviewNotes}`
+    : `"${costDescription}" foi reprovado`
+
+  await insert(supabase, submittedByUserId, 'cost_rejected',
+    'Custo reprovado',
+    body,
+    `/manutencao/${orderId}`
+  )
+}

@@ -88,8 +88,7 @@ function UnitCard({ unit, onClick }: { unit: Unit; onClick: () => void }) {
     <button
       onClick={onClick}
       className={cn(
-        'w-full text-left p-4 rounded-xl border border-border bg-card',
-        'hover:shadow-md hover:border-primary/30 transition-all duration-200',
+        'w-full text-left p-4 rounded-xl border border-border bg-card card-interactive',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
       )}
     >

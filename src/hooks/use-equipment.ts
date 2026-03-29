@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { useUnitStore } from '@/stores/unit-store'
+import { useAuthReadyStore } from '@/stores/auth-store'
 import type { Equipment, EquipmentStatus } from '@/types/database.types'
 
 // ─────────────────────────────────────────────────────────────
@@ -24,9 +25,11 @@ export type EquipmentFilters = {
 export function useEquipment(filters: EquipmentFilters = {}) {
   const { search, category, status, onlyActive } = filters
   const { activeUnitId } = useUnitStore()
+  const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
 
   return useQuery({
     queryKey: ['equipment', filters, activeUnitId],
+    enabled: isSessionReady,
     queryFn: async () => {
       const supabase = createClient()
       let q = supabase

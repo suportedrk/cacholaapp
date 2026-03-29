@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import Link from 'next/link'
-import { ArrowLeft, Loader2, Save, UserX, UserCheck, Building2 } from 'lucide-react'
+import { Loader2, Save, UserX, UserCheck, Building2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -72,18 +71,9 @@ export default function EditarUsuarioPage() {
   return (
     <div className="max-w-2xl space-y-6">
       {/* Cabeçalho */}
-      <div className="flex items-center gap-3">
-        <Link
-          href={ROUTES.users}
-          className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-          aria-label="Voltar"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </Link>
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground tracking-tight">Editar Usuário</h1>
-          <p className="mt-0.5 text-sm text-muted-foreground">Dados pessoais e status</p>
-        </div>
+      <div>
+        <h1 className="text-2xl font-semibold text-foreground tracking-tight">Editar Usuário</h1>
+        <p className="mt-0.5 text-sm text-muted-foreground">Dados pessoais e status</p>
       </div>
 
       {/* Card principal */}

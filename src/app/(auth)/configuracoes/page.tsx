@@ -1,10 +1,13 @@
 'use client'
 
+import Link from 'next/link'
+import { ExternalLink } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { PageHeader } from '@/components/shared/page-header'
 import { ConfigTable, type ConfigItem } from '@/components/features/settings/config-table'
 import { GeneralSettingsTab } from '@/components/features/settings/general-settings-tab'
 import { BusinessHoursTab } from '@/components/features/settings/business-hours-tab'
+import { BrandIdentityTab } from '@/components/features/settings/brand-identity-tab'
 import {
   useEventTypes, useCreateEventType, useUpdateEventType, useDeleteEventType,
   usePackages, useCreatePackage, useUpdatePackage, useDeletePackage,
@@ -57,8 +60,8 @@ export default function ConfiguracoesPage() {
       />
 
       <Tabs defaultValue="tipos">
-        <div className="w-full overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <TabsList className="w-max gap-1">
+        <div className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <TabsList className="min-w-max">
             <TabsTrigger value="tipos">Tipos de Evento</TabsTrigger>
             <TabsTrigger value="pacotes">Pacotes</TabsTrigger>
             <TabsTrigger value="saloes">Salões</TabsTrigger>
@@ -66,6 +69,8 @@ export default function ConfiguracoesPage() {
             <TabsTrigger value="categorias-equip">Categ. Equipamentos</TabsTrigger>
             <TabsTrigger value="horarios">Horários</TabsTrigger>
             <TabsTrigger value="geral">Geral</TabsTrigger>
+            <TabsTrigger value="identidade">Identidade Visual</TabsTrigger>
+            <TabsTrigger value="integracoes">Integrações</TabsTrigger>
           </TabsList>
         </div>
 
@@ -153,6 +158,30 @@ export default function ConfiguracoesPage() {
         {/* ── Configurações Gerais ── */}
         <TabsContent value="geral" className="mt-4">
           <GeneralSettingsTab />
+        </TabsContent>
+
+        {/* ── Identidade Visual ── */}
+        <TabsContent value="identidade" className="mt-4">
+          <BrandIdentityTab />
+        </TabsContent>
+
+        {/* ── Integrações ── */}
+        <TabsContent value="integracoes" className="mt-4 space-y-3">
+          <p className="text-sm text-muted-foreground">
+            Integrações com sistemas externos para importar e exportar dados do Cachola OS.
+          </p>
+          <Link
+            href="/configuracoes/integracoes/ploomes"
+            className="flex items-center justify-between rounded-xl border border-border bg-card p-4 card-interactive group"
+          >
+            <div className="space-y-0.5">
+              <p className="font-medium text-sm group-hover:text-primary transition-colors">Ploomes CRM</p>
+              <p className="text-xs text-muted-foreground">
+                Sincronize festas fechadas do Ploomes automaticamente com o calendário do Cachola OS.
+              </p>
+            </div>
+            <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
+          </Link>
         </TabsContent>
       </Tabs>
     </div>

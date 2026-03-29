@@ -5,6 +5,7 @@ import {
   Tooltip, ResponsiveContainer,
 } from 'recharts'
 import { cn } from '@/lib/utils'
+import { CHART_COLORS } from '@/lib/constants/brand-colors'
 
 type DataItem = { name: string; value: number }
 
@@ -34,7 +35,7 @@ function CustomTooltip({ active, payload }: {
 }
 
 export function HorizontalBarChartCard({
-  title, data, color = '#7C8D78',
+  title, data, color = CHART_COLORS.primary,
   loading, height, className, maxItems = 10,
 }: HorizontalBarChartCardProps) {
   const sliced  = data.slice(0, maxItems)
@@ -51,7 +52,7 @@ export function HorizontalBarChartCard({
           Nenhum dado no período
         </div>
       ) : (
-        <ResponsiveContainer width="100%" height={calcH}>
+        <ResponsiveContainer width="100%" height={calcH} debounce={50}>
           <BarChart
             data={sliced}
             layout="vertical"

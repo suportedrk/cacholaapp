@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { Camera, MessageSquare, Check, Minus } from 'lucide-react'
+import { Camera, MessageSquare, Minus, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ChecklistItem, ChecklistItemStatus } from '@/types/database.types'
 
@@ -19,16 +19,11 @@ const STATUS_CYCLE: Record<ChecklistItemStatus, ChecklistItemStatus> = {
   na:      'pending',
 }
 
-const STATUS_ICON: Record<ChecklistItemStatus, React.ReactNode> = {
-  pending: null,
-  done:    <Check className="w-4 h-4" />,
-  na:      <Minus className="w-3.5 h-3.5" />,
-}
-
+// Classes visuais do círculo interno (não do touch target)
 const STATUS_STYLE: Record<ChecklistItemStatus, string> = {
-  pending: 'bg-background border-border text-muted-foreground',
-  done:    'bg-green-500 border-green-500 text-white',
-  na:      'bg-gray-200 border-gray-200 text-gray-500 dark:bg-gray-700 dark:border-gray-600',
+  pending: 'border-border bg-background text-muted-foreground',
+  done:    'border-green-500 bg-green-500 text-white',
+  na:      'border-gray-300 bg-gray-100 text-gray-400 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-500',
 }
 
 export function ChecklistItemRow({
@@ -38,13 +33,29 @@ export function ChecklistItemRow({
   onPhotoChange,
   disabled,
 }: ChecklistItemRowProps) {
-  const [notesOpen, setNotesOpen] = useState(!!item.notes)
+  const [notesOpen, setNotesOpen]   = useState(!!item.notes)
   const [localNotes, setLocalNotes] = useState(item.notes ?? '')
+  const [justDone, setJustDone]     = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const isDone = item.status === 'done'
+  const isNa   = item.status === 'na'
 
   function handleCycle() {
     if (disabled) return
-    onStatusChange(STATUS_CYCLE[item.status])
+    const next = STATUS_CYCLE[item.status]
+
+    if (next === 'done') {
+      // Flash de sucesso
+      setJustDone(true)
+      setTimeout(() => setJustDone(false), 600)
+      // Haptic feedback (mobile)
+      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+        navigator.vibrate(10)
+      }
+    }
+
+    onStatusChange(next)
   }
 
   function handleNotesBlur() {
@@ -58,38 +69,67 @@ export function ChecklistItemRow({
     if (file) onPhotoChange?.(file)
   }
 
-  const isDone = item.status === 'done'
-  const isNa   = item.status === 'na'
-
   return (
     <div
       className={cn(
-        'rounded-xl border transition-colors',
-        isDone ? 'bg-green-50/50 border-green-100 dark:bg-green-950/20 dark:border-green-900/30' :
-        isNa   ? 'bg-muted/40 border-border' :
+        'relative rounded-xl border transition-colors duration-300',
+        isDone ? 'bg-green-50/60 border-green-100 dark:bg-green-950/20 dark:border-green-900/30' :
+        isNa   ? 'bg-muted/40 border-border/60' :
                  'bg-card border-border'
       )}
     >
-      <div className="flex items-start gap-3 p-3">
-        {/* Status toggle — grande para toque mobile */}
+      {/* Flash overlay ao concluir */}
+      {justDone && (
+        <div className="absolute inset-0 rounded-xl bg-green-400/20 pointer-events-none animate-item-flash" />
+      )}
+
+      <div className="flex items-start gap-1 p-2">
+        {/* ── Checkbox — 48px touch target ── */}
         <button
           onClick={handleCycle}
           disabled={disabled}
           className={cn(
-            'flex items-center justify-center w-8 h-8 rounded-full border-2 shrink-0 mt-0.5 transition-all duration-200',
-            STATUS_STYLE[item.status],
-            !disabled && 'active:scale-95'
+            'flex items-center justify-center w-12 h-12 rounded-xl shrink-0 transition-all duration-150',
+            !disabled && 'active:scale-90 touch-manipulation'
           )}
           aria-label={`Status: ${item.status}. Toque para alternar.`}
         >
-          {STATUS_ICON[item.status]}
+          <span
+            className={cn(
+              'flex items-center justify-center w-7 h-7 rounded-full border-2 transition-all duration-200',
+              STATUS_STYLE[item.status]
+            )}
+          >
+            {isDone ? (
+              /* SVG inline com animação de draw */
+              <svg
+                viewBox="0 0 16 16"
+                fill="none"
+                className="w-4 h-4"
+                aria-hidden
+              >
+                <path
+                  key={`check-${item.id}-done`}
+                  d="M3 8.5 6.5 12 13 5"
+                  stroke="currentColor"
+                  strokeWidth={2.5}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="animate-check-draw"
+                />
+              </svg>
+            ) : isNa ? (
+              <Minus className="w-3.5 h-3.5" />
+            ) : null}
+          </span>
         </button>
 
-        {/* Conteúdo */}
-        <div className="flex-1 min-w-0 space-y-1.5">
+        {/* ── Conteúdo ── */}
+        <div className="flex-1 min-w-0 py-2 pr-1">
+          {/* Descrição do item */}
           <p
             className={cn(
-              'text-sm leading-snug',
+              'text-base leading-snug font-medium',
               isDone && 'line-through text-muted-foreground',
               isNa   && 'text-muted-foreground'
             )}
@@ -97,58 +137,71 @@ export function ChecklistItemRow({
             {item.description}
           </p>
 
-          {/* Foto se existir */}
+          {/* Foto existente */}
           {item.photo_url && (
             <img
               src={item.photo_url}
               alt="Foto do item"
-              className="mt-1 rounded-lg w-full max-w-[200px] object-cover border border-border"
+              className="mt-2 rounded-lg w-full max-w-[200px] object-cover border border-border"
             />
           )}
 
-          {/* Notas inline */}
-          {notesOpen && (
-            <textarea
-              value={localNotes}
-              onChange={(e) => setLocalNotes(e.target.value)}
-              onBlur={handleNotesBlur}
-              placeholder="Observação..."
-              rows={2}
-              disabled={disabled}
-              className="w-full text-xs text-foreground bg-background border border-border rounded-lg px-2.5 py-1.5 resize-none focus:outline-none focus:ring-2 focus:ring-ring placeholder:text-muted-foreground/60"
-            />
-          )}
+          {/* Notas: campo expandido OU botão "Adicionar nota" */}
+          {notesOpen ? (
+            <div className="mt-2 space-y-1">
+              <textarea
+                value={localNotes}
+                onChange={(e) => setLocalNotes(e.target.value)}
+                onBlur={handleNotesBlur}
+                placeholder="Observação sobre este item..."
+                rows={2}
+                disabled={disabled}
+                autoFocus
+                className="w-full text-sm text-foreground bg-background border border-border rounded-lg px-2.5 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-ring placeholder:text-muted-foreground/50"
+              />
+              <button
+                onClick={() => {
+                  handleNotesBlur()
+                  setNotesOpen(false)
+                }}
+                className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+              >
+                <X className="w-3 h-3" /> Fechar nota
+              </button>
+            </div>
+          ) : !disabled ? (
+            <button
+              onClick={() => setNotesOpen(true)}
+              className={cn(
+                'mt-1.5 text-xs flex items-center gap-1 transition-colors',
+                item.notes
+                  ? 'text-primary font-medium'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              <MessageSquare className="w-3 h-3" />
+              {item.notes ? 'Ver nota' : 'Adicionar nota'}
+            </button>
+          ) : item.notes ? (
+            <p className="mt-1.5 text-xs text-muted-foreground italic">{item.notes}</p>
+          ) : null}
         </div>
 
-        {/* Ações secundárias */}
-        <div className="flex flex-col gap-1.5 shrink-0">
-          <button
-            onClick={() => setNotesOpen((v) => !v)}
-            disabled={disabled}
-            className={cn(
-              'flex items-center justify-center w-7 h-7 rounded-lg transition-colors',
-              notesOpen || item.notes
-                ? 'bg-primary/10 text-primary'
-                : 'text-muted-foreground hover:bg-muted'
-            )}
-            aria-label="Observação"
-          >
-            <MessageSquare className="w-3.5 h-3.5" />
-          </button>
+        {/* ── Câmera ── */}
+        {onPhotoChange && !disabled && (
           <button
             onClick={() => fileInputRef.current?.click()}
-            disabled={disabled}
             className={cn(
-              'flex items-center justify-center w-7 h-7 rounded-lg transition-colors',
+              'flex items-center justify-center w-8 h-8 rounded-lg transition-colors mt-2 shrink-0',
               item.photo_url
                 ? 'bg-primary/10 text-primary'
                 : 'text-muted-foreground hover:bg-muted'
             )}
-            aria-label="Foto"
+            aria-label="Adicionar foto"
           >
-            <Camera className="w-3.5 h-3.5" />
+            <Camera className="w-4 h-4" />
           </button>
-        </div>
+        )}
       </div>
 
       <input

@@ -7,18 +7,18 @@ interface Props {
 }
 
 export const MAINTENANCE_STATUS_CONFIG: Record<MaintenanceStatus, { label: string; pill: string }> = {
-  open:           { label: 'Aberta',           pill: 'bg-blue-50 text-blue-700 border border-blue-200' },
-  in_progress:    { label: 'Em Andamento',     pill: 'bg-purple-50 text-purple-700 border border-purple-200' },
-  waiting_parts:  { label: 'Aguardando Peças', pill: 'bg-amber-50 text-amber-700 border border-amber-200' },
-  completed:      { label: 'Concluída',        pill: 'bg-green-50 text-green-700 border border-green-200' },
-  cancelled:      { label: 'Cancelada',        pill: 'bg-gray-100 text-gray-500 border border-gray-200' },
+  open:           { label: 'Aberta',           pill: 'badge-blue border' },
+  in_progress:    { label: 'Em Andamento',     pill: 'badge-purple border' },
+  waiting_parts:  { label: 'Aguardando Peças', pill: 'badge-amber border' },
+  completed:      { label: 'Concluída',        pill: 'badge-green border' },
+  cancelled:      { label: 'Cancelada',        pill: 'badge-gray border' },
 }
 
 export const MAINTENANCE_PRIORITY_CONFIG: Record<string, { label: string; pill: string }> = {
-  critical: { label: 'Crítica', pill: 'bg-red-100 text-red-700 border border-red-300' },
-  high:     { label: 'Alta',    pill: 'bg-orange-50 text-orange-700 border border-orange-200' },
-  medium:   { label: 'Média',   pill: 'bg-amber-50 text-amber-600 border border-amber-200' },
-  low:      { label: 'Baixa',   pill: 'bg-gray-50 text-gray-500 border border-gray-200' },
+  critical: { label: 'Crítica', pill: 'badge-red border' },
+  high:     { label: 'Alta',    pill: 'badge-orange border' },
+  medium:   { label: 'Média',   pill: 'badge-amber border' },
+  low:      { label: 'Baixa',   pill: 'badge-gray border' },
 }
 
 export function MaintenanceStatusBadge({ status, className }: Props) {

@@ -37,9 +37,17 @@ export interface Database {
       maintenance_orders:   { Row: MaintenanceOrder;    Insert: Partial<MaintenanceOrder>; Update: Partial<MaintenanceOrder>; Relationships: [] }
       equipment:            { Row: Equipment;           Insert: Partial<Equipment>;        Update: Partial<Equipment>;        Relationships: [] }
       maintenance_photos:   { Row: MaintenancePhoto;    Insert: Partial<MaintenancePhoto>; Update: Partial<MaintenancePhoto>; Relationships: [] }
+      // Manutenção — Schema Expandido (Migration 017)
+      maintenance_suppliers: { Row: MaintenanceSupplier; Insert: Partial<MaintenanceSupplier>; Update: Partial<MaintenanceSupplier>; Relationships: [] }
+      supplier_contacts:     { Row: SupplierContact;     Insert: Partial<SupplierContact>;     Update: Partial<SupplierContact>;     Relationships: [] }
+      supplier_documents:    { Row: SupplierDocument;    Insert: Partial<SupplierDocument>;    Update: Partial<SupplierDocument>;    Relationships: [] }
+      maintenance_costs:     { Row: MaintenanceCost;     Insert: Partial<MaintenanceCost>;     Update: Partial<MaintenanceCost>;     Relationships: [] }
       // Configurações avançadas (Fase 3)
       unit_settings:        { Row: UnitSettings;        Insert: Partial<UnitSettings>;   Update: Partial<UnitSettings>;   Relationships: [] }
       equipment_categories: { Row: EquipmentCategory;   Insert: Partial<EquipmentCategory>; Update: Partial<EquipmentCategory>; Relationships: [] }
+      // Integração Ploomes CRM
+      ploomes_config:       { Row: PloomesConfigRow;    Insert: Partial<PloomesConfigRow>; Update: Partial<PloomesConfigRow>; Relationships: [] }
+      ploomes_sync_log:     { Row: PloomesSyncLog;      Insert: Partial<PloomesSyncLog>; Update: Partial<PloomesSyncLog>; Relationships: [] }
       // Sistema
       notifications:        { Row: AppNotification;     Insert: Partial<AppNotification>; Update: Partial<AppNotification>; Relationships: [] }
       audit_logs:           { Row: AuditLog;            Insert: Partial<AuditLog>;       Update: Partial<AuditLog>;       Relationships: [] }
@@ -85,6 +93,7 @@ export type UserRole =
 
 // Fase 1: enum atualizado (migration 006)
 // draft→pending, completed→finished, cancelado removido, adding preparing e post_event
+// Fase 4 (migration 016): adicionado 'lost' para deals Perdido do Ploomes
 export type EventStatus =
   | 'pending'     // Pendente (aguardando confirmação)
   | 'confirmed'   // Confirmado
@@ -92,10 +101,11 @@ export type EventStatus =
   | 'in_progress' // Em Andamento (evento acontecendo)
   | 'finished'    // Finalizado
   | 'post_event'  // Pós-Evento (limpeza, devolução, avaliação)
+  | 'lost'        // Perdido (via Ploomes StatusId=3 — oculto por padrão na UI)
 
 export type ChecklistStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled'
 export type ChecklistItemStatus = 'pending' | 'done' | 'na'
-export type MaintenanceType = 'emergency' | 'punctual' | 'recurring'
+export type MaintenanceType = 'emergency' | 'preventive' | 'punctual' | 'recurring'
 export type MaintenancePriority = 'low' | 'medium' | 'high' | 'critical'
 export type MaintenanceStatus = 'open' | 'in_progress' | 'waiting_parts' | 'completed' | 'cancelled'
 export type PhotoType = 'before' | 'after' | 'during'
@@ -146,6 +156,11 @@ export type UnitSettingsData = {
     default_duration_hours?: number              // ex: 4
     min_gap_hours?: number                       // ex: 1
     default_start_time?: string                  // ex: "14:00"
+  }
+  brand?: {
+    accent_color?: string   // hex ex: "#7C8D78"
+    logo_url?: string       // storage path em user-avatars/unit-logos/{unitId}/logo.jpg
+    display_name?: string   // nome curto exibido na sidebar
   }
 }
 
@@ -275,6 +290,7 @@ export type User = {
       maintenance: boolean
       checklists: boolean
     }
+    onboarding_completed?: boolean
   }
   created_at: string
   updated_at: string
@@ -310,6 +326,7 @@ export type Event = {
   id: string
   unit_id: string
   ploomes_deal_id: string | null
+  ploomes_url: string | null
   title: string
   date: string           // DATE → 'YYYY-MM-DD'
   start_time: string     // TIME → 'HH:MM:SS'
@@ -344,6 +361,7 @@ export type EventInsert = {
   package_id?: string | null
   venue_id?: string | null
   ploomes_deal_id?: string | null
+  ploomes_url?: string | null
   created_by: string
 }
 
@@ -421,9 +439,87 @@ export type MaintenanceOrder = {
   due_date: string | null
   event_id: string | null
   recurrence_rule: RecurrenceRule | null
+  // Migration 017 — schema expansion
+  supplier_id:     string | null
+  cost_estimate:   number | null
+  completed_at:    string | null
+  preventive_plan: PreventivePlan | null
   created_by: string
   created_at: string
   updated_at: string
+}
+
+export type PreventivePlan = {
+  frequency:            'monthly' | 'quarterly' | 'semiannual' | 'annual'
+  interval:             number
+  checklist_items:      string[]
+  last_performed_at:    string | null
+  next_due_date:        string | null
+  advance_notice_days:  number
+  linked_equipment_id:  string | null
+}
+
+export type MaintenanceSupplier = {
+  id:           string
+  unit_id:      string
+  company_name: string
+  trade_name:   string | null
+  cnpj:         string | null
+  category:     string | null
+  email:        string | null
+  phone:        string | null
+  address:      string | null
+  notes:        string | null
+  is_active:    boolean
+  rating:       number | null
+  created_at:   string
+  updated_at:   string
+}
+
+export type SupplierContact = {
+  id:          string
+  supplier_id: string
+  name:        string
+  role:        string | null
+  phone:       string | null
+  whatsapp:    string | null
+  email:       string | null
+  is_primary:  boolean
+  created_at:  string
+}
+
+export type SupplierDocument = {
+  id:               string
+  supplier_id:      string
+  name:             string
+  file_url:         string
+  file_type:        string | null
+  file_size_bytes:  number | null
+  uploaded_by:      string | null
+  expires_at:       string | null
+  created_at:       string
+}
+
+export type MaintenanceCostStatus = 'pending' | 'approved' | 'rejected'
+export type MaintenanceCostType   = 'material' | 'labor' | 'travel' | 'other'
+
+export type MaintenanceCost = {
+  id:            string
+  unit_id:       string
+  order_id:      string
+  description:   string
+  amount:        number
+  cost_type:     MaintenanceCostType
+  receipt_url:   string | null
+  receipt_notes: string | null
+  status:        MaintenanceCostStatus
+  submitted_by:  string
+  submitted_at:  string
+  reviewed_by:   string | null
+  reviewed_at:   string | null
+  review_notes:  string | null
+  created_at:    string
+  updated_at:    string
 }
 
 export type MaintenancePhoto = {
@@ -485,6 +581,49 @@ export type SystemConfig = {
 }
 
 // ─────────────────────────────────────────────────────────────
+// PLOOMES CRM
+// ─────────────────────────────────────────────────────────────
+export type PloomesConfigRow = {
+  id: string
+  unit_id: string
+  pipeline_id: number
+  stage_id: number
+  won_status_id: number
+  field_mappings: Record<string, {
+    field: string
+    label: string
+    valueKey: string
+    parser: string
+  }>
+  contact_mappings: Record<string, string>
+  status_mappings: Record<string, string>
+  webhook_url: string | null
+  webhook_registered_at: string | null
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export type PloomesSyncLog = {
+  id: string
+  started_at: string
+  finished_at: string | null
+  status: 'running' | 'success' | 'error'
+  deals_found: number
+  deals_created: number
+  deals_updated: number
+  deals_errors: number
+  deals_removed: number
+  venues_created: number
+  types_created: number
+  error_message: string | null
+  triggered_by: 'cron' | 'manual' | 'webhook'
+  triggered_by_user_id: string | null
+  unit_id: string | null
+  created_at: string
+}
+
+// ─────────────────────────────────────────────────────────────
 // TIPOS COM RELACIONAMENTOS (para queries com join/select aninhado)
 // ─────────────────────────────────────────────────────────────
 
@@ -530,12 +669,15 @@ export type MaintenanceWithDetails = MaintenanceOrder & {
   equipment: Pick<Equipment, 'id' | 'name' | 'category' | 'location'> | null
 }
 
-// Manutenção para listagem (sem fotos inline)
+// Manutenção para listagem (com fotos e fornecedor)
 export type MaintenanceForList = MaintenanceOrder & {
   sector: Pick<Sector, 'id' | 'name'> | null
   assigned_user: Pick<User, 'id' | 'name' | 'avatar_url'> | null
-  photo_count: number  // calculado no client
   equipment: Pick<Equipment, 'id' | 'name'> | null
+  supplier: Pick<MaintenanceSupplier, 'id' | 'company_name'> | null
+  photos: Array<Pick<MaintenancePhoto, 'id' | 'url' | 'type'>>
+  /** @deprecated use photos.length */
+  photo_count: number
 }
 
 

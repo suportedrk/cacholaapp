@@ -16,6 +16,7 @@ import { useSectors } from '@/hooks/use-sectors'
 import { useUsers } from '@/hooks/use-users'
 import { useEquipment } from '@/hooks/use-equipment'
 import { useCreateMaintenanceOrder, useUpdateMaintenanceOrder } from '@/hooks/use-maintenance'
+import { useSuppliers } from '@/hooks/use-suppliers'
 import { useAuth } from '@/hooks/use-auth'
 import type {
   MaintenanceWithDetails, MaintenanceType, MaintenancePriority,
@@ -34,11 +35,13 @@ interface FormData {
   sector_id:        string
   equipment_id:     string
   assigned_to:      string
+  supplier_id:      string
+  cost_estimate:    string
   due_date:         string
   // recorrência
-  recurrence_frequency: 'daily' | 'weekly' | 'monthly'
-  recurrence_interval:  string
-  recurrence_day_of_week: string
+  recurrence_frequency:    'daily' | 'weekly' | 'monthly'
+  recurrence_interval:     string
+  recurrence_day_of_week:  string
   recurrence_day_of_month: string
   recurrence_advance_notice: string
 }
@@ -52,6 +55,8 @@ const DEFAULT_FORM: FormData = {
   sector_id:        '',
   equipment_id:     '',
   assigned_to:      '',
+  supplier_id:      '',
+  cost_estimate:    '',
   due_date:         '',
   recurrence_frequency:      'weekly',
   recurrence_interval:       '1',
@@ -71,7 +76,7 @@ const DAY_OF_WEEK_OPTS = [
 // COMPONENTE
 // ─────────────────────────────────────────────────────────────
 interface Props {
-  order?: MaintenanceWithDetails
+  order?:     MaintenanceWithDetails
   onSuccess?: (id: string) => void
 }
 
@@ -80,9 +85,10 @@ export function MaintenanceForm({ order, onSuccess }: Props) {
   const { profile } = useAuth()
   const isEditing = !!order
 
-  const { data: sectors = [] } = useSectors(true)
-  const { data: users = [] } = useUsers({ isActive: true })
+  const { data: sectors = [] }       = useSectors(true)
+  const { data: users = [] }         = useUsers({ isActive: true })
   const { data: equipmentList = [] } = useEquipment({ onlyActive: true })
+  const { data: suppliers = [] }     = useSuppliers({ isActive: true })
 
   const createOrder = useCreateMaintenanceOrder()
   const updateOrder = useUpdateMaintenanceOrder()
@@ -102,6 +108,8 @@ export function MaintenanceForm({ order, onSuccess }: Props) {
       sector_id:        order.sector_id ?? '',
       equipment_id:     order.equipment_id ?? '',
       assigned_to:      order.assigned_to ?? '',
+      supplier_id:      order.supplier_id ?? '',
+      cost_estimate:    order.cost_estimate != null ? String(order.cost_estimate) : '',
       due_date:         order.due_date ? order.due_date.split('T')[0] : '',
       recurrence_frequency:      r?.frequency ?? 'weekly',
       recurrence_interval:       String(r?.interval ?? 1),
@@ -147,15 +155,21 @@ export function MaintenanceForm({ order, onSuccess }: Props) {
     e.preventDefault()
     if (!validate()) return
 
+    const costEstimateNum = form.cost_estimate
+      ? parseFloat(form.cost_estimate.replace(',', '.'))
+      : null
+
     const payload = {
       title:           form.title.trim(),
       description:     form.description.trim() || null,
       type:            form.type,
       priority:        form.priority,
       status:          form.status,
-      sector_id:       form.sector_id || null,
+      sector_id:       form.sector_id    || null,
       equipment_id:    form.equipment_id || null,
-      assigned_to:     form.assigned_to || null,
+      assigned_to:     form.assigned_to  || null,
+      supplier_id:     form.supplier_id  || null,
+      cost_estimate:   isNaN(costEstimateNum!) ? null : costEstimateNum,
       due_date:        form.due_date ? new Date(form.due_date).toISOString() : null,
       event_id:        null,
       recurrence_rule: buildRecurrenceRule(),
@@ -213,6 +227,7 @@ export function MaintenanceForm({ order, onSuccess }: Props) {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="emergency">🔴 Emergencial</SelectItem>
+                <SelectItem value="preventive">🔵 Preventiva</SelectItem>
                 <SelectItem value="punctual">🟡 Pontual</SelectItem>
                 <SelectItem value="recurring">🟢 Recorrente</SelectItem>
               </SelectContent>
@@ -223,9 +238,7 @@ export function MaintenanceForm({ order, onSuccess }: Props) {
           <div className="space-y-1.5">
             <Label>Prioridade</Label>
             <Select value={form.priority} onValueChange={(v) => set('priority', v)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
+              <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="critical">Crítica</SelectItem>
                 <SelectItem value="high">Alta</SelectItem>
@@ -239,9 +252,7 @@ export function MaintenanceForm({ order, onSuccess }: Props) {
           <div className="space-y-1.5">
             <Label>Status</Label>
             <Select value={form.status} onValueChange={(v) => set('status', v)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
+              <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="open">Aberta</SelectItem>
                 <SelectItem value="in_progress">Em Andamento</SelectItem>
@@ -287,8 +298,7 @@ export function MaintenanceForm({ order, onSuccess }: Props) {
                 <SelectItem value="__none__">Nenhum</SelectItem>
                 {equipmentList.map((eq) => (
                   <SelectItem key={eq.id} value={eq.id}>
-                    {eq.name}
-                    {eq.location ? ` — ${eq.location}` : ''}
+                    {eq.name}{eq.location ? ` — ${eq.location}` : ''}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -304,7 +314,7 @@ export function MaintenanceForm({ order, onSuccess }: Props) {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <Label>Responsável</Label>
+            <Label>Responsável interno</Label>
             <Select value={form.assigned_to} onValueChange={(v) => set('assigned_to', v)}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecionar responsável..." />
@@ -326,6 +336,41 @@ export function MaintenanceForm({ order, onSuccess }: Props) {
               onChange={(e) => set('due_date', e.target.value)}
             />
           </div>
+
+          {/* Fornecedor */}
+          <div className="space-y-1.5">
+            <Label>Fornecedor externo</Label>
+            <Select
+              value={form.supplier_id || '__none__'}
+              onValueChange={(v) => set('supplier_id', v === '__none__' ? '' : v)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecionar fornecedor..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">Nenhum</SelectItem>
+                {suppliers.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.trade_name ?? s.company_name}
+                    {s.category ? ` (${s.category})` : ''}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Estimativa de custo */}
+          <div className="space-y-1.5">
+            <Label htmlFor="cost_estimate">Estimativa de Custo (R$)</Label>
+            <Input
+              id="cost_estimate"
+              type="text"
+              inputMode="decimal"
+              value={form.cost_estimate}
+              onChange={(e) => set('cost_estimate', e.target.value)}
+              placeholder="0,00"
+            />
+          </div>
         </div>
       </section>
 
@@ -345,9 +390,7 @@ export function MaintenanceForm({ order, onSuccess }: Props) {
                 value={form.recurrence_frequency}
                 onValueChange={(v) => set('recurrence_frequency', v)}
               >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="daily">Diário</SelectItem>
                   <SelectItem value="weekly">Semanal</SelectItem>
@@ -423,7 +466,7 @@ export function MaintenanceForm({ order, onSuccess }: Props) {
         </section>
       )}
 
-      {/* ── Seção 5: Fotos (placeholder — Bloco 2) ───────────── */}
+      {/* ── Seção 5: Fotos ────────────────────────────────────── */}
       <section className="space-y-4">
         <h2 className="text-base font-semibold text-foreground">Fotos</h2>
         <Separator />
