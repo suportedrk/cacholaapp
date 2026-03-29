@@ -613,6 +613,53 @@ Regras de recorrência com colunas explícitas (melhor para queries e índices):
 **use-checklist-stats.ts**
 - `useChecklistStats()`: staleTime 5min; 4 queries paralelas (all, overdue, today, week); byPriority + byCategory via template join; avgCompletionHours calculado client-side
 
+### Checklists — P4 Integration (2026-03-29)
+- `src/app/(auth)/checklists/page.tsx`: botão "+ Novo" → abre `CreateChecklistModal`; `onCreated` redireciona para `/checklists/[id]`
+- `src/app/(auth)/eventos/[id]/page.tsx`: `AddChecklistModal` substituído por `CreateChecklistModal` com `defaultEventId` + `defaultEventTitle`
+
+### Checklists — P5 Premium Detail Page (Prompt 5 — 2026-03-29)
+
+#### Componentes novos em `src/app/(auth)/checklists/[id]/components/`
+
+**`item-assign-popover.tsx`**
+- Dialog com busca de usuário, destaque do responsável atual (checkmark), opção "Remover atribuição"
+- Exporta `AssignedUser = Pick<User, 'id' | 'name' | 'avatar_url'>`
+
+**`item-deadline-popover.tsx`**
+- Dialog com 4 presets rápidos (Hoje / Amanhã / Em 3 dias / 1 semana)
+- Input de data customizado com mínimo = hoje
+- Opção "Remover prazo" quando há prazo definido
+
+**`checklist-item-row.tsx`** (nova versão só para a página de detalhe)
+- `RichChecklistItem` type: `ChecklistItem & { assigned_user?, done_by_user? }`
+- 3-state checkbox com `animate-check-draw` + haptic vibrate(10)
+- Priority badge (exceto medium), `is_required` asterisco vermelho
+- Assigned user + due date + estimated_minutes como metadata inline (apenas para pendentes)
+- Atribuição: `ItemAssignPopover` com update otimista local + `useUpdateChecklistItem`
+- Prazo: `ItemDeadlinePopover` com update otimista local + `useUpdateChecklistItem`
+- Notes: debounce 1s auto-save (ref para evitar stale closure)
+- Câmera via `capture="environment"` (desabilitada offline via `onPhotoChange=undefined`)
+- Done by: exibe nome do responsável quando item concluído
+- Desktop: botões User + Calendar inline; Mobile: ⋮ DropdownMenu manual (overlay + card)
+- Border-left vermelho quando overdue, fundo vermelho sutil quando `priority=urgent`
+
+**`checklist-detail-header.tsx`**
+- `ProgressRing` SVG (56px, label=true): stroke animado, classe `stroke-primary`
+- Quando concluído: banner verde com ProgressRing + Concluído + botão Duplicar
+- Quando em andamento: card com type/priority badges, título, event link, assigned user, estimated remaining
+- Collapsible description via `ChevronDown/Up`
+- `⋮ DropdownMenu`: Duplicar → `useDuplicateChecklist` + redirect; Exportar PDF (placeholder); Excluir → ConfirmDialog → `useDeleteChecklist` + redirect
+- Progress bar full-width no fundo do card
+
+#### Página `src/app/(auth)/checklists/[id]/page.tsx` — Redesign completo
+- **Header**: `ChecklistDetailHeader` (substituiu sticky sub-header inline)
+- **Item Filter Bar**: local state `ItemFilter` — all/pending/done/na/overdue/my; pills com contagem; scroll horizontal
+- **Item List**: novo `ChecklistItemRow` com `checklistId` + `currentUserId`
+- **Footer sticky**: `FooterRing` (32px SVG ring) + contagem + botão "Concluir"
+  - `paddingBottom: max(16px, env(safe-area-inset-bottom))` para safe area
+- **Complete flow**: usa `useCompleteChecklist` (valida `is_required` no hook); ConfirmDialog mostra aviso se há itens obrigatórios pendentes
+- Offline support mantido (banners offline/syncing, foto/finalizar desabilitados)
+
 ### Fase 2 — Bloco 1: Módulo de Manutenção (2026-03-27)
 - [x] `supabase/migrations/009_fase2_maintenance.sql`: tabela `sectors` (8 setores seed), `maintenance_orders` atualizado (sector_id FK, recurrence_rule JSONB, tipo emergency/punctual/recurring), buckets privados `maintenance-photos` + `user-avatars` com RLS Storage
 - [x] `src/types/database.types.ts`: Sector, RecurrenceRule, MaintenanceWithDetails, MaintenanceForList, CalendarMaintenance, DashboardMaintenanceStats, MaintenanceType atualizado
