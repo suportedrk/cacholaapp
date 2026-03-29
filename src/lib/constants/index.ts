@@ -61,6 +61,7 @@ export const ROUTES = {
   reports: '/relatorios',
   auditLogs: '/admin/logs',
   equipment: '/equipamentos',
+  myTasks: '/checklists/minhas-tarefas',
 } as const
 
 // ============================================================

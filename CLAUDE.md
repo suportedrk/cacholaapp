@@ -407,6 +407,7 @@ docker compose -f docker-compose.prod.yml logs -f app
 | `/admin/logs` | `(auth)/admin/logs/page.tsx` | ✅ funcional (Fase 3 Bloco 4) |
 | `/configuracoes/integracoes/ploomes` | `(auth)/configuracoes/integracoes/ploomes/page.tsx` | ✅ funcional (Fase 4) |
 | `/configuracoes/integracoes/ploomes/mapeamento` | `(auth)/configuracoes/integracoes/ploomes/mapeamento/page.tsx` | ✅ funcional (Fase 4) |
+| `/checklists/minhas-tarefas` | `(auth)/checklists/minhas-tarefas/page.tsx` | ✅ funcional (P9) |
 | `/login` | `(public)/login/page.tsx` | ✅ funcional |
 | `/recuperar-senha` | `(public)/recuperar-senha/page.tsx` | ✅ funcional |
 
@@ -729,6 +730,46 @@ Regras de recorrência com colunas explícitas (melhor para queries e índices):
 
 #### Integração em `/checklists/page.tsx`
 - Botão "Recorrências" (ghost, RefreshCw icon) adicionado ao header da página, antes de Templates
+
+### Checklists — P8 Duplicação (Prompt 8 — 2026-03-29)
+
+#### Componentes novos em `src/app/(auth)/checklists/[id]/components/`
+**`duplicate-checklist-modal.tsx`**: modal `createPortal(document.body)` com novo título, combobox de evento (busca debounce), assignee select, due date, 3 checkboxes (copiar prioridades ON / assignees OFF / prazos OFF); chama `useDuplicateChecklist`
+
+#### Componente novo em `src/app/(auth)/checklists/components/`
+**`duplicate-from-event-modal.tsx`**: event source combobox, multi-select de checklists com progresso, target event combobox OU standalone toggle, assignee override, copy options; `mutateAsync` em sequência com progress tracking
+
+#### Integrações
+- `checklist-detail-header.tsx` ⋮ menu: "Duplicar checklist" → `setDuplicateOpen(true)` (em vez de `handleDuplicate` inline)
+- "Duplicado de..." indicator: `checklist.duplicated_from` UUID com link para checklist original
+- `/checklists/page.tsx`: botão "Duplicar de evento" (Copy icon) abre `DuplicateFromEventModal`
+
+#### Fix: self-referential FK join removido
+- `CHECKLIST_DETAIL_SELECT` tinha `duplicated_from_checklist:checklists!checklists_duplicated_from_fkey(...)` que quebrava todos os fetches de detalhe (FK pode não existir na DB em dev)
+- Removido o join; `checklist.duplicated_from` é UUID escalar suficiente para exibir o link
+
+### Checklists — P9 Minhas Tarefas (Prompt 9 — 2026-03-29)
+
+#### Rota nova: `/checklists/minhas-tarefas`
+- `src/app/(auth)/checklists/minhas-tarefas/page.tsx`: visão pessoal cross-checklist
+  — 4 KPIs: Pendentes / Atrasados / Vencem Hoje / Feitos (7 dias)
+  — Search input + 4 filter pills: Todos / Urgentes / Atrasados / Hoje
+  — 4 grupos colapsáveis: Atrasados (dot vermelho) / Hoje (âmbar) / Próximos (verde) / Sem Prazo (cinza)
+  — `TaskCard`: checkbox → `animate-task-complete` (400ms slide-right + collapse) → mutation Supabase → invalidate queries
+  — Prioridade badge (exceto medium), prazo relativo colorido, link para checklist, nome do evento
+  — Empty state "Tudo em dia!" quando sem tarefas; empty state filtrado quando sem resultados
+  — Mobile-first 375px, dark mode completo
+
+#### Hooks atualizados em `src/hooks/use-my-tasks.ts`
+- `useMyCompletedTasksCount(userId)`: conta items com `status='done'`, `done_by=userId`, `updated_at >= 7 dias atrás`; `staleTime: 5min`
+
+#### Navegação
+- `src/components/layout/nav-items.ts`: item "Minhas Tarefas" (ListTodo icon, `module: 'checklists'`) adicionado ao grupo raiz
+- `src/app/(auth)/checklists/page.tsx`: botão "Minhas Tarefas" no header da página
+- `ROUTES.myTasks = '/checklists/minhas-tarefas'` em `src/lib/constants/index.ts`
+
+#### globals.css
+- `@keyframes task-complete`: slide-right + max-height collapse 400ms; `.animate-task-complete`; `prefers-reduced-motion` guard
 
 ### Fase 2 — Bloco 1: Módulo de Manutenção (2026-03-27)
 - [x] `supabase/migrations/009_fase2_maintenance.sql`: tabela `sectors` (8 setores seed), `maintenance_orders` atualizado (sector_id FK, recurrence_rule JSONB, tipo emergency/punctual/recurring), buckets privados `maintenance-photos` + `user-avatars` com RLS Storage

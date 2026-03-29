@@ -3,6 +3,7 @@ import {
   LayoutDashboard,
   CalendarDays,
   ClipboardList,
+  ListTodo,
   Wrench,
   Users,
   BarChart3,
@@ -34,7 +35,8 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: 'Dashboard',   href: ROUTES.dashboard, icon: LayoutDashboard },
       { label: 'Eventos',     href: ROUTES.events,    icon: CalendarDays,  module: 'events'    },
-      { label: 'Checklists',  href: ROUTES.checklists,icon: ClipboardList,  module: 'checklists'},
+      { label: 'Checklists',   href: ROUTES.checklists, icon: ClipboardList, module: 'checklists' },
+      { label: 'Minhas Tarefas', href: ROUTES.myTasks,  icon: ListTodo,      module: 'checklists' },
     ],
   },
   {
