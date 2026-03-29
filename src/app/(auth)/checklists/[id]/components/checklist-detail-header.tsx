@@ -22,6 +22,7 @@ import {
 } from '@/types/database.types'
 import type { ChecklistWithItems, Priority } from '@/types/database.types'
 import { DuplicateChecklistModal } from './duplicate-checklist-modal'
+import { ExportPdfModal } from './export-pdf-modal'
 
 // ─────────────────────────────────────────────────────────────
 // PROGRESS RING
@@ -107,6 +108,7 @@ export function ChecklistDetailHeader({
   const [descOpen,      setDescOpen]      = useState(false)
   const [deleteOpen,    setDeleteOpen]    = useState(false)
   const [duplicateOpen, setDuplicateOpen] = useState(false)
+  const [exportPdfOpen, setExportPdfOpen] = useState(false)
 
   const { mutate: deleteChecklist, isPending: isDeleting } = useDeleteChecklist()
 
@@ -247,7 +249,7 @@ export function ChecklistDetailHeader({
                 Duplicar checklist
               </DropdownMenuItem>
               <DropdownMenuItem
-                onClick={() => { /* PDF placeholder */ }}
+                onClick={() => setExportPdfOpen(true)}
                 className="gap-2"
               >
                 <FileText className="w-4 h-4" />
@@ -356,6 +358,13 @@ export function ChecklistDetailHeader({
         onClose={() => setDuplicateOpen(false)}
         checklist={checklist}
         onDuplicated={(newId) => router.push(`/checklists/${newId}`)}
+      />
+
+      {/* Export PDF modal */}
+      <ExportPdfModal
+        open={exportPdfOpen}
+        onClose={() => setExportPdfOpen(false)}
+        checklist={checklist}
       />
     </div>
   )
