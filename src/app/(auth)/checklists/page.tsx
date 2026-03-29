@@ -1,9 +1,9 @@
 'use client'
 
-import { Suspense } from 'react'
+import { Suspense, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ClipboardList, LayoutTemplate } from 'lucide-react'
+import { ClipboardList, LayoutTemplate, Plus } from 'lucide-react'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { PageHeader } from '@/components/shared/page-header'
 import { EmptyState } from '@/components/shared/empty-state'
@@ -18,6 +18,7 @@ import {
   ChecklistCard,
   ChecklistCardSkeleton,
 } from './components/checklist-card'
+import { CreateChecklistModal } from './components/create-checklist-modal'
 import type { ChecklistFilters } from '@/hooks/use-checklists'
 
 // ─────────────────────────────────────────────────────────────
@@ -149,6 +150,9 @@ function LoadMoreButton({ currentPage }: { currentPage: number }) {
 // PAGE
 // ─────────────────────────────────────────────────────────────
 export default function ChecklistsPage() {
+  const router = useRouter()
+  const [createOpen, setCreateOpen] = useState(false)
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -163,6 +167,10 @@ export default function ChecklistsPage() {
               <LayoutTemplate className="w-4 h-4 mr-1.5" />
               Templates
             </Link>
+            <Button size="sm" onClick={() => setCreateOpen(true)}>
+              <Plus className="w-4 h-4 mr-1.5" />
+              Novo
+            </Button>
           </div>
         }
       />
@@ -183,6 +191,15 @@ export default function ChecklistsPage() {
       >
         <ChecklistsContent />
       </Suspense>
+
+      <CreateChecklistModal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onCreated={(id) => {
+          setCreateOpen(false)
+          router.push(`/checklists/${id}`)
+        }}
+      />
     </div>
   )
 }

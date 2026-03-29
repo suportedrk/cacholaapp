@@ -25,14 +25,13 @@ import { EventStatusBadge, STATUS_CONFIG } from '@/components/shared/event-statu
 import { ConfirmDialog } from '@/components/shared/confirm-dialog'
 import { UserAvatar } from '@/components/shared/user-avatar'
 import { ChecklistCard } from '@/components/features/checklists/checklist-card'
-import { AddChecklistModal } from '@/components/features/checklists/add-checklist-modal'
+import { CreateChecklistModal } from '@/app/(auth)/checklists/components/create-checklist-modal'
 import { PloomesEventDetails } from '@/components/features/ploomes/ploomes-event-details'
 import { EventTimeline } from '@/components/features/events/event-timeline'
 import { MaintenanceStatusBadge, MaintenancePriorityBadge } from '@/components/features/maintenance/maintenance-status-badge'
 import { useEvent, useDeleteEvent, useChangeEventStatus } from '@/hooks/use-events'
-import { useEventChecklists, useCreateChecklist } from '@/hooks/use-checklists'
+import { useEventChecklists } from '@/hooks/use-checklists'
 import { useEventMaintenances } from '@/hooks/use-maintenance'
-import { useUsers } from '@/hooks/use-users'
 import { cn } from '@/lib/utils'
 import type { EventStatus } from '@/types/database.types'
 
@@ -124,9 +123,6 @@ export default function EventoDetailPage() {
   const changeStatus = useChangeEventStatus()
   const { data: checklists = [], isLoading: checklistsLoading } = useEventChecklists(id)
   const { data: maintenances = [] } = useEventMaintenances(id)
-  const createChecklist = useCreateChecklist()
-  const { data: usersData = [] } = useUsers({ isActive: true })
-  const users = usersData.map((u) => ({ id: u.id, name: u.name }))
 
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [addChecklistOpen, setAddChecklistOpen] = useState(false)
@@ -444,21 +440,12 @@ export default function EventoDetailPage() {
       </div>
 
       {/* Modals */}
-      <AddChecklistModal
+      <CreateChecklistModal
         open={addChecklistOpen}
-        onOpenChange={setAddChecklistOpen}
-        users={users}
-        loading={createChecklist.isPending}
-        onConfirm={async ({ templateId, title, assignedTo, dueDate }) => {
-          await createChecklist.mutateAsync({
-            eventId: id,
-            templateId,
-            title,
-            assignedTo: assignedTo || undefined,
-            dueDate: dueDate || undefined,
-          })
-          setAddChecklistOpen(false)
-        }}
+        onClose={() => setAddChecklistOpen(false)}
+        defaultEventId={id}
+        defaultEventTitle={event.title}
+        onCreated={() => setAddChecklistOpen(false)}
       />
 
       <ConfirmDialog
