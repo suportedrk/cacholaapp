@@ -360,3 +360,130 @@ export async function notifyCostRejected(
     `/manutencao/${orderId}`
   )
 }
+
+// ─────────────────────────────────────────────────────────────
+// CHECKLISTS PREMIUM (Migration 018)
+// ─────────────────────────────────────────────────────────────
+
+// Item de checklist atribuído a um responsável
+export async function notifyChecklistItemAssigned(
+  supabase: SupabaseClient,
+  itemId: string,
+  assignedToUserId: string,
+  actorUserId?: string
+): Promise<void> {
+  if (assignedToUserId === actorUserId) return
+
+  const { data: item } = await (supabase as any)
+    .from('checklist_items')
+    .select('description, checklist_id, checklist:checklists(title)')
+    .eq('id', itemId)
+    .single()
+
+  if (!item) return
+
+  await insert(
+    supabase,
+    assignedToUserId,
+    'checklist_item_assigned',
+    'Tarefa atribuída a você',
+    `"${item.description}" no checklist "${item.checklist?.title ?? ''}"`,
+    `/checklists/${item.checklist_id}`
+  )
+}
+
+// Novo comentário em item do qual o usuário é responsável
+export async function notifyChecklistItemCommented(
+  supabase: SupabaseClient,
+  itemId: string,
+  actorUserId: string
+): Promise<void> {
+  const { data: item } = await (supabase as any)
+    .from('checklist_items')
+    .select('description, assigned_to, checklist_id, checklist:checklists(title)')
+    .eq('id', itemId)
+    .single()
+
+  if (!item || !item.assigned_to) return
+  if (item.assigned_to === actorUserId) return
+
+  await insert(
+    supabase,
+    item.assigned_to,
+    'checklist_item_commented',
+    'Novo comentário na sua tarefa',
+    `Comentário em "${item.description}"`,
+    `/checklists/${item.checklist_id}`
+  )
+}
+
+// Item de checklist passou do prazo → notifica responsável
+export async function notifyChecklistItemOverdue(
+  supabase: SupabaseClient,
+  itemId: string
+): Promise<void> {
+  const { data: item } = await (supabase as any)
+    .from('checklist_items')
+    .select('description, assigned_to, checklist_id, checklist:checklists(title, unit_id)')
+    .eq('id', itemId)
+    .single()
+
+  if (!item || !item.assigned_to) return
+
+  await insert(
+    supabase,
+    item.assigned_to,
+    'checklist_item_overdue',
+    'Tarefa em atraso',
+    `"${item.description}" passou do prazo`,
+    `/checklists/${item.checklist_id}`
+  )
+}
+
+// Checklist recorrente gerado automaticamente → notifica responsável
+export async function notifyChecklistRecurringGenerated(
+  supabase: SupabaseClient,
+  checklistId: string
+): Promise<void> {
+  const { data: cl } = await (supabase as any)
+    .from('checklists')
+    .select('title, assigned_to')
+    .eq('id', checklistId)
+    .single()
+
+  if (!cl || !cl.assigned_to) return
+
+  await insert(
+    supabase,
+    cl.assigned_to,
+    'checklist_recurring_generated',
+    'Checklist recorrente gerado',
+    `O checklist "${cl.title}" foi gerado automaticamente`,
+    `/checklists/${checklistId}`
+  )
+}
+
+// Checklist duplicado de evento anterior → notifica responsável
+export async function notifyChecklistDuplicated(
+  supabase: SupabaseClient,
+  checklistId: string,
+  actorUserId?: string
+): Promise<void> {
+  const { data: cl } = await (supabase as any)
+    .from('checklists')
+    .select('title, assigned_to')
+    .eq('id', checklistId)
+    .single()
+
+  if (!cl || !cl.assigned_to) return
+  if (cl.assigned_to === actorUserId) return
+
+  await insert(
+    supabase,
+    cl.assigned_to,
+    'checklist_duplicated',
+    'Checklist duplicado atribuído',
+    `O checklist "${cl.title}" foi criado a partir de um evento anterior`,
+    `/checklists/${checklistId}`
+  )
+}

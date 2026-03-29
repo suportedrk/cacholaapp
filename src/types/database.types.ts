@@ -28,10 +28,13 @@ export interface Database {
       events:               { Row: Event;               Insert: EventInsert;             Update: EventUpdate;             Relationships: [] }
       event_staff:          { Row: EventStaff;          Insert: Partial<EventStaff>;     Update: Partial<EventStaff>;     Relationships: [] }
       // Checklists
-      checklist_templates:  { Row: ChecklistTemplate;   Insert: Partial<ChecklistTemplate>; Update: Partial<ChecklistTemplate>; Relationships: [] }
-      template_items:       { Row: TemplateItem;        Insert: Partial<TemplateItem>;   Update: Partial<TemplateItem>;   Relationships: [] }
-      checklists:           { Row: Checklist;           Insert: Partial<Checklist>;      Update: Partial<Checklist>;      Relationships: [] }
-      checklist_items:      { Row: ChecklistItem;       Insert: Partial<ChecklistItem>;  Update: Partial<ChecklistItem>;  Relationships: [] }
+      checklist_templates:      { Row: ChecklistTemplate;      Insert: Partial<ChecklistTemplate>;      Update: Partial<ChecklistTemplate>;      Relationships: [] }
+      template_items:           { Row: TemplateItem;           Insert: Partial<TemplateItem>;           Update: Partial<TemplateItem>;           Relationships: [] }
+      checklists:               { Row: Checklist;              Insert: Partial<Checklist>;              Update: Partial<Checklist>;              Relationships: [] }
+      checklist_items:          { Row: ChecklistItem;          Insert: Partial<ChecklistItem>;          Update: Partial<ChecklistItem>;          Relationships: [] }
+      // Checklists Premium (Migration 018)
+      checklist_recurrence:     { Row: ChecklistRecurrence;    Insert: Partial<ChecklistRecurrence>;    Update: Partial<ChecklistRecurrence>;    Relationships: [] }
+      checklist_item_comments:  { Row: ChecklistItemComment;   Insert: Partial<ChecklistItemComment>;   Update: Partial<ChecklistItemComment>;   Relationships: [] }
       // Manutenção
       sectors:              { Row: Sector;              Insert: Partial<Sector>;           Update: Partial<Sector>;           Relationships: [] }
       maintenance_orders:   { Row: MaintenanceOrder;    Insert: Partial<MaintenanceOrder>; Update: Partial<MaintenanceOrder>; Relationships: [] }
@@ -105,6 +108,8 @@ export type EventStatus =
 
 export type ChecklistStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled'
 export type ChecklistItemStatus = 'pending' | 'done' | 'na'
+export type ChecklistType = 'event' | 'standalone' | 'recurring'
+export type Priority = 'low' | 'medium' | 'high' | 'urgent'
 export type MaintenanceType = 'emergency' | 'preventive' | 'punctual' | 'recurring'
 export type MaintenancePriority = 'low' | 'medium' | 'high' | 'critical'
 export type MaintenanceStatus = 'open' | 'in_progress' | 'waiting_parts' | 'completed' | 'cancelled'
@@ -381,10 +386,15 @@ export type ChecklistTemplate = {
   id: string
   unit_id: string
   title: string
-  category: string       // TEXT legado
-  category_id: string | null  // FK → checklist_categories (Fase 1, migration 007)
+  category: string                     // TEXT legado
+  category_id: string | null           // FK → checklist_categories
   created_by: string
   is_active: boolean
+  // Migration 018 — Checklists Premium
+  description: string | null
+  estimated_duration_minutes: number | null
+  default_priority: Priority
+  recurrence_rule: ChecklistRecurrenceRule | null
   created_at: string
   updated_at: string
 }
@@ -394,6 +404,30 @@ export type TemplateItem = {
   template_id: string
   description: string
   sort_order: number
+  // Migration 018 — Checklists Premium
+  default_priority: Priority
+  default_estimated_minutes: number | null
+  default_assigned_to: DefaultAssignedTo | null
+  notes_template: string | null
+  requires_photo: boolean
+  is_required: boolean
+}
+
+// shape de default_assigned_to em template_items
+export type DefaultAssignedTo = {
+  type: 'role' | 'user'
+  value: string  // nome do role ou UUID do usuário
+}
+
+// shape de recurrence_rule em checklist_templates (JSONB — mesma shape de ChecklistRecurrence.rule)
+export type ChecklistRecurrenceRule = {
+  frequency: 'daily' | 'weekly' | 'biweekly' | 'monthly'
+  interval?: number
+  days_of_week?: number[]   // 0=dom…6=sáb
+  day_of_month?: number     // 1-31
+  time_of_day?: string      // 'HH:MM'
+  end_date?: string         // ISO date
+  max_occurrences?: number
 }
 
 export type Checklist = {
@@ -404,22 +438,74 @@ export type Checklist = {
   event_id: string | null
   assigned_to: string | null
   status: ChecklistStatus
-  due_date: string | null
+  due_date: string | null  // prazo geral do checklist
   created_at: string
   updated_at: string
+  // Migration 018 — Checklists Premium
+  type: ChecklistType
+  priority: Priority
+  description: string | null
+  created_by: string | null
+  completed_at: string | null
+  completed_by: string | null
+  duplicated_from: string | null
+  recurrence_id: string | null
 }
 
 export type ChecklistItem = {
   id: string
   checklist_id: string
   description: string
-  is_done: boolean          // legado — derivado de status
-  status: ChecklistItemStatus  // 'pending' | 'done' | 'na' (migration 007)
+  is_done: boolean               // legado — derivado de status
+  status: ChecklistItemStatus    // 'pending' | 'done' | 'na'
   done_by: string | null
   done_at: string | null
   photo_url: string | null
   notes: string | null
   sort_order: number
+  // Migration 018 — Checklists Premium
+  assigned_to: string | null
+  priority: Priority
+  due_at: string | null          // prazo individual do item (due_date do checklist é o geral)
+  estimated_minutes: number | null
+  actual_minutes: number | null
+}
+
+// Migration 018 — nova tabela: regras de recorrência
+export type ChecklistRecurrence = {
+  id: string
+  template_id: string
+  unit_id: string
+  frequency: 'daily' | 'weekly' | 'biweekly' | 'monthly'
+  day_of_week: number[] | null  // 0=dom…6=sáb
+  day_of_month: number | null   // 1-31
+  time_of_day: string           // 'HH:MM:SS'
+  assigned_to: string | null
+  is_active: boolean
+  last_generated_at: string | null
+  next_generation_at: string | null
+  title_prefix: string | null
+  description: string | null
+  created_by: string | null
+  created_at: string
+  updated_at: string
+  // Joins opcionais
+  template?: ChecklistTemplate
+  assigned_user?: Pick<User, 'id' | 'name' | 'avatar_url'>
+}
+
+// Migration 018 — nova tabela: comentários por item
+export type ChecklistItemComment = {
+  id: string
+  item_id: string
+  user_id: string
+  content: string
+  photo_url: string | null
+  unit_id: string
+  created_at: string
+  updated_at: string
+  // Join opcional
+  user?: Pick<User, 'id' | 'name' | 'avatar_url'>
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -641,16 +727,21 @@ export type EventWithDetails = Event & {
 
 // Checklist com itens completos (tela de preenchimento)
 export type ChecklistWithItems = Checklist & {
-  checklist_items: ChecklistItem[]
+  checklist_items: Array<ChecklistItem & {
+    assigned_user?: Pick<User, 'id' | 'name' | 'avatar_url'>
+    comments?: ChecklistItemComment[]
+  }>
   event: Pick<Event, 'id' | 'title' | 'date'> | null
   assigned_user: Pick<User, 'id' | 'name' | 'avatar_url'> | null
+  completed_by_user?: Pick<User, 'id' | 'name' | 'avatar_url'> | null
+  recurrence?: ChecklistRecurrence | null
 }
 
-// Checklist para listagem (itens apenas com id+status para progresso)
+// Checklist para listagem (itens apenas com id+status+priority para progresso)
 export type ChecklistForList = Checklist & {
   event: Pick<Event, 'id' | 'title' | 'date'> | null
   assigned_user: Pick<User, 'id' | 'name' | 'avatar_url'> | null
-  checklist_items: Array<{ id: string; status: ChecklistItemStatus }>
+  checklist_items: Array<{ id: string; status: ChecklistItemStatus; priority: Priority }>
 }
 
 // Template com itens e categoria
