@@ -3,7 +3,7 @@
 import { Suspense, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ClipboardList, LayoutTemplate, Plus, RefreshCw } from 'lucide-react'
+import { ClipboardList, LayoutTemplate, Plus, RefreshCw, Copy } from 'lucide-react'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { PageHeader } from '@/components/shared/page-header'
 import { EmptyState } from '@/components/shared/empty-state'
@@ -19,6 +19,7 @@ import {
   ChecklistCardSkeleton,
 } from './components/checklist-card'
 import { CreateChecklistModal } from './components/create-checklist-modal'
+import { DuplicateFromEventModal } from './components/duplicate-from-event-modal'
 import type { ChecklistFilters } from '@/hooks/use-checklists'
 
 // ─────────────────────────────────────────────────────────────
@@ -151,7 +152,8 @@ function LoadMoreButton({ currentPage }: { currentPage: number }) {
 // ─────────────────────────────────────────────────────────────
 export default function ChecklistsPage() {
   const router = useRouter()
-  const [createOpen, setCreateOpen] = useState(false)
+  const [createOpen,    setCreateOpen]    = useState(false)
+  const [dupEventOpen,  setDupEventOpen]  = useState(false)
 
   return (
     <div className="space-y-6">
@@ -167,6 +169,10 @@ export default function ChecklistsPage() {
               <RefreshCw className="w-4 h-4 mr-1.5" />
               Recorrências
             </Link>
+            <Button variant="outline" size="sm" onClick={() => setDupEventOpen(true)}>
+              <Copy className="w-4 h-4 mr-1.5" />
+              Duplicar de evento
+            </Button>
             <Link
               href="/checklists/templates"
               className={cn(buttonVariants({ variant: 'outline', size: 'sm' }))}
@@ -205,6 +211,14 @@ export default function ChecklistsPage() {
         onCreated={(id) => {
           setCreateOpen(false)
           router.push(`/checklists/${id}`)
+        }}
+      />
+
+      <DuplicateFromEventModal
+        open={dupEventOpen}
+        onClose={() => setDupEventOpen(false)}
+        onDuplicated={(ids) => {
+          if (ids.length === 1) router.push(`/checklists/${ids[0]}`)
         }}
       />
     </div>
