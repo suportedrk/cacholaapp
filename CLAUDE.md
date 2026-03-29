@@ -492,6 +492,88 @@ docker compose -f docker-compose.prod.yml logs -f app
   - `popover.tsx`: `render` prop adicionada ao tipo de `PopoverTrigger`
 - [x] `src/app/(auth)/dashboard/page.tsx`: página completa substituindo placeholder
 
+### Checklists — Schema Premium (Migration 018 + 018b — 2026-03-29)
+Branch: `feat/checklist-premium-schema`
+
+#### Tipos de checklist (`checklists.type`)
+- `event`: vinculado a um evento/festa (comportamento original, default)
+- `standalone`: checklist avulso sem evento vinculado
+- `recurring`: gerado automaticamente por regra de recorrência
+
+#### Prioridades (`Priority` type — compartilhado entre checklists e itens)
+- `low`: baixa (verde)
+- `medium`: média (amarelo) — default
+- `high`: alta (laranja)
+- `urgent`: urgente (vermelho pulsante)
+
+#### Novas colunas em `checklists` (migration 018)
+- `type`: event | standalone | recurring (default: 'event')
+- `priority`: low | medium | high | urgent (default: 'medium')
+- `description`: texto livre
+- `created_by`: UUID → users
+- `completed_at`: timestamp de finalização
+- `completed_by`: UUID → users
+- `duplicated_from`: UUID → checklists (auto-referência, Prompt 8)
+- `recurrence_id`: UUID → checklist_recurrence
+
+#### Novas colunas em `checklist_items` (migrations 018 + 018b)
+- `assigned_to`: UUID → users (responsável individual do item)
+- `priority`: low | medium | high | urgent (default: 'medium')
+- `due_at`: prazo individual do item (≠ `checklists.due_date` que é prazo geral)
+- `estimated_minutes`: tempo estimado em minutos
+- `actual_minutes`: tempo real gasto (preenchido ao concluir)
+
+#### Novas colunas em `checklist_templates` (migration 018)
+- `description`: descrição do template
+- `estimated_duration_minutes`: duração estimada total
+- `default_priority`: prioridade padrão para checklists gerados
+- `recurrence_rule`: JSONB com shape `ChecklistRecurrenceRule`
+
+#### Novas colunas em `template_items` (migration 018)
+- `default_priority`: prioridade padrão do item
+- `default_estimated_minutes`: tempo estimado padrão
+- `default_assigned_to`: JSONB `{ type: 'role'|'user', value: '<role>|<uuid>' }`
+- `notes_template`: instrução padrão exibida como placeholder nas notas
+- `requires_photo`: item obriga registro de foto ao concluir
+- `is_required`: item é obrigatório para finalizar o checklist (default: true)
+
+#### Nova tabela: `checklist_recurrence` (migration 018b)
+Regras de recorrência com colunas explícitas (melhor para queries e índices):
+- `template_id` FK, `unit_id` FK
+- `frequency`: daily | weekly | biweekly | monthly
+- `day_of_week`: int[] (0=dom…6=sáb, para weekly/biweekly)
+- `day_of_month`: int 1-31 (para monthly)
+- `time_of_day`: TIME default '08:00:00'
+- `assigned_to`: UUID → users (responsável padrão dos checklists gerados)
+- `is_active`, `last_generated_at`, `next_generation_at`
+- `title_prefix`: prefixo do título gerado (ex: "Limpeza Semanal — ")
+- RLS: view via `check_permission + get_user_unit_ids`, manage via `create`
+
+#### Nova tabela: `checklist_item_comments` (migration 018b)
+- `item_id` FK → checklist_items, `user_id` FK → users, `unit_id` FK → units
+- `content TEXT NOT NULL`, `photo_url TEXT` (bucket `checklist-comment-photos`)
+- RLS: view por unidade, create pelo próprio user, own (edit/delete próprio), manage (delete admin)
+- Realtime habilitado via `ALTER PUBLICATION supabase_realtime ADD TABLE`
+
+#### Storage bucket novo
+- `checklist-comment-photos`: fotos em comentários (10 MB, JPEG/PNG/WebP/HEIC, privado)
+
+#### Notification types novos (src/lib/notifications.ts)
+- `checklist_item_assigned`: item atribuído a responsável
+- `checklist_item_commented`: novo comentário em item do qual sou responsável
+- `checklist_item_overdue`: item passou do prazo
+- `checklist_recurring_generated`: checklist recorrente gerado automaticamente
+- `checklist_duplicated`: checklist duplicado de evento anterior
+
+#### TypeScript types novos (src/types/database.types.ts)
+- `ChecklistType`: 'event' | 'standalone' | 'recurring'
+- `Priority`: 'low' | 'medium' | 'high' | 'urgent'
+- `ChecklistRecurrence`: type completo com joins opcionais
+- `ChecklistItemComment`: type completo com join de user
+- `ChecklistRecurrenceRule`: shape do JSONB em checklist_templates
+- `DefaultAssignedTo`: shape do JSONB em template_items
+- `ChecklistWithItems`, `ChecklistForList`, `TemplateWithItems`: atualizados
+
 ### Fase 2 — Bloco 1: Módulo de Manutenção (2026-03-27)
 - [x] `supabase/migrations/009_fase2_maintenance.sql`: tabela `sectors` (8 setores seed), `maintenance_orders` atualizado (sector_id FK, recurrence_rule JSONB, tipo emergency/punctual/recurring), buckets privados `maintenance-photos` + `user-avatars` com RLS Storage
 - [x] `src/types/database.types.ts`: Sector, RecurrenceRule, MaintenanceWithDetails, MaintenanceForList, CalendarMaintenance, DashboardMaintenanceStats, MaintenanceType atualizado
