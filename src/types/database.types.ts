@@ -110,6 +110,34 @@ export type ChecklistStatus = 'pending' | 'in_progress' | 'completed' | 'cancell
 export type ChecklistItemStatus = 'pending' | 'done' | 'na'
 export type ChecklistType = 'event' | 'standalone' | 'recurring'
 export type Priority = 'low' | 'medium' | 'high' | 'urgent'
+
+// Labels pt-BR e utilitários de UI (usados em filtros, badges, forms)
+export const PRIORITY_LABELS: Record<Priority, string> = {
+  low: 'Baixa',
+  medium: 'Média',
+  high: 'Alta',
+  urgent: 'Urgente',
+}
+
+export const PRIORITY_COLORS: Record<Priority, string> = {
+  low: 'text-green-600',
+  medium: 'text-yellow-600',
+  high: 'text-orange-600',
+  urgent: 'text-red-600',
+}
+
+export const CHECKLIST_TYPE_LABELS: Record<ChecklistType, string> = {
+  event: 'Evento',
+  standalone: 'Avulso',
+  recurring: 'Recorrente',
+}
+
+export const CHECKLIST_STATUS_LABELS: Record<ChecklistStatus, string> = {
+  pending: 'Pendente',
+  in_progress: 'Em andamento',
+  completed: 'Concluído',
+  cancelled: 'Cancelado',
+}
 export type MaintenanceType = 'emergency' | 'preventive' | 'punctual' | 'recurring'
 export type MaintenancePriority = 'low' | 'medium' | 'high' | 'critical'
 export type MaintenanceStatus = 'open' | 'in_progress' | 'waiting_parts' | 'completed' | 'cancelled'
@@ -463,12 +491,14 @@ export type ChecklistItem = {
   photo_url: string | null
   notes: string | null
   sort_order: number
+  created_at: string
   // Migration 018 — Checklists Premium
   assigned_to: string | null
   priority: Priority
   due_at: string | null          // prazo individual do item (due_date do checklist é o geral)
   estimated_minutes: number | null
   actual_minutes: number | null
+  is_required: boolean           // copiado de template_items.is_required na criação
 }
 
 // Migration 018 — nova tabela: regras de recorrência
