@@ -755,6 +755,23 @@ export type EventWithDetails = Event & {
   }>
 }
 
+// Evento para listagem paginada — inclui progresso de checklists
+export type EventForList = Event & {
+  event_type: Pick<EventType, 'id' | 'name'> | null
+  package: Pick<Package, 'id' | 'name'> | null
+  venue: Pick<Venue, 'id' | 'name' | 'capacity'> | null
+  staff: Array<{
+    id: string
+    role_in_event: string
+    user: Pick<User, 'id' | 'name' | 'avatar_url'>
+  }>
+  checklists: Array<{
+    id: string
+    status: ChecklistStatus
+    checklist_items: Array<{ id: string; status: ChecklistItemStatus }>
+  }>
+}
+
 // Checklist com itens completos (tela de preenchimento)
 export type ChecklistWithItems = Checklist & {
   checklist_items: Array<ChecklistItem & {

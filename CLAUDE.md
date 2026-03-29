@@ -1421,6 +1421,7 @@ Varredura completa do codebase para consistência visual, acessibilidade e idiom
 - [x] Fase 3 Bloco 5: Otimizações de Performance (select específico, staleTime, React.memo, bundle analyzer)
 - [x] Fase 3 Bloco 6: Offline Mode (IDB checklists R/W com sync queue + calendário read-only cached)
 - [x] Fase 4: Integração Ploomes CRM (lib cliente, sync, upload, cron, webhook, UI completa)
+- [x] Eventos Redesign P1: Lista com abas temporais, agrupamento e load more
 
 > **NOTA:** Após subir o Supabase com `docker compose up -d`, regenerar os tipos com:
 > ```bash
@@ -1738,6 +1739,34 @@ Branch: `claude/optimistic-poitras`
 | TooltipTrigger | Usar `render` prop para elemento custom; sem `asChild` |
 | Page transition | `key={pathname}` no wrapper dentro de `<main>` + `animate-page-enter` |
 | Skeleton | `<Skeleton>` usa `.skeleton-shimmer` — adapta a dark mode via `color-mix` |
+
+---
+
+## Eventos Redesign — P1 Lista com Abas Temporais (2026-03-29)
+
+### Novos tipos em `src/types/database.types.ts`
+- `EventForList`: Event + staff + event_type + package + venue + checklists (com checklist_items para progresso)
+
+### Novos hooks em `src/hooks/use-events.ts`
+- `TabKey`: `'today' | 'week' | 'month' | 'all'`
+- `getTabDateRange(tab, now)`: calcula `{ start, end }` ISO por aba (exportado para reutilização)
+- `useEventsTabCounts()`: 4 COUNT queries paralelas (`head: true`) — staleTime 2min, retry sem 401/403
+- `useEventsInfinite(filters)`: `useInfiniteQuery`, page size 20, cursor por offset; inclui join `checklists(id,status,checklist_items(id,status))`; filtros `tab + status[] + search`; `enabled: isSessionReady`
+
+### Novos componentes
+- `src/components/features/events/event-temporal-tabs.tsx`: abas pills com counters (scroll horizontal mobile, aria-selected, auto-scroll aba ativa)
+- `src/components/features/events/event-day-group.tsx`: separador de agrupamento por dia com labels inteligentes (Hoje/Amanhã/data longa ptBR)
+
+### Componentes atualizados
+- `src/components/features/events/event-card.tsx`: aceita `EventWithDetails | EventForList`; barra de progresso de checklists (verde ≥80%, âmbar ≥50%, vermelho <50%); skeleton usa `.skeleton-shimmer`
+- `src/app/(auth)/eventos/page.tsx`: redesign completo — abas + busca + chips + agrupamento por dia + load more; inner component `EventosContent` dentro de `<Suspense>` para `useSearchParams`; stagger `animate-fade-up` nos cards
+
+### Decisões técnicas
+- `useEventsInfinite` separado de `useEvents` (mantém retrocompat com modais de checklist)
+- Tab counts via `head: true` (apenas COUNT, zero dados transferidos)
+- Checklist progress calculado client-side dos items já retornados no join (sem query N+1)
+- Aba ativa em URL search params (`?tab=`) — persiste no refresh
+- Status filters em `useState` local — reset ao trocar de aba
 
 ---
 

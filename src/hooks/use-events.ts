@@ -1,8 +1,9 @@
 'use client'
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
-import type { EventWithDetails, EventInsert, EventUpdate, EventStatus } from '@/types/database.types'
+import type { EventWithDetails, EventForList, EventInsert, EventUpdate, EventStatus } from '@/types/database.types'
 import { toast } from 'sonner'
 import { notifyEventCreated, notifyStatusChanged } from '@/lib/notifications'
 import { useUnitStore } from '@/stores/unit-store'
@@ -20,6 +21,21 @@ const EVENT_WITH_DETAILS_SELECT = `
   )
 ` as const
 
+const EVENT_FOR_LIST_SELECT = `
+  *,
+  event_type:event_types(id, name),
+  package:packages(id, name),
+  venue:venues(id, name, capacity),
+  staff:event_staff(
+    id,
+    role_in_event,
+    user:users(id, name, avatar_url)
+  ),
+  checklists(id, status, checklist_items(id, status))
+` as const
+
+const EVENTS_PAGE_SIZE = 20
+
 // ─────────────────────────────────────────────────────────────
 // FILTROS
 // ─────────────────────────────────────────────────────────────
@@ -30,6 +46,149 @@ export type EventFilters = {
   dateTo?: string    // 'YYYY-MM-DD'
   page?: number
   pageSize?: number
+}
+
+// ─────────────────────────────────────────────────────────────
+// ABAS TEMPORAIS
+// ─────────────────────────────────────────────────────────────
+export type TabKey = 'today' | 'week' | 'month' | 'all'
+
+export function getTabDateRange(tab: TabKey, now: Date): { start: string; end: string } | null {
+  if (tab === 'all') return null
+  if (tab === 'today') {
+    const d = format(now, 'yyyy-MM-dd')
+    return { start: d, end: d }
+  }
+  if (tab === 'week') {
+    return {
+      start: format(startOfWeek(now, { weekStartsOn: 1 }), 'yyyy-MM-dd'),
+      end:   format(endOfWeek(now,   { weekStartsOn: 1 }), 'yyyy-MM-dd'),
+    }
+  }
+  // month
+  return {
+    start: format(startOfMonth(now), 'yyyy-MM-dd'),
+    end:   format(endOfMonth(now),   'yyyy-MM-dd'),
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// CONTADORES POR ABA
+// ─────────────────────────────────────────────────────────────
+export function useEventsTabCounts() {
+  const { activeUnitId } = useUnitStore()
+  const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
+
+  return useQuery({
+    queryKey: ['events-tab-counts', activeUnitId],
+    enabled: isSessionReady,
+    staleTime: 2 * 60 * 1000,
+    retry: (failureCount, error: unknown) => {
+      const status = (error as { status?: number })?.status
+      if (status === 401 || status === 403) return false
+      return failureCount < 3
+    },
+    queryFn: async () => {
+      const supabase = createClient()
+      const now = new Date()
+
+      const makeCount = async (dateFrom?: string, dateTo?: string) => {
+        let q = supabase
+          .from('events')
+          .select('id', { count: 'exact', head: true })
+          .neq('status', 'lost')
+        if (activeUnitId) q = q.eq('unit_id', activeUnitId)
+        if (dateFrom)     q = q.gte('date', dateFrom)
+        if (dateTo)       q = q.lte('date', dateTo)
+        const { count } = await q
+        return count ?? 0
+      }
+
+      const todayStr  = format(now, 'yyyy-MM-dd')
+      const weekRange = getTabDateRange('week', now)!
+      const monRange  = getTabDateRange('month', now)!
+
+      const [today, week, month, all] = await Promise.all([
+        makeCount(todayStr, todayStr),
+        makeCount(weekRange.start, weekRange.end),
+        makeCount(monRange.start,  monRange.end),
+        makeCount(),
+      ])
+
+      return { today, week, month, all } as Record<TabKey, number>
+    },
+  })
+}
+
+// ─────────────────────────────────────────────────────────────
+// LISTAGEM INFINITA (página principal de eventos)
+// ─────────────────────────────────────────────────────────────
+export type EventFiltersInfinite = {
+  tab: TabKey
+  status?: EventStatus[]
+  search?: string
+}
+
+export function useEventsInfinite(filters: EventFiltersInfinite) {
+  const { activeUnitId } = useUnitStore()
+  const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
+  const { tab, status, search } = filters
+
+  return useInfiniteQuery({
+    queryKey: ['events-infinite', activeUnitId, tab, status, search],
+    enabled: isSessionReady,
+    staleTime: 30 * 1000,
+    initialPageParam: 0 as number,
+    retry: (failureCount, error: unknown) => {
+      const st = (error as { status?: number })?.status
+      if (st === 401 || st === 403) return false
+      return failureCount < 3
+    },
+    getNextPageParam: (lastPage: { events: EventForList[]; total: number; offset: number }) => {
+      const next = lastPage.offset + EVENTS_PAGE_SIZE
+      return next < lastPage.total ? next : undefined
+    },
+    queryFn: async ({ pageParam }) => {
+      const supabase = createClient()
+      const offset = pageParam as number
+      const now    = new Date()
+
+      let query = supabase
+        .from('events')
+        .select(EVENT_FOR_LIST_SELECT, { count: 'exact' })
+        .order('date',       { ascending: true })
+        .order('start_time', { ascending: true })
+        .range(offset, offset + EVENTS_PAGE_SIZE - 1)
+
+      if (activeUnitId) query = query.eq('unit_id', activeUnitId)
+
+      const dateRange = getTabDateRange(tab, now)
+      if (dateRange) {
+        query = query.gte('date', dateRange.start).lte('date', dateRange.end)
+      }
+
+      if (status?.length) {
+        query = query.in('status', status)
+      } else {
+        query = query.neq('status', 'lost')
+      }
+
+      if (search?.trim()) {
+        query = query.or(
+          `client_name.ilike.%${search}%,birthday_person.ilike.%${search}%,title.ilike.%${search}%`
+        )
+      }
+
+      const { data, error, count } = await query
+      if (error) throw error
+
+      return {
+        events: (data ?? []) as unknown as EventForList[],
+        total:  count ?? 0,
+        offset,
+      }
+    },
+  })
 }
 
 // ─────────────────────────────────────────────────────────────
