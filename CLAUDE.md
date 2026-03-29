@@ -674,6 +674,38 @@ docker compose -f docker-compose.prod.yml logs -f app
 #### Buckets Storage
 - `maintenance-receipts`: comprovantes de custo (privado, path `{userId}/{timestamp}_{filename}`)
 
+### Manutenção — Histórico Consolidado (Prompt 6 — 2026-03-28)
+
+#### API
+- `GET /api/maintenance/history-summary?unit_id=X[&date_from&date_to&type&sector_id&supplier_id]`
+- KPIs: `total_completed`, `avg_resolution_hours`, `total_cost_approved`, `avg_cost_per_order`
+- Chart: `by_month[]` — últimos 12 meses fixos (count + cost), com filtros type/sector/supplier aplicados
+- Auth: cookie-based, retorna 401 sem sessão
+
+#### Hooks (`src/hooks/use-maintenance-history.ts`)
+- `useMaintenanceHistory(filters)` — `useInfiniteQuery`, 20/batch, offset pagination, status=completed
+- `useHistorySummary(filters)` — fetch para API route, `staleTime: 2min`
+- `formatResolutionTime(hours)` — `< 1h → Xmin`, `< 24h → Xh`, `>= 24h → X dias`
+- `calcResolutionHours(created_at, completed_at)` — diferença em horas, null se sem completed_at
+- `HistoryFilters` type: `date_from`, `date_to`, `type[]`, `sector_id`, `supplier_id`
+
+#### Componentes
+- `src/components/features/maintenance/history-timeline.tsx`: timeline vertical agrupada por mês
+  — `groupByMonth()` via `format(parseISO(completed_at), 'MMMM yyyy')`
+  — Dot colorido por tipo (vermelho/âmbar/verde/azul) + linha conectora `bg-border`
+  — Card com ícone, título, setor, fornecedor, data conclusão, tempo de resolução
+  — `HistoryTimelineSkeleton` incluído
+- `src/components/features/maintenance/history-tab.tsx`: aba completa
+  — 4 KPI cards (2×2 mobile, 4×1 desktop)
+  — Recharts `ComposedChart`: `Bar` (count, eixo Y esquerdo) + `Line` (cost, eixo Y direito)
+  — Filtros: date range inputs + type `FilterChip`s + sector `Select` + supplier `Select`
+  — Export Excel (`exportToExcel`) + PDF (`exportReportPDF`) — botões aparecem só quando há dados
+  — Load-more button (hasNextPage via useInfiniteQuery)
+  — Empty state (HistoryIcon), skeleton, error state
+
+#### Integração
+- `maintenance-tabs.tsx`: aba Histórico → `<HistoryTab />` (substituiu `PlaceholderTab`)
+
 ---
 
 ### Fase 2 — Bloco 2: Upload de Fotos (2026-03-27 → polimento Prompt 8 2026-03-28)
