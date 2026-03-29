@@ -660,6 +660,28 @@ Regras de recorrência com colunas explícitas (melhor para queries e índices):
 - **Complete flow**: usa `useCompleteChecklist` (valida `is_required` no hook); ConfirmDialog mostra aviso se há itens obrigatórios pendentes
 - Offline support mantido (banners offline/syncing, foto/finalizar desabilitados)
 
+### Checklists — Comentários por Item (Prompt 6 — 2026-03-29)
+
+**Componente:** `src/app/(auth)/checklists/[id]/components/item-comments-sheet.tsx`
+- Desktop: slide-over direita (400px, overlay) — Mobile: bottom-sheet (max-h 85svh, drag handle, rounded-t-2xl)
+- Usa `createPortal(document.body)` para posicionamento correto sobre tudo
+- Thread cronológica com `useChecklistItemComments(itemId)` — ASC, staleTime 30s
+- Foto nos comentários: `useSignedUrls('checklist-comment-photos', paths)` para signed URLs
+- Upload: `compressImage(file, 1200, 0.8)` antes de passar para `useAddComment({ itemId, content, photoFile, userId })`
+- Exclusão inline: clique uma vez → "Confirmar exclusão?" por 3s → segundo clique confirma (apenas autor via `user_id === currentUserId` + RLS)
+- `Lightbox`: overlay fullscreen com `createPortal`, fecha com Esc ou clique no overlay
+- Auto-scroll para fundo via `listRef.current.scrollTop = scrollHeight`
+- Realtime: `supabase.channel('comments-{itemId}')` com `postgres_changes INSERT` → invalida query + scroll
+- Textarea auto-resize: `style.height = 'auto'` depois `style.height = scrollHeight` (max 96px / 4 linhas)
+- `Ctrl+Enter` envia, botão Send disabled se texto vazio e sem foto
+- Empty state: `MessageCircle` + "Nenhum comentário ainda"
+
+**Integração no `ChecklistItemRow`:**
+- Botão `MessageCircle` sempre visível na coluna de ações direita
+- Badge numérico vermelho quando `commentsCount > 0` (máx "9+")
+- `commentsCount` state local (int) atualizado via `onCommentsCount` callback do sheet
+- `commentsOpen` state abre/fecha `ItemCommentsSheet`
+
 ### Fase 2 — Bloco 1: Módulo de Manutenção (2026-03-27)
 - [x] `supabase/migrations/009_fase2_maintenance.sql`: tabela `sectors` (8 setores seed), `maintenance_orders` atualizado (sector_id FK, recurrence_rule JSONB, tipo emergency/punctual/recurring), buckets privados `maintenance-photos` + `user-avatars` com RLS Storage
 - [x] `src/types/database.types.ts`: Sector, RecurrenceRule, MaintenanceWithDetails, MaintenanceForList, CalendarMaintenance, DashboardMaintenanceStats, MaintenanceType atualizado
