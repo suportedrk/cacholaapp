@@ -387,6 +387,7 @@ docker compose -f docker-compose.prod.yml logs -f app
 | `/checklists` | `(auth)/checklists/page.tsx` | ✅ funcional (Bloco 3) |
 | `/checklists/[id]` | `(auth)/checklists/[id]/page.tsx` | ✅ funcional (Bloco 3) |
 | `/checklists/templates` | `(auth)/checklists/templates/page.tsx` | ✅ funcional (Bloco 3) |
+| `/checklists/recorrencias` | `(auth)/checklists/recorrencias/page.tsx` | ✅ funcional (P7) |
 | `/checklists/templates/novo` | `(auth)/checklists/templates/novo/page.tsx` | ✅ funcional (Bloco 3) |
 | `/checklists/templates/[id]/editar` | `(auth)/checklists/templates/[id]/editar/page.tsx` | ✅ funcional (Bloco 3) |
 | `/manutencao` | `(auth)/manutencao/page.tsx` | ✅ funcional (Fase 2 Bloco 1) |
@@ -681,6 +682,53 @@ Regras de recorrência com colunas explícitas (melhor para queries e índices):
 - Badge numérico vermelho quando `commentsCount > 0` (máx "9+")
 - `commentsCount` state local (int) atualizado via `onCommentsCount` callback do sheet
 - `commentsOpen` state abre/fecha `ItemCommentsSheet`
+
+### Checklists — P6 Comment Threads (Prompt 6 — 2026-03-29)
+
+#### Componentes novos em `src/app/(auth)/checklists/[id]/components/`
+
+**`item-comments-sheet.tsx`**
+- `createPortal(document.body)` para overlay + painel
+- Mobile: bottom-sheet `inset-x-0 bottom-0 max-h-[85svh] rounded-t-2xl`
+- Desktop: slide-over `sm:inset-y-0 sm:right-0 sm:w-[400px] sm:rounded-l-2xl`
+- `useChecklistItemComments(open ? itemId : null)` — lazy load somente quando aberto
+- `useSignedUrls('checklist-comment-photos', photoPaths)` para thumbnails
+- `Lightbox` sub-component: createPortal + Escape key close
+- `CommentItem`: avatar 24px, name, formatDistanceToNow ptBR, texto, thumbnail, delete inline (3s timer)
+- Send: `compressImage(file, 1200, 0.8)` → `addComment(...)` com upload de foto opcional
+- Realtime: `supabase.channel('comments-{itemId}')` `postgres_changes INSERT` → invalidate + scrollToBottom
+- Auto-resize textarea (max 96px) + Ctrl+Enter para enviar
+
+#### `checklist-item-row.tsx` — adicionado comentários
+- Botão `MessageCircle` com badge (count real, máximo "9+")
+- `commentsOpen` state abre `ItemCommentsSheet`
+
+### Checklists — P7 Recorrências (Prompt 7 — 2026-03-29)
+
+#### Nova rota: `/checklists/recorrencias`
+- `src/app/(auth)/checklists/recorrencias/page.tsx`: lista todas as regras (ativas + pausadas)
+  - `RecurrenceCard`: ícone roxo, título prefixo + template name, toggle Switch ON/OFF via `useUpdateRecurrence`, ⋮ menu (editar/ver checklists gerados/excluir), pill "Próxima geração: D de MMM às HH:mm"
+  - Humanização: `humanizeFrequency()` → "Semanal · Seg, Ter" / "Mensal · dia 15" etc.
+  - `RecurrenceSkeleton` + EmptyState + stats (total/ativas/pausadas)
+- `src/app/(auth)/checklists/recorrencias/components/create-recurrence-modal.tsx`:
+  - Template selector (auto-preenche prefixo com título do template)
+  - Frequency pills: Diária / Semanal / Quinzenal / Mensal
+  - Day-of-week multi-select: 7 botões D S T Q Q S S (toggles independentes)
+  - Day-of-month input (1–28, condicional para Mensal)
+  - Time picker `<input type="time">`
+  - Assigned user select (filtrado `is_active=true`)
+  - Title prefix + preview ao vivo "Prefixo — DD/MM/YYYY"
+  - Suporta modo criar (useCreateRecurrence) e modo editar (useUpdateRecurrence)
+
+#### Novo cron: `POST /api/cron/generate-recurring-checklists`
+- Query `checklist_recurrence` onde `is_active=true AND next_generation_at <= now()`
+- Para cada regra: cria checklist `type='recurring'` com título `{prefix} — DD/MM/YYYY`
+- Copia itens do template (priority, estimated_minutes, notes, is_required, sort_order)
+- Atualiza `last_generated_at` + recalcula `next_generation_at` (espelha lógica do hook)
+- Protegido por `CRON_SECRET`; retorna `{ ok, generated, errors, timestamp }`
+
+#### Integração em `/checklists/page.tsx`
+- Botão "Recorrências" (ghost, RefreshCw icon) adicionado ao header da página, antes de Templates
 
 ### Fase 2 — Bloco 1: Módulo de Manutenção (2026-03-27)
 - [x] `supabase/migrations/009_fase2_maintenance.sql`: tabela `sectors` (8 setores seed), `maintenance_orders` atualizado (sector_id FK, recurrence_rule JSONB, tipo emergency/punctual/recurring), buckets privados `maintenance-photos` + `user-avatars` com RLS Storage
