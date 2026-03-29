@@ -750,6 +750,36 @@ docker compose -f docker-compose.prod.yml logs -f app
 
 ---
 
+### Manutenção — Mobile UX, Preventivas e SLA (Prompt 8 — 2026-03-28)
+
+#### Quick Actions Bar (mobile-only)
+- `src/components/features/maintenance/quick-actions-bar.tsx` (novo): barra fixa `md:hidden` com 3 botões (Foto / Status / Custo)
+  — Foto: input `capture="environment"` → `compressImage(file, 1200, 0.8)` → upload `maintenance-photos/{orderId}/quick-{ts}.jpg` → `useAddMaintenancePhoto`
+  — Status: abre `StatusBottomSheet`; "completed" delega a `useCompleteMaintenanceOrder`
+  — Custo: abre `QuickCostSheet`
+  — `paddingBottom: max(12px, env(safe-area-inset-bottom))` — safe area iOS/Android
+- `src/components/features/maintenance/status-bottom-sheet.tsx` (novo): Sheet `side="bottom"` rounded-t-2xl; grid 2×2 de status com ícones e cores semânticas; status atual desabilitado com checkmark
+- `src/components/features/maintenance/quick-cost-sheet.tsx` (novo): formulário simplificado inline; `text-base` (evita zoom iOS); máscara R$; upload de comprovante por câmera; usa `useSubmitCost` + `useUploadReceipt`
+- `src/app/(auth)/manutencao/[id]/page.tsx`: `<QuickActionsBar>` integrado + `pb-24 md:pb-0` no container
+
+#### Overdue Banner
+- `src/components/features/maintenance/overdue-banner.tsx` (novo): banner não-dismissível com `status-error-*` tokens; `border-l-4 border-red-500`; mostra count + maxDaysOverdue; botão "Ver atrasadas" chama `onViewOverdue`
+- `src/hooks/use-maintenance.ts`: `useOverdueOrders()` adicionado — conta ordens com `due_date < today` e `status` não concluído/cancelado
+
+#### Preventive Schedule
+- `src/components/features/maintenance/preventive-schedule.tsx` (novo): seção colapsável "Próximas Preventivas"; auto-expande se item vence em ≤14 dias; `formatFrequency()` human-labels; `countdownInfo()` — verde >14d / âmbar 7-14d / vermelho ≤7d/atrasado; oculto se sem itens
+- `src/hooks/use-maintenance.ts`: `useUpcomingPreventives()` adicionado — tipo `preventive`, status não concluído, sort client-side por `preventive_plan?.next_due_date`
+- `src/components/features/maintenance/maintenance-tabs.tsx`: `<OverdueBanner>` + `<PreventiveSchedule>` acima dos filtros em modo lista
+
+#### SLA Card
+- `src/components/features/maintenance/sla-card.tsx` (novo): `SlaBar` colorida (verde/âmbar/vermelho) + `animate-pulse-sla` quando atrasada; grid 2×2 com Criada/Prazo/Decorrido/Restante; banner vermelho interno quando atrasada; `formatDuration(ms)` helper
+- `src/app/(auth)/manutencao/[id]/page.tsx`: `<SlaCard>` entre info grid e seção preventiva, condicional a `due_date && status !== 'cancelled'`
+
+#### globals.css
+- `@keyframes pulse-sla` (1.5s ease-in-out) + `.animate-pulse-sla` + `prefers-reduced-motion` guard
+
+---
+
 ### Fase 2 — Bloco 2: Upload de Fotos (2026-03-27 → polimento Prompt 8 2026-03-28)
 - [x] `src/hooks/use-signed-urls.ts`: `useSignedUrls(bucket, paths)` — batch `createSignedUrls`, staleTime 30min
 - [x] `src/components/shared/photo-upload.tsx`: **Prompt 8** — reescrita completa; exports: `compressImage`, `PhotoDropZone` (alias `PhotoUpload`), `PhotoThumb`

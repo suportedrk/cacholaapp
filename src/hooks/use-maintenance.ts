@@ -403,6 +403,101 @@ export function useRemoveMaintenancePhoto() {
 }
 
 // ─────────────────────────────────────────────────────────────
+// ORDENS ATRASADAS (para banner de alerta)
+// ─────────────────────────────────────────────────────────────
+export function useOverdueOrders() {
+  const { activeUnitId } = useUnitStore()
+  const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
+
+  return useQuery({
+    queryKey: ['maintenance', 'overdue', activeUnitId],
+    enabled: isSessionReady,
+    staleTime: 60 * 1000,
+    queryFn: async () => {
+      const supabase = createClient()
+      const today = new Date().toISOString().split('T')[0]
+
+      let q = supabase
+        .from('maintenance_orders')
+        .select('id, title, due_date, created_at')
+        .not('status', 'in', '("completed","cancelled")')
+        .lt('due_date', today)
+
+      if (activeUnitId) q = q.eq('unit_id', activeUnitId)
+
+      const { data, error } = await q
+      if (error) throw error
+
+      const orders = (data ?? []) as { id: string; title: string; due_date: string; created_at: string }[]
+      // Find most overdue (smallest due_date = longest overdue)
+      const sorted = [...orders].sort((a, b) => a.due_date.localeCompare(b.due_date))
+      const mostOverdue = sorted[0]
+      const maxDaysOverdue = mostOverdue
+        ? Math.floor((Date.now() - new Date(mostOverdue.due_date + 'T23:59:59').getTime()) / 86_400_000)
+        : 0
+
+      return { count: orders.length, mostOverdue, maxDaysOverdue }
+    },
+  })
+}
+
+// ─────────────────────────────────────────────────────────────
+// PRÓXIMAS PREVENTIVAS (para cronograma)
+// ─────────────────────────────────────────────────────────────
+export type PreventiveForSchedule = {
+  id: string
+  title: string
+  sector: { name: string } | null
+  supplier: { company_name: string } | null
+  preventive_plan: {
+    frequency?: string
+    interval?: number
+    next_due_date?: string | null
+  } | null
+}
+
+export function useUpcomingPreventives() {
+  const { activeUnitId } = useUnitStore()
+  const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
+
+  return useQuery({
+    queryKey: ['maintenance', 'preventives', activeUnitId],
+    enabled: isSessionReady,
+    staleTime: 2 * 60 * 1000,
+    queryFn: async () => {
+      const supabase = createClient()
+
+      let q = supabase
+        .from('maintenance_orders')
+        .select(`
+          id, title, preventive_plan,
+          sector:sectors(name),
+          supplier:maintenance_suppliers!supplier_id(company_name)
+        `)
+        .eq('type', 'preventive')
+        .not('status', 'in', '("completed","cancelled")')
+
+      if (activeUnitId) q = q.eq('unit_id', activeUnitId)
+
+      const { data, error } = await q
+      if (error) throw error
+
+      const items = (data ?? []) as unknown as PreventiveForSchedule[]
+
+      // Sort client-side by next_due_date ASC, nulls last
+      return items.sort((a, b) => {
+        const dA = a.preventive_plan?.next_due_date
+        const dB = b.preventive_plan?.next_due_date
+        if (!dA && !dB) return 0
+        if (!dA) return 1
+        if (!dB) return -1
+        return dA.localeCompare(dB)
+      })
+    },
+  })
+}
+
+// ─────────────────────────────────────────────────────────────
 // MANUTENÇÕES DE UM EVENTO
 // ─────────────────────────────────────────────────────────────
 export function useEventMaintenances(eventId: string | null) {

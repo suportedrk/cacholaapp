@@ -11,6 +11,8 @@ import { EmptyState } from '@/components/shared/empty-state'
 import { MaintenanceCard, MaintenanceCardSkeleton } from './maintenance-card'
 import { MaintenanceFilters } from './maintenance-filters'
 import { KanbanBoard } from './kanban-board'
+import { OverdueBanner } from './overdue-banner'
+import { PreventiveSchedule } from './preventive-schedule'
 import { cn } from '@/lib/utils'
 import { useMaintenanceOrders, type MaintenanceFilters as Filters } from '@/hooks/use-maintenance'
 import { useSectors } from '@/hooks/use-sectors'
@@ -119,6 +121,16 @@ function OrdersTabContent() {
 
   return (
     <div className="space-y-4">
+      {/* Overdue banner — above filters */}
+      {viewMode === 'list' && (
+        <OverdueBanner
+          onViewOverdue={(f) => setFilters((prev) => ({ ...prev, ...f, page: 1 }))}
+        />
+      )}
+
+      {/* Preventive schedule — collapsible */}
+      {viewMode === 'list' && <PreventiveSchedule />}
+
       {/* Filters + View toggle row */}
       <div className="bg-card rounded-xl border border-border p-4">
         <div className="flex items-start justify-between gap-3">

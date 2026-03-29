@@ -31,6 +31,8 @@ import { MaintenanceTimeline } from '@/components/features/maintenance/maintenan
 import { PhotoSection } from '@/components/features/maintenance/photo-section'
 import { CostCard, CostCardSkeleton } from '@/components/features/maintenance/cost-card'
 import { CostFormModal } from '@/components/features/maintenance/cost-form-modal'
+import { QuickActionsBar } from '@/components/features/maintenance/quick-actions-bar'
+import { SlaCard } from '@/components/features/maintenance/sla-card'
 import { cn } from '@/lib/utils'
 import { useState } from 'react'
 import { useOrderCosts, useCurrentUser, MANAGER_ROLES, formatBRL } from '@/hooks/use-maintenance-costs'
@@ -105,7 +107,14 @@ export default function DetalheOrdemPage({
   }
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-6 max-w-3xl pb-24 md:pb-0">
+
+      {/* Quick Actions Bar — mobile only */}
+      <QuickActionsBar
+        orderId={order.id}
+        currentStatus={order.status as any}
+        canComplete={canComplete}
+      />
 
       {/* Header */}
       <div className={cn(
@@ -337,6 +346,11 @@ export default function DetalheOrdemPage({
             </div>
           </div>
         </div>
+      )}
+
+      {/* SLA Card — shown only when order has a due_date and not cancelled */}
+      {order.due_date && order.status !== 'cancelled' && (
+        <SlaCard createdAt={order.created_at} dueDate={order.due_date} />
       )}
 
       {/* Plano Preventivo */}

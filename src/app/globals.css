@@ -248,6 +248,18 @@
   transform-origin: top center;
 }
 
+/* SLA bar — pulse when overdue (> 100%) */
+@keyframes pulse-sla {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.55; }
+}
+.animate-pulse-sla {
+  animation: pulse-sla 1.5s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse-sla { animation: none; }
+}
+
 /* Notification panel — slide in from the right */
 @keyframes slide-in-right {
   from { transform: translateX(100%); }
