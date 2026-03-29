@@ -3,7 +3,7 @@
 import { Suspense, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ClipboardList, LayoutTemplate, Plus } from 'lucide-react'
+import { ClipboardList, LayoutTemplate, Plus, RefreshCw } from 'lucide-react'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { PageHeader } from '@/components/shared/page-header'
 import { EmptyState } from '@/components/shared/empty-state'
@@ -160,6 +160,13 @@ export default function ChecklistsPage() {
         description="Acompanhe e preencha os checklists operacionais"
         actions={
           <div className="flex items-center gap-2">
+            <Link
+              href="/checklists/recorrencias"
+              className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }))}
+            >
+              <RefreshCw className="w-4 h-4 mr-1.5" />
+              Recorrências
+            </Link>
             <Link
               href="/checklists/templates"
               className={cn(buttonVariants({ variant: 'outline', size: 'sm' }))}
