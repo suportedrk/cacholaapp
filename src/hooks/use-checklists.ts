@@ -932,6 +932,98 @@ export function useDeleteTemplate() {
 }
 
 // ─────────────────────────────────────────────────────────────
+// TEMPLATES — REATIVAR
+// ─────────────────────────────────────────────────────────────
+export function useReactivateTemplate() {
+  const qc = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const supabase = createClient()
+      const { error } = await supabase
+        .from('checklist_templates')
+        .update({ is_active: true })
+        .eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['checklist-templates'] })
+      toast.success('Template reativado.')
+    },
+    onError: () => toast.error('Erro ao reativar template.'),
+  })
+}
+
+// ─────────────────────────────────────────────────────────────
+// TEMPLATES — DUPLICAR
+// ─────────────────────────────────────────────────────────────
+export function useDuplicateTemplate() {
+  const qc = useQueryClient()
+  const { activeUnitId } = useUnitStore()
+
+  return useMutation({
+    mutationFn: async (templateId: string) => {
+      const supabase = createClient()
+
+      // 1. Fetch source template with items
+      const { data: src, error: srcErr } = await supabase
+        .from('checklist_templates')
+        .select('*, template_items(*)')
+        .eq('id', templateId)
+        .single()
+      if (srcErr) throw srcErr
+
+      // 2. Create new template
+      const { data: newTpl, error: tplErr } = await supabase
+        .from('checklist_templates')
+        .insert({
+          title: `${src.title} (cópia)`,
+          category: '',
+          category_id: src.category_id,
+          created_by: src.created_by,
+          is_active: true,
+          unit_id: activeUnitId!,
+          description: src.description,
+          default_priority: src.default_priority,
+          estimated_duration_minutes: src.estimated_duration_minutes,
+        })
+        .select('id')
+        .single()
+      if (tplErr) throw tplErr
+
+      // 3. Copy items preserving all premium fields
+      const sortedItems = (src.template_items as unknown as import('@/types/database.types').TemplateItem[])
+        .sort((a, b) => a.sort_order - b.sort_order)
+
+      if (sortedItems.length > 0) {
+        const { error: itemsErr } = await supabase
+          .from('template_items')
+          .insert(sortedItems.map((it) => ({
+            template_id: newTpl.id,
+            description: it.description,
+            sort_order: it.sort_order,
+            default_priority: it.default_priority,
+            default_estimated_minutes: it.default_estimated_minutes,
+            default_assigned_to: it.default_assigned_to,
+            notes_template: it.notes_template,
+            requires_photo: it.requires_photo,
+            is_required: it.is_required,
+          })))
+        if (itemsErr) throw itemsErr
+      }
+
+      return newTpl.id
+    },
+    onSuccess: (newId) => {
+      qc.invalidateQueries({ queryKey: ['checklist-templates'] })
+      toast.success('Template duplicado.')
+      return newId
+    },
+    onError: () => toast.error('Erro ao duplicar template.'),
+  })
+}
+
+// ─────────────────────────────────────────────────────────────
 // CATEGORIAS DE CHECKLIST
 // ─────────────────────────────────────────────────────────────
 export function useChecklistCategories() {

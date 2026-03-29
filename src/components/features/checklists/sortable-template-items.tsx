@@ -1,6 +1,6 @@
 'use client'
 
-
+import { useState, useRef, useEffect } from 'react'
 import {
   DndContext,
   closestCenter,
@@ -19,101 +19,312 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { GripVertical, Trash2, Plus } from 'lucide-react'
+import {
+  GripVertical, Trash2, Plus, ChevronDown, ChevronUp,
+  Camera, Star, Clock,
+} from 'lucide-react'
+import { Switch } from '@/components/ui/switch'
 import { cn } from '@/lib/utils'
+import { PRIORITY_LABELS } from '@/types/database.types'
+import type { Priority } from '@/types/database.types'
 
 // ─────────────────────────────────────────────────────────────
-// TIPOS
+// TYPES
 // ─────────────────────────────────────────────────────────────
 export interface TemplateItemDraft {
-  // id temporário (string) para DnD — pode não existir no banco ainda
   tempId: string
   description: string
+  defaultPriority: Priority
+  defaultEstimatedMinutes: number | null
+  defaultAssignedToUserId: string | null
+  notesTemplate: string | null
+  requiresPhoto: boolean
+  isRequired: boolean
 }
+
+export type TemplateUserOption = { id: string; name: string }
 
 interface SortableTemplateItemsProps {
   items: TemplateItemDraft[]
   onChange: (items: TemplateItemDraft[]) => void
+  users?: TemplateUserOption[]
   disabled?: boolean
 }
 
 // ─────────────────────────────────────────────────────────────
-// ITEM SORTÁVEL
+// HELPERS
 // ─────────────────────────────────────────────────────────────
-function SortableItem({
-  item,
-  onDescriptionChange,
-  onRemove,
-  disabled,
-}: {
+
+const PRIORITY_BADGE: Record<Priority, string> = {
+  low:    'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800',
+  medium: '',
+  high:   'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-800',
+  urgent: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800',
+}
+
+const FIELD_SELECT = 'w-full h-8 rounded-lg border border-border bg-background px-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring'
+
+function createEmptyItem(tempId: string): TemplateItemDraft {
+  return {
+    tempId,
+    description: '',
+    defaultPriority: 'medium',
+    defaultEstimatedMinutes: null,
+    defaultAssignedToUserId: null,
+    notesTemplate: null,
+    requiresPhoto: false,
+    isRequired: true,
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// SORTABLE ITEM
+// ─────────────────────────────────────────────────────────────
+
+interface SortableItemProps {
   item: TemplateItemDraft
-  onDescriptionChange: (desc: string) => void
+  onUpdate: (updates: Partial<TemplateItemDraft>) => void
   onRemove: () => void
+  onAddAfter: () => void
+  users: TemplateUserOption[]
+  autoFocus: boolean
   disabled?: boolean
-}) {
+}
+
+function SortableItem({
+  item, onUpdate, onRemove, onAddAfter, users, autoFocus, disabled,
+}: SortableItemProps) {
+  const [expanded, setExpanded] = useState(false)
+  const descRef = useRef<HTMLInputElement>(null)
+  const notesRef = useRef<HTMLTextAreaElement>(null)
+
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: item.tempId })
 
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
+  useEffect(() => {
+    if (autoFocus) descRef.current?.focus()
+  }, [autoFocus])
+
+  function handleNotesChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
+    const el = e.target
+    el.style.height = 'auto'
+    el.style.height = `${el.scrollHeight}px`
+    onUpdate({ notesTemplate: el.value || null })
   }
+
+  function handleDescKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      onAddAfter()
+    } else if (e.key === 'Escape' && !item.description.trim()) {
+      onRemove()
+    }
+  }
+
+  const showPriorityBadge = item.defaultPriority !== 'medium'
+  const hasTime = (item.defaultEstimatedMinutes ?? 0) > 0
 
   return (
     <div
       ref={setNodeRef}
-      style={style}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
       className={cn(
-        'flex items-center gap-2 rounded-lg border border-border bg-card px-2 py-2 transition-shadow',
-        isDragging && 'shadow-md ring-1 ring-primary/20 z-50'
+        'rounded-xl border border-border bg-card transition-shadow',
+        isDragging && 'shadow-lg ring-2 ring-primary/20 z-50 opacity-90',
       )}
     >
-      {/* Drag handle */}
-      <button
-        {...attributes}
-        {...listeners}
-        disabled={disabled}
-        className="flex items-center justify-center w-5 h-5 text-muted-foreground/50 cursor-grab active:cursor-grabbing shrink-0 touch-none"
-        aria-label="Arrastar para reordenar"
-      >
-        <GripVertical className="w-4 h-4" />
-      </button>
+      {/* ── Collapsed row ── */}
+      <div className="flex items-center gap-2 px-2 py-2 min-h-[44px]">
+        {/* Drag handle */}
+        <button
+          {...attributes}
+          {...listeners}
+          disabled={disabled}
+          className="flex items-center justify-center w-6 h-6 text-muted-foreground/40 cursor-grab active:cursor-grabbing shrink-0 touch-none hover:text-muted-foreground transition-colors"
+          aria-label="Arrastar para reordenar"
+        >
+          <GripVertical className="w-4 h-4" />
+        </button>
 
-      {/* Input de descrição */}
-      <input
-        type="text"
-        value={item.description}
-        onChange={(e) => onDescriptionChange(e.target.value)}
-        disabled={disabled}
-        placeholder="Descreva o item..."
-        className="flex-1 min-w-0 text-sm bg-transparent outline-none placeholder:text-muted-foreground/50 text-foreground"
-      />
+        {/* Description input */}
+        <input
+          ref={descRef}
+          type="text"
+          value={item.description}
+          onChange={(e) => onUpdate({ description: e.target.value })}
+          onKeyDown={handleDescKeyDown}
+          disabled={disabled}
+          placeholder="Descreva o item… (Enter para adicionar outro)"
+          className="flex-1 min-w-0 text-sm bg-transparent outline-none placeholder:text-muted-foreground/40 text-foreground"
+        />
 
-      {/* Remover */}
-      <button
-        onClick={onRemove}
-        disabled={disabled}
-        className="text-muted-foreground/50 hover:text-destructive transition-colors shrink-0"
-        aria-label="Remover item"
-      >
-        <Trash2 className="w-3.5 h-3.5" />
-      </button>
+        {/* Compact summary badges */}
+        <div className="flex items-center gap-1 shrink-0">
+          {showPriorityBadge && (
+            <span className={cn(
+              'text-[10px] px-1 py-0.5 rounded border leading-none font-medium',
+              PRIORITY_BADGE[item.defaultPriority],
+            )}>
+              {PRIORITY_LABELS[item.defaultPriority]}
+            </span>
+          )}
+          {hasTime && (
+            <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
+              <Clock className="w-2.5 h-2.5" />
+              {item.defaultEstimatedMinutes}m
+            </span>
+          )}
+          {item.requiresPhoto && (
+            <Camera className="w-3 h-3 text-blue-400" aria-label="Requer foto" />
+          )}
+          {item.isRequired && (
+            <Star className="w-3 h-3 text-amber-400" aria-label="Obrigatório" />
+          )}
+        </div>
+
+        {/* Expand toggle */}
+        <button
+          onClick={() => setExpanded((v) => !v)}
+          disabled={disabled}
+          className="flex items-center justify-center w-7 h-7 rounded-md text-muted-foreground/50 hover:text-foreground hover:bg-muted transition-colors shrink-0"
+          aria-label={expanded ? 'Colapsar' : 'Configurar item'}
+        >
+          {expanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+        </button>
+
+        {/* Delete */}
+        <button
+          onClick={onRemove}
+          disabled={disabled}
+          className="flex items-center justify-center w-7 h-7 rounded-md text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors shrink-0"
+          aria-label="Remover item"
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
+      {/* ── Expanded config ── */}
+      {expanded && (
+        <div className="border-t border-border/60 bg-muted/20 px-3 pb-3 pt-3 space-y-3 rounded-b-xl">
+          {/* Row 1: Priority + Estimated time + Required */}
+          <div className="grid grid-cols-3 gap-2">
+            <div className="space-y-1">
+              <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Prioridade</label>
+              <select
+                value={item.defaultPriority}
+                onChange={(e) => onUpdate({ defaultPriority: e.target.value as Priority })}
+                disabled={disabled}
+                className={FIELD_SELECT}
+              >
+                <option value="low">Baixa</option>
+                <option value="medium">Média</option>
+                <option value="high">Alta</option>
+                <option value="urgent">Urgente</option>
+              </select>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Tempo (min)</label>
+              <input
+                type="number"
+                min={0}
+                max={999}
+                value={item.defaultEstimatedMinutes ?? ''}
+                onChange={(e) => onUpdate({
+                  defaultEstimatedMinutes: e.target.value ? parseInt(e.target.value, 10) : null,
+                })}
+                disabled={disabled}
+                placeholder="—"
+                className="w-full h-8 rounded-lg border border-border bg-background px-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1">
+                <Star className="w-2.5 h-2.5 text-amber-400" />
+                Obrigatório
+              </label>
+              <div className="flex items-center h-8">
+                <Switch
+                  checked={item.isRequired}
+                  onCheckedChange={(v) => onUpdate({ isRequired: v })}
+                  disabled={disabled}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Row 2: Requires photo + Assignee */}
+          <div className={cn('grid gap-2', users.length > 0 ? 'grid-cols-2' : 'grid-cols-1')}>
+            <div className="space-y-1">
+              <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1">
+                <Camera className="w-2.5 h-2.5" />
+                Requer foto
+              </label>
+              <div className="flex items-center h-8">
+                <Switch
+                  checked={item.requiresPhoto}
+                  onCheckedChange={(v) => onUpdate({ requiresPhoto: v })}
+                  disabled={disabled}
+                />
+              </div>
+            </div>
+
+            {users.length > 0 && (
+              <div className="space-y-1">
+                <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Responsável padrão</label>
+                <select
+                  value={item.defaultAssignedToUserId ?? ''}
+                  onChange={(e) => onUpdate({ defaultAssignedToUserId: e.target.value || null })}
+                  disabled={disabled}
+                  className={FIELD_SELECT}
+                >
+                  <option value="">Nenhum</option>
+                  {users.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name.split(' ').slice(0, 2).join(' ')}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+
+          {/* Row 3: Notes template */}
+          <div className="space-y-1">
+            <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Instruções padrão</label>
+            <textarea
+              ref={notesRef}
+              value={item.notesTemplate ?? ''}
+              onChange={handleNotesChange}
+              disabled={disabled}
+              placeholder="Instruções que aparecerão como texto de ajuda nas notas do item..."
+              rows={2}
+              style={{ resize: 'none', overflow: 'hidden' }}
+              className="w-full rounded-lg border border-border bg-background px-2.5 py-2 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-ring"
+            />
+          </div>
+        </div>
+      )}
     </div>
   )
 }
 
 // ─────────────────────────────────────────────────────────────
-// COMPONENTE PRINCIPAL
+// MAIN COMPONENT
 // ─────────────────────────────────────────────────────────────
 export function SortableTemplateItems({
   items,
   onChange,
+  users = [],
   disabled,
 }: SortableTemplateItemsProps) {
+  const [autoFocusId, setAutoFocusId] = useState<string | null>(null)
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   )
 
   function handleDragEnd(event: DragEndEvent) {
@@ -124,19 +335,26 @@ export function SortableTemplateItems({
     onChange(arrayMove(items, oldIndex, newIndex))
   }
 
-  function addItem() {
-    onChange([
-      ...items,
-      { tempId: `new-${Date.now()}`, description: '' },
-    ])
+  function addItem(afterTempId?: string) {
+    const newId = `new-${Date.now()}`
+    if (afterTempId) {
+      const afterIdx = items.findIndex((i) => i.tempId === afterTempId)
+      const newItems = [...items]
+      newItems.splice(afterIdx + 1, 0, createEmptyItem(newId))
+      onChange(newItems)
+    } else {
+      onChange([...items, createEmptyItem(newId)])
+    }
+    setAutoFocusId(newId)
   }
 
-  function updateDesc(tempId: string, description: string) {
-    onChange(items.map((i) => (i.tempId === tempId ? { ...i, description } : i)))
+  function updateItem(tempId: string, updates: Partial<TemplateItemDraft>) {
+    onChange(items.map((i) => (i.tempId === tempId ? { ...i, ...updates } : i)))
   }
 
   function removeItem(tempId: string) {
     onChange(items.filter((i) => i.tempId !== tempId))
+    if (autoFocusId === tempId) setAutoFocusId(null)
   }
 
   return (
@@ -154,8 +372,11 @@ export function SortableTemplateItems({
             <SortableItem
               key={item.tempId}
               item={item}
-              onDescriptionChange={(desc) => updateDesc(item.tempId, desc)}
+              onUpdate={(updates) => updateItem(item.tempId, updates)}
               onRemove={() => removeItem(item.tempId)}
+              onAddAfter={() => addItem(item.tempId)}
+              users={users}
+              autoFocus={item.tempId === autoFocusId}
               disabled={disabled}
             />
           ))}
@@ -163,15 +384,15 @@ export function SortableTemplateItems({
       </DndContext>
 
       {items.length === 0 && (
-        <p className="text-sm text-muted-foreground text-center py-4 border border-dashed border-border rounded-lg">
-          Nenhum item ainda. Adicione abaixo.
+        <p className="text-sm text-muted-foreground text-center py-6 border border-dashed border-border rounded-xl">
+          Nenhum item ainda. Clique em "+ Adicionar item" para começar.
         </p>
       )}
 
       <button
-        onClick={addItem}
+        onClick={() => addItem()}
         disabled={disabled}
-        className="flex items-center gap-1.5 text-sm text-primary hover:text-primary/80 transition-colors font-medium py-1 disabled:opacity-40"
+        className="flex items-center gap-1.5 text-sm text-primary hover:text-primary/80 transition-colors font-medium py-1.5 disabled:opacity-40"
       >
         <Plus className="w-4 h-4" />
         Adicionar item
