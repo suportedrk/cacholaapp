@@ -809,6 +809,97 @@ Modal `createPortal(document.body)` com overlay + painel centrado:
 - Menu item "Exportar PDF" → `setExportPdfOpen(true)` (substituiu placeholder)
 - `<ExportPdfModal>` renderizado no final do JSX (normal header + completed banner)
 
+### Checklists — P11 Templates 2.0 (Prompt 11 — 2026-03-29)
+
+#### `src/components/features/checklists/sortable-template-items.tsx` — Reescrita completa
+- `TemplateItemDraft` expandido: `defaultPriority`, `defaultEstimatedMinutes`, `defaultAssignedToUserId`, `notesTemplate`, `requiresPhoto`, `isRequired`
+- `TemplateUserOption = { id, name }` exportado para seletor de responsável padrão
+- `SortableItem` colapsável:
+  - Linha colapsada: drag handle + description input + badges compactos (priority pill se ≠ medium, tempo, câmera, estrela) + chevron expand + delete
+  - Painel expandido (3 rows): Row1: priority select + tempo number + isRequired Switch; Row2: requiresPhoto Switch + assignee select (condicional a `users.length > 0`); Row3: textarea auto-resize para `notesTemplate`
+  - `autoFocus` via `descRef.current?.focus()` em `useEffect`
+  - Enter → `onAddAfter()` (chain); Escape (se vazio) → `onRemove()`
+- Total de minutos exibido no header da seção via `useMemo`
+
+#### `src/app/(auth)/checklists/templates/page.tsx` — Reescrita completa
+- `TemplateCard`: priority badge, subtitle (categoria · N itens · ~Xmin), indicadores foto/obrigatório/tempo, usage count, ⋮ menu (Editar/Duplicar/Desativar/Reativar), description snippet
+- Usage count: `useQuery` separado que agrupa `checklists.template_id` por ID client-side
+- `useChecklistTemplates(false)` — carrega todos (ativos + inativos)
+- Filtros: busca por nome, select categoria, botão "Mostrar inativos"
+- Grid 2 colunas em sm+; counter de ativos/inativos no rodapé
+
+#### Novos hooks em `src/hooks/use-checklists.ts`
+- `useReactivateTemplate()`: update `is_active=true` + invalidate + toast
+- `useDuplicateTemplate()`: copia template + itens com todos os campos premium → retorna `newId`
+
+#### `templates/novo/page.tsx` — Melhorias
+- Campos novos: description textarea, defaultPriority select
+- Total time auto-calculado via `useMemo` exibido no header dos itens
+- `useUsers()` → `userOptions` passado para `<SortableTemplateItems users={userOptions}>`
+- `handleSave` mapeia todos os campos premium dos itens
+
+#### `templates/[id]/editar/page.tsx` — Melhorias
+- Inicialização do `useEffect` popula todos os campos premium dos itens:
+  - `default_assigned_to` JSONB `{ type: 'user', value }` → `defaultAssignedToUserId`
+  - `default_priority`, `default_estimated_minutes`, `notes_template`, `requires_photo`, `is_required`
+- Campos de cabeçalho: description, defaultPriority (mesmos do novo)
+- Total time auto-calculado
+
+### Checklists — P12 Polish Final (Prompt 12 — 2026-03-29)
+
+#### Code audit (zero issues found)
+- Sem cores hex hardcoded nas telas de checklist
+- Sem strings em inglês na UI
+- Sem uso de `asChild` (base-ui)
+- Sem `console.log` de debug
+
+#### Fixes cirúrgicos
+- `minhas-tarefas/page.tsx` `TaskCard`: checkbox touch target corrigido de `w-5 h-5` (20px) para wrapper `w-11 h-11` (-m-2) — atinge 44px mínimo
+- `checklist-detail-header.tsx`: `ExportPdfModal` convertido para `dynamic(() => import(...), { ssr: false })` — lazy load evita carregar jsPDF/Canvas até o usuário abrir o modal
+- `sortable-template-items.tsx`: painel expandido ganha `animate-fade-up` (150ms) para transição suave
+
+#### Offline mode — estado atual e decisão técnica
+- `checklists` store: `{ id, data: AnyJson, cachedAt }` — snapshot completo do Supabase inclui todos os campos premium automaticamente
+- `checklist_items` store: armazena apenas `{ status, notes }` editados offline — campos como `priority` e `assigned_to` não são editáveis offline, portanto não precisam estar no schema
+- **Decisão:** schema offline está correto como está — a migração de versão do IDB só seria necessária se adicionarmos edição de priority/assignee offline no futuro
+- Sync manager envia apenas `status` + `notes` para Supabase ao voltar online (correto)
+
+#### safe-area — cobertura verificada
+- `checklists/[id]/page.tsx`: footer sticky com `max(16px, env(safe-area-inset-bottom))`
+- `create-checklist-modal.tsx`: `max(0.75rem, env(safe-area-inset-bottom))`
+- `item-comments-sheet.tsx`: `max(12px, env(safe-area-inset-bottom))`
+
+#### card-interactive — cobertura verificada
+- `checklist-card.tsx` (listagem): ✅
+- `templates/page.tsx` (TemplateCard): ✅
+- `checklist-kpis.tsx`: KPI cards não são clicáveis → sem card-interactive (correto)
+- `TaskCard` (minhas-tarefas): não é clicável como um todo → sem card-interactive (correto)
+
+### Checklists Premium — Resumo Consolidado (12 prompts — 2026-03-29)
+
+**Migration:** 018 + 018b (schema expandido)
+**Branch:** feat/checklist-premium-schema → merged para develop
+
+**Features entregues:**
+1. Schema expandido: prioridade, prazo por item, responsável por item, type, comments, recurrence
+2. Hooks refatorados: 15+ hooks com expanded joins e optimistic updates
+3. Listagem premium: KPIs + sparklines, filtros, cards com progresso
+4. Criação avulsa: CreateChecklistModal com 3 tipos (event/standalone/recurring)
+5. Detalhe premium: item assign/deadline popovers, 3-state checkbox, footer sticky, SaveIndicator
+6. Comentários: thread por item com fotos, realtime, lightbox
+7. Recorrência: UI + endpoint cron, geração automática
+8. Duplicação: individual + batch de evento anterior
+9. Minhas Tarefas: visão pessoal cross-checklist com agrupamento por urgência
+10. Export PDF: relatório com fotos, comentários, assinaturas (lazy loaded)
+11. Templates 2.0: config avançada por item, expandable, badges, usage count
+12. Polish: touch targets 44px, lazy loading, dark mode, offline schema doc
+
+**Decisões técnicas estabelecidas:**
+- `ExportPdfModal` lazy via `next/dynamic` (evita carregar jsPDF até usar)
+- Offline: snapshot `AnyJson` captura campos premium; sync envia só status+notes
+- `card-interactive` só em cards inteiramente clicáveis (não em cards com botões internos)
+- Touch targets: wrapper `w-11 h-11 -m-[valor]` para elementos pequenos
+
 ### Fase 2 — Bloco 1: Módulo de Manutenção (2026-03-27)
 - [x] `supabase/migrations/009_fase2_maintenance.sql`: tabela `sectors` (8 setores seed), `maintenance_orders` atualizado (sector_id FK, recurrence_rule JSONB, tipo emergency/punctual/recurring), buckets privados `maintenance-photos` + `user-avatars` com RLS Storage
 - [x] `src/types/database.types.ts`: Sector, RecurrenceRule, MaintenanceWithDetails, MaintenanceForList, CalendarMaintenance, DashboardMaintenanceStats, MaintenanceType atualizado
