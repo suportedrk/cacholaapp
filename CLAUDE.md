@@ -393,6 +393,8 @@ docker compose -f docker-compose.prod.yml logs -f app
 | `/manutencao/nova` | `(auth)/manutencao/nova/page.tsx` | ✅ funcional (Fase 2 Bloco 1) |
 | `/manutencao/[id]` | `(auth)/manutencao/[id]/page.tsx` | ✅ funcional (Fase 2 Bloco 1) |
 | `/manutencao/[id]/editar` | `(auth)/manutencao/[id]/editar/page.tsx` | ✅ funcional (Fase 2 Bloco 1) |
+| `/manutencao/fornecedores/novo` | `(auth)/manutencao/fornecedores/novo/page.tsx` | ✅ funcional (Prompt 4) |
+| `/manutencao/fornecedores/[id]` | `(auth)/manutencao/fornecedores/[id]/page.tsx` | ✅ funcional (Prompt 4) |
 | `/admin/unidades` | `(auth)/admin/unidades/page.tsx` | ✅ funcional (Fase 2.5) |
 | `/admin/unidades/nova` | `(auth)/admin/unidades/nova/page.tsx` | ✅ funcional (Fase 2.5) |
 | `/admin/unidades/[id]` | `(auth)/admin/unidades/[id]/page.tsx` | ✅ funcional (Fase 2.5) |
@@ -606,6 +608,36 @@ docker compose -f docker-compose.prod.yml logs -f app
 #### Animação `fadeSlideUp`
 - `@keyframes fade-slide-up` em `globals.css`; `prefers-reduced-motion` sem translateY
 - Token: `--animate-fade-slide-up`; classe: `.animate-fade-slide-up`
+
+### Manutenção — Fornecedores (Prompt 4 — 2026-03-28)
+
+#### Hooks (`src/hooks/use-suppliers.ts`)
+- `useSuppliers(filters)`: lista com `*, contacts:supplier_contacts(*), documents_count:supplier_documents(count)`
+- `useSupplier(id)`: detalhe com `*, contacts:supplier_contacts(*), documents:supplier_documents(*)`
+- `useCreateSupplier`, `useUpdateSupplier`, `useDeleteSupplier`
+- `useCreateContact`, `useUpdateContact`, `useDeleteContact` — lógica de contato principal (batch update is_primary=false antes)
+- `useUploadSupplierDocument`: fake progress interval 12%/180ms→85%, snap 100% ao concluir; path `{supplierId}/{timestamp}_{safeFilename}`
+- `useDeleteSupplierDocument`: remove registro + storage (best-effort)
+- Exports: `SUPPLIER_CATEGORIES`, `SupplierFilters`, `SupplierWithCounts`, `SupplierWithDetails`, `SupplierInsert`, `ContactInsert`
+
+#### Componentes
+- `src/components/features/maintenance/supplier-rating.tsx`: 5 estrelas, hover preview, nullable (clicar estrela selecionada remove rating)
+- `src/components/features/maintenance/supplier-card.tsx`: avatar Building2, category color badge, primary contact, doc/contact counts, CNPJ mono, `SupplierCardSkeleton`
+- `src/components/features/maintenance/supplier-form.tsx`: form criação/edição com CNPJ+phone mascarados, rating stars, category select, is_active Switch
+- `src/components/features/maintenance/contact-list.tsx`: lista inline de contatos com add/edit/delete; badge "Principal" (estrela âmbar); ConfirmDialog para exclusão
+- `src/components/features/maintenance/supplier-document-section.tsx`: upload com progress bar, badges de vencimento (vermelho=vencido, âmbar≤30 dias), view por tipo (lightbox imagens, window.open PDFs), `formatBytes` helper
+- `src/components/features/maintenance/supplier-list.tsx`: busca debounce 300ms, filtro categoria Select, FilterChips status Ativo/Inativo, grid `lg:grid-cols-2`
+
+#### Páginas
+- `src/app/(auth)/manutencao/fornecedores/novo/page.tsx`: form de criação → redirect para `/manutencao/fornecedores/[id]`
+- `src/app/(auth)/manutencao/fornecedores/[id]/page.tsx`: 3 sections (Dados da Empresa, Contatos, Documentos), inline edit, delete com ConfirmDialog
+
+#### Integrações
+- `maintenance-tabs.tsx`: aba Fornecedores → `<SupplierList />` (substituiu PlaceholderTab)
+- `maintenance-form.tsx`: campo `supplier_id` (select fornecedores ativos), campo `cost_estimate`, tipo `preventive` adicionado
+
+#### Buckets Storage
+- `supplier-documents`: documentos de fornecedores (privado, path `{supplierId}/{timestamp}_{filename}`)
 
 ---
 

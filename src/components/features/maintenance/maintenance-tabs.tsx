@@ -3,6 +3,7 @@
 import { useState, Suspense } from 'react'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { ClipboardList, Building2, DollarSign, Clock, Wrench } from 'lucide-react'
+import { SupplierList } from './supplier-list'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/shared/empty-state'
 import { MaintenanceCard, MaintenanceCardSkeleton } from './maintenance-card'
@@ -174,9 +175,7 @@ function MaintenanceTabsInner() {
 
       {/* Tab content */}
       {activeTab === 'orders' && <OrdersTabContent />}
-      {activeTab === 'suppliers' && (
-        <PlaceholderTab icon={Building2} label="Gestão de Fornecedores" />
-      )}
+      {activeTab === 'suppliers' && <SupplierList />}
       {activeTab === 'costs' && (
         <PlaceholderTab icon={DollarSign} label="Controle de Custos" />
       )}
