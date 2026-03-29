@@ -765,7 +765,6 @@ export type ChecklistWithItems = Checklist & {
   assigned_user: Pick<User, 'id' | 'name' | 'avatar_url'> | null
   completed_by_user?: Pick<User, 'id' | 'name' | 'avatar_url'> | null
   recurrence?: ChecklistRecurrence | null
-  duplicated_from_checklist?: Pick<Checklist, 'id' | 'title'> | null
 }
 
 // Checklist para listagem (itens apenas com id+status+priority para progresso)

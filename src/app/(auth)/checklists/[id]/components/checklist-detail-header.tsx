@@ -294,7 +294,7 @@ export function ChecklistDetailHeader({
         </div>
 
         {/* Duplicado de... indicator */}
-        {checklist.duplicated_from_checklist && (
+        {checklist.duplicated_from && (
           <div className="flex items-center gap-1.5 mt-2 text-xs text-muted-foreground">
             <ClipboardCopy className="w-3 h-3 shrink-0" />
             <span>Duplicado de</span>
@@ -302,7 +302,7 @@ export function ChecklistDetailHeader({
               href={`/checklists/${checklist.duplicated_from}`}
               className="hover:text-foreground underline truncate"
             >
-              {checklist.duplicated_from_checklist.title}
+              checklist original
             </Link>
           </div>
         )}
