@@ -3,87 +3,104 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { format, parseISO } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
 import {
-  ArrowLeft, Calendar, User, Clock,
-  CheckCircle2, WifiOff, RotateCw, ClipboardList,
+  ArrowLeft, WifiOff, RotateCw, ClipboardList,
 } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
-import { ChecklistProgress } from '@/components/features/checklists/checklist-progress'
-import { ChecklistItemRow } from '@/components/features/checklists/checklist-item-row'
 import { ConfirmDialog } from '@/components/shared/confirm-dialog'
 import { useOfflineChecklist } from '@/hooks/use-offline-checklist'
+import { useCompleteChecklist } from '@/hooks/use-checklists'
 import { useAuth } from '@/hooks/use-auth'
 import { calcProgress } from '@/components/features/checklists/checklist-progress'
 import { cn } from '@/lib/utils'
+import { ChecklistDetailHeader } from './components/checklist-detail-header'
+import { ChecklistItemRow, type RichChecklistItem } from './components/checklist-item-row'
 import type { ChecklistItemStatus } from '@/types/database.types'
 
-const STATUS_LABEL = {
-  pending:     'Pendente',
-  in_progress: 'Em Andamento',
-  completed:   'Concluído',
-  cancelled:   'Cancelado',
+// ─────────────────────────────────────────────────────────────
+// ITEM FILTER BAR
+// ─────────────────────────────────────────────────────────────
+type ItemFilter = 'all' | 'pending' | 'done' | 'na' | 'overdue' | 'my'
+
+interface FilterBarProps {
+  active:      ItemFilter
+  onChange:    (f: ItemFilter) => void
+  counts:      Record<ItemFilter, number>
+  currentUserId?: string
 }
 
-// ─── Indicador de salvamento inline ──────────────────────────
-function SaveIndicator({ isUpdating, justSaved }: { isUpdating: boolean; justSaved: boolean }) {
-  if (isUpdating) {
-    return (
-      <span className="flex items-center gap-1 text-xs text-muted-foreground animate-pulse shrink-0">
-        <RotateCw className="w-3 h-3" />
-        Salvando…
-      </span>
-    )
-  }
-  if (justSaved) {
-    return (
-      <span className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400 shrink-0">
-        <CheckCircle2 className="w-3 h-3" />
-        Salvo
-      </span>
-    )
-  }
-  return null
+function ItemFilterBar({ active, onChange, counts, currentUserId }: FilterBarProps) {
+  const filters: { key: ItemFilter; label: string }[] = [
+    { key: 'all',     label: 'Todos'    },
+    { key: 'pending', label: 'Pendentes' },
+    { key: 'done',    label: 'Feitos'   },
+    { key: 'na',      label: 'N/A'      },
+    { key: 'overdue', label: 'Atrasados' },
+    ...(currentUserId ? [{ key: 'my' as ItemFilter, label: 'Meus' }] : []),
+  ]
+
+  return (
+    <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-0.5 -mx-4 px-4 lg:-mx-6 lg:px-6">
+      {filters.map((f) => (
+        <button
+          key={f.key}
+          onClick={() => onChange(f.key)}
+          className={cn(
+            'flex items-center gap-1 px-3 h-7 rounded-full text-xs font-medium whitespace-nowrap shrink-0 transition-colors',
+            active === f.key
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-muted text-muted-foreground hover:bg-muted/80',
+          )}
+        >
+          {f.label}
+          {counts[f.key] > 0 && active !== f.key && (
+            <span className="bg-background/30 rounded-full px-1.5 text-[10px] tabular-nums">
+              {counts[f.key]}
+            </span>
+          )}
+        </button>
+      ))}
+    </div>
+  )
 }
 
-// ─── Estado vazio ─────────────────────────────────────────────
-function EmptyState() {
+// ─────────────────────────────────────────────────────────────
+// EMPTY STATE
+// ─────────────────────────────────────────────────────────────
+function EmptyState({ filtered }: { filtered?: boolean }) {
   return (
     <div className="flex flex-col items-center justify-center py-16 gap-3 text-muted-foreground">
       <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-muted">
         <ClipboardList className="w-8 h-8 opacity-50" />
       </div>
-      <p className="text-sm font-medium">Nenhum item neste checklist.</p>
-      <p className="text-xs opacity-60">Adicione itens via template ou edição.</p>
+      {filtered ? (
+        <>
+          <p className="text-sm font-medium">Nenhum item neste filtro.</p>
+          <p className="text-xs opacity-60">Tente outro filtro.</p>
+        </>
+      ) : (
+        <>
+          <p className="text-sm font-medium">Nenhum item neste checklist.</p>
+          <p className="text-xs opacity-60">Adicione itens via template ou edição.</p>
+        </>
+      )}
     </div>
   )
 }
 
-// ─── Estado completo (celebração) ────────────────────────────
-function CompletedBanner({ pct, done, total }: { pct: number; done: number; total: number }) {
-  return (
-    <div className="rounded-2xl bg-green-50 border border-green-200 dark:bg-green-950/30 dark:border-green-900/40 p-6 text-center">
-      <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/40 mb-3 animate-celebrate">
-        <CheckCircle2 className="w-8 h-8 text-green-600 dark:text-green-400" />
-      </div>
-      <h2 className="text-base font-semibold text-green-800 dark:text-green-300 mb-1">
-        Checklist Concluído!
-      </h2>
-      <p className="text-sm text-green-700 dark:text-green-400">
-        {done} de {total} ite{total !== 1 ? 'ns' : 'm'} · {pct}% concluído{pct !== 100 ? 's' : ''}
-      </p>
-    </div>
-  )
-}
-
-// ─── Loading skeleton ──────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+// LOADING SKELETON
+// ─────────────────────────────────────────────────────────────
 function ChecklistLoadingSkeleton() {
   return (
-    <div className="space-y-3 p-4">
-      <Skeleton className="h-5 w-40 skeleton-shimmer" />
-      <Skeleton className="h-2 w-full rounded-full skeleton-shimmer" />
+    <div className="space-y-3 py-4">
+      <Skeleton className="h-28 w-full rounded-2xl skeleton-shimmer" />
+      <div className="flex gap-2">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton key={i} className="h-7 w-20 rounded-full skeleton-shimmer" />
+        ))}
+      </div>
       {Array.from({ length: 5 }).map((_, i) => (
         <Skeleton key={i} className="h-14 w-full rounded-xl skeleton-shimmer" />
       ))}
@@ -91,10 +108,48 @@ function ChecklistLoadingSkeleton() {
   )
 }
 
-// ─── Página principal ──────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+// FOOTER PROGRESS RING (32px)
+// ─────────────────────────────────────────────────────────────
+function FooterRing({ pct }: { pct: number }) {
+  const size = 32, sw = 3
+  const r      = (size - sw) / 2
+  const circ   = 2 * Math.PI * r
+  const offset = circ - (pct / 100) * circ
+  const center = size / 2
+  return (
+    <div className="relative inline-flex items-center justify-center shrink-0">
+      <svg width={size} height={size} className="-rotate-90">
+        <circle cx={center} cy={center} r={r} strokeWidth={sw}
+          className="stroke-primary-foreground/30 fill-none" />
+        <circle cx={center} cy={center} r={r} strokeWidth={sw}
+          fill="none" className="stroke-primary-foreground transition-all duration-500"
+          strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round" />
+      </svg>
+      <span className="absolute text-[9px] font-bold text-primary-foreground tabular-nums rotate-0">
+        {pct}%
+      </span>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────────────────────
+import { isPast, startOfDay, parseISO, isToday } from 'date-fns'
+
+function isItemOverdue(item: RichChecklistItem): boolean {
+  if (!item.due_at || item.status !== 'pending') return false
+  const d = startOfDay(parseISO(item.due_at))
+  return isPast(d) && !isToday(d)
+}
+
+// ─────────────────────────────────────────────────────────────
+// PAGE
+// ─────────────────────────────────────────────────────────────
 export default function ChecklistFillPage() {
-  const { id } = useParams<{ id: string }>()
-  const router  = useRouter()
+  const { id }   = useParams<{ id: string }>()
+  const router   = useRouter()
   const { profile } = useAuth()
 
   const {
@@ -112,11 +167,14 @@ export default function ChecklistFillPage() {
     handleFinish,
   } = useOfflineChecklist(id)
 
+  const { mutate: completeChecklist, isPending: isCompleting } = useCompleteChecklist()
+
   const [confirmFinish, setConfirmFinish] = useState(false)
-  const [justSaved, setJustSaved]         = useState(false)
+  const [justSaved,     setJustSaved]     = useState(false)
+  const [itemFilter,    setItemFilter]    = useState<ItemFilter>('all')
   const prevUpdating = useRef(false)
 
-  // Detecta quando isUpdating passa de true → false para mostrar "Salvo ✓"
+  // Detect isUpdating false → show "Salvo ✓"
   useEffect(() => {
     if (prevUpdating.current && !isUpdating) {
       setJustSaved(true)
@@ -130,19 +188,13 @@ export default function ChecklistFillPage() {
   const isCancelled = checklist?.status === 'cancelled'
   const isReadOnly  = isCompleted || isCancelled
 
-  async function onFinish() {
-    await handleFinish()
-    setConfirmFinish(false)
-    router.push('/checklists')
-  }
-
   // ── Loading ──
   if (isLoading) return <ChecklistLoadingSkeleton />
 
-  // ── Erro ──
+  // ── Error ──
   if (isError || !checklist) {
     return (
-      <div className="space-y-4 p-4">
+      <div className="space-y-4 py-4">
         <Link
           href="/checklists"
           className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
@@ -158,167 +210,178 @@ export default function ChecklistFillPage() {
     )
   }
 
-  const { done, total, pct } = calcProgress(checklist.checklist_items)
+  const allItems = checklist.checklist_items as RichChecklistItem[]
+  const { done, total, pct } = calcProgress(allItems)
+
+  // ── Counts per filter ──
+  const counts: Record<ItemFilter, number> = {
+    all:     allItems.length,
+    pending: allItems.filter((i) => i.status === 'pending').length,
+    done:    allItems.filter((i) => i.status === 'done').length,
+    na:      allItems.filter((i) => i.status === 'na').length,
+    overdue: allItems.filter(isItemOverdue).length,
+    my:      allItems.filter((i) => i.assigned_to === profile?.id).length,
+  }
+
+  // ── Filtered items ──
+  const visibleItems = allItems.filter((item) => {
+    switch (itemFilter) {
+      case 'pending': return item.status === 'pending'
+      case 'done':    return item.status === 'done'
+      case 'na':      return item.status === 'na'
+      case 'overdue': return isItemOverdue(item)
+      case 'my':      return item.assigned_to === profile?.id
+      default:        return true
+    }
+  })
+
+  // ── Required items not yet done ──
+  const requiredPending = allItems.filter(
+    (i) => i.is_required && i.status === 'pending',
+  )
+
+  async function onFinish() {
+    if (!profile?.id) return
+    completeChecklist(
+      { checklistId: id, userId: profile.id },
+      {
+        onSuccess: () => {
+          setConfirmFinish(false)
+          router.push('/checklists')
+        },
+        onError: () => setConfirmFinish(false),
+      },
+    )
+  }
 
   return (
-    /* Container full-height para sticky funcionar dentro do <main> */
+    /* Container full-height para footer sticky funcionar */
     <div className="flex flex-col -mt-4 lg:-mt-6 min-h-full pb-28">
 
-      {/* ── Sticky header com progresso ── */}
-      <div className="sticky top-0 z-30 bg-background/95 backdrop-blur-sm border-b border-border -mx-4 lg:-mx-6 px-4 lg:px-6 pt-4 pb-3">
-        {/* Linha 1: título + indicador de save */}
-        <div className="flex items-start gap-3 mb-2.5">
-          <div className="flex-1 min-w-0">
-            <h1 className="text-base font-semibold text-foreground leading-tight truncate">
-              {checklist.title}
-            </h1>
-            {checklist.event && (
-              <p className="text-xs text-muted-foreground truncate mt-0.5">
-                {checklist.event.title}
-              </p>
-            )}
-          </div>
-
-          <SaveIndicator isUpdating={isUpdating} justSaved={justSaved} />
-        </div>
-
-        {/* Linha 2: barra de progresso + contagem */}
-        <div className="flex items-center gap-3">
-          <div className="flex-1">
-            <ChecklistProgress items={checklist.checklist_items} showLabel={false} />
-          </div>
-          <span className="text-xs font-medium text-foreground shrink-0 tabular-nums">
-            {done}/{total}
+      {/* ── Offline banners ── */}
+      {isOffline && (
+        <div className="flex items-center gap-2 rounded-xl bg-amber-50 border border-amber-200 dark:bg-amber-950/30 dark:border-amber-900/50 px-3 py-2.5 text-sm text-amber-800 dark:text-amber-300 mx-0 mt-4 mb-0">
+          <WifiOff className="size-4 shrink-0" />
+          <span className="flex-1 leading-snug">
+            Sem conexão — alterações serão sincronizadas ao reconectar.
           </span>
-          <span className={cn(
-            'text-xs font-medium px-2 py-0.5 rounded-full shrink-0',
-            isCompleted ? 'bg-green-100 text-green-700 dark:bg-green-950/50 dark:text-green-400' :
-            isCancelled ? 'bg-muted text-muted-foreground' :
-            checklist.status === 'in_progress' ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-400' :
-            'bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400'
-          )}>
-            {STATUS_LABEL[checklist.status]}
-          </span>
+          {pendingCount > 0 && (
+            <span className="shrink-0 rounded-full bg-amber-200 dark:bg-amber-800 px-2 py-0.5 text-xs font-medium">
+              {pendingCount}
+            </span>
+          )}
         </div>
+      )}
+      {isSyncing && (
+        <div className="flex items-center gap-2 rounded-xl bg-blue-50 border border-blue-200 dark:bg-blue-950/30 dark:border-blue-900/50 px-3 py-2.5 text-sm text-blue-800 dark:text-blue-300 mx-0 mt-2 mb-0">
+          <RotateCw className="size-4 shrink-0 animate-spin" />
+          Sincronizando alterações com o servidor…
+        </div>
+      )}
+
+      {/* ── Rich header ── */}
+      <div className="py-4">
+        <ChecklistDetailHeader
+          checklist={checklist}
+          done={done}
+          total={total}
+          pct={pct}
+          currentUserId={profile?.id}
+          isUpdating={isUpdating}
+          justSaved={justSaved}
+        />
       </div>
 
-      {/* ── Conteúdo scrollável ── */}
-      <div className="flex flex-col gap-3 px-0 py-4">
+      {/* ── Item filter bar ── */}
+      {allItems.length > 0 && !isReadOnly && (
+        <div className="mb-3">
+          <ItemFilterBar
+            active={itemFilter}
+            onChange={setItemFilter}
+            counts={counts}
+            currentUserId={profile?.id}
+          />
+        </div>
+      )}
 
-        {/* Banner offline */}
-        {isOffline && (
-          <div className="flex items-center gap-2 rounded-xl bg-amber-50 border border-amber-200 dark:bg-amber-950/30 dark:border-amber-900/50 px-3 py-2.5 text-sm text-amber-800 dark:text-amber-300">
-            <WifiOff className="size-4 shrink-0" />
-            <span className="flex-1 leading-snug">
-              Sem conexão — alterações serão sincronizadas ao reconectar.
-            </span>
-            {pendingCount > 0 && (
-              <span className="shrink-0 rounded-full bg-amber-200 dark:bg-amber-800 px-2 py-0.5 text-xs font-medium">
-                {pendingCount} pendente{pendingCount !== 1 ? 's' : ''}
-              </span>
-            )}
-          </div>
-        )}
-
-        {/* Banner sincronizando */}
-        {isSyncing && (
-          <div className="flex items-center gap-2 rounded-xl bg-blue-50 border border-blue-200 dark:bg-blue-950/30 dark:border-blue-900/50 px-3 py-2.5 text-sm text-blue-800 dark:text-blue-300">
-            <RotateCw className="size-4 shrink-0 animate-spin" />
-            Sincronizando alterações com o servidor…
-          </div>
-        )}
-
-        {/* Meta do checklist (data, responsável, prazo) */}
-        {(checklist.event?.date || checklist.assigned_user || checklist.due_date) && (
-          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground px-1">
-            {checklist.event?.date && (
-              <span className="flex items-center gap-1">
-                <Calendar className="w-3 h-3" />
-                {format(parseISO(checklist.event.date), "d MMM yyyy", { locale: ptBR })}
-              </span>
-            )}
-            {checklist.assigned_user && (
-              <span className="flex items-center gap-1">
-                <User className="w-3 h-3" />
-                {checklist.assigned_user.name}
-              </span>
-            )}
-            {checklist.due_date && (
-              <span className="flex items-center gap-1">
-                <Clock className="w-3 h-3" />
-                Prazo: {format(parseISO(checklist.due_date), "d MMM HH:mm", { locale: ptBR })}
-              </span>
-            )}
-          </div>
-        )}
-
-        {/* ── Lista de itens ── */}
-        {checklist.checklist_items.length === 0 ? (
+      {/* ── Item list ── */}
+      <div className="flex-1">
+        {allItems.length === 0 ? (
           <EmptyState />
+        ) : visibleItems.length === 0 ? (
+          <EmptyState filtered />
         ) : (
           <div className="space-y-2">
-            {checklist.checklist_items.map((item) => (
+            {visibleItems.map((item) => (
               <ChecklistItemRow
                 key={item.id}
                 item={item}
+                checklistId={id}
                 disabled={isReadOnly || isUpdating}
+                currentUserId={profile?.id}
                 onStatusChange={(status: ChecklistItemStatus) =>
-                  handleItemStatus(item.id, status, profile?.id)}
+                  handleItemStatus(item.id, status, profile?.id)
+                }
                 onNotesChange={(notes: string) =>
-                  handleItemNotes(item.id, notes, profile?.id)}
+                  handleItemNotes(item.id, notes, profile?.id)
+                }
                 onPhotoChange={isOffline
                   ? undefined
-                  : (file: File) => handleItemPhoto(item.id, file, profile?.id)}
+                  : (file: File) => handleItemPhoto(item.id, file, profile?.id)
+                }
               />
             ))}
           </div>
         )}
 
-        {/* ── Celebração / estado concluído ── */}
-        {isCompleted && (
-          <CompletedBanner pct={pct} done={done} total={total} />
-        )}
-
-        {/* ── Estado cancelado ── */}
+        {/* Cancelled state */}
         {isCancelled && (
-          <div className="rounded-xl bg-muted/60 border border-border p-4 text-center text-sm text-muted-foreground">
+          <div className="rounded-xl bg-muted/60 border border-border p-4 text-center text-sm text-muted-foreground mt-4">
             Este checklist foi cancelado.
           </div>
         )}
       </div>
 
-      {/* ── Footer sticky — botão de concluir ── */}
+      {/* ── Sticky footer ── */}
       {!isReadOnly && (
-        <div className="fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-sm border-t border-border p-4 safe-area-inset-bottom">
-          <div className="max-w-2xl mx-auto">
+        <div
+          className="fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-sm border-t border-border px-4 pb-4 pt-3"
+          style={{ paddingBottom: 'max(16px, env(safe-area-inset-bottom))' }}
+        >
+          <div className="max-w-2xl mx-auto flex items-center gap-3">
+            {/* Mini ring */}
+            <FooterRing pct={pct} />
+
+            {/* Concluir button */}
             <Button
               size="lg"
-              className="w-full gap-2"
+              className="flex-1 gap-2"
               onClick={() => setConfirmFinish(true)}
-              disabled={done === 0 || isUpdating || isOffline}
+              disabled={done === 0 || isUpdating || isOffline || isCompleting}
               title={isOffline ? 'Reconecte-se para finalizar' : undefined}
             >
-              <CheckCircle2 className="w-5 h-5" />
               Concluir Checklist
-              {done > 0 && (
-                <span className="ml-1 opacity-80 text-sm font-normal">
-                  ({done}/{total})
-                </span>
-              )}
+              <span className="opacity-80 text-sm font-normal tabular-nums">
+                {done}/{total}
+              </span>
             </Button>
           </div>
         </div>
       )}
 
-      {/* ── Confirmação de finalização ── */}
+      {/* ── Confirm finish ── */}
       <ConfirmDialog
         open={confirmFinish}
         onOpenChange={setConfirmFinish}
         title="Finalizar checklist?"
-        description={`${done} de ${total} itens concluídos (${pct}%). Os itens restantes ficarão como pendentes. Esta ação não pode ser desfeita.`}
+        description={
+          requiredPending.length > 0
+            ? `Atenção: ${requiredPending.length} ite${requiredPending.length !== 1 ? 'ns' : 'm'} obrigatório${requiredPending.length !== 1 ? 's' : ''} ainda não concluído${requiredPending.length !== 1 ? 's' : ''}. Finalize-os antes de concluir.`
+            : `${done} de ${total} itens concluídos (${pct}%). Esta ação não pode ser desfeita.`
+        }
         confirmLabel="Finalizar"
-        loading={isFinishing}
-        onConfirm={onFinish}
+        loading={isCompleting || isFinishing}
+        onConfirm={requiredPending.length > 0 ? () => setConfirmFinish(false) : onFinish}
       />
     </div>
   )
