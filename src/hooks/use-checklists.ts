@@ -39,7 +39,6 @@ const CHECKLIST_DETAIL_SELECT = `
   event:events!checklists_event_id_fkey(id, title, date, start_time, end_time, status),
   template:checklist_templates!checklists_template_id_fkey(id, title),
   recurrence:checklist_recurrence!checklists_recurrence_id_fkey(id, frequency, day_of_week, is_active, next_generation_at),
-  duplicated_from_checklist:checklists!checklists_duplicated_from_fkey(id, title),
   checklist_items(
     *,
     assigned_user:users!checklist_items_assigned_to_fkey(id, name, avatar_url),
