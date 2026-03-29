@@ -573,6 +573,45 @@ Regras de recorrência com colunas explícitas (melhor para queries e índices):
 - `ChecklistRecurrenceRule`: shape do JSONB em checklist_templates
 - `DefaultAssignedTo`: shape do JSONB em template_items
 - `ChecklistWithItems`, `ChecklistForList`, `TemplateWithItems`: atualizados
+- `PRIORITY_LABELS`, `PRIORITY_COLORS`, `CHECKLIST_TYPE_LABELS`, `CHECKLIST_STATUS_LABELS`: constantes pt-BR exportadas
+- `checklist_items.is_required`: adicionado (copiado de template_items na criação)
+- `checklist_items.created_at`: adicionado ao type
+
+### Checklists — Hooks Premium (Prompt 2 — 2026-03-29)
+
+#### Select constants exportadas de use-checklists.ts
+- `CHECKLIST_LIST_SELECT`: joins com assigned_user, created_by_user, completed_by_user, event, template, checklist_items(id, status, priority)
+- `CHECKLIST_DETAIL_SELECT`: todos os joins + checklist_items completos + done_by_user + recurrence
+
+#### Hooks refatorados em use-checklists.ts
+- `useChecklists(filters)`: `ChecklistFilters` expandido com `type`, `priority`, `overdue`, `search`; ordenação urgência-first; RETRY não retenta 401/403; enabled com `isSessionReady`
+- `useChecklist(id)`: enabled `!!id && isSessionReady`; usa `CHECKLIST_DETAIL_SELECT`
+- `useChecklistItems(checklistId)`: novo — items separados para invalidação granular; join assigned_user + done_by_user
+- `useEventChecklists(eventId)`: enabled `!!eventId && isSessionReady`
+- `useCreateChecklist`: aceita `type`, `description`, `priority`, `createdBy`; copia `is_required` e `priority` dos template_items
+- `useUpdateChecklist`: novo — patch parcial de todos os campos premium
+- `useCompleteChecklist`: novo — valida items `is_required` antes de concluir; seta `completed_at/by`
+- `useDuplicateChecklist`: novo — cópia limpa com `duplicated_from`; preserva priority/estimated_minutes/assigned_to
+- `useCreateTemplate` / `useUpdateTemplate`: aceita campos premium (`description`, `defaultPriority`, `estimatedDurationMinutes`); items com `notesTemplate`, `requiresPhoto`, `isRequired`
+
+#### Hooks novos
+
+**use-checklist-comments.ts**
+- `useChecklistItemComments(itemId)`: enabled `!!itemId && isSessionReady`; join user
+- `useAddComment()`: upload para `checklist-comment-photos` (path privado); notifyChecklistItemCommented fire-and-forget
+- `useDeleteComment()`: valida `user_id === userId`; remove storage best-effort
+
+**use-checklist-recurrences.ts**
+- `useChecklistRecurrences(onlyActive)`: join template + assigned_user
+- `useCreateRecurrence()`: calcula `next_generation_at` via `calcNextGenerationAt()`
+- `useUpdateRecurrence()`: suporta `isActive` toggle (recalcula next_generation_at ao retomar)
+- `useDeleteRecurrence()`
+
+**use-my-tasks.ts**
+- `useMyTasks(userId, filters)`: cross-checklist, status='pending', join checklist+event; ordenação urgência→due_at→created_at; filtros `priority`, `overdue`, `eventId`
+
+**use-checklist-stats.ts**
+- `useChecklistStats()`: staleTime 5min; 4 queries paralelas (all, overdue, today, week); byPriority + byCategory via template join; avgCompletionHours calculado client-side
 
 ### Fase 2 — Bloco 1: Módulo de Manutenção (2026-03-27)
 - [x] `supabase/migrations/009_fase2_maintenance.sql`: tabela `sectors` (8 setores seed), `maintenance_orders` atualizado (sector_id FK, recurrence_rule JSONB, tipo emergency/punctual/recurring), buckets privados `maintenance-photos` + `user-avatars` com RLS Storage

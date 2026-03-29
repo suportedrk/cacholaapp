@@ -318,3 +318,13 @@ COMMENT ON COLUMN public.checklist_recurrence.next_generation_at IS
   'Próxima execução do cron que gera o checklist. Atualizado após cada geração.';
 COMMENT ON COLUMN public.checklist_item_comments.photo_url IS
   'Storage path em checklist-comment-photos (privado). Usar signed URL para exibição.';
+
+-- ---------------------------------------------------------------------------
+-- Addendum: is_required em checklist_items
+-- (copiado de template_items.is_required na criação do checklist)
+-- ---------------------------------------------------------------------------
+ALTER TABLE public.checklist_items
+  ADD COLUMN IF NOT EXISTS is_required BOOLEAN NOT NULL DEFAULT FALSE;
+
+CREATE INDEX IF NOT EXISTS idx_checklist_items_required
+  ON public.checklist_items(checklist_id) WHERE is_required = TRUE;
