@@ -1897,6 +1897,20 @@ Branch: `claude/optimistic-poitras`
 
 ---
 
+## Migration 021 — Service Providers (Prestadores de Serviços) (2026-03-30)
+
+- 7 tabelas: `service_categories`, `service_providers`, `provider_contacts`, `provider_services`, `provider_documents`, `event_providers`, `provider_ratings`
+- Triggers: `update_provider_stats` (recalcula `avg_rating` + `total_events` via SECURITY DEFINER), `update_updated_at` (reutiliza função existente) em todas as 7 tabelas
+- Bucket: `provider-documents` (20MB, PDF/imagens/docx, privado)
+- Seed: 13 categorias padrão para unidade Pinheiros
+- RLS: módulo `'providers'` com ações `view/create/edit/delete` (28 policies)
+- `role_default_perms`: super_admin (tudo), diretor (view+export), gerente (view+create+edit+export), vendedora (view)
+- CHECK constraint de `role_default_perms.module` expandido para incluir `'providers'`
+- Constraint checks: status (active/inactive/blocked/pending_docs), document_type (cpf/cnpj), rating (1–5), price_type (per_event/per_hour/custom), event_provider status (pending/confirmed/cancelled/completed), doc_type (contract/license/certificate/insurance/id_document/other), contact type (phone/email/whatsapp)
+- ~18 índices para busca, filtro e detecção de conflitos de agenda
+
+---
+
 ## DECISÕES TÉCNICAS
 
 | Decisão | Razão |
