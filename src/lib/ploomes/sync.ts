@@ -293,9 +293,37 @@ export async function syncDeals(
           birthday_age: parsed.age ?? null,
           guest_count: parsed.guestCount ?? null,
           theme: parsed.theme ?? null,
+          notes: parsed.notes ?? null,
           venue_id: venueId,
           unit_id: unitId,
           created_by: createdBy,
+          // Logística
+          setup_time: parsed.setupTime ?? null,
+          teardown_time: parsed.teardownTime ?? null,
+          show_time: parsed.showTime ?? null,
+          event_location: parsed.eventLocation ?? null,
+          duration: parsed.duration ?? null,
+          // Serviços contratados
+          has_show: parsed.hasShow ?? false,
+          photo_video: parsed.photoVideo ?? null,
+          decoration_aligned: parsed.decorationAligned ?? false,
+          has_decorated_sweets: parsed.hasDecoratedSweets ?? false,
+          party_favors: parsed.partyFavors ?? false,
+          outside_drinks: parsed.outsideDrinks ?? false,
+          // Família
+          father_name: parsed.fatherName ?? null,
+          school: parsed.school ?? null,
+          birthday_date: parsed.birthdayDate ?? null,
+          // Financeiro
+          payment_method: parsed.paymentMethod ?? null,
+          briefing: parsed.briefing ?? null,
+          event_category: parsed.eventCategory ?? null,
+          cake_flavor: parsed.cakeFlavor ?? null,
+          music: parsed.music ?? null,
+          adult_count: parsed.adultCount ?? null,
+          kids_under4: parsed.kidsUnder4 ?? null,
+          kids_over5: parsed.kidsOver5 ?? null,
+          deal_amount: parsed.amount ?? null,
         }
 
         // Verificar se já existe (para contar created vs updated vs lost)

@@ -379,6 +379,30 @@ export type Event = {
   created_by: string
   created_at: string
   updated_at: string
+  // Ploomes enrichment (migration 020) — apenas deals Ploomes
+  setup_time: string | null          // TIME 'HH:MM:SS'
+  teardown_time: string | null       // TIME 'HH:MM:SS'
+  show_time: string | null           // TIME 'HH:MM:SS'
+  event_location: string | null
+  duration: string | null            // TIME 'HH:MM:SS'
+  has_show: boolean
+  photo_video: string | null
+  decoration_aligned: boolean
+  has_decorated_sweets: boolean
+  party_favors: boolean
+  outside_drinks: boolean
+  father_name: string | null
+  school: string | null
+  birthday_date: string | null       // DATE 'YYYY-MM-DD'
+  payment_method: string | null
+  briefing: string | null
+  event_category: string | null
+  cake_flavor: string | null
+  music: string | null
+  adult_count: number | null
+  kids_under4: number | null
+  kids_over5: number | null
+  deal_amount: number | null
 }
 
 export type EventInsert = {

@@ -1454,6 +1454,7 @@ Varredura completa do codebase para consistência visual, acessibilidade e idiom
 - [x] Eventos Redesign P1: Lista com abas temporais, agrupamento e load more
 - [x] Eventos Redesign P2: Cards enriquecidos + KPI cards + campos client_phone/email/theme
 - [x] Eventos Redesign P3: Detalhe do evento com accordion sections + quick actions bar
+- [x] Eventos Redesign P4: Enriquecimento Ploomes — 22 novos campos sincronizados, migration 020, UI com Serviços/Briefing/Financeiro
 
 > **NOTA:** Após subir o Supabase com `docker compose up -d`, regenerar os tipos com:
 > ```bash
@@ -1844,6 +1845,55 @@ Branch: `claude/optimistic-poitras`
 - `divide-y divide-border` no pai garante divisores corretos mesmo com seções condicionais
 - `checklistsSectionRef` em wrapper `<div>` ao redor do AccordionSection para scroll target mobile
 - Acordeão de scratch: sem Radix, sem shadcn — CSS grid animation puro
+
+---
+
+## Eventos Redesign — P4 Enriquecimento Ploomes (2026-03-29)
+
+### Novos campos sincronizados (22 OtherProperties + deal.Amount)
+
+**Logística:** setup_time, teardown_time, show_time, event_location, duration
+**Serviços:** has_show, photo_video, decoration_aligned, has_decorated_sweets, party_favors, outside_drinks
+**Família:** father_name, school, birthday_date
+**Financeiro:** payment_method, briefing, event_category, cake_flavor, music, adult_count, kids_under4, kids_over5, deal_amount (Deal.Amount)
+
+### `supabase/migrations/020_ploomes_enrichment_fields.sql`
+- 23 colunas adicionadas via `ALTER TABLE events ADD COLUMN IF NOT EXISTS`
+- Todos nullable (nem todos os deals têm todos os campos)
+- Booleanos com `DEFAULT FALSE`; decimais como `DECIMAL(12,2)`
+
+### `src/lib/ploomes/types.ts`
+- `PloomesOtherProperty`: adicionado `BoolValue?: boolean` e `BigStringValue?: string`
+- `ParsedDeal`: 22+ novos campos (setupTime, hasShow, briefing, fatherName, etc.)
+- `FieldMappingDef`: tipos expandidos com `BoolValue`, `BigStringValue`, parser `bool`
+
+### `src/lib/ploomes/field-mapping.ts`
+- `DEAL_FIELD_MAP`: expandido de 9 para 32 entradas (22 novos FieldKeys)
+- `ValueKey`: adicionado `BoolValue` e `BigStringValue`
+- `Parser`: adicionado `bool`
+- `parseRawValue`: handler para `bool` (`BoolValue`) e bigstring (via `StringValue`/`BigStringValue`)
+- Seções: Essenciais (10), Logística (5), Serviços (6), Família (3), Financeiro (8)
+
+### `src/lib/ploomes/sync.ts` — `eventPayload` expandido
+- Todos os 22 novos campos do `parsed` mapeados para colunas do banco
+- `deal_amount: parsed.amount ?? null` (Deal.Amount standard field)
+- `notes: parsed.notes ?? null` (Observações BigString — antes não era salvo)
+
+### `src/app/(auth)/eventos/[id]/page.tsx` — Novas seções accordion
+- `LogisticsTimeline`: expandida com pontos setup/show/teardown (amber=montagem, violet=show)
+- **S3 "Cliente e Família"**: adicionados father_name, school, birthday_date
+- **S3b "Serviços Contratados"** (novo): `BoolIndicator` grid 2 colunas + photo_video
+- **S3c "Briefing"** (novo): texto longo whitespace-pre-wrap
+- **S3d "Financeiro"** (novo): deal_amount formatado BRL + payment_method
+- **S1 "Informações da Festa"**: adicionados event_category, cake_flavor, music, breakdown adultos/crianças
+- Todos condicionais (`hasServices`, `hasBriefing`, `hasFinancial`) — não renderizam se vazio
+
+### Decisões técnicas
+- `event_category` (não `event_type`) para evitar conflito com FK `event_type_id`
+- `BigStringValue` e `BoolValue` adicionados a `PloomesOtherProperty` conforme API Ploomes
+- `notes` agora salvo no sync (campo `deal_6DD261DD...` antes ignorado)
+- `deal_amount` mapeado de `Deal.Amount` (standard field, não OtherProperty)
+- Migration `IF NOT EXISTS` — segura para re-executar
 
 ---
 

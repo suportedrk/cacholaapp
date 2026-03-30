@@ -9,7 +9,8 @@ import {
   ArrowLeft, Pencil, Trash2, Calendar, Clock, MapPin, Users, Package,
   ChevronDown, Plus, ExternalLink, Wrench, PartyPopper, Truck, User2,
   CheckSquare, MessageCircle, Phone, Mail, MoreVertical,
-  ClipboardList, History, Tag,
+  ClipboardList, History, Tag, Star, Camera, Music2, CakeSlice,
+  DollarSign, School, BookText, Check, X as XIcon,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -98,13 +99,33 @@ function AccordionSection({ title, icon: Icon, badge, defaultOpen = false, child
 }
 
 // ── Logistics Timeline ─────────────────────────────────────────
-function LogisticsTimeline({ start, end }: { start: string; end: string }) {
+interface TimelinePoint {
+  time: string
+  label: string
+  color: string
+  textColor: string
+}
+
+function LogisticsTimeline({
+  start, end, setup, teardown, show,
+}: {
+  start: string
+  end: string
+  setup?: string | null
+  teardown?: string | null
+  show?: string | null
+}) {
   const fmt = (t: string) => t.slice(0, 5)
 
-  const points = [
-    { time: fmt(start), label: 'Início',  color: 'bg-green-500', textColor: 'text-green-600 dark:text-green-400' },
-    { time: fmt(end),   label: 'Término', color: 'bg-green-500', textColor: 'text-green-600 dark:text-green-400' },
+  const raw: Array<TimelinePoint & { sortKey: string }> = [
+    ...(setup    ? [{ sortKey: setup,    time: fmt(setup),    label: 'Montagem',    color: 'bg-amber-400',  textColor: 'text-amber-600 dark:text-amber-400' }] : []),
+    { sortKey: start,    time: fmt(start),    label: 'Início',     color: 'bg-green-500', textColor: 'text-green-600 dark:text-green-400' },
+    ...(show     ? [{ sortKey: show,     time: fmt(show),     label: 'Show',        color: 'bg-violet-500', textColor: 'text-violet-600 dark:text-violet-400' }] : []),
+    { sortKey: end,      time: fmt(end),      label: 'Término',    color: 'bg-green-500', textColor: 'text-green-600 dark:text-green-400' },
+    ...(teardown ? [{ sortKey: teardown, time: fmt(teardown), label: 'Desmontagem', color: 'bg-amber-400',  textColor: 'text-amber-600 dark:text-amber-400' }] : []),
   ]
+  // Sort by sortKey (HH:MM comparison works lexicographically)
+  const points = raw.sort((a, b) => a.sortKey.localeCompare(b.sortKey))
 
   return (
     <div className="relative flex items-start justify-between pt-5 pb-2">
@@ -116,6 +137,20 @@ function LogisticsTimeline({ start, end }: { start: string; end: string }) {
           <span className="text-[10px] text-text-tertiary">{pt.label}</span>
         </div>
       ))}
+    </div>
+  )
+}
+
+// ── Bool indicator helper ──────────────────────────────────────
+function BoolIndicator({ value, label }: { value: boolean; label: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      {value ? (
+        <Check className="w-3.5 h-3.5 text-green-500 shrink-0" />
+      ) : (
+        <XIcon className="w-3.5 h-3.5 text-text-tertiary/40 shrink-0" />
+      )}
+      <span className={cn('text-sm', value ? 'text-text-primary' : 'text-text-tertiary line-through')}>{label}</span>
     </div>
   )
 }
@@ -326,7 +361,6 @@ export default function EventoDetailPage() {
     "EEE, d 'de' MMMM 'de' yyyy",
     { locale: ptBR },
   )
-  const formatTime = (t: string) => t.slice(0, 5)
 
   const displayTitle = event.birthday_person
     ? `${event.birthday_person}${event.birthday_age ? ` · ${event.birthday_age} anos` : ''}`
@@ -338,8 +372,17 @@ export default function EventoDetailPage() {
 
   const completedChecklists = checklists.filter((c) => c.status === 'completed').length
 
-  const hasPartyInfo  = !!(event.event_type || event.package || event.notes)
-  const hasClientInfo = !!(event.client_phone || event.client_email)
+  const hasPartyInfo  = !!(event.event_type || event.package || event.notes || event.event_category || event.cake_flavor || event.music || event.adult_count || event.kids_under4 || event.kids_over5)
+  const hasClientInfo = !!(event.client_phone || event.client_email || event.father_name || event.school || event.birthday_date)
+  const hasLogisticsExtras = !!(event.setup_time || event.teardown_time || event.show_time)
+  const hasServices   = event.has_show || event.decoration_aligned || event.has_decorated_sweets || event.party_favors || event.outside_drinks || !!event.photo_video
+  const hasBriefing   = !!event.briefing
+  const hasFinancial  = !!(event.deal_amount || event.payment_method)
+
+  function formatBRL(val: number) {
+    return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+  }
+  function formatTime(t: string) { return t.slice(0, 5) }
 
   async function handleDelete() {
     await deleteEvent.mutateAsync(id)
@@ -497,10 +540,16 @@ export default function EventoDetailPage() {
         {/* S1: Informações da Festa */}
         {hasPartyInfo && (
           <AccordionSection title="Informações da Festa" icon={PartyPopper} defaultOpen>
-            <div className="space-y-3">
+            <div className="space-y-2.5">
+              {event.event_category && (
+                <div className="flex items-start gap-3">
+                  <span className="text-xs text-text-tertiary w-28 shrink-0 pt-0.5">Tipo</span>
+                  <span className="text-sm text-text-primary">{event.event_category}</span>
+                </div>
+              )}
               {event.event_type && (
                 <div className="flex items-start gap-3">
-                  <span className="text-xs text-text-tertiary w-28 shrink-0 pt-0.5">Tipo de evento</span>
+                  <span className="text-xs text-text-tertiary w-28 shrink-0 pt-0.5">Categoria</span>
                   <span className="text-sm text-text-primary">{event.event_type.name}</span>
                 </div>
               )}
@@ -513,14 +562,45 @@ export default function EventoDetailPage() {
                   </div>
                 </div>
               )}
+              {/* Convidados */}
               {event.guest_count && (
                 <div className="flex items-start gap-3">
                   <span className="text-xs text-text-tertiary w-28 shrink-0 pt-0.5">Convidados</span>
-                  <span className="text-sm text-text-primary">{event.guest_count} pessoas</span>
+                  <div>
+                    <span className="text-sm text-text-primary">{event.guest_count} pessoas</span>
+                    {(event.adult_count || event.kids_under4 || event.kids_over5) && (
+                      <p className="text-xs text-text-tertiary mt-0.5">
+                        {[
+                          event.adult_count ? `${event.adult_count} adultos` : null,
+                          event.kids_over5  ? `${event.kids_over5} crianças ≥5` : null,
+                          event.kids_under4 ? `${event.kids_under4} crianças ≤4` : null,
+                        ].filter(Boolean).join(' · ')}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+              {/* Bolo e música */}
+              {event.cake_flavor && (
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-text-tertiary w-28 shrink-0">Sabor do bolo</span>
+                  <div className="flex items-center gap-1.5">
+                    <CakeSlice className="w-3.5 h-3.5 text-text-tertiary shrink-0" />
+                    <span className="text-sm text-text-primary">{event.cake_flavor}</span>
+                  </div>
+                </div>
+              )}
+              {event.music && (
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-text-tertiary w-28 shrink-0">Músicas</span>
+                  <div className="flex items-center gap-1.5">
+                    <Music2 className="w-3.5 h-3.5 text-text-tertiary shrink-0" />
+                    <span className="text-sm text-text-primary">{event.music}</span>
+                  </div>
                 </div>
               )}
               {event.notes && (
-                <div className="mt-2 pt-3 border-t border-border">
+                <div className="mt-1 pt-3 border-t border-border">
                   <p className="text-xs text-text-tertiary mb-1.5">Observações</p>
                   <p className="text-sm text-text-secondary whitespace-pre-wrap">{event.notes}</p>
                 </div>
@@ -531,20 +611,32 @@ export default function EventoDetailPage() {
 
         {/* S2: Logística */}
         <AccordionSection title="Logística" icon={Truck} defaultOpen>
-          <LogisticsTimeline start={event.start_time} end={event.end_time} />
-          {event.venue && (
-            <div className="mt-3 flex items-center gap-2 text-sm text-text-secondary">
-              <MapPin className="w-4 h-4 text-text-tertiary shrink-0" />
-              <span>{event.venue.name}</span>
-              {event.venue.capacity && (
-                <span className="text-text-tertiary">· cap. {event.venue.capacity}</span>
-              )}
-            </div>
-          )}
+          <LogisticsTimeline
+            start={event.start_time}
+            end={event.end_time}
+            setup={hasLogisticsExtras ? event.setup_time : null}
+            teardown={hasLogisticsExtras ? event.teardown_time : null}
+            show={hasLogisticsExtras ? event.show_time : null}
+          />
+          <div className="mt-2 space-y-1.5 text-sm">
+            {event.venue && (
+              <div className="flex items-center gap-2 text-text-secondary">
+                <MapPin className="w-4 h-4 text-text-tertiary shrink-0" />
+                <span>{event.venue.name}</span>
+                {event.venue.capacity && <span className="text-text-tertiary">· cap. {event.venue.capacity}</span>}
+              </div>
+            )}
+            {event.event_location && (
+              <div className="flex items-center gap-2 text-text-secondary">
+                <MapPin className="w-4 h-4 text-text-tertiary shrink-0" />
+                <span>{event.event_location}</span>
+              </div>
+            )}
+          </div>
         </AccordionSection>
 
         {/* S3: Cliente e Contato */}
-        <AccordionSection title="Cliente e Contato" icon={User2}>
+        <AccordionSection title="Cliente e Família" icon={User2}>
           <div className="space-y-3">
             <div>
               <p className="text-sm font-medium text-text-primary">{event.client_name}</p>
@@ -554,8 +646,20 @@ export default function EventoDetailPage() {
                   <span className="text-text-secondary">
                     {event.birthday_person}
                     {event.birthday_age ? ` · ${event.birthday_age} anos` : ''}
+                    {event.birthday_date ? ` (${format(parseISO(event.birthday_date + 'T00:00:00'), 'dd/MM/yyyy')})` : ''}
                   </span>
                 </p>
+              )}
+              {event.father_name && (
+                <p className="text-xs text-text-tertiary mt-0.5">
+                  Pai: <span className="text-text-secondary">{event.father_name}</span>
+                </p>
+              )}
+              {event.school && (
+                <div className="flex items-center gap-1.5 mt-1">
+                  <School className="w-3.5 h-3.5 text-text-tertiary shrink-0" />
+                  <span className="text-xs text-text-secondary">{event.school}</span>
+                </div>
               )}
             </div>
 
@@ -601,6 +705,52 @@ export default function EventoDetailPage() {
             )}
           </div>
         </AccordionSection>
+
+        {/* S3b: Serviços Contratados */}
+        {hasServices && (
+          <AccordionSection title="Serviços Contratados" icon={Star}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
+              <BoolIndicator value={event.has_show}            label="Show" />
+              <BoolIndicator value={event.decoration_aligned}  label="Decoração alinhada" />
+              <BoolIndicator value={event.has_decorated_sweets} label="Doces decorados" />
+              <BoolIndicator value={event.party_favors}        label="Lembrancinhas" />
+              <BoolIndicator value={event.outside_drinks}      label="Bebidas de fora" />
+              {event.photo_video && (
+                <div className="flex items-center gap-2">
+                  <Camera className="w-3.5 h-3.5 text-text-secondary shrink-0" />
+                  <span className="text-sm text-text-primary">{event.photo_video}</span>
+                </div>
+              )}
+            </div>
+          </AccordionSection>
+        )}
+
+        {/* S3c: Briefing */}
+        {hasBriefing && (
+          <AccordionSection title="Briefing" icon={BookText}>
+            <p className="text-sm text-text-secondary whitespace-pre-wrap leading-relaxed">{event.briefing}</p>
+          </AccordionSection>
+        )}
+
+        {/* S3d: Financeiro */}
+        {hasFinancial && (
+          <AccordionSection title="Financeiro" icon={DollarSign}>
+            <div className="space-y-2">
+              {event.deal_amount != null && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-text-secondary">Valor do negócio</span>
+                  <span className="text-sm font-semibold text-text-primary">{formatBRL(event.deal_amount)}</span>
+                </div>
+              )}
+              {event.payment_method && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-text-secondary">Forma de pagamento</span>
+                  <span className="text-sm text-text-primary">{event.payment_method}</span>
+                </div>
+              )}
+            </div>
+          </AccordionSection>
+        )}
 
         {/* S4: Checklists */}
         <div ref={checklistsSectionRef}>

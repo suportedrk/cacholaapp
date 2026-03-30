@@ -28,6 +28,8 @@ export type PloomesOtherProperty = {
   FieldKey: string
   DateTimeValue?: string    // ISO 8601, ex: "2026-04-25T00:00:00-03:00"
   StringValue?: string
+  BigStringValue?: string   // Texto longo (textarea no Ploomes)
+  BoolValue?: boolean       // Campos booleanos (Sim/Não)
   IntegerValue?: number
   DecimalValue?: number
   ObjectValueName?: string  // Nome do objeto selecionado (ex: "Buffet Cachola Pinheiros")
@@ -76,7 +78,7 @@ export type ParsedDeal = {
   clientEmail?: string
   clientPhone?: string
   amount?: number
-  // Campos customizados mapeados
+  // Campos customizados — essenciais (9 originais)
   eventDate?: string      // "YYYY-MM-DD"
   startTime?: string      // "HH:MM"
   endTime?: string        // "HH:MM"
@@ -86,6 +88,33 @@ export type ParsedDeal = {
   unitName?: string       // ObjectValueName do campo Unidade
   venueName?: string      // ObjectValueName do campo Casa
   theme?: string
+  notes?: string          // Observações (BigString)
+  // Logística
+  setupTime?: string      // "HH:MM"
+  teardownTime?: string   // "HH:MM"
+  showTime?: string       // "HH:MM"
+  eventLocation?: string  // Select
+  duration?: string       // "HH:MM"
+  // Serviços contratados
+  hasShow?: boolean
+  photoVideo?: string
+  decorationAligned?: boolean
+  hasDecoratedSweets?: boolean
+  partyFavors?: boolean
+  outsideDrinks?: boolean
+  // Família/cliente
+  fatherName?: string
+  school?: string
+  birthdayDate?: string   // "YYYY-MM-DD"
+  // Financeiro/operacional
+  paymentMethod?: string
+  briefing?: string       // BigString
+  eventCategory?: string  // Tipo (social/corporativo) — Select
+  cakeFlavor?: string
+  music?: string
+  adultCount?: number
+  kidsUnder4?: number
+  kidsOver5?: number
   ploomesUrl: string
 }
 
@@ -115,6 +144,6 @@ export type PloomesApiError = {
 export type FieldMappingDef = {
   field: string
   label: string
-  valueKey: 'DateTimeValue' | 'StringValue' | 'IntegerValue' | 'DecimalValue' | 'ObjectValueName'
-  parser: 'date' | 'time' | 'string' | 'number'
+  valueKey: 'DateTimeValue' | 'StringValue' | 'BigStringValue' | 'BoolValue' | 'IntegerValue' | 'DecimalValue' | 'ObjectValueName'
+  parser: 'date' | 'time' | 'string' | 'bool' | 'number'
 }
