@@ -23,34 +23,38 @@ import {
 
 export default function ConfiguracoesPage() {
   // ── Tipos de Evento ──────────────────────────────────────
-  const { data: eventTypes = [], isLoading: loadingTypes } = useEventTypes(false)
+  const { data: eventTypes = [], isLoading: loadingTypes, isError: errorTypes, refetch: refetchTypes } = useEventTypes(false)
   const createType = useCreateEventType()
   const updateType = useUpdateEventType()
   const deleteType = useDeleteEventType()
 
   // ── Pacotes ──────────────────────────────────────────────
-  const { data: packages = [], isLoading: loadingPackages } = usePackages(false)
+  const { data: packages = [], isLoading: loadingPackages, isError: errorPackages, refetch: refetchPackages } = usePackages(false)
   const createPkg = useCreatePackage()
   const updatePkg = useUpdatePackage()
   const deletePkg = useDeletePackage()
 
   // ── Salões ───────────────────────────────────────────────
-  const { data: venues = [], isLoading: loadingVenues } = useVenues(false)
+  const { data: venues = [], isLoading: loadingVenues, isError: errorVenues, refetch: refetchVenues } = useVenues(false)
   const createVenue = useCreateVenue()
   const updateVenue = useUpdateVenue()
   const deleteVenue = useDeleteVenue()
 
   // ── Setores (manutenção) ─────────────────────────────────
-  const { data: sectors = [], isLoading: loadingSectors } = useSectors(false)
+  const { data: sectors = [], isLoading: loadingSectors, isError: errorSectors, refetch: refetchSectors } = useSectors(false)
   const createSector = useCreateSector()
   const updateSector = useUpdateSector()
   const deleteSector = useDeleteSector()
 
   // ── Categorias de Equipamento ────────────────────────────
-  const { data: equipCats = [], isLoading: loadingEquipCats } = useEquipmentCategoryItems(false)
+  const { data: equipCats = [], isLoading: loadingEquipCats, isError: errorEquipCats, refetch: refetchEquipCats } = useEquipmentCategoryItems(false)
   const createEquipCat = useCreateEquipmentCategory()
   const updateEquipCat = useUpdateEquipmentCategory()
   const deleteEquipCat = useDeleteEquipmentCategory()
+
+  // Se alguma query de configuração falhou (após a sessão estar pronta), mostra um aviso
+  const hasError = errorTypes || errorPackages || errorVenues || errorSectors || errorEquipCats
+  const refetchAll = () => { void refetchTypes(); void refetchPackages(); void refetchVenues(); void refetchSectors(); void refetchEquipCats() }
 
   return (
     <div className="space-y-6">
@@ -58,6 +62,18 @@ export default function ConfiguracoesPage() {
         title="Configurações"
         description="Gerencie as configurações operacionais da unidade"
       />
+
+      {hasError && (
+        <div className="flex items-center justify-between rounded-xl border border-status-error-border bg-status-error-bg px-4 py-3 text-sm text-status-error-text">
+          <span>Não foi possível carregar algumas configurações.</span>
+          <button
+            onClick={refetchAll}
+            className="ml-4 shrink-0 rounded-md border border-status-error-border bg-background px-3 py-1 text-xs font-medium hover:bg-muted transition-colors"
+          >
+            Tentar novamente
+          </button>
+        </div>
+      )}
 
       <Tabs defaultValue="tipos">
         <div className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
