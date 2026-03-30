@@ -32,11 +32,18 @@ export interface IndexEquipment {
   category: string | null
 }
 
+export interface IndexProvider {
+  id: string
+  name: string
+  avg_rating: number | null
+}
+
 export interface CommandPaletteIndex {
   events:      IndexEvent[]
   checklists:  IndexChecklist[]
   maintenance: IndexMaintenance[]
   equipment:   IndexEquipment[]
+  providers:   IndexProvider[]
 }
 
 // ── Hook ─────────────────────────────────────────────────────
@@ -49,7 +56,7 @@ export function useCommandPaletteIndex(enabled: boolean) {
     queryFn: async (): Promise<CommandPaletteIndex> => {
       const supabase = createClient()
 
-      const [evRes, clRes, mnRes, eqRes] = await Promise.all([
+      const [evRes, clRes, mnRes, eqRes, prRes] = await Promise.all([
         (() => {
           let q = supabase
             .from('events')
@@ -90,6 +97,16 @@ export function useCommandPaletteIndex(enabled: boolean) {
           if (activeUnitId) q = q.eq('unit_id', activeUnitId)
           return q
         })(),
+
+        (() => {
+          let q = supabase
+            .from('service_providers')
+            .select('id, name, avg_rating')
+            .eq('status', 'active')
+            .limit(150)
+          if (activeUnitId) q = q.eq('unit_id', activeUnitId)
+          return q
+        })(),
       ])
 
       return {
@@ -97,6 +114,7 @@ export function useCommandPaletteIndex(enabled: boolean) {
         checklists:  (clRes.data  ?? []) as IndexChecklist[],
         maintenance: (mnRes.data  ?? []) as IndexMaintenance[],
         equipment:   (eqRes.data  ?? []) as IndexEquipment[],
+        providers:   (prRes.data  ?? []) as IndexProvider[],
       }
     },
     enabled,

@@ -13,6 +13,7 @@ export const SEGMENT_LABELS: Record<string, string> = {
   checklists:     'Checklists',
   manutencao:     'Manutenção',
   equipamentos:   'Equipamentos',
+  prestadores:    'Prestadores',
   relatorios:     'Relatórios',
   perfil:         'Meu Perfil',
   configuracoes:  'Configurações',

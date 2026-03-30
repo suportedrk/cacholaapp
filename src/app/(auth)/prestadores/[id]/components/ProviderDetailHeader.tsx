@@ -1,7 +1,8 @@
 'use client'
 
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Pencil, Phone, Mail, MoreVertical, MessageCircle, MapPin, PartyPopper } from 'lucide-react'
+import { Pencil, Phone, Mail, MoreVertical, MessageCircle, MapPin, PartyPopper, FileDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatPhone, formatCPF, formatCNPJ } from '@/lib/utils/providers'
 import { PROVIDER_STATUS_LABELS, PROVIDER_STATUS_COLORS } from '@/types/providers'
@@ -13,6 +14,8 @@ import {
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useUpdateProvider, useDeleteProvider } from '@/hooks/use-providers'
+import { useUnitStore } from '@/stores/unit-store'
+import { formatCurrency } from '@/lib/utils/providers'
 import type { ServiceProviderWithDetails } from '@/types/providers'
 
 // ── Status badge helpers ─────────────────────────────────────
@@ -47,6 +50,8 @@ export function ProviderDetailHeader({ provider }: Props) {
   const router = useRouter()
   const updateProvider = useUpdateProvider()
   const deleteProvider = useDeleteProvider()
+  const activeUnit = useUnitStore((s) => s.activeUnit)
+  const [isPdfLoading, setIsPdfLoading] = useState(false)
 
   const primaryContact = provider.contacts.find((c) => c.is_primary) ?? provider.contacts[0]
   const waContact = provider.contacts.find((c) => c.type === 'whatsapp') ?? primaryContact
@@ -75,6 +80,42 @@ export function ProviderDetailHeader({ provider }: Props) {
   async function handleDelete() {
     await deleteProvider.mutateAsync(provider.id)
     router.push('/prestadores')
+  }
+
+  async function handleExportPDF() {
+    setIsPdfLoading(true)
+    try {
+      const { exportProviderPDF } = await import('@/lib/utils/export')
+      await exportProviderPDF({
+        name:           provider.name,
+        legalName:      provider.legal_name,
+        documentNumber: provider.document_number,
+        status:         PROVIDER_STATUS_LABELS[provider.status] ?? provider.status,
+        unitName:       activeUnit?.name ?? 'Cachola OS',
+        avgRating:      provider.avg_rating,
+        totalEvents:    provider.total_events,
+        contacts: (provider.contacts ?? []).map((c) => ({
+          type:       c.type,
+          value:      c.value,
+          label:      c.label,
+          is_primary: c.is_primary,
+        })),
+        services: (provider.services ?? []).map((s) => ({
+          categoryName: s.category?.name ?? 'Serviço',
+          priceType:    s.price_type,
+          priceValue:   s.price_value != null ? formatCurrency(s.price_value) : null,
+          description:  s.description,
+        })),
+        documents: (provider.documents ?? []).map((d) => ({
+          name:      d.name,
+          docType:   d.doc_type,
+          expiresAt: d.expires_at,
+        })),
+        filename: `prestador-${provider.name.toLowerCase().replace(/\s+/g, '-')}`,
+      })
+    } finally {
+      setIsPdfLoading(false)
+    }
   }
 
   return (
@@ -193,6 +234,10 @@ export function ProviderDetailHeader({ provider }: Props) {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-44">
             <DropdownMenuGroup>
+              <DropdownMenuItem onClick={handleExportPDF} disabled={isPdfLoading}>
+                <FileDown className="w-4 h-4 mr-2" />
+                {isPdfLoading ? 'Gerando PDF…' : 'Exportar PDF'}
+              </DropdownMenuItem>
               {primaryContact && (
                 <DropdownMenuItem onClick={() => {
                   window.location.href = `tel:${primaryContact.value.replace(/\D/g, '')}`

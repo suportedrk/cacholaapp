@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import {
   Search, X, Calendar, CheckSquare, Wrench, Package,
   Zap, Clock, LayoutDashboard, Settings, BarChart2,
-  ClipboardList, Building2, Users,
+  ClipboardList, Building2, Users, Handshake,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -17,7 +17,7 @@ import { cn } from '@/lib/utils'
 
 // ── Types ─────────────────────────────────────────────────────
 
-type ResultGroup = 'recent' | 'page' | 'action' | 'event' | 'checklist' | 'maintenance' | 'equipment'
+type ResultGroup = 'recent' | 'page' | 'action' | 'event' | 'checklist' | 'maintenance' | 'equipment' | 'provider'
 
 interface FlatResult {
   id: string
@@ -37,6 +37,7 @@ const PAGES: FlatResult[] = [
   { id: 'p-manutencao',   label: 'Manutenção',     sublabel: 'Ordens de serviço',             href: '/manutencao',       group: 'page', iconEl: <Wrench          className="w-4 h-4" /> },
   { id: 'p-relatorios',   label: 'Relatórios',     sublabel: 'Dashboards analíticos',         href: '/relatorios',       group: 'page', iconEl: <BarChart2       className="w-4 h-4" /> },
   { id: 'p-equipamentos', label: 'Equipamentos',   sublabel: 'Cadastro de ativos',            href: '/equipamentos',     group: 'page', iconEl: <Package         className="w-4 h-4" /> },
+  { id: 'p-prestadores',  label: 'Prestadores',    sublabel: 'DJs, fotógrafos, decoradores',  href: '/prestadores',      group: 'page', iconEl: <Handshake       className="w-4 h-4" /> },
   { id: 'p-config',       label: 'Configurações',  sublabel: 'Tipos, pacotes e horários',     href: '/configuracoes',    group: 'page', iconEl: <Settings        className="w-4 h-4" /> },
   { id: 'p-usuarios',     label: 'Usuários',       sublabel: 'Gestão de equipe',              href: '/admin/usuarios',   group: 'page', iconEl: <Users           className="w-4 h-4" /> },
   { id: 'p-unidades',     label: 'Unidades',       sublabel: 'Gerenciar unidades',            href: '/admin/unidades',   group: 'page', iconEl: <Building2       className="w-4 h-4" /> },
@@ -46,8 +47,9 @@ const ACTIONS: FlatResult[] = [
   { id: 'a-new-evento',   label: 'Novo Evento',                sublabel: 'Criar um novo evento',        href: '/eventos/novo',              group: 'action', iconEl: <Zap className="w-4 h-4" /> },
   { id: 'a-new-manut',    label: 'Nova Ordem de Manutenção',   sublabel: 'Abrir ordem de serviço',      href: '/manutencao/nova',            group: 'action', iconEl: <Zap className="w-4 h-4" /> },
   { id: 'a-new-template', label: 'Novo Template de Checklist', sublabel: 'Criar modelo de checklist',   href: '/checklists/templates/novo',  group: 'action', iconEl: <Zap className="w-4 h-4" /> },
-  { id: 'a-new-equip',    label: 'Novo Equipamento',           sublabel: 'Cadastrar ativo',             href: '/equipamentos/novo',          group: 'action', iconEl: <Zap className="w-4 h-4" /> },
-  { id: 'a-new-usuario',  label: 'Convidar Usuário',           sublabel: 'Adicionar membro da equipe',  href: '/admin/usuarios/novo',        group: 'action', iconEl: <Zap className="w-4 h-4" /> },
+  { id: 'a-new-equip',       label: 'Novo Equipamento',           sublabel: 'Cadastrar ativo',             href: '/equipamentos/novo',     group: 'action', iconEl: <Zap className="w-4 h-4" /> },
+  { id: 'a-new-prestador',   label: 'Novo Prestador',             sublabel: 'Cadastrar prestador',         href: '/prestadores/novo',      group: 'action', iconEl: <Zap className="w-4 h-4" /> },
+  { id: 'a-new-usuario',     label: 'Convidar Usuário',           sublabel: 'Adicionar membro da equipe',  href: '/admin/usuarios/novo',   group: 'action', iconEl: <Zap className="w-4 h-4" /> },
 ]
 
 // ── Helpers ───────────────────────────────────────────────────
@@ -81,6 +83,7 @@ const GROUP_META: Record<ResultGroup, { label: string; iconClass: string }> = {
   checklist:   { label: 'Checklists',   iconClass: 'icon-green'  },
   maintenance: { label: 'Manutenções',  iconClass: 'icon-amber'  },
   equipment:   { label: 'Equipamentos', iconClass: 'icon-gray'   },
+  provider:    { label: 'Prestadores',  iconClass: 'icon-brand'  },
 }
 
 // ── ResultItem ────────────────────────────────────────────────
@@ -268,6 +271,22 @@ export function CommandPalette() {
           iconEl:   <Package className="w-4 h-4" />,
         }))
       if (items.length) res.push({ group: 'equipment', items })
+    }
+
+    // Providers
+    if (index?.providers) {
+      const items = index.providers
+        .filter((p) => fuzzy(p.name, q))
+        .slice(0, 5)
+        .map((p): FlatResult => ({
+          id:       `pr-${p.id}`,
+          label:    p.name,
+          sublabel: p.avg_rating ? `★ ${p.avg_rating.toFixed(1)}` : 'Prestador ativo',
+          href:     `/prestadores/${p.id}`,
+          group:    'provider',
+          iconEl:   <Handshake className="w-4 h-4" />,
+        }))
+      if (items.length) res.push({ group: 'provider', items })
     }
 
     // Pages

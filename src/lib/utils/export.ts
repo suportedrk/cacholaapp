@@ -463,3 +463,254 @@ export async function exportChecklistPDF(config: ChecklistPdfConfig) {
   addPdfFooter(pdf, pageW, margin, pageH)
   pdf.save(`${filename}.pdf`)
 }
+
+// ─────────────────────────────────────────────────────────────
+// PDF DE PRESTADOR — programático, sem html2canvas
+// ─────────────────────────────────────────────────────────────
+
+export type ProviderPdfContact = {
+  type: string
+  value: string
+  label?: string | null
+  is_primary?: boolean
+}
+
+export type ProviderPdfService = {
+  categoryName: string
+  priceType: string
+  priceValue?: string | null
+  description?: string | null
+}
+
+export type ProviderPdfDocument = {
+  name: string
+  docType: string
+  expiresAt?: string | null
+}
+
+export type ProviderPdfRating = {
+  score: number
+  comment?: string | null
+  createdAt: string
+}
+
+export type ProviderPdfConfig = {
+  name:            string
+  legalName?:      string | null
+  documentNumber?: string | null
+  status:          string
+  unitName:        string
+  avgRating?:      number | null
+  totalEvents?:    number
+  contacts:        ProviderPdfContact[]
+  services:        ProviderPdfService[]
+  documents:       ProviderPdfDocument[]
+  ratings?:        ProviderPdfRating[]
+  accentHex?:      string
+  filename:        string
+}
+
+export async function exportProviderPDF(config: ProviderPdfConfig) {
+  const { default: jsPDF } = await import('jspdf')
+
+  const {
+    name, legalName, documentNumber, status, unitName,
+    avgRating, totalEvents,
+    contacts, services, documents, ratings = [],
+    accentHex = '#7C8D78',
+    filename,
+  } = config
+
+  const pdf    = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+  const pageW  = pdf.internal.pageSize.getWidth()
+  const pageH  = pdf.internal.pageSize.getHeight()
+  const margin = 20
+  const tableW = pageW - margin * 2
+
+  const period = new Date().toLocaleDateString('pt-BR')
+  const [ar, ag, ab] = hexToRgb(accentHex)
+
+  let y = addPdfHeader(pdf, name, unitName, period, accentHex, pageW, margin)
+
+  // ── Section helper ──
+  function drawSection(label: string) {
+    if (y + 10 > pageH - 18) {
+      addPdfFooter(pdf, pageW, margin, pageH)
+      pdf.addPage()
+      y = margin + 6
+    }
+    y += 4
+    pdf.setFont('helvetica', 'bold')
+    pdf.setFontSize(9.5)
+    pdf.setTextColor(ar, ag, ab)
+    pdf.text(label.toUpperCase(), margin, y)
+    pdf.setDrawColor(ar, ag, ab)
+    pdf.setLineWidth(0.3)
+    pdf.line(margin, y + 1.5, pageW - margin, y + 1.5)
+    pdf.setLineWidth(0.2)
+    pdf.setTextColor(30, 30, 30)
+    y += 7
+  }
+
+  function checkSpace(needed: number) {
+    if (y + needed > pageH - 18) {
+      addPdfFooter(pdf, pageW, margin, pageH)
+      pdf.addPage()
+      y = margin + 6
+    }
+  }
+
+  // ── Dados Gerais ──
+  drawSection('Dados Gerais')
+
+  const infoRows: [string, string][] = [
+    ['Nome fantasia', name],
+    ...(legalName && legalName !== name ? [['Razão social', legalName] as [string, string]] : []),
+    ...(documentNumber ? [['CPF / CNPJ', documentNumber] as [string, string]] : []),
+    ['Status', status],
+    ...(avgRating != null ? [[`Avaliação média`, `★ ${avgRating.toFixed(1)} / 5`] as [string, string]] : []),
+    ...(totalEvents != null ? [['Total de festas', String(totalEvents)] as [string, string]] : []),
+  ]
+
+  infoRows.forEach(([label, value]) => {
+    checkSpace(6.5)
+    pdf.setFont('helvetica', 'bold')
+    pdf.setFontSize(8.5)
+    pdf.setTextColor(80, 80, 80)
+    pdf.text(`${label}:`, margin, y)
+    pdf.setFont('helvetica', 'normal')
+    pdf.setTextColor(30, 30, 30)
+    pdf.text(value, margin + 40, y)
+    y += 6.5
+  })
+
+  // ── Contatos ──
+  if (contacts.length > 0) {
+    drawSection('Contatos')
+
+    const CONTACT_TYPE: Record<string, string> = {
+      phone: 'Telefone', email: 'E-mail', whatsapp: 'WhatsApp',
+    }
+
+    contacts.forEach((c) => {
+      checkSpace(6.5)
+      const typeLabel = CONTACT_TYPE[c.type] ?? c.type
+      const badge     = c.is_primary ? ' (Principal)' : ''
+      pdf.setFont('helvetica', 'bold')
+      pdf.setFontSize(8.5)
+      pdf.setTextColor(80, 80, 80)
+      pdf.text(`${typeLabel}${badge}:`, margin, y)
+      pdf.setFont('helvetica', 'normal')
+      pdf.setTextColor(30, 30, 30)
+      pdf.text(c.value, margin + 40, y)
+      if (c.label) {
+        pdf.setFontSize(7.5)
+        pdf.setTextColor(120, 120, 120)
+        pdf.text(c.label, margin + 40, y + 4)
+        y += 3
+      }
+      y += 6.5
+    })
+  }
+
+  // ── Serviços ──
+  if (services.length > 0) {
+    drawSection('Serviços Oferecidos')
+
+    const PRICE_TYPE: Record<string, string> = {
+      per_event: 'Por evento', per_hour: 'Por hora', custom: 'A combinar',
+    }
+
+    services.forEach((s) => {
+      checkSpace(8)
+      pdf.setFont('helvetica', 'bold')
+      pdf.setFontSize(9)
+      pdf.setTextColor(30, 30, 30)
+      pdf.text(s.categoryName, margin, y)
+      pdf.setFont('helvetica', 'normal')
+      pdf.setFontSize(8)
+      pdf.setTextColor(80, 80, 80)
+      const priceLabel = PRICE_TYPE[s.priceType] ?? s.priceType
+      const priceStr   = s.priceValue ? `${priceLabel}: ${s.priceValue}` : priceLabel
+      pdf.text(priceStr, margin + 60, y)
+      y += 5.5
+      if (s.description) {
+        checkSpace(5)
+        pdf.setFontSize(7.5)
+        pdf.setTextColor(100, 100, 100)
+        pdf.setFont('helvetica', 'italic')
+        pdf.text(`↳ ${s.description}`, margin + 4, y, { maxWidth: tableW - 8 })
+        y += 5
+      }
+      pdf.setDrawColor(235, 235, 235)
+      pdf.line(margin, y, pageW - margin, y)
+      y += 2
+    })
+  }
+
+  // ── Documentos ──
+  if (documents.length > 0) {
+    drawSection('Documentos')
+
+    const DOC_TYPE: Record<string, string> = {
+      contract: 'Contrato', license: 'Licença', certificate: 'Certificado',
+      insurance: 'Seguro', id_document: 'Documento de Identidade', other: 'Outro',
+    }
+    const now = new Date()
+
+    documents.forEach((d) => {
+      checkSpace(7)
+      const docLabel = DOC_TYPE[d.docType] ?? d.docType
+      pdf.setFont('helvetica', 'bold')
+      pdf.setFontSize(8.5)
+      pdf.setTextColor(30, 30, 30)
+      pdf.text(d.name, margin, y)
+      pdf.setFont('helvetica', 'normal')
+      pdf.setFontSize(8)
+      pdf.setTextColor(80, 80, 80)
+      pdf.text(docLabel, margin + 70, y)
+      if (d.expiresAt) {
+        const exp     = new Date(d.expiresAt)
+        const expired = exp < now
+        pdf.setTextColor(expired ? 220 : 100, expired ? 38 : 100, expired ? 38 : 100)
+        pdf.text(`Vence: ${exp.toLocaleDateString('pt-BR')}`, pageW - margin, y, { align: 'right' })
+      }
+      y += 7
+      pdf.setDrawColor(235, 235, 235)
+      pdf.line(margin, y - 1, pageW - margin, y - 1)
+    })
+  }
+
+  // ── Avaliações ──
+  if (ratings.length > 0) {
+    drawSection('Avaliações')
+
+    ratings.slice(0, 10).forEach((rating) => {
+      checkSpace(10)
+      const stars = '★'.repeat(rating.score) + '☆'.repeat(5 - rating.score)
+      pdf.setFont('helvetica', 'bold')
+      pdf.setFontSize(10)
+      pdf.setTextColor(245, 158, 11)
+      pdf.text(stars, margin, y)
+      pdf.setFont('helvetica', 'normal')
+      pdf.setFontSize(8)
+      pdf.setTextColor(120, 120, 120)
+      pdf.text(new Date(rating.createdAt).toLocaleDateString('pt-BR'), pageW - margin, y, { align: 'right' })
+      y += 5
+      if (rating.comment) {
+        checkSpace(6)
+        pdf.setFontSize(8)
+        pdf.setTextColor(60, 60, 60)
+        pdf.setFont('helvetica', 'italic')
+        pdf.text(`"${rating.comment}"`, margin + 2, y, { maxWidth: tableW - 4 })
+        y += 6
+      }
+      pdf.setDrawColor(235, 235, 235)
+      pdf.line(margin, y, pageW - margin, y)
+      y += 3
+    })
+  }
+
+  addPdfFooter(pdf, pageW, margin, pageH)
+  pdf.save(`${filename}.pdf`)
+}
