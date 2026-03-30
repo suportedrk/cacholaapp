@@ -4,21 +4,26 @@ import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import type { AppNotification } from '@/types/database.types'
+import { useAuthReadyStore } from '@/stores/auth-store'
 
 // ─────────────────────────────────────────────────────────────
 // HOOK PRINCIPAL
 // ─────────────────────────────────────────────────────────────
 export function useNotifications() {
   const qc = useQueryClient()
+  const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
   const [userId, setUserId] = useState<string | null>(null)
 
-  // Obtém userId uma única vez ao montar
+  // Obtém userId somente quando a sessão já está confirmada pelo AuthGuard.
+  // Antes de isSessionReady, getUser() retornaria null, deixando userId=null
+  // para sempre e a query nunca dispararia.
   useEffect(() => {
+    if (!isSessionReady) return
     const supabase = createClient()
     supabase.auth.getUser().then(({ data: { user } }) => {
       setUserId(user?.id ?? null)
     })
-  }, [])
+  }, [isSessionReady])
 
   // ── Query: últimas 50 notificações ──
   const query = useQuery({
