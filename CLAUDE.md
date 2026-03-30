@@ -1452,6 +1452,8 @@ Varredura completa do codebase para consistência visual, acessibilidade e idiom
 - [x] Fase 3 Bloco 6: Offline Mode (IDB checklists R/W com sync queue + calendário read-only cached)
 - [x] Fase 4: Integração Ploomes CRM (lib cliente, sync, upload, cron, webhook, UI completa)
 - [x] Eventos Redesign P1: Lista com abas temporais, agrupamento e load more
+- [x] Eventos Redesign P2: Cards enriquecidos + KPI cards + campos client_phone/email/theme
+- [x] Eventos Redesign P3: Detalhe do evento com accordion sections + quick actions bar
 
 > **NOTA:** Após subir o Supabase com `docker compose up -d`, regenerar os tipos com:
 > ```bash
@@ -1797,6 +1799,51 @@ Branch: `claude/optimistic-poitras`
 - Checklist progress calculado client-side dos items já retornados no join (sem query N+1)
 - Aba ativa em URL search params (`?tab=`) — persiste no refresh
 - Status filters em `useState` local — reset ao trocar de aba
+
+---
+
+## Eventos Redesign — P2 Cards Enriquecidos + KPI Cards (2026-03-29)
+
+### Migration: `019_events_extra_fields.sql`
+- ADD COLUMN `client_phone TEXT`, `client_email TEXT`, `theme TEXT` em `events`
+
+### Novos componentes
+- `src/components/features/events/events-kpi-cards.tsx`: grid 2×2→4 colunas; cards Festas hoje / Esta semana / Checklists % / Sem checklist; clicáveis → muda aba; skeleton loading
+
+### Componentes atualizados
+- `src/components/features/events/event-card.tsx`: avatar 48px com iniciais + cor hash-based; badge "Hoje" pulsando; badge "Sem checklist" âmbar; tema com Tag icon; contato sempre visível mobile / expande hover desktop; barra de progresso com `animate-progress-fill`
+- `src/lib/ploomes/sync.ts`: `eventPayload` inclui `client_phone`, `client_email`, `theme`
+- `src/app/(auth)/eventos/page.tsx`: `EventsKpiCards` entre PageHeader e abas temporais
+- `src/app/globals.css`: `@keyframes progress-fill` (scaleX 0→1, 600ms) + `.animate-progress-fill`
+
+---
+
+## Eventos Redesign — P3 Detalhe com Accordion + Quick Actions (2026-03-29)
+
+### `src/app/(auth)/eventos/[id]/page.tsx` — Reescrita completa
+- **`AccordionSection`** (scratch, sem lib): `useState(isOpen)` + CSS grid `grid-template-rows: 0fr→1fr` + `transition-[grid-template-rows] duration-200`; `ChevronDown rotate-180` quando aberto
+- **`LogisticsTimeline`**: linha horizontal conectora (`absolute top-[13px] left-[18px] right-[18px] h-0.5 bg-border`); 2 pontos circulares verdes com label Início/Término e horário
+- **`EventChecklistRow`**: link compacto com progresso inline (done/total + mini barra) + `ExternalLink` icon
+- **`QuickActionsBar`**: `fixed bottom-0 inset-x-0 md:hidden z-[25]`; 4 botões: Ligar (`tel:`), WhatsApp (`wa.me/55{phone}`), Checklists (scroll via `useRef`), Ploomes (link externo)
+- **`EventDetailSkeleton`**: avatar circle + accordion stubs
+- **Header hero**: avatar 64px com iniciais + cor hash-based; birthday_person como H1; badge status; client_name; data/hora/convidados (grid 2-col desktop); botão Ploomes ghost quando `ploomes_url`
+- **Breadcrumb desktop**: `Eventos / {birthday_person || title}` (hidden mobile)
+- **Accordion card** com `divide-y divide-border`; 7 seções:
+  - Logística (`defaultOpen`): mini-timeline + pacote
+  - Informações da Festa: tipo de evento + notas
+  - Cliente e Contato: nome, phone, email com links
+  - Equipe: avatares grid
+  - Checklists (`defaultOpen`): `EventChecklistRow` list + "Criar Checklist" button + `CreateChecklistModal`
+  - Histórico: `EventTimeline` component
+- **Manutenções Relacionadas**: seção extra fora do accordion quando há manutenções vinculadas
+- `pb-20 md:pb-0` no container para não cobrir a barra mobile
+
+### Decisões técnicas
+- `PloomesEventDetails` removido — dados do Ploomes agora no header hero
+- Seções sem dados não renderizam (hide empty via conditional render)
+- `divide-y divide-border` no pai garante divisores corretos mesmo com seções condicionais
+- `checklistsSectionRef` em wrapper `<div>` ao redor do AccordionSection para scroll target mobile
+- Acordeão de scratch: sem Radix, sem shadcn — CSS grid animation puro
 
 ---
 
