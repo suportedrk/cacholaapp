@@ -1981,6 +1981,143 @@ Branch: `claude/optimistic-poitras`
 
 ---
 
+## Providers — P6 Associação Festa ↔ Prestador (Prompt 6 — 2026-03-30)
+
+### Novos arquivos
+
+**`src/app/(auth)/eventos/[id]/components/AccordionSection.tsx`** (47 linhas)
+- Extraído da definição inline em `page.tsx`
+- Props: `title`, `icon`, `badge`, `defaultOpen`, `children`
+- Reutilizado por `page.tsx` e `ProvidersSection.tsx`
+
+**`src/app/(auth)/eventos/[id]/components/ProviderConflictAlert.tsx`** (37 linhas)
+- Banner amber não-bloqueador quando prestador tem outro evento na mesma data
+- Recebe `conflicts: EventProvider[]`; retorna `null` se vazio
+- Lista eventos conflitantes com data formatada ptBR
+
+**`src/app/(auth)/eventos/[id]/components/EventProviderCard.tsx`** (147 linhas)
+- `ProviderAvatar` (size="sm") + nome linkado para `/prestadores/[id]` com `ExternalLink`
+- `STATUS_BADGE_CLASS` map para badges por status (pending=amber, confirmed=green, cancelled=red, completed=gray)
+- Preço com `formatCurrency` + `PRICE_TYPE_LABELS`; horário de chegada; notas
+- `DropdownMenu` com ações Confirmar/Concluído/Cancelar + `ConfirmDialog` para remover
+- Usa `useUpdateEventProvider` e `useRemoveProviderFromEvent`
+
+**`src/app/(auth)/eventos/[id]/components/AddProviderModal.tsx`** (320 linhas)
+- `createPortal(document.body)` com overlay — bottom-sheet mobile / centrado desktop
+- Combobox: `useProviders()` filtrado por `existingProviderIds`, busca com `useDebounce(search, 200)`
+- **Fix blur/click race**: `onMouseDown={(e) => { e.preventDefault(); selectProvider(p) }}` nos itens + `onBlur` com timeout 150ms
+- Verificação de conflito via `useProviderScheduleConflicts(selected?.id, eventDate, eventId)`
+- Auto-seleção de categoria quando `providerCategories.length === 1` via `useEffect`
+- Input monetário: `formatInputCurrency` (dígitos → `parseCurrency` → `formatCurrency`)
+- `unit_id` retirado de `selected.unit_id` (providers já filtrados pela unidade ativa)
+
+**`src/app/(auth)/eventos/[id]/components/sections/ProvidersSection.tsx`** (89 linhas)
+- `useEventProviders(eventId)` para a lista
+- Totalizador: soma `agreed_price` onde `price_type === 'per_event'`
+- Botão tracejado "+ Adicionar Prestador" abre `AddProviderModal`
+- `existingProviderIds` evita duplicata no combobox
+
+### Arquivos modificados
+
+- **`src/app/(auth)/eventos/[id]/page.tsx`**: `AccordionSection` extraído; seção S4 "Prestadores" inserida entre Financeiro e Checklists
+- **`src/components/features/events/event-card.tsx`**: badge `Handshake` com contagem de prestadores (`providers_count`)
+- **`src/hooks/use-events.ts`**: `EVENT_FOR_LIST_SELECT` com join `providers_count:event_providers(count)`
+- **`src/types/database.types.ts`**: `EventForList.providers_count?: Array<{ count: number }>` adicionado
+- **`src/types/providers.ts`**: `CreateEventProviderInput.status?: EventProviderStatus` adicionado
+
+### Decisões técnicas
+- `providers_count` via aggregate PostgREST (`event_providers(count)`) — zero query N+1
+- `AccordionSection` extraído para arquivo próprio para compartilhar entre `page.tsx` e `ProvidersSection`
+- Conflito de agenda: filtro client-side em `useProviderScheduleConflicts` (não query com join em coluna de tabela relacionada)
+- Modal não-bloqueante: conflito exibe alerta mas permite salvar
+
+---
+
+## Providers — P7 Avaliações + Alertas de Documentos (Prompt 7 — 2026-03-30)
+
+### PARTE 1 — Sistema de Avaliação Pós-Evento
+
+#### Componentes novos em `src/app/(auth)/prestadores/components/`
+
+**`RatingFormCard.tsx`** (134 linhas)
+- `createPortal(document.body)` — bottom-sheet mobile / `sm:max-w-md` centrado desktop
+- 4 critérios: Avaliação geral (obrigatória, `StarRating size="md"`) + Pontualidade / Qualidade / Profissionalismo (opcionais, `StarRating size="sm"`)
+- Textarea de comentário opcional
+- `canSubmit = rating >= 1 && !createRating.isPending`; botão "Salvar Avaliação" / "Salvando…"
+- Fecha com `onSuccess()` após `mutateAsync` (toast no hook)
+
+**`PendingRatingsAlert.tsx`** (105 linhas)
+- Chave sessionStorage: `'cachola-pending-ratings-dismissed'` — dismissível por sessão
+- `usePendingRatings()` carregado preguiçosamente (só quando expandido)
+- Expande "Ver pendentes" (ChevronRight rotate) → lista até 5 `EventProvider`s sem avaliação
+- Cada item: `ProviderAvatar` + nome + evento + data + botão "Avaliar" → abre `RatingFormCard`
+- Botão `X` dispensa alerta para a sessão atual
+
+**`EventProviderRatingSection.tsx`** (70 linhas)
+- Renderiza abaixo de `EventProviderCard` — `-mt-1` para junção visual
+- Retorna `null` se `ep.status !== 'completed'` ou `!ep.provider`
+- **Com avaliação:** card verde (`border-green-200 bg-green-50`) com `CheckCircle2` + `StarRating` + preview do comentário + "Avaliado por {name} em {data}"
+- **Sem avaliação:** card âmbar tracejado com `Star` icon + "Avaliar agora" → abre `RatingFormCard`
+- `unitId` via `useUnitStore()`
+
+### PARTE 2 — Alertas de Documentos a Vencer
+
+#### `src/hooks/use-providers.ts` — fix
+- `PROVIDER_LIST_SELECT`: `documents_agg:provider_documents(count)` → `docs:provider_documents(id,expires_at)`
+- Mapeamento: `documents_count: docs.length`, `expiring_docs: docs` (array com id+expires_at)
+- `has_expiring_docs` filter: comparação real com `now + 30 dias` (antes era placeholder `true`)
+
+#### `src/types/providers.ts` — fix
+- `ServiceProviderListItem`: adicionado `expiring_docs?: Array<{ id: string; expires_at: string | null }>`
+
+#### `src/app/(auth)/prestadores/components/ProviderCard.tsx`
+- Computa `hasExpiredDocs` (< now) e `hasExpiringDocs` (≤ now+30d, !expired) client-side
+- Linha de métricas: badge `AlertTriangle` vermelho "Doc vencido" ou âmbar "Doc vencendo"
+
+#### `src/app/(auth)/prestadores/page.tsx`
+- `PendingRatingsAlert` renderizado após `ProviderKPICards` (apenas quando `kpis.pendingRatingsCount > 0`)
+- Banner âmbar inline para docs vencendo (quando `kpis.expiringDocsCount > 0`) com contagem + botão "Ver documentos" → ativa filtro `has_expiring_docs: true`
+
+### PARTE 3 — Novos tipos de notificação (já em `src/lib/notifications.ts`)
+- `provider_doc_expiring`: documento vence em N dias → notifica managers da unidade (cron)
+- `provider_doc_expired`: documento vencido → notifica managers da unidade (cron)
+- `provider_rating_pending`: avaliação pendente → notifica managers (cron, 24–48h após conclusão)
+- `provider_added_to_event`: prestador adicionado → notifica managers (hook imediato)
+- `provider_status_changed`: status alterado → notifica managers (hook imediato)
+
+### PARTE 4 — Integrações nos hooks existentes
+
+#### `src/hooks/use-event-providers.ts`
+- `useAddProviderToEvent.onSuccess`: fire-and-forget `notifyProviderAddedToEvent(supabase, data.id, user?.id)`
+- `useUpdateEventProvider.onSuccess`: fire-and-forget `notifyProviderStatusChanged(supabase, data.id, data.status, user?.id)` quando `data.status` definido
+
+#### `src/hooks/use-provider-ratings.ts`
+- `useCreateRating.onSuccess`: invalida `['event-ratings', eventId, unitId]` + `['provider-kpis', unitId]`
+- Novo `useEventRatings(eventId)`: retorna `Record<string, ProviderRating>` mapeado por `event_provider_id` — O(1) lookup em `ProvidersSection`
+
+#### `src/app/(auth)/eventos/[id]/components/sections/ProvidersSection.tsx`
+- Prop `eventTitle?` adicionada
+- `useEventRatings(eventId)` carregado junto com `useEventProviders`
+- Cada `EventProviderCard` seguido por `EventProviderRatingSection` com `rating={ratingsMap[ep.id]}`
+
+#### `src/app/(auth)/eventos/[id]/page.tsx`
+- `ProvidersSection` recebe `eventTitle={event.birthday_person || event.title || ''}`
+
+### Cron: `GET /api/cron/check-provider-alerts`
+- Usa `createClient` direto de `@supabase/supabase-js` (padrão dos outros crons)
+- 3 verificações em sequência: docs vencendo / docs vencidos / avaliações pendentes (24–48h window)
+- Docs: batch-load providers via `providerMap` (evita N+1); atualiza `expiry_alert_sent = true` após notificar
+- Ratings: filtra unrated com Set de `ratedEpIds`; notifica managers da `user_units`
+- Retorna `{ ok, docsExpiring, docsExpired, ratingsPending, errors[], timestamp }`
+
+### Decisões técnicas
+- `usePendingRatings()` retorna tipo inferido pelo Supabase que não bate exatamente com `EventProvider`; cast `rawEp as unknown as EventProvider` em `PendingRatingsAlert` (dado já validado pelo RLS + filtro do hook)
+- `useEventRatings` separado de `useProviderRatings` — queryKey diferente para invalidação granular sem refetch de todos os ratings do prestador
+- `expiry_alert_sent = true` persistido no banco — garante idempotência; próxima renovação começa com `false` via insert de novo documento
+- Cron de providers separado de `check-alerts` — chamadas externas e loops N+1 (por unidade) não interferem nos alertas internos
+
+---
+
 ## DECISÕES TÉCNICAS
 
 | Decisão | Razão |

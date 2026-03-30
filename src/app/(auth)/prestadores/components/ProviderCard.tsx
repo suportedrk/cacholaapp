@@ -2,7 +2,7 @@
 
 import { memo } from 'react'
 import Link from 'next/link'
-import { Phone, Mail, MessageCircle, CalendarDays, FileText } from 'lucide-react'
+import { Phone, Mail, MessageCircle, CalendarDays, FileText, AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatPhone } from '@/lib/utils/providers'
 import { PROVIDER_STATUS_LABELS, PROVIDER_STATUS_COLORS } from '@/types/providers'
@@ -40,6 +40,16 @@ export const ProviderCard = memo(function ProviderCard({ provider, animationDela
 
   const statusBadgeClass = STATUS_BADGE[provider.status] ?? 'badge-gray border'
   const statusLabel = PROVIDER_STATUS_LABELS[provider.status] ?? provider.status
+
+  // Doc expiry state
+  const now = new Date()
+  const thirtyDaysLater = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
+  const hasExpiredDocs = (provider.expiring_docs ?? []).some(
+    (d) => d.expires_at && new Date(d.expires_at) < now
+  )
+  const hasExpiringDocs = !hasExpiredDocs && (provider.expiring_docs ?? []).some(
+    (d) => d.expires_at && new Date(d.expires_at) <= thirtyDaysLater
+  )
 
   // WhatsApp contact (if any)
   const waContact = provider.contacts.find((c) => c.type === 'whatsapp')
@@ -162,6 +172,18 @@ export const ProviderCard = memo(function ProviderCard({ provider, animationDela
                 <span className="text-border">·</span>
                 <span className="flex items-center gap-1 text-primary font-medium">
                   {provider.upcoming_events_count} agendado{provider.upcoming_events_count > 1 ? 's' : ''}
+                </span>
+              </>
+            )}
+            {(hasExpiredDocs || hasExpiringDocs) && (
+              <>
+                <span className="text-border">·</span>
+                <span className={cn(
+                  'flex items-center gap-1 font-medium',
+                  hasExpiredDocs ? 'text-destructive' : 'text-amber-600 dark:text-amber-400',
+                )}>
+                  <AlertTriangle className="w-3 h-3 shrink-0" aria-hidden="true" />
+                  {hasExpiredDocs ? 'Doc vencido' : 'Doc vencendo'}
                 </span>
               </>
             )}

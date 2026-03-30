@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { Plus } from 'lucide-react'
+import { Plus, AlertTriangle } from 'lucide-react'
 import { useProviders } from '@/hooks/use-providers'
 import { useProviderKpis } from '@/hooks/use-provider-kpis'
 import { useServiceCategories } from '@/hooks/use-service-categories'
@@ -11,6 +11,7 @@ import { ProviderFiltersBar } from './components/ProviderFilters'
 import { ProviderCard } from './components/ProviderCard'
 import { ProviderCardSkeleton } from './components/ProviderCardSkeleton'
 import { ProviderEmptyState } from './components/ProviderEmptyState'
+import { PendingRatingsAlert } from './components/PendingRatingsAlert'
 
 export default function PrestadoresPage() {
   const router = useRouter()
@@ -36,6 +37,10 @@ export default function PrestadoresPage() {
     router.push('/prestadores/novo')
   }
 
+  function handleShowExpiringDocs() {
+    setFilter('has_expiring_docs', true)
+  }
+
   // ── Render ─────────────────────────────────────────────────
   return (
     <div className="space-y-6">
@@ -59,6 +64,36 @@ export default function PrestadoresPage() {
 
       {/* ── KPI Cards ─────────────────────────────────────── */}
       <ProviderKPICards kpis={kpis} isLoading={kpisLoading} />
+
+      {/* ── Pending ratings alert ─────────────────────────── */}
+      {!kpisLoading && (kpis?.pendingRatingsCount ?? 0) > 0 && (
+        <PendingRatingsAlert pendingCount={kpis!.pendingRatingsCount} />
+      )}
+
+      {/* ── Expiring docs alert ───────────────────────────── */}
+      {!kpisLoading && (kpis?.expiringDocsCount ?? 0) > 0 && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-900/10 dark:border-amber-700/50 p-4 flex items-start gap-3">
+          <div className="shrink-0 mt-0.5 w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+            <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-text-primary">
+              {kpis!.expiringDocsCount === 1
+                ? '1 documento vence nos próximos 30 dias'
+                : `${kpis!.expiringDocsCount} documentos vencem nos próximos 30 dias`}
+            </p>
+            <p className="text-xs text-text-secondary mt-0.5">
+              Renove os documentos para manter seus prestadores ativos.
+            </p>
+          </div>
+          <button
+            onClick={handleShowExpiringDocs}
+            className="shrink-0 text-xs font-medium text-amber-700 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-300 underline underline-offset-2"
+          >
+            Ver documentos
+          </button>
+        </div>
+      )}
 
       {/* ── Filters ───────────────────────────────────────── */}
       <ProviderFiltersBar

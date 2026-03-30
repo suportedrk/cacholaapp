@@ -20,7 +20,7 @@ const PROVIDER_LIST_SELECT = `
   *,
   contacts:provider_contacts(*),
   services:provider_services(*, category:service_categories(*)),
-  documents_agg:provider_documents(count),
+  docs:provider_documents(id,expires_at),
   upcoming_events_agg:event_providers(count)
 ` as const
 
@@ -80,13 +80,17 @@ export function useProviders(filters?: Partial<ProviderFilters>) {
       if (error) throw error
 
       // Shape the aggregated counts and apply client-side category filter
+      const now = new Date()
+      const thirtyDaysLater = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
+
       let items = (data ?? []).map((row) => {
         const r = row as Record<string, unknown>
-        const docAgg = r.documents_agg as { count: number }[] | null
+        const docs = (r.docs as { id: string; expires_at: string | null }[]) ?? []
         const evAgg = r.upcoming_events_agg as { count: number }[] | null
         return {
           ...r,
-          documents_count: docAgg?.[0]?.count ?? 0,
+          documents_count: docs.length,
+          expiring_docs: docs,
           upcoming_events_count: evAgg?.[0]?.count ?? 0,
         } as ServiceProviderListItem
       })
@@ -100,16 +104,15 @@ export function useProviders(filters?: Partial<ProviderFilters>) {
         )
       }
 
-      // has_expiring_docs filter: client-side
+      // has_expiring_docs filter: client-side — docs expiring within 30 days
       if (filters?.has_expiring_docs) {
-        const now = Date.now()
-        const thirtyDays = 30 * 24 * 60 * 60 * 1000
-        items = items.filter(() => {
-          // This would require documents in list select — currently only count
-          // Filtered to items with expiring_docs_count > 0 if available
-          return true // placeholder — full doc data available in detail
-        })
-        void now; void thirtyDays
+        items = items.filter((p) =>
+          (p.expiring_docs ?? []).some((d) => {
+            if (!d.expires_at) return false
+            const exp = new Date(d.expires_at)
+            return exp <= thirtyDaysLater
+          })
+        )
       }
 
       return items

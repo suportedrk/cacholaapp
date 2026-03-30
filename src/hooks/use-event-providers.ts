@@ -5,6 +5,10 @@ import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { useUnitStore } from '@/stores/unit-store'
 import { useAuthReadyStore } from '@/stores/auth-store'
+import {
+  notifyProviderAddedToEvent,
+  notifyProviderStatusChanged,
+} from '@/lib/notifications'
 import type {
   EventProvider,
   CreateEventProviderInput,
@@ -155,6 +159,13 @@ export function useAddProviderToEvent() {
       qc.invalidateQueries({ queryKey: ['provider', data.provider_id, activeUnitId] })
       qc.invalidateQueries({ queryKey: ['providers', activeUnitId] })
       toast.success('Prestador adicionado ao evento.')
+      ;(async () => {
+        try {
+          const supabase = createClient()
+          const { data: { user } } = await supabase.auth.getUser()
+          await notifyProviderAddedToEvent(supabase, data.id, user?.id ?? undefined)
+        } catch { /* non-critical */ }
+      })()
     },
     onError: (error: unknown) => {
       const msg = (error as { message?: string })?.message ?? ''
@@ -200,6 +211,15 @@ export function useUpdateEventProvider() {
       qc.invalidateQueries({ queryKey: ['event-providers', data.event_id, activeUnitId] })
       qc.invalidateQueries({ queryKey: ['provider-events', data.provider_id, activeUnitId] })
       toast.success('Prestador atualizado.')
+      if (data.status) {
+        ;(async () => {
+          try {
+            const supabase = createClient()
+            const { data: { user } } = await supabase.auth.getUser()
+            await notifyProviderStatusChanged(supabase, data.id, data.status as string, user?.id ?? undefined)
+          } catch { /* non-critical */ }
+        })()
+      }
     },
     onError: () => toast.error('Erro ao atualizar prestador do evento.'),
   })

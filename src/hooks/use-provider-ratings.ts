@@ -114,11 +114,13 @@ export function useCreateRating() {
       return data as unknown as ProviderRating
     },
     onSuccess: (data) => {
-      // Trigger updates trigger in DB updates avg_rating on service_providers automatically
+      // DB trigger recalcula avg_rating em service_providers automaticamente
       qc.invalidateQueries({ queryKey: ['provider-ratings', data.provider_id, activeUnitId] })
+      qc.invalidateQueries({ queryKey: ['event-ratings', data.event_id, activeUnitId] })
       qc.invalidateQueries({ queryKey: ['provider', data.provider_id, activeUnitId] })
       qc.invalidateQueries({ queryKey: ['providers', activeUnitId] })
       qc.invalidateQueries({ queryKey: ['pending-ratings', activeUnitId] })
+      qc.invalidateQueries({ queryKey: ['provider-kpis', activeUnitId] })
       toast.success('Avaliação registrada com sucesso.')
     },
     onError: (error: unknown) => {
@@ -158,5 +160,40 @@ export function useUpdateRating() {
       toast.success('Avaliação atualizada.')
     },
     onError: () => toast.error('Erro ao atualizar avaliação.'),
+  })
+}
+
+// ─────────────────────────────────────────────────────────────
+// useEventRatings — Avaliações de todos os prestadores de um evento
+// Retorna um mapa: event_provider_id → ProviderRating
+// ─────────────────────────────────────────────────────────────
+export function useEventRatings(eventId: string | null) {
+  const { activeUnitId } = useUnitStore()
+  const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
+
+  return useQuery({
+    queryKey: ['event-ratings', eventId, activeUnitId],
+    enabled: !!eventId && !!activeUnitId && isSessionReady,
+    staleTime: 30 * 1000,
+    retry: (count, error: unknown) => {
+      const status = (error as { status?: number; code?: number })?.status
+        ?? (error as { status?: number; code?: number })?.code
+      if (status === 401 || status === 403) return false
+      return count < 2
+    },
+    queryFn: async (): Promise<Record<string, ProviderRating>> => {
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from('provider_ratings')
+        .select(RATING_SELECT)
+        .eq('event_id', eventId!)
+        .eq('unit_id', activeUnitId!)
+      if (error) throw error
+      const map: Record<string, ProviderRating> = {}
+      for (const r of (data ?? []) as unknown as ProviderRating[]) {
+        map[r.event_provider_id] = r
+      }
+      return map
+    },
   })
 }

@@ -203,6 +203,7 @@ export interface ServiceProviderListItem extends ServiceProvider {
   services: (ProviderService & { category: ServiceCategory })[]
   documents_count: number
   upcoming_events_count: number
+  expiring_docs?: Array<{ id: string; expires_at: string | null }>
 }
 
 // ==========================================

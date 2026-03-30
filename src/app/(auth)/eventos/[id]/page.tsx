@@ -714,7 +714,7 @@ export default function EventoDetailPage() {
         )}
 
         {/* S4: Prestadores */}
-        <ProvidersSection eventId={id} eventDate={event.date} />
+        <ProvidersSection eventId={id} eventDate={event.date} eventTitle={event.birthday_person || event.title || ''} />
 
         {/* S5: Checklists */}
         <div ref={checklistsSectionRef}>

@@ -5,18 +5,22 @@ import { Handshake, Plus } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { formatCurrency } from '@/lib/utils/providers'
 import { useEventProviders } from '@/hooks/use-event-providers'
+import { useEventRatings } from '@/hooks/use-provider-ratings'
 import { AccordionSection } from '../AccordionSection'
 import { EventProviderCard } from '../EventProviderCard'
+import { EventProviderRatingSection } from '../EventProviderRatingSection'
 import { AddProviderModal } from '../AddProviderModal'
 
 interface Props {
   eventId: string
   eventDate: string  // 'YYYY-MM-DD'
+  eventTitle?: string
 }
 
-export function ProvidersSection({ eventId, eventDate }: Props) {
+export function ProvidersSection({ eventId, eventDate, eventTitle = '' }: Props) {
   const [addOpen, setAddOpen] = useState(false)
   const { data: eventProviders = [], isLoading } = useEventProviders(eventId)
+  const { data: ratingsMap = {} } = useEventRatings(eventId)
 
   // Total estimated cost — sum per_event providers with a price
   const totalEstimated = eventProviders.reduce((sum, ep) => {
@@ -51,7 +55,15 @@ export function ProvidersSection({ eventId, eventDate }: Props) {
         {!isLoading && eventProviders.length > 0 && (
           <div className="space-y-2">
             {eventProviders.map((ep) => (
-              <EventProviderCard key={ep.id} ep={ep} />
+              <div key={ep.id}>
+                <EventProviderCard ep={ep} />
+                <EventProviderRatingSection
+                  ep={ep}
+                  rating={ratingsMap[ep.id]}
+                  eventTitle={eventTitle}
+                  eventDate={eventDate}
+                />
+              </div>
             ))}
 
             {/* Total estimado */}

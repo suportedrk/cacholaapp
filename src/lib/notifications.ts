@@ -487,3 +487,141 @@ export async function notifyChecklistDuplicated(
     `/checklists/${checklistId}`
   )
 }
+
+// ─────────────────────────────────────────────────────────────
+// PRESTADORES DE SERVIÇOS (Migration 021)
+// ─────────────────────────────────────────────────────────────
+
+// Prestador adicionado ao evento → notifica gerentes da unidade
+export async function notifyProviderAddedToEvent(
+  supabase: SupabaseClient,
+  eventProviderId: string,
+  actorUserId?: string
+): Promise<void> {
+  const { data: ep } = await (supabase as any)
+    .from('event_providers')
+    .select('unit_id, event_id, provider:service_providers(name), event:events(id, title)')
+    .eq('id', eventProviderId)
+    .single()
+
+  if (!ep) return
+
+  const { data: managers } = await (supabase as any)
+    .from('user_units')
+    .select('user_id')
+    .eq('unit_id', ep.unit_id)
+    .in('role', ['gerente', 'diretor', 'super_admin'])
+
+  if (!managers?.length) return
+
+  for (const m of managers) {
+    if (m.user_id === actorUserId) continue
+    await insert(
+      supabase,
+      m.user_id,
+      'provider_added_to_event',
+      'Prestador adicionado ao evento',
+      `${ep.provider?.name} foi adicionado à festa "${ep.event?.title}"`,
+      `/eventos/${ep.event_id}`
+    )
+  }
+}
+
+// Status do prestador no evento mudou → notifica gerentes
+export async function notifyProviderStatusChanged(
+  supabase: SupabaseClient,
+  eventProviderId: string,
+  newStatus: string,
+  actorUserId?: string
+): Promise<void> {
+  const STATUS_LABELS: Record<string, string> = {
+    pending:   'pendente',
+    confirmed: 'confirmado',
+    cancelled: 'cancelado',
+    completed: 'concluído',
+  }
+
+  const { data: ep } = await (supabase as any)
+    .from('event_providers')
+    .select('unit_id, event_id, provider:service_providers(name), event:events(id, title)')
+    .eq('id', eventProviderId)
+    .single()
+
+  if (!ep) return
+
+  const { data: managers } = await (supabase as any)
+    .from('user_units')
+    .select('user_id')
+    .eq('unit_id', ep.unit_id)
+    .in('role', ['gerente', 'diretor', 'super_admin'])
+
+  const label = STATUS_LABELS[newStatus] ?? newStatus
+  const recipients = new Set<string>((managers ?? []).map((m: { user_id: string }) => m.user_id))
+  recipients.delete(actorUserId ?? '')
+
+  for (const uid of Array.from(recipients)) {
+    await insert(
+      supabase,
+      uid,
+      'provider_status_changed',
+      'Status do prestador atualizado',
+      `${ep.provider?.name} foi ${label} para "${ep.event?.title}"`,
+      `/eventos/${ep.event_id}`
+    )
+  }
+}
+
+// Documento de prestador vence em ≤30 dias → notifica manager (cron)
+export async function notifyProviderDocExpiring(
+  supabase: SupabaseClient,
+  userId: string,
+  providerName: string,
+  docName: string,
+  daysLeft: number,
+  providerId: string
+): Promise<void> {
+  await insert(
+    supabase,
+    userId,
+    'provider_doc_expiring',
+    'Documento vencendo',
+    `"${docName}" de ${providerName} vence em ${daysLeft} dia${daysLeft === 1 ? '' : 's'}`,
+    `/prestadores/${providerId}`
+  )
+}
+
+// Documento de prestador já venceu → notifica manager (cron)
+export async function notifyProviderDocExpired(
+  supabase: SupabaseClient,
+  userId: string,
+  providerName: string,
+  docName: string,
+  providerId: string
+): Promise<void> {
+  await insert(
+    supabase,
+    userId,
+    'provider_doc_expired',
+    'Documento vencido',
+    `"${docName}" de ${providerName} está vencido`,
+    `/prestadores/${providerId}`
+  )
+}
+
+// Avaliação pendente para prestador → notifica manager (cron)
+export async function notifyProviderRatingPending(
+  supabase: SupabaseClient,
+  userId: string,
+  providerName: string,
+  eventTitle: string,
+  eventId: string
+): Promise<void> {
+  await insert(
+    supabase,
+    userId,
+    'provider_rating_pending',
+    `Avalie ${providerName}`,
+    `Como foi ${providerName} na festa "${eventTitle}"?`,
+    `/eventos/${eventId}`
+  )
+}
