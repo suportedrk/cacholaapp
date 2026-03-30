@@ -38,6 +38,7 @@ export function useKeyboardShortcuts() {
 
   // Keep palette-open state in ref to avoid stale closure in effect
   const paletteOpenRef = useRef(isPaletteOpen)
+  // eslint-disable-next-line react-hooks/refs
   paletteOpenRef.current = isPaletteOpen
 
   useEffect(() => {

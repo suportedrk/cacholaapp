@@ -13,7 +13,6 @@ import {
 import { useUpdateEventProvider, useRemoveProviderFromEvent } from '@/hooks/use-event-providers'
 import {
   EVENT_PROVIDER_STATUS_LABELS,
-  EVENT_PROVIDER_STATUS_COLORS,
   PRICE_TYPE_LABELS,
 } from '@/types/providers'
 import type { EventProvider, EventProviderStatus } from '@/types/providers'

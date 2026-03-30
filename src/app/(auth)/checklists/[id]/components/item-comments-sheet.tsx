@@ -184,7 +184,7 @@ export function ItemCommentsSheet({
   onClose,
   itemId,
   itemDescription,
-  checklistId,
+  checklistId: _checklistId,
   onCommentsCount,
 }: ItemCommentsSheetProps) {
   const { profile } = useAuth()
@@ -299,7 +299,7 @@ export function ItemCommentsSheet({
         },
       },
     )
-  }, [profile?.id, text, selectedPhoto, addComment, itemId])
+  }, [profile, text, selectedPhoto, addComment, itemId])
 
   // Delete
   function handleDelete(comment: ChecklistItemComment) {

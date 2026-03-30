@@ -38,6 +38,7 @@ export function Navbar({ onMenuClick, scrolled }: NavbarProps) {
   const initials = profile ? getInitials(profile.name) : 'U'
   const avatarColor = profile ? getAvatarColor(profile.name) : ''
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setClientReady(true) }, [])
 
   return (

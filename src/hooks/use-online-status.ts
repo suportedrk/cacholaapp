@@ -15,6 +15,7 @@ export function useOnlineStatus() {
 
   useEffect(() => {
     // Sincroniza com o estado real assim que o componente monta
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsOnline(navigator.onLine)
 
     const onOnline  = () => setIsOnline(true)

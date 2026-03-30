@@ -18,8 +18,7 @@ import { ConfirmDialog } from '@/components/shared/confirm-dialog'
 import { useDeleteChecklist } from '@/hooks/use-checklists'
 import { cn } from '@/lib/utils'
 import {
-  PRIORITY_LABELS, PRIORITY_COLORS, CHECKLIST_TYPE_LABELS,
-  CHECKLIST_STATUS_LABELS,
+  PRIORITY_LABELS, CHECKLIST_TYPE_LABELS,
 } from '@/types/database.types'
 import type { ChecklistWithItems, Priority } from '@/types/database.types'
 import { DuplicateChecklistModal } from './duplicate-checklist-modal'
@@ -101,7 +100,7 @@ export function ChecklistDetailHeader({
   done,
   total,
   pct,
-  currentUserId,
+  currentUserId: _currentUserId,
   isUpdating,
   justSaved,
 }: ChecklistDetailHeaderProps) {

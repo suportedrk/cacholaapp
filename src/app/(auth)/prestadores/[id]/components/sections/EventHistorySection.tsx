@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { Calendar, ExternalLink } from 'lucide-react'
-import { format, parseISO, isPast } from 'date-fns'
+import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
 import { formatCurrency } from '@/lib/utils/providers'
@@ -39,7 +39,6 @@ function EventRow({
 
   const isCompleted = ep.status === 'completed'
   const isCancelled = ep.status === 'cancelled'
-  const isFuture = event.date ? !isPast(parseISO(event.date + 'T23:59:59')) : false
 
   const dotClass = STATUS_DOT[ep.status] ?? 'bg-muted-foreground'
   const statusLabel = EVENT_PROVIDER_STATUS_LABELS[ep.status]

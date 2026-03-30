@@ -58,6 +58,7 @@ interface Props {
 }
 
 export function SlaCard({ createdAt, dueDate }: Props) {
+  // eslint-disable-next-line react-hooks/purity
   const now      = Date.now()
   const created  = new Date(createdAt).getTime()
   const due      = parseISO(dueDate + 'T23:59:59').getTime()

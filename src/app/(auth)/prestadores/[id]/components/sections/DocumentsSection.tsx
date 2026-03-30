@@ -2,8 +2,6 @@
 
 import { useState } from 'react'
 import { Paperclip, FileText, Eye, Download, AlertTriangle } from 'lucide-react'
-import { format, parseISO } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
 import { getDocumentExpiryStatus } from '@/lib/utils/providers'
 import { DOC_TYPE_LABELS } from '@/types/providers'

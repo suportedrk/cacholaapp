@@ -32,7 +32,7 @@ export function EventProviderRatingSection({ ep, rating, eventTitle, eventDate }
           <StarRating rating={rating.rating} size="sm" showValue />
           {rating.comment && (
             <span className="text-xs text-text-secondary italic truncate flex-1 min-w-0">
-              "{rating.comment}"
+              &quot;{rating.comment}&quot;
             </span>
           )}
         </div>

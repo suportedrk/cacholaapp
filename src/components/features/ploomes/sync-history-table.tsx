@@ -49,7 +49,7 @@ export function SyncHistoryTable() {
       <div className="flex flex-col items-center gap-2 py-10 text-center text-muted-foreground">
         <Clock className="h-8 w-8 opacity-40" />
         <p className="text-sm">Nenhuma sincronização registrada ainda.</p>
-        <p className="text-xs">Use o botão "Sincronizar Agora" acima para iniciar.</p>
+        <p className="text-xs">Use o botão &quot;Sincronizar Agora&quot; acima para iniciar.</p>
       </div>
     )
   }
@@ -70,7 +70,7 @@ export function SyncHistoryTable() {
           </tr>
         </thead>
         <tbody>
-          {logs.map((log, i) => (
+          {logs.map((log) => (
             <tr
               key={log.id}
               className={cn(

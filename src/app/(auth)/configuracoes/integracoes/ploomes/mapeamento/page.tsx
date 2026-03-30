@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { format, parseISO, formatDistanceToNow } from 'date-fns'
+import { parseISO, formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import {
   GitBranch, Database, User, CheckCircle2,

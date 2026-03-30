@@ -22,7 +22,7 @@ type AdminClient = SupabaseClient<Database>
 
 const DEFAULT_PIPELINE_ID   = parseInt(process.env.PLOOMES_PIPELINE_ID ?? '60000636', 10)
 const DEFAULT_STAGE_ID      = parseInt(process.env.PLOOMES_STAGE_FESTA_FECHADA_ID ?? '60004787', 10)
-const DEFAULT_STATUS_ID     = parseInt(process.env.PLOOMES_WON_STATUS_ID ?? '1', 10)
+const _DEFAULT_STATUS_ID     = parseInt(process.env.PLOOMES_WON_STATUS_ID ?? '1', 10)
 
 // ── Carregar config do banco ──────────────────────────────────
 

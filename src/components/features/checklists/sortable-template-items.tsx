@@ -336,6 +336,7 @@ export function SortableTemplateItems({
   }
 
   function addItem(afterTempId?: string) {
+    // eslint-disable-next-line react-hooks/purity
     const newId = `new-${Date.now()}`
     if (afterTempId) {
       const afterIdx = items.findIndex((i) => i.tempId === afterTempId)
@@ -385,7 +386,7 @@ export function SortableTemplateItems({
 
       {items.length === 0 && (
         <p className="text-sm text-muted-foreground text-center py-6 border border-dashed border-border rounded-xl">
-          Nenhum item ainda. Clique em "+ Adicionar item" para começar.
+          Nenhum item ainda. Clique em &quot;+ Adicionar item&quot; para começar.
         </p>
       )}
 

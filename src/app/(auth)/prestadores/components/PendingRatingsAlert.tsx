@@ -25,8 +25,10 @@ export function PendingRatingsAlert({ pendingCount }: Props) {
 
   const { data: pendingList = [] } = usePendingRatings()
 
+  // SSR-safe sessionStorage read — must run in effect (window not available server-side)
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setDismissed(sessionStorage.getItem(SESSION_KEY) === '1')
     }
   }, [])

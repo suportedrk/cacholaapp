@@ -13,7 +13,7 @@ import {
 } from '@dnd-kit/core'
 import { useDroppable } from '@dnd-kit/core'
 import { useQueryClient } from '@tanstack/react-query'
-import { Zap, Wrench, RefreshCw, Shield, Clock } from 'lucide-react'
+import { Zap, Wrench, Shield, Clock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { KanbanCard, KanbanCardContent } from './kanban-card'
 import {

@@ -69,8 +69,10 @@ export function AddProviderModal({ eventId, eventDate, existingProviderIds, onCl
   // Auto-select category when there is exactly one
   useEffect(() => {
     if (providerCategories.length === 1) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCategoryId(providerCategories[0].category_id)
     } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCategoryId('')
     }
   }, [selected?.id]) // eslint-disable-line react-hooks/exhaustive-deps

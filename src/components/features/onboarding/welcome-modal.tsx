@@ -45,10 +45,12 @@ export function WelcomeModal() {
   const [slide, setSlide] = useState(0)
   const [mounted, setMounted] = useState(false)
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setMounted(true) }, [])
 
   // Reset slide when modal opens
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (welcomeOpen) setSlide(0)
   }, [welcomeOpen])
 

@@ -82,6 +82,7 @@ export function GuidedTour() {
 
   const step = TOUR_STEPS[tourStep]
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setMounted(true) }, [])
 
   const updatePositions = useCallback(() => {
@@ -116,6 +117,7 @@ export function GuidedTour() {
   }, [tourActive, tourStep, step, nextTourStep])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     updatePositions()
     window.addEventListener('resize', updatePositions)
     return () => window.removeEventListener('resize', updatePositions)

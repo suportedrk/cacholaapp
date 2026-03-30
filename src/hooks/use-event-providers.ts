@@ -108,7 +108,7 @@ export function useProviderScheduleConflicts(
     retry: false,
     queryFn: async (): Promise<EventProvider[]> => {
       const supabase = createClient()
-      let query = supabase
+      const query = supabase
         .from('event_providers')
         .select(EVENT_PROVIDER_WITH_EVENT_SELECT)
         .eq('provider_id', providerId!)

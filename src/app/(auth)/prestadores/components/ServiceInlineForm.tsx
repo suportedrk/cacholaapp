@@ -60,8 +60,11 @@ export function ServiceInlineForm({
   const [draft, setDraft] = useState<ServiceDraft>(initialData ?? DEFAULT_DRAFT)
   const [errors, setErrors] = useState<Partial<Record<keyof ServiceDraft, string>>>({})
 
+  // Reset form when initialData changes (edit mode — legitimate derived state pattern)
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setDraft(initialData ?? DEFAULT_DRAFT)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setErrors({})
   }, [initialData])
 

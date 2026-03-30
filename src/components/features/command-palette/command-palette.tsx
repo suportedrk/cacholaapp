@@ -10,7 +10,7 @@ import {
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { useCommandPaletteStore, type RecentItem } from '@/stores/command-palette-store'
+import { useCommandPaletteStore } from '@/stores/command-palette-store'
 import { useCommandPaletteIndex } from '@/hooks/use-command-palette-search'
 import { useDebounce } from '@/hooks/use-debounce'
 import { cn } from '@/lib/utils'

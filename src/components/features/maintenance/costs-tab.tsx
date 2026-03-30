@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { DollarSign, Plus, TrendingUp, Clock } from 'lucide-react'
+import { DollarSign, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { FilterChip } from '@/components/shared/filter-chip'
 import {

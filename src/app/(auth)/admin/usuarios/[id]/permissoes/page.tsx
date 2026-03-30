@@ -7,7 +7,7 @@ import { Switch } from '@/components/ui/switch'
 import { useUser } from '@/hooks/use-users'
 import { useUserPermissions, useUpdatePermission } from '@/hooks/use-permissions'
 import { UserAvatar } from '@/components/shared/user-avatar'
-import { MODULE_LABELS, ACTION_LABELS, ROUTES } from '@/lib/constants'
+import { MODULE_LABELS, ACTION_LABELS } from '@/lib/constants'
 import type { Module, Action } from '@/types/permissions'
 
 const MODULES: Module[] = [

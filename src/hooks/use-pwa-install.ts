@@ -26,6 +26,7 @@ export function usePwaInstall() {
       window.matchMedia('(display-mode: standalone)').matches ||
       (window.navigator as { standalone?: boolean }).standalone === true
     if (isStandalone) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setInstalled(true)
       return
     }
@@ -44,7 +45,7 @@ export function usePwaInstall() {
     }
     const firstVisit = Number(localStorage.getItem(FIRST_VISIT_KEY))
 
-    function maybeShow(prompt: BeforeInstallPromptEvent) {
+    function maybeShow(_prompt: BeforeInstallPromptEvent) {
       const elapsed      = Date.now() - firstVisit
       const enoughVisits = visits >= MIN_VISITS
       const enoughTime   = elapsed >= MIN_TIME_MS

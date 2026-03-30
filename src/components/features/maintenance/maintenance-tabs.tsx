@@ -80,6 +80,7 @@ function OrdersTabContent() {
   const [viewMode, setViewMode] = useState<ViewMode>('list')
   useEffect(() => {
     const saved = localStorage.getItem(VIEW_MODE_KEY)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (saved === 'kanban' || saved === 'list') setViewMode(saved)
   }, [])
 
@@ -200,21 +201,6 @@ function OrdersTabContent() {
           )}
         </>
       )}
-    </div>
-  )
-}
-
-// ─────────────────────────────────────────────────────────────
-// PLACEHOLDER FOR UPCOMING TABS
-// ─────────────────────────────────────────────────────────────
-function PlaceholderTab({ icon: Icon, label }: { icon: React.ElementType; label: string }) {
-  return (
-    <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
-      <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
-        <Icon className="w-6 h-6 text-muted-foreground" />
-      </div>
-      <p className="text-sm font-medium text-foreground">{label}</p>
-      <p className="text-xs text-muted-foreground">Em breve</p>
     </div>
   )
 }

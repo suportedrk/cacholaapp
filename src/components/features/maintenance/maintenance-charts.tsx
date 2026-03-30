@@ -10,7 +10,6 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import { Skeleton } from '@/components/ui/skeleton'
-import { cn } from '@/lib/utils'
 import { useMaintenanceStats } from '@/hooks/use-maintenance-stats'
 import { BRAND_GREEN } from '@/lib/constants/brand-colors'
 

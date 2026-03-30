@@ -7,12 +7,14 @@ const eslintConfig = defineConfig([
   ...nextTs,
   globalIgnores([
     '.next/**',
+    '.claude/**',
     'out/**',
     'build/**',
     'next-env.d.ts',
     'node_modules/**',
     'public/sw.js',
     'public/workbox-*.js',
+    'public/swe-worker-*.js',
   ]),
   {
     rules: {

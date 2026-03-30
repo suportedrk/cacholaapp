@@ -1,7 +1,6 @@
 'use client'
 
 import { Phone, Mail, MessageCircle, Star } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import { formatPhone } from '@/lib/utils/providers'
 import { CONTACT_TYPE_LABELS } from '@/types/providers'
 import { AccordionSection } from '../AccordionSection'

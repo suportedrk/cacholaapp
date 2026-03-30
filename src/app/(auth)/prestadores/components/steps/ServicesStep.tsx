@@ -87,7 +87,7 @@ export function ServicesStep({
     setEditingSavedId(null)
   }
 
-  function pendingToSaved(s: ServiceDraft): Partial<ProviderService> {
+  function _pendingToSaved(s: ServiceDraft): Partial<ProviderService> {
     return {
       category_id: s.category_id,
       price_type: s.price_type,

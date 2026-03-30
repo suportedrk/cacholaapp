@@ -1,4 +1,4 @@
-import { Lock, ExternalLink, User, Calendar, Clock, Users, Palette, MapPin } from 'lucide-react'
+import { Lock, ExternalLink, User, Calendar, Clock, Users, Palette } from 'lucide-react'
 import { PloomeBadge } from './ploomes-badge'
 
 type Props = {

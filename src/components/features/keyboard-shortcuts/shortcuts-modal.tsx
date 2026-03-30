@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 import { useShortcutsStore } from '@/stores/shortcuts-store'
-import { cn } from '@/lib/utils'
 
 // ─────────────────────────────────────────────────────────────
 // DATA
@@ -92,6 +91,7 @@ function ShortcutsPanel({ onClose }: { onClose: () => void }) {
   const [isMac, setIsMac] = useState(false)
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsMac(/Mac|iPhone|iPod|iPad/.test(navigator.platform))
   }, [])
 
@@ -168,6 +168,7 @@ function ShortcutsPanel({ onClose }: { onClose: () => void }) {
 export function ShortcutsModal() {
   const { isOpen, close } = useShortcutsStore()
   const [mounted, setMounted] = useState(false)
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setMounted(true) }, [])
 
   if (!mounted || !isOpen) return null

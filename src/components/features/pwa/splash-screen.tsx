@@ -15,6 +15,7 @@ export function SplashScreen() {
 
     if (!isStandalone) return
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setVisible(true)
 
     // Start fade-out after 1.2 s

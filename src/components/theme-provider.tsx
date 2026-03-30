@@ -73,7 +73,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const initial: Theme =
       stored === 'light' || stored === 'dark' || stored === 'system' ? stored : 'system'
     const resolved = resolve(initial)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setThemeState(initial)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setResolvedTheme(resolved)
     applyTheme(resolved)
   }, [resolve])

@@ -14,6 +14,7 @@ function useCountUp(target: number, duration = 500, enabled = true) {
 
   useEffect(() => {
     if (!enabled) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (target === 0) { setValue(0); return }
 
     const startTime = performance.now()
@@ -43,6 +44,7 @@ function useCountUpFloat(target: number, duration = 500, enabled = true) {
 
   useEffect(() => {
     if (!enabled) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (target === 0) { setValue(0); return }
 
     const startTime = performance.now()

@@ -55,9 +55,11 @@ export function ContactInlineForm({ initialData, onSubmit, onCancel }: Props) {
   const [draft, setDraft] = useState<ContactDraft>(initialData ?? DEFAULT_DRAFT)
   const [errors, setErrors] = useState<Partial<Record<keyof ContactDraft, string>>>({})
 
-  // Reset if initialData changes (edit mode)
+  // Reset form when initialData changes (edit mode — legitimate derived state pattern)
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setDraft(initialData ?? DEFAULT_DRAFT)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setErrors({})
   }, [initialData])
 

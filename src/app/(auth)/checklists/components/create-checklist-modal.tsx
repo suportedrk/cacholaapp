@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
-import { useRouter } from 'next/navigation'
 import { format, subDays, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import {
@@ -15,8 +14,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
-import { UserAvatar } from '@/components/shared/user-avatar'
-import { FilterChip } from '@/components/shared/filter-chip'
 import { cn } from '@/lib/utils'
 import {
   useCreateChecklist,
@@ -25,7 +22,6 @@ import {
 import { useEvents } from '@/hooks/use-events'
 import { useUsers } from '@/hooks/use-users'
 import { useAuth } from '@/hooks/use-auth'
-import { useUnitStore } from '@/stores/unit-store'
 import {
   PRIORITY_LABELS,
   type ChecklistType,
@@ -174,10 +170,13 @@ export function CreateChecklistModal({
   useEffect(() => {
     if (titleEdited) return
     if (selectedTemplate && type === 'event' && selectedEvent?.title) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTitle(`${selectedTemplate.title} — ${selectedEvent.title}`)
     } else if (selectedTemplate) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTitle(selectedTemplate.title)
     } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTitle('')
     }
   }, [selectedTemplate, selectedEvent?.title, type, titleEdited])
@@ -185,6 +184,7 @@ export function CreateChecklistModal({
   // ── Auto-fill priority from template ──
   useEffect(() => {
     if (selectedTemplate?.default_priority) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPriority(selectedTemplate.default_priority)
     }
   }, [selectedTemplate])

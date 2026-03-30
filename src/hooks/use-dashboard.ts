@@ -217,6 +217,7 @@ export function useCalendarEvents(dateFrom: string, dateTo: string) {
   // Carregar do IDB quando offline
   useEffect(() => {
     if (isOnline || !dateFrom || !dateTo) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsLoadingOffline(true)
     getOfflineDb().then(async (db) => {
       const cached = await db.get('calendar_events', cacheKey)

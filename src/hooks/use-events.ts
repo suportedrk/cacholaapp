@@ -1,7 +1,7 @@
 'use client'
 
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns'
+import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
 import type { EventWithDetails, EventForList, EventInsert, EventUpdate, EventStatus } from '@/types/database.types'
 import { toast } from 'sonner'

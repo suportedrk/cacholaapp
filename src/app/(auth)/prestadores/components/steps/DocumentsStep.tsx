@@ -2,7 +2,7 @@
 
 import { FileText, Trash2, Eye } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { getDocumentExpiryStatus, formatCurrency } from '@/lib/utils/providers'
+import { getDocumentExpiryStatus } from '@/lib/utils/providers'
 import { DOC_TYPE_LABELS } from '@/types/providers'
 import { DocumentDropZone, DocDraftCard } from '../DocumentUploadCard'
 import type { DocDraft } from '../DocumentUploadCard'

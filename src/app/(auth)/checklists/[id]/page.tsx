@@ -164,7 +164,7 @@ export default function ChecklistFillPage() {
     handleItemStatus,
     handleItemNotes,
     handleItemPhoto,
-    handleFinish,
+    handleFinish: _handleFinish,
   } = useOfflineChecklist(id)
 
   const { mutate: completeChecklist, isPending: isCompleting } = useCompleteChecklist()
@@ -177,6 +177,7 @@ export default function ChecklistFillPage() {
   // Detect isUpdating false → show "Salvo ✓"
   useEffect(() => {
     if (prevUpdating.current && !isUpdating) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setJustSaved(true)
       const t = setTimeout(() => setJustSaved(false), 2000)
       return () => clearTimeout(t)

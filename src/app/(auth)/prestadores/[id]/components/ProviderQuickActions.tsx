@@ -2,7 +2,6 @@
 
 import { useRouter } from 'next/navigation'
 import { Phone, MessageCircle, Pencil, MoreVertical } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem,
   DropdownMenuSeparator, DropdownMenuTrigger,

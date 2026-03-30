@@ -2,10 +2,10 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
-import { formatDistanceToNow, format, parseISO } from 'date-fns'
+import { formatDistanceToNow, format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import {
-  CheckCircle2, Clock, DollarSign, Image, Plus, RefreshCw, AlertCircle, Wrench,
+  CheckCircle2, Clock, DollarSign, Image, Plus, RefreshCw, AlertCircle,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -147,7 +147,6 @@ function TimelineItem({ event, isLast }: { event: TimelineEvent; isLast: boolean
 
     // Audit
     const statusChange = (event.newData?.status as string | undefined)
-    const completedAt  = event.newData?.completed_at
 
     if (event.action === 'UPDATE' && statusChange) {
       const isCompletion = statusChange === 'completed'

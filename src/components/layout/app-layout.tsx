@@ -46,6 +46,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   // Restore collapse state from localStorage
   useEffect(() => {
     const stored = localStorage.getItem(COLLAPSED_KEY)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (stored === 'true') setSidebarCollapsed(true)
   }, [])
 

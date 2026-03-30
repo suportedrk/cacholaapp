@@ -100,6 +100,21 @@ const TAG_SUGGESTIONS = [
 ]
 
 // ─────────────────────────────────────────────────────────────
+// Field error helper (outside component to satisfy react-hooks/static-components)
+// ─────────────────────────────────────────────────────────────
+
+function FieldError({ errors, field }: { errors: Record<string, string>; field: string }) {
+  const msg = errors[field]
+  if (!msg) return null
+  return (
+    <p className="flex items-center gap-1 text-xs text-destructive mt-1">
+      <AlertCircle className="w-3 h-3 shrink-0" />
+      {msg}
+    </p>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────
 // Component
 // ─────────────────────────────────────────────────────────────
 
@@ -156,17 +171,6 @@ export function BasicDataStep({ data, errors, onChange, onClearError }: Props) {
 
   const fieldError = (field: string) => errors[field]
 
-  const FieldError = ({ field }: { field: string }) => {
-    const msg = fieldError(field)
-    if (!msg) return null
-    return (
-      <p className="flex items-center gap-1 text-xs text-destructive mt-1">
-        <AlertCircle className="w-3 h-3 shrink-0" />
-        {msg}
-      </p>
-    )
-  }
-
   return (
     <div className="space-y-6">
 
@@ -196,7 +200,7 @@ export function BasicDataStep({ data, errors, onChange, onClearError }: Props) {
               </label>
             ))}
           </div>
-          <FieldError field="document_type" />
+          <FieldError errors={errors} field="document_type" />
         </div>
 
         {/* Número do documento */}
@@ -222,7 +226,7 @@ export function BasicDataStep({ data, errors, onChange, onClearError }: Props) {
               fieldError('document_number') && 'border-destructive focus:ring-destructive/30',
             )}
           />
-          <FieldError field="document_number" />
+          <FieldError errors={errors} field="document_number" />
         </div>
       </section>
 
@@ -243,7 +247,7 @@ export function BasicDataStep({ data, errors, onChange, onClearError }: Props) {
             aria-invalid={!!fieldError('name')}
             className={cn(inputBase, fieldError('name') && 'border-destructive focus:ring-destructive/30')}
           />
-          <FieldError field="name" />
+          <FieldError errors={errors} field="name" />
         </div>
 
         {/* Razão social (CNPJ only) */}
@@ -260,7 +264,7 @@ export function BasicDataStep({ data, errors, onChange, onClearError }: Props) {
               aria-invalid={!!fieldError('legal_name')}
               className={cn(inputBase, fieldError('legal_name') && 'border-destructive focus:ring-destructive/30')}
             />
-            <FieldError field="legal_name" />
+            <FieldError errors={errors} field="legal_name" />
           </div>
         )}
 

@@ -16,7 +16,7 @@ import { ItemDeadlinePopover } from './item-deadline-popover'
 import { ItemCommentsSheet } from './item-comments-sheet'
 import { useUpdateChecklistItem } from '@/hooks/use-checklists'
 import type { ChecklistItem, ChecklistItemStatus, Priority, User as UserType } from '@/types/database.types'
-import { PRIORITY_LABELS, PRIORITY_COLORS } from '@/types/database.types'
+import { PRIORITY_LABELS } from '@/types/database.types'
 
 // ─────────────────────────────────────────────────────────────
 // TYPES
@@ -31,9 +31,9 @@ interface ChecklistItemRowProps {
   checklistId:    string
   onStatusChange: (status: ChecklistItemStatus) => void
   onNotesChange:  (notes: string) => void
-  onPhotoChange?: (file: File) => void
-  disabled?:      boolean
-  currentUserId?: string
+  onPhotoChange?:  (file: File) => void
+  disabled?:       boolean
+  currentUserId?:  string
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -61,7 +61,6 @@ const PRIORITY_BG: Record<Priority, string> = {
 function dueDateInfo(dueAt: string | null): { label: string; cls: string } | null {
   if (!dueAt) return null
   const d = startOfDay(parseISO(dueAt))
-  const today = startOfDay(new Date())
   if (isPast(d) && !isToday(d)) {
     return { label: 'Atrasado', cls: 'text-red-600 dark:text-red-400' }
   }
@@ -83,7 +82,7 @@ export function ChecklistItemRow({
   onNotesChange,
   onPhotoChange,
   disabled,
-  currentUserId,
+  currentUserId: _currentUserId,
 }: ChecklistItemRowProps) {
   const { mutate: updateItem } = useUpdateChecklistItem()
 

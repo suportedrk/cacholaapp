@@ -215,6 +215,7 @@ interface DocRowProps {
 function DocRow({ doc, signedUrl }: DocRowProps) {
   const deleteDoc    = useDeleteSupplierDocument()
   const [lightbox, setLightbox] = useState(false)
+  // eslint-disable-next-line react-hooks/static-components
   const Icon   = getFileIcon(doc.file_type)
   const badge  = expiryBadge(doc.expires_at)
   const isImage = doc.file_type?.startsWith('image/')
@@ -228,6 +229,7 @@ function DocRow({ doc, signedUrl }: DocRowProps) {
   return (
     <>
       <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-card group/doc">
+        {/* eslint-disable-next-line react-hooks/static-components */}
         <Icon className="w-5 h-5 text-muted-foreground shrink-0" />
 
         <div className="flex-1 min-w-0 space-y-0.5">

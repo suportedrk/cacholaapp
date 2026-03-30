@@ -8,7 +8,7 @@ import { ptBR } from 'date-fns/locale'
 import { toast } from 'sonner'
 import {
   Bell, Calendar, RefreshCw, ClipboardList, CheckCircle2,
-  AlertTriangle, CheckCheck, LucideIcon, X, Wrench, Settings,
+  AlertTriangle, CheckCheck, LucideIcon, X, Wrench,
   Clock, Archive, Check,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
