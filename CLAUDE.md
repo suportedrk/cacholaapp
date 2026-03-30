@@ -1911,6 +1911,76 @@ Branch: `claude/optimistic-poitras`
 
 ---
 
+## Providers — P4 Formulário Multi-Step (Prompt 4 — 2026-03-30)
+
+### Rotas
+- `/prestadores/novo` → `ProviderForm` sem props (modo criação)
+- `/prestadores/[id]/editar` → `ProviderForm provider={provider}` (modo edição)
+
+### Componentes novos em `src/app/(auth)/prestadores/components/`
+
+**`ProviderFormStepper.tsx`**
+- 4 passos: Dados Básicos / Contatos / Serviços / Documentos (ícones FileText/Phone/Briefcase/Paperclip)
+- Estados: complete (bg-primary + check), current (bg-primary + ring-4), error (border-destructive + AlertCircle), pending (muted)
+- Só passos visitados são clicáveis; linha conectora entre círculos; mobile oculta labels exceto o passo atual
+
+**`ContactInlineForm.tsx`**
+- `ContactDraft: { type, value, label, is_primary }`
+- Tipo select adapta placeholder e máscara (formatPhone para phone/whatsapp, email para email)
+- Validação: phone/whatsapp mín 10 dígitos, email regex, campo obrigatório
+
+**`ServiceInlineForm.tsx`**
+- `ServiceDraft: { category_id, price_type, price_value: string, description, notes }`
+- `formatInputCurrency(raw)`: strips non-digits → divide por 100 → formatCurrency ("1500" → "R$ 15,00")
+- Categorias disponíveis filtradas: oculta já usadas exceto a sendo editada
+- Re-exporta `parseCurrency` para uso no pai
+
+**`DocumentUploadCard.tsx`**
+- `DocumentDropZone`: drag-over state (border-primary + brand-50), validação MIME, limite 20MB
+- `DocDraftCard`: preview com name, doc_type select, expires_at date picker
+- `DocDraft: { file: File, name: string, doc_type: DocType, expires_at: string }`
+
+**`steps/BasicDataStep.tsx`**
+- `BasicData`: document_type, document_number, name, legal_name, status, instagram, zip_code, state, city, address, website, tags[], notes
+- CPF/CNPJ: `maskDocument()` no change, switch de tipo limpa o campo
+- `legal_name`: renderização condicional com `animate-fade-up` quando CNPJ
+- Tags: `tagInput` local, sugestões dropdown, Enter/vírgula para adicionar, Backspace remove último
+- ZIP: hífem automático após 5 dígitos; 27 UFs no select
+
+**`steps/ContactsStep.tsx`**
+- `validateContactsStep()`: exportado, exige mínimo 1 contato no total
+- Contatos salvos + pendentes como cards; edição abre `ContactInlineForm` inline (substitui o card)
+- Contato principal exibe ícone Star âmbar
+
+**`steps/ServicesStep.tsx`**
+- `validateServicesStep()`: exportado, exige mínimo 1 serviço no total
+- `ServiceCard` sub-componente: ícone de categoria + nome + price_type + valor formatado
+- Botão "Adicionar" desabilitado quando todas as categorias já usadas
+- `pendingToSaved()` helper exportado (module-level)
+
+**`steps/DocumentsStep.tsx`**
+- Documentos salvos com badge de vencimento (EXPIRY_BADGE + EXPIRY_LABEL)
+- `DocumentDropZone` sempre visível no fundo para adicionar mais
+- Step opcional (sem validação mínima)
+
+**`ProviderForm.tsx`** (orquestrador principal)
+- Props: `provider?: ServiceProviderWithDetails`, `onSuccess?: () => void`
+- State: `currentStep(0–3)`, `visitedSteps: Set<number>`, `stepErrors: StepErrors[]`, `isSaving`
+- `validateAll()`: valida todos os passos, retorna índice do primeiro com erro (−1 = OK)
+- `goNext()`: valida passo atual antes de avançar; adiciona ao visitedSteps
+- **Modo criação:** `saveCreateMode()` — createProvider → Promise.allSettled (contatos/serviços/docs) → toasts de aviso parcial → redirect `/prestadores/{id}`
+- **Modo edição:** `saveEditMode()` — apenas salva dados básicos; sub-recursos via mutations imediatas
+- Handlers imediatos em edição: `handleDeleteSavedContact`, `handleUpdateSavedContact`, `handleDeleteSavedService`, `handleUpdateSavedService`, `handleDeleteSavedDoc` (useCallback)
+- Botões mobile: full-width stacked (reverse order); desktop: right-aligned inline
+
+### Decisões técnicas
+- Input monetário armazena BRL formatado no form state ("R$ 1.500,00"), converte via `parseCurrency()` só na submissão
+- `Promise.allSettled` na criação: falha de contato/serviço/doc não bloqueia o fluxo principal
+- `usedCategoryIds` excluindo a categoria sendo editada → permite re-salvar sem erro de duplicata
+- Rota de edição: sub-recursos são mutations imediatas (feedback instantâneo, sem "aguardar save")
+
+---
+
 ## DECISÕES TÉCNICAS
 
 | Decisão | Razão |
