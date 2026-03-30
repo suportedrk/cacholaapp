@@ -1987,6 +1987,24 @@ Branch: `claude/optimistic-poitras`
 
 ---
 
+## DATA FETCHING PATTERNS (Obrigatório)
+
+Estas regras resolvem o bug "Skeleton Loading Infinito" causado por race condition entre session, Zustand hydration e TanStack Query. **Toda nova query deve seguir estes padrões.**
+
+| Regra | Como aplicar |
+|-------|-------------|
+| `enabled` obrigatório em toda `useQuery` | `enabled: !!activeUnitId && isSessionReady` (ou só `isSessionReady` se não depende de unidade) |
+| `isSessionReady` vem de `useAuthReadyStore` | `const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)` |
+| Retry nunca retentar 401/403 | `retry: (count, err) => count < 3 && err?.status !== 401 && err?.status !== 403` |
+| Páginas DEVEM tratar `isError` | Nunca só `isLoading` — sempre `isError` também com banner "Tentar novamente" |
+| Zustand com persist precisa de `_hasHydrated` | Ver `unit-store.ts` como referência — `onRehydrateStorage` seta flag |
+| Não fazer `getUser()` interno em hooks | Usar `isSessionReady` como gate; `getUser()` antes de ready retorna null |
+| Sub-queries herdam `enabled` do hook pai | Todos os `useQuery` dentro de um hook composto recebem o mesmo `enabled` guard |
+| AuthGuard é self-contained | Faz próprio `getSession()` — não depende de provider pai |
+| `onAuthStateChange SIGNED_IN` invalida cache | `AuthCacheSync` em `providers.tsx` já cuida disso — não duplicar |
+
+---
+
 ## DECISÕES TÉCNICAS
 
 | Decisão | Razão |
