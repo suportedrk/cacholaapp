@@ -51,6 +51,14 @@ export interface Database {
       // Integração Ploomes CRM
       ploomes_config:       { Row: PloomesConfigRow;    Insert: Partial<PloomesConfigRow>; Update: Partial<PloomesConfigRow>; Relationships: [] }
       ploomes_sync_log:     { Row: PloomesSyncLog;      Insert: Partial<PloomesSyncLog>; Update: Partial<PloomesSyncLog>; Relationships: [] }
+      // Prestadores de Serviços (Migration 021)
+      service_categories:   { Row: ServiceCategory;     Insert: Partial<ServiceCategory>;    Update: Partial<ServiceCategory>;    Relationships: [] }
+      service_providers:    { Row: ServiceProvider;     Insert: Partial<ServiceProvider>;    Update: Partial<ServiceProvider>;    Relationships: [] }
+      provider_contacts:    { Row: ProviderContact;     Insert: Partial<ProviderContact>;    Update: Partial<ProviderContact>;    Relationships: [] }
+      provider_services:    { Row: ProviderService;     Insert: Partial<ProviderService>;    Update: Partial<ProviderService>;    Relationships: [] }
+      provider_documents:   { Row: ProviderDocument;    Insert: Partial<ProviderDocument>;   Update: Partial<ProviderDocument>;   Relationships: [] }
+      event_providers:      { Row: EventProvider;       Insert: Partial<EventProvider>;      Update: Partial<EventProvider>;      Relationships: [] }
+      provider_ratings:     { Row: ProviderRating;      Insert: Partial<ProviderRating>;     Update: Partial<ProviderRating>;     Relationships: [] }
       // Sistema
       notifications:        { Row: AppNotification;     Insert: Partial<AppNotification>; Update: Partial<AppNotification>; Relationships: [] }
       audit_logs:           { Row: AuditLog;            Insert: Partial<AuditLog>;       Update: Partial<AuditLog>;       Relationships: [] }
@@ -937,4 +945,130 @@ export type StaffByChecklists = {
   checklists_completed: number
   checklists_overdue:   number
   maintenance_count:    number
+}
+
+// ─────────────────────────────────────────────────────────────
+// PRESTADORES DE SERVIÇOS — DB row types (Migration 021)
+// Rich/join types live in src/types/providers.ts
+// ─────────────────────────────────────────────────────────────
+export type ProviderDocumentType = 'cpf' | 'cnpj'
+export type ProviderContactType  = 'phone' | 'email' | 'whatsapp'
+export type ProviderPriceType    = 'per_event' | 'per_hour' | 'custom'
+export type ProviderDocType      = 'contract' | 'license' | 'certificate' | 'insurance' | 'id_document' | 'other'
+export type ProviderStatusType   = 'active' | 'inactive' | 'blocked' | 'pending_docs'
+export type EventProviderStatusType = 'pending' | 'confirmed' | 'cancelled' | 'completed'
+
+export type ServiceCategory = {
+  id:          string
+  unit_id:     string
+  name:        string
+  slug:        string
+  description: string | null
+  icon:        string
+  color:       string
+  is_active:   boolean
+  sort_order:  number
+  created_at:  string
+  updated_at:  string
+}
+
+export type ServiceProvider = {
+  id:              string
+  unit_id:         string
+  document_type:   ProviderDocumentType
+  document_number: string
+  name:            string
+  legal_name:      string | null
+  status:          ProviderStatusType
+  tags:            string[]
+  notes:           string | null
+  address:         string | null
+  city:            string | null
+  state:           string | null
+  zip_code:        string | null
+  website:         string | null
+  instagram:       string | null
+  avg_rating:      number
+  total_events:    number
+  created_by:      string | null
+  created_at:      string
+  updated_at:      string
+}
+
+export type ProviderContact = {
+  id:          string
+  provider_id: string
+  unit_id:     string
+  type:        ProviderContactType
+  value:       string
+  label:       string | null
+  is_primary:  boolean
+  created_at:  string
+  updated_at:  string
+}
+
+export type ProviderService = {
+  id:          string
+  provider_id: string
+  category_id: string
+  unit_id:     string
+  description: string | null
+  price_type:  ProviderPriceType
+  price_value: number | null
+  currency:    string
+  notes:       string | null
+  is_active:   boolean
+  created_at:  string
+  updated_at:  string
+}
+
+export type ProviderDocument = {
+  id:                 string
+  provider_id:        string
+  unit_id:            string
+  name:               string
+  doc_type:           ProviderDocType
+  file_url:           string
+  file_name:          string
+  file_size:          number | null
+  mime_type:          string | null
+  expires_at:         string | null
+  expiry_alert_sent:  boolean
+  uploaded_by:        string | null
+  created_at:         string
+  updated_at:         string
+}
+
+export type EventProvider = {
+  id:           string
+  event_id:     string
+  provider_id:  string
+  category_id:  string | null
+  unit_id:      string
+  agreed_price: number | null
+  price_type:   ProviderPriceType
+  status:       EventProviderStatusType
+  arrival_time: string | null
+  notes:        string | null
+  confirmed_by: string | null
+  confirmed_at: string | null
+  created_by:   string | null
+  created_at:   string
+  updated_at:   string
+}
+
+export type ProviderRating = {
+  id:                string
+  event_provider_id: string
+  provider_id:       string
+  event_id:          string
+  unit_id:           string
+  rating:            number
+  comment:           string | null
+  punctuality:       number | null
+  quality:           number | null
+  professionalism:   number | null
+  rated_by:          string
+  created_at:        string
+  updated_at:        string
 }
