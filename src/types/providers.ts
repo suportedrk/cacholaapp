@@ -299,6 +299,7 @@ export interface CreateEventProviderInput {
   provider_id: string
   category_id?: string
   unit_id: string
+  status?: EventProviderStatus
   agreed_price?: number
   price_type?: PriceType
   arrival_time?: string

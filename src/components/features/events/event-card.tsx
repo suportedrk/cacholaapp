@@ -3,7 +3,7 @@
 import { memo } from 'react'
 import Link from 'next/link'
 import { parseISO, isToday, isFuture, startOfDay } from 'date-fns'
-import { Clock, MapPin, Users, Package as PackageIcon, Phone, Mail, Tag } from 'lucide-react'
+import { Clock, MapPin, Users, Package as PackageIcon, Phone, Mail, Tag, Handshake } from 'lucide-react'
 import { EventStatusBadge } from '@/components/shared/event-status-badge'
 import { PloomeBadge } from '@/components/features/ploomes/ploomes-badge'
 import { cn } from '@/lib/utils'
@@ -69,6 +69,10 @@ export const EventCard = memo(function EventCard({ event }: EventCardProps) {
     : progress >= 80  ? 'bg-green-500'
     : progress >= 50  ? 'bg-amber-500'
     :                   'bg-red-500'
+
+  const providerCount  = ('providers_count' in event)
+    ? (event as EventForList).providers_count?.[0]?.count ?? 0
+    : 0
 
   const avatarName     = event.birthday_person || event.client_name || '?'
   const avatarColor    = getAvatarColor(avatarName)
@@ -165,6 +169,12 @@ export const EventCard = memo(function EventCard({ event }: EventCardProps) {
           <span className="inline-flex items-center gap-1 text-xs text-text-secondary">
             <PackageIcon className="w-3 h-3 shrink-0" />
             {event.package.name}
+          </span>
+        )}
+        {providerCount > 0 && (
+          <span className="inline-flex items-center gap-1 text-xs text-text-secondary">
+            <Handshake className="w-3 h-3 shrink-0" />
+            {providerCount} {providerCount === 1 ? 'prestador' : 'prestadores'}
           </span>
         )}
       </div>

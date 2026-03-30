@@ -808,6 +808,7 @@ export type EventForList = Event & {
     status: ChecklistStatus
     checklist_items: Array<{ id: string; status: ChecklistItemStatus }>
   }>
+  providers_count?: Array<{ count: number }>
 }
 
 // Checklist com itens completos (tela de preenchimento)

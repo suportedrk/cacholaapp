@@ -7,7 +7,7 @@ import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import {
   ArrowLeft, Pencil, Trash2, Calendar, Clock, MapPin, Users, Package,
-  ChevronDown, Plus, ExternalLink, Wrench, PartyPopper, Truck, User2,
+  Plus, ExternalLink, Wrench, PartyPopper, Truck, User2,
   CheckSquare, MessageCircle, Phone, Mail, MoreVertical,
   ClipboardList, History, Tag, Star, Camera, Music2, CakeSlice,
   DollarSign, School, BookText, Check, X as XIcon,
@@ -27,6 +27,8 @@ import { MaintenanceStatusBadge, MaintenancePriorityBadge } from '@/components/f
 import { useEvent, useDeleteEvent, useChangeEventStatus } from '@/hooks/use-events'
 import { useEventChecklists } from '@/hooks/use-checklists'
 import { useEventMaintenances } from '@/hooks/use-maintenance'
+import { AccordionSection } from './components/AccordionSection'
+import { ProvidersSection } from './components/sections/ProvidersSection'
 import { cn } from '@/lib/utils'
 import type { EventStatus, ChecklistForList } from '@/types/database.types'
 
@@ -55,48 +57,7 @@ function getInitials(name: string): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
 }
 
-// ── Accordion Section ──────────────────────────────────────────
-interface AccordionSectionProps {
-  title: string
-  icon: React.ElementType
-  badge?: string | number
-  defaultOpen?: boolean
-  children: React.ReactNode
-}
-
-function AccordionSection({ title, icon: Icon, badge, defaultOpen = false, children }: AccordionSectionProps) {
-  const [isOpen, setIsOpen] = useState(defaultOpen)
-
-  return (
-    <div>
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center gap-2.5 px-4 py-3.5 text-left hover:bg-muted/30 transition-colors"
-        aria-expanded={isOpen}
-      >
-        <Icon className="w-4 h-4 text-text-secondary shrink-0" />
-        <span className="text-sm font-medium text-text-primary flex-1">{title}</span>
-        {badge !== undefined && (
-          <span className="inline-flex items-center justify-center h-5 min-w-5 px-1.5 rounded-full bg-muted text-text-secondary text-xs font-medium">
-            {badge}
-          </span>
-        )}
-        <ChevronDown className={cn('w-4 h-4 text-text-tertiary transition-transform duration-200', isOpen && 'rotate-180')} />
-      </button>
-      <div
-        className="grid transition-[grid-template-rows] duration-200 ease-out"
-        style={{ gridTemplateRows: isOpen ? '1fr' : '0fr' }}
-      >
-        <div className="overflow-hidden">
-          <div className="px-4 pb-4">
-            {children}
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
+// AccordionSection — imported from ./components/AccordionSection
 
 // ── Logistics Timeline ─────────────────────────────────────────
 interface TimelinePoint {
@@ -752,7 +713,10 @@ export default function EventoDetailPage() {
           </AccordionSection>
         )}
 
-        {/* S4: Checklists */}
+        {/* S4: Prestadores */}
+        <ProvidersSection eventId={id} eventDate={event.date} />
+
+        {/* S5: Checklists */}
         <div ref={checklistsSectionRef}>
           <AccordionSection
             title="Checklists"

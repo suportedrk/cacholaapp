@@ -31,7 +31,8 @@ const EVENT_FOR_LIST_SELECT = `
     role_in_event,
     user:users(id, name, avatar_url)
   ),
-  checklists(id, status, checklist_items(id, status))
+  checklists(id, status, checklist_items(id, status)),
+  providers_count:event_providers(count)
 ` as const
 
 const EVENTS_PAGE_SIZE = 20
