@@ -238,3 +238,45 @@ export function useDeleteProvider() {
     onError: () => toast.error('Erro ao remover prestador.'),
   })
 }
+
+// ─────────────────────────────────────────────────────────────
+// useProviderEvents — Histórico de eventos de um prestador
+// ─────────────────────────────────────────────────────────────
+const PROVIDER_EVENT_SELECT = `
+  *,
+  event:events(id, title, date, start_time, end_time, status),
+  category:service_categories(id, name, icon, color)
+` as const
+
+export function useProviderEvents(providerId: string | null) {
+  const { activeUnitId } = useUnitStore()
+  const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
+
+  return useQuery({
+    queryKey: ['provider-events', providerId, activeUnitId],
+    enabled: !!providerId && !!activeUnitId && isSessionReady,
+    staleTime: 60 * 1000,
+    retry: (count, error: unknown) => {
+      const status = (error as { status?: number; code?: number })?.status
+        ?? (error as { status?: number; code?: number })?.code
+      if (status === 401 || status === 403) return false
+      return count < 2
+    },
+    queryFn: async () => {
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from('event_providers')
+        .select(PROVIDER_EVENT_SELECT)
+        .eq('provider_id', providerId!)
+        .eq('unit_id', activeUnitId!)
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      return (data ?? []) as unknown as ProviderEventItem[]
+    },
+  })
+}
+
+export type ProviderEventItem = import('@/types/providers').EventProvider & {
+  event: { id: string; title?: string | null; date?: string | null; start_time?: string | null; end_time?: string | null; status?: string | null } | null
+  category: import('@/types/providers').ServiceCategory | null
+}
