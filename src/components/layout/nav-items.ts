@@ -11,6 +11,7 @@ import {
   ScrollText,
   Building2,
   Package,
+  Handshake,
 } from 'lucide-react'
 import { ROUTES } from '@/lib/constants'
 import type { Module } from '@/types/permissions'
@@ -42,9 +43,10 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Operações',
     items: [
-      { label: 'Manutenção',   href: ROUTES.maintenance, icon: Wrench,   module: 'maintenance' },
-      { label: 'Equipamentos', href: ROUTES.equipment,   icon: Package,  module: 'maintenance' },
-      { label: 'Relatórios',   href: ROUTES.reports,     icon: BarChart3,module: 'reports'     },
+      { label: 'Manutenção',   href: ROUTES.maintenance, icon: Wrench,     module: 'maintenance' },
+      { label: 'Equipamentos', href: ROUTES.equipment,   icon: Package,    module: 'maintenance' },
+      { label: 'Prestadores',  href: ROUTES.providers,   icon: Handshake,  module: 'providers'   },
+      { label: 'Relatórios',   href: ROUTES.reports,     icon: BarChart3,  module: 'reports'     },
     ],
   },
   {

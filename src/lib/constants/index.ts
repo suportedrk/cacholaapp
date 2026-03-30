@@ -62,6 +62,7 @@ export const ROUTES = {
   auditLogs: '/admin/logs',
   equipment: '/equipamentos',
   myTasks: '/checklists/minhas-tarefas',
+  providers: '/prestadores',
 } as const
 
 // ============================================================

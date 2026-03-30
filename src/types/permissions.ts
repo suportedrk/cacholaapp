@@ -24,6 +24,7 @@ export type Module =
   | 'audit_logs'
   | 'notifications'
   | 'settings'
+  | 'providers'
 
 export type Action = 'view' | 'create' | 'edit' | 'delete' | 'export'
 
