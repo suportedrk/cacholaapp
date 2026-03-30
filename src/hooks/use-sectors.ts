@@ -5,14 +5,17 @@ import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import type { Sector } from '@/types/database.types'
 import { useUnitStore } from '@/stores/unit-store'
+import { useAuthReadyStore } from '@/stores/auth-store'
 
 // ─────────────────────────────────────────────────────────────
 // LISTAR SETORES
 // ─────────────────────────────────────────────────────────────
 export function useSectors(onlyActive = true) {
   const { activeUnitId } = useUnitStore()
+  const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
   return useQuery({
     queryKey: ['sectors', onlyActive, activeUnitId],
+    enabled: isSessionReady,
     queryFn: async () => {
       const supabase = createClient()
       let q = supabase.from('sectors').select('*').order('sort_order')

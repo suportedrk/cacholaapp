@@ -60,6 +60,7 @@ export function useEventReport(filters: ReportFilters) {
 
   const byMonth = useQuery({
     queryKey: ['report', 'events', 'by-month', effectiveFilters],
+    enabled: isSessionReady,
     queryFn: async () => {
       const { data, error } = await createClient()
         .rpc('report_events_by_month', args)
@@ -71,6 +72,7 @@ export function useEventReport(filters: ReportFilters) {
 
   const byType = useQuery({
     queryKey: ['report', 'events', 'by-type', effectiveFilters],
+    enabled: isSessionReady,
     queryFn: async () => {
       const { data, error } = await createClient()
         .rpc('report_events_by_type', args)
@@ -82,6 +84,7 @@ export function useEventReport(filters: ReportFilters) {
 
   const byVenue = useQuery({
     queryKey: ['report', 'events', 'by-venue', effectiveFilters],
+    enabled: isSessionReady,
     queryFn: async () => {
       const { data, error } = await createClient()
         .rpc('report_events_by_venue', args)
@@ -94,6 +97,7 @@ export function useEventReport(filters: ReportFilters) {
   // Tabela de detalhes (client-side query com paginação)
   const detail = useQuery({
     queryKey: ['report', 'events', 'detail', effectiveFilters],
+    enabled: isSessionReady,
     queryFn: async () => {
       let q = createClient()
         .from('events')
@@ -145,6 +149,7 @@ export function useMaintenanceReport(filters: ReportFilters) {
 
   const byMonth = useQuery({
     queryKey: ['report', 'maintenance', 'by-month', effectiveFilters],
+    enabled: isSessionReady,
     queryFn: async () => {
       const { data, error } = await createClient()
         .rpc('report_maintenance_by_month', args)
@@ -156,6 +161,7 @@ export function useMaintenanceReport(filters: ReportFilters) {
 
   const bySector = useQuery({
     queryKey: ['report', 'maintenance', 'by-sector', effectiveFilters],
+    enabled: isSessionReady,
     queryFn: async () => {
       const { data, error } = await createClient()
         .rpc('report_maintenance_by_sector', args)
@@ -167,6 +173,7 @@ export function useMaintenanceReport(filters: ReportFilters) {
 
   const detail = useQuery({
     queryKey: ['report', 'maintenance', 'detail', effectiveFilters],
+    enabled: isSessionReady,
     queryFn: async () => {
       let q = createClient()
         .from('maintenance_orders')
@@ -217,6 +224,7 @@ export function useChecklistReport(filters: ReportFilters) {
 
   const byMonth = useQuery({
     queryKey: ['report', 'checklists', 'by-month', effectiveFilters],
+    enabled: isSessionReady,
     queryFn: async () => {
       const { data, error } = await createClient()
         .rpc('report_checklists_by_month', args)
@@ -228,6 +236,7 @@ export function useChecklistReport(filters: ReportFilters) {
 
   const byCategory = useQuery({
     queryKey: ['report', 'checklists', 'by-category', effectiveFilters],
+    enabled: isSessionReady,
     queryFn: async () => {
       const { data, error } = await createClient()
         .rpc('report_checklists_by_category', args)
@@ -239,6 +248,7 @@ export function useChecklistReport(filters: ReportFilters) {
 
   const detail = useQuery({
     queryKey: ['report', 'checklists', 'detail', effectiveFilters],
+    enabled: isSessionReady,
     queryFn: async () => {
       let q = createClient()
         .from('checklists')
@@ -294,6 +304,7 @@ export function useStaffReport(filters: ReportFilters) {
 
   const byEvents = useQuery({
     queryKey: ['report', 'staff', 'by-events', effectiveFilters],
+    enabled: isSessionReady,
     queryFn: async () => {
       const { data, error } = await createClient()
         .rpc('report_staff_by_events', args)
@@ -305,6 +316,7 @@ export function useStaffReport(filters: ReportFilters) {
 
   const byChecklists = useQuery({
     queryKey: ['report', 'staff', 'by-checklists', effectiveFilters],
+    enabled: isSessionReady,
     queryFn: async () => {
       const { data, error } = await createClient()
         .rpc('report_staff_by_checklists', args)

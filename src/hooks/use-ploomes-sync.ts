@@ -3,6 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import type { PloomesConfigRow } from '@/types/database.types'
+import { useAuthReadyStore } from '@/stores/auth-store'
 
 // ── Types (espelham a resposta da API) ────────────────────────
 
@@ -42,8 +43,10 @@ type SyncResult = {
 // ── Hook: status e histórico ──────────────────────────────────
 
 export function usePloomesSyncStatus() {
+  const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
   return useQuery<SyncStatusResponse>({
     queryKey: ['ploomes', 'sync', 'status'],
+    enabled: isSessionReady,
     queryFn: async () => {
       const res = await fetch('/api/ploomes/sync/status')
       if (!res.ok) throw new Error('Erro ao buscar status do Ploomes.')
@@ -97,8 +100,10 @@ export function useTriggerPloomesSync() {
 // ── Hook: configuração Ploomes (ploomes_config) ───────────────
 
 export function usePloomesConfig(unitId: string | null) {
+  const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
   return useQuery<PloomesConfigRow | null>({
     queryKey: ['ploomes', 'config', unitId],
+    enabled: isSessionReady,
     queryFn: async () => {
       const params = unitId ? `?unit_id=${unitId}` : ''
       const res = await fetch(`/api/ploomes/config${params}`)
@@ -113,8 +118,10 @@ export function usePloomesConfig(unitId: string | null) {
 // ── Hook: verificar se integração Ploomes está ativa na unidade ──
 
 export function usePloomesIntegrationActive(unitId: string | null) {
+  const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
   return useQuery<boolean>({
     queryKey: ['ploomes', 'active', unitId],
+    enabled: isSessionReady,
     queryFn: async () => {
       const res = await fetch('/api/ploomes/sync/status')
       if (!res.ok) return false

@@ -5,14 +5,17 @@ import { createClient } from '@/lib/supabase/client'
 import type { EventType, Package, Venue } from '@/types/database.types'
 import { toast } from 'sonner'
 import { useUnitStore } from '@/stores/unit-store'
+import { useAuthReadyStore } from '@/stores/auth-store'
 
 // ─────────────────────────────────────────────────────────────
 // EVENT TYPES
 // ─────────────────────────────────────────────────────────────
 export function useEventTypes(onlyActive = true) {
   const { activeUnitId } = useUnitStore()
+  const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
   return useQuery({
     queryKey: ['event-types', { onlyActive }, activeUnitId],
+    enabled: isSessionReady,
     queryFn: async () => {
       const supabase = createClient()
       let query = supabase
@@ -83,8 +86,10 @@ export function useDeleteEventType() {
 // ─────────────────────────────────────────────────────────────
 export function usePackages(onlyActive = true) {
   const { activeUnitId } = useUnitStore()
+  const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
   return useQuery({
     queryKey: ['packages', { onlyActive }, activeUnitId],
+    enabled: isSessionReady,
     queryFn: async () => {
       const supabase = createClient()
       let query = supabase
@@ -155,8 +160,10 @@ export function useDeletePackage() {
 // ─────────────────────────────────────────────────────────────
 export function useVenues(onlyActive = true) {
   const { activeUnitId } = useUnitStore()
+  const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
   return useQuery({
     queryKey: ['venues', { onlyActive }, activeUnitId],
+    enabled: isSessionReady,
     queryFn: async () => {
       const supabase = createClient()
       let query = supabase

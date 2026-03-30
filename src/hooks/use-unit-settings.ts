@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { useUnitStore } from '@/stores/unit-store'
+import { useAuthReadyStore } from '@/stores/auth-store'
 import type { UnitSettings, UnitSettingsData } from '@/types/database.types'
 import { BRAND_GREEN } from '@/lib/constants/brand-colors'
 
@@ -39,9 +40,11 @@ export const DEFAULT_UNIT_SETTINGS: UnitSettingsData = {
 
 export function useUnitSettings() {
   const { activeUnitId } = useUnitStore()
+  const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
 
   return useQuery({
     queryKey: ['unit-settings', activeUnitId],
+    enabled: !!activeUnitId && isSessionReady,
     queryFn: async () => {
       if (!activeUnitId) return null
       const { data, error } = await createClient()
@@ -52,7 +55,6 @@ export function useUnitSettings() {
       if (error) throw error
       return data as UnitSettings | null
     },
-    enabled: !!activeUnitId,
     staleTime: 5 * 60 * 1000,
   })
 }

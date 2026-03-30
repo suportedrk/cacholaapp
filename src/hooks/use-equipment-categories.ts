@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { useUnitStore } from '@/stores/unit-store'
+import { useAuthReadyStore } from '@/stores/auth-store'
 import type { EquipmentCategory } from '@/types/database.types'
 
 // ─────────────────────────────────────────────────────────────
@@ -12,9 +13,11 @@ import type { EquipmentCategory } from '@/types/database.types'
 
 export function useEquipmentCategoryItems(onlyActive = false) {
   const { activeUnitId } = useUnitStore()
+  const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
 
   return useQuery({
     queryKey: ['equipment-category-items', activeUnitId, onlyActive],
+    enabled: isSessionReady,
     queryFn: async () => {
       const supabase = createClient()
       let q = supabase

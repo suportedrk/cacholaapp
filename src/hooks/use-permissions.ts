@@ -5,12 +5,15 @@ import { createClient } from '@/lib/supabase/client'
 import type { UserPermission } from '@/types/database.types'
 import type { PermissionMap, Module, Action } from '@/types/permissions'
 import { toast } from 'sonner'
+import { useAuthReadyStore } from '@/stores/auth-store'
 
 const supabase = createClient()
 
 export function useUserPermissions(userId: string | null | undefined) {
+  const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
   return useQuery({
     queryKey: ['permissions', userId],
+    enabled: !!userId && isSessionReady,
     queryFn: async () => {
       if (!userId) return null
 
@@ -34,7 +37,6 @@ export function useUserPermissions(userId: string | null | undefined) {
 
       return map as PermissionMap
     },
-    enabled: !!userId,
     staleTime: 5 * 60 * 1000, // permissões raramente mudam — revalida a cada 5min
   })
 }
