@@ -8,6 +8,13 @@ interface UnitStore {
   activeUnit: Pick<Unit, 'id' | 'name' | 'slug'> | null
   /** Todas as unidades que o usuário tem acesso */
   userUnits: UserUnitWithUnit[]
+  /**
+   * true depois que o persist middleware terminou de ler o localStorage.
+   * Evita que queries com `!!activeUnitId` disparem com o valor inicial null
+   * antes da rehidratação completar (relevante no ciclo SSR → CSR do Next.js).
+   */
+  _hasHydrated: boolean
+  setHasHydrated: (v: boolean) => void
   setActiveUnit: (unitId: string | null, unit?: Pick<Unit, 'id' | 'name' | 'slug'> | null) => void
   setUserUnits: (userUnits: UserUnitWithUnit[]) => void
   reset: () => void
@@ -19,6 +26,9 @@ export const useUnitStore = create<UnitStore>()(
       activeUnitId: null,
       activeUnit: null,
       userUnits: [],
+      _hasHydrated: false,
+
+      setHasHydrated: (v) => set({ _hasHydrated: v }),
 
       setActiveUnit: (unitId, unit) =>
         set({
@@ -34,6 +44,9 @@ export const useUnitStore = create<UnitStore>()(
       name: 'cachola-active-unit',
       // Persistir apenas o ID da unidade ativa (não os dados completos)
       partialize: (state) => ({ activeUnitId: state.activeUnitId }),
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true)
+      },
     }
   )
 )
