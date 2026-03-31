@@ -5,6 +5,7 @@ import { Plus, AlertTriangle } from 'lucide-react'
 import { useProviders } from '@/hooks/use-providers'
 import { useProviderKpis } from '@/hooks/use-provider-kpis'
 import { useServiceCategories } from '@/hooks/use-service-categories'
+import { useLoadingTimeout } from '@/hooks/use-loading-timeout'
 import { useProviderFiltersStore } from '@/stores/provider-filters-store'
 import { ProviderKPICards } from './components/ProviderKPICards'
 import { ProviderFiltersBar } from './components/ProviderFilters'
@@ -31,6 +32,8 @@ export default function PrestadoresPage() {
     isError,
     refetch,
   } = useProviders(filters)
+
+  const isTimedOut = useLoadingTimeout(providersLoading || kpisLoading)
 
   // ── Handlers ───────────────────────────────────────────────
   function handleCreateProvider() {
@@ -115,6 +118,13 @@ export default function PrestadoresPage() {
             onClick={() => refetch()}
             className="text-sm text-primary hover:underline"
           >
+            Tentar novamente
+          </button>
+        </div>
+      ) : (providersLoading || categoriesLoading) && isTimedOut ? (
+        <div className="flex flex-col items-center justify-center py-24 gap-4">
+          <p className="text-text-secondary text-sm">O carregamento está demorando mais que o esperado.</p>
+          <button onClick={() => refetch()} className="text-sm text-primary underline underline-offset-4">
             Tentar novamente
           </button>
         </div>

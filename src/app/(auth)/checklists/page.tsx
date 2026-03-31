@@ -9,6 +9,7 @@ import { PageHeader } from '@/components/shared/page-header'
 import { EmptyState } from '@/components/shared/empty-state'
 import { cn } from '@/lib/utils'
 import { useChecklists } from '@/hooks/use-checklists'
+import { useLoadingTimeout } from '@/hooks/use-loading-timeout'
 import { ChecklistKPIs } from './components/checklist-kpis'
 import {
   ChecklistFiltersBar,
@@ -41,7 +42,8 @@ function ChecklistsContent() {
     pageSize:   18,
   }
 
-  const { data, isLoading, isError } = useChecklists(filters)
+  const { data, isLoading, isError, refetch } = useChecklists(filters)
+  const isTimedOut = useLoadingTimeout(isLoading)
 
   const checklists = data?.checklists ?? []
   const total      = data?.total ?? 0
@@ -87,12 +89,20 @@ function ChecklistsContent() {
         </div>
       )}
 
-      {/* ── Loading skeleton ── */}
-      {isLoading && (
+      {/* ── Loading skeleton / timeout ── */}
+      {isLoading && !isTimedOut && (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
           {Array.from({ length: 9 }).map((_, i) => (
             <ChecklistCardSkeleton key={i} />
           ))}
+        </div>
+      )}
+      {isLoading && isTimedOut && (
+        <div className="flex flex-col items-center justify-center py-24 gap-4">
+          <p className="text-text-secondary text-sm">O carregamento está demorando mais que o esperado.</p>
+          <button onClick={() => refetch()} className="text-sm text-primary underline underline-offset-4">
+            Tentar novamente
+          </button>
         </div>
       )}
 

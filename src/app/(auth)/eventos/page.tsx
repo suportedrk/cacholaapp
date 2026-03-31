@@ -13,6 +13,7 @@ import { EventTemporalTabs } from '@/components/features/events/event-temporal-t
 import { EventDayGroup } from '@/components/features/events/event-day-group'
 import { EventsKpiCards } from '@/components/features/events/events-kpi-cards'
 import { useEventsInfinite, useEventsTabCounts, useEventsKpis, type TabKey } from '@/hooks/use-events'
+import { useLoadingTimeout } from '@/hooks/use-loading-timeout'
 import { usePloomesIntegrationActive } from '@/hooks/use-ploomes-sync'
 import { useUnitStore } from '@/stores/unit-store'
 import { useDebounce } from '@/hooks/use-debounce'
@@ -111,6 +112,8 @@ function EventosContent() {
     search: debouncedSearch || undefined,
   })
 
+  const isTimedOut = useLoadingTimeout(isLoading)
+
   // Achata todas as páginas em lista única
   const allEvents = useMemo(
     () => data?.pages.flatMap((p) => p.events) ?? [],
@@ -136,6 +139,17 @@ function EventosContent() {
 
   const hasSearch  = debouncedSearch.trim().length > 0
   const hasFilters = statusFilters.length > 0
+
+  if (isTimedOut) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 gap-4">
+        <p className="text-text-secondary text-sm">O carregamento está demorando mais que o esperado.</p>
+        <button onClick={() => window.location.reload()} className="text-sm text-primary underline underline-offset-4">
+          Tentar novamente
+        </button>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-4">

@@ -19,6 +19,7 @@ import {
   useCalendarMaintenance,
   type CalendarEvent,
 } from '@/hooks/use-dashboard'
+import { useLoadingTimeout } from '@/hooks/use-loading-timeout'
 import { BRAND_GREEN } from '@/lib/constants/brand-colors'
 
 // ── Stroke colors for sparklines (Recharts requires hex, not CSS vars) ──
@@ -55,7 +56,7 @@ export default function DashboardPage() {
     return { dateFrom: d, dateTo: d }
   }, [currentDate, calView])
 
-  const { data: kpis,     isLoading: loadingKpis } = useDashboardKpis()
+  const { data: kpis,     isLoading: loadingKpis, refetch: refetchKpis } = useDashboardKpis()
   const { data: nextEvent, isLoading: loadingNext } = useNextEvent()
   const {
     data: calEvents = [],
@@ -64,6 +65,8 @@ export default function DashboardPage() {
     cachedAt: calCachedAt,
   } = useCalendarEvents(dateFrom, dateTo)
   const { data: calMaintenance = [] } = useCalendarMaintenance(dateFrom, dateTo, showMaintenance)
+
+  const isTimedOut = useLoadingTimeout(loadingKpis || loadingNext || loadingCal)
 
   // Greeting (client-only to avoid hydration mismatch)
   const [greeting, setGreeting] = useState('Olá')
@@ -85,6 +88,17 @@ export default function DashboardPage() {
     : nextDays === 0 ? 'Hoje!'
     : nextDays === 1 ? '1 dia'
     : `${nextDays} dias`
+
+  if (isTimedOut) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 gap-4">
+        <p className="text-text-secondary text-sm">O carregamento está demorando mais que o esperado.</p>
+        <button onClick={() => refetchKpis()} className="text-sm text-primary underline underline-offset-4">
+          Tentar novamente
+        </button>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">

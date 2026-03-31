@@ -22,7 +22,7 @@ export function useProviderRatings(providerId: string | null) {
 
   return useQuery({
     queryKey: ['provider-ratings', providerId, activeUnitId],
-    enabled: !!providerId && !!activeUnitId && isSessionReady,
+    enabled: !!providerId && isSessionReady,
     staleTime: 60 * 1000,
     retry: (count, error: unknown) => {
       const status = (error as { status?: number; code?: number })?.status
@@ -32,12 +32,13 @@ export function useProviderRatings(providerId: string | null) {
     },
     queryFn: async (): Promise<ProviderRating[]> => {
       const supabase = createClient()
-      const { data, error } = await supabase
+      let rQuery = supabase
         .from('provider_ratings')
         .select(RATING_SELECT)
         .eq('provider_id', providerId!)
-        .eq('unit_id', activeUnitId!)
         .order('created_at', { ascending: false })
+      if (activeUnitId) rQuery = rQuery.eq('unit_id', activeUnitId)
+      const { data, error } = await rQuery
       if (error) throw error
       return data as unknown as ProviderRating[]
     },
@@ -53,7 +54,7 @@ export function usePendingRatings() {
 
   return useQuery({
     queryKey: ['pending-ratings', activeUnitId],
-    enabled: !!activeUnitId && isSessionReady,
+    enabled: isSessionReady,
     staleTime: 2 * 60 * 1000,
     retry: (count, error: unknown) => {
       const status = (error as { status?: number; code?: number })?.status
@@ -65,7 +66,7 @@ export function usePendingRatings() {
       const supabase = createClient()
 
       // Get completed event_providers without a rating
-      const { data: completed, error } = await supabase
+      let pendingQuery = supabase
         .from('event_providers')
         .select(`
           *,
@@ -73,8 +74,9 @@ export function usePendingRatings() {
           event:events(id, title, date),
           category:service_categories(id, name, icon, color)
         `)
-        .eq('unit_id', activeUnitId!)
         .eq('status', 'completed')
+      if (activeUnitId) pendingQuery = pendingQuery.eq('unit_id', activeUnitId)
+      const { data: completed, error } = await pendingQuery
 
       if (error) throw error
 

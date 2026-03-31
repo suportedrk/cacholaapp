@@ -15,7 +15,7 @@ export function useProviderKpis() {
 
   return useQuery({
     queryKey: ['provider-kpis', activeUnitId],
-    enabled: !!activeUnitId && isSessionReady,
+    enabled: isSessionReady,
     staleTime: 2 * 60 * 1000,
     retry: (count, error: unknown) => {
       const status = (error as { status?: number; code?: number })?.status
@@ -33,52 +33,26 @@ export function useProviderKpis() {
         .toISOString()
         .split('T')[0]
 
+      let q1 = supabase.from('service_providers').select('id', { count: 'exact', head: true }).eq('status', 'active')
+      let q2 = supabase.from('service_providers').select('avg_rating').eq('status', 'active').gt('avg_rating', 0)
+      let q3 = supabase.from('provider_documents').select('id', { count: 'exact', head: true }).lte('expires_at', in30Days).gte('expires_at', now.toISOString().split('T')[0])
+      let q4 = supabase.from('event_providers').select('id', { count: 'exact', head: true }).neq('status', 'cancelled').gte('created_at', monthStart).lte('created_at', monthEnd)
+      let q5 = supabase.from('event_providers').select('id').eq('status', 'completed')
+      if (activeUnitId) {
+        q1 = q1.eq('unit_id', activeUnitId)
+        q2 = q2.eq('unit_id', activeUnitId)
+        q3 = q3.eq('unit_id', activeUnitId)
+        q4 = q4.eq('unit_id', activeUnitId)
+        q5 = q5.eq('unit_id', activeUnitId)
+      }
+
       const [
         activeResult,
         ratedResult,
         expiringDocsResult,
         scheduledResult,
         pendingRatingsResult,
-      ] = await Promise.all([
-        // 1. Total active providers
-        supabase
-          .from('service_providers')
-          .select('id', { count: 'exact', head: true })
-          .eq('unit_id', activeUnitId!)
-          .eq('status', 'active'),
-
-        // 2. Providers with at least one rating (avg_rating > 0)
-        supabase
-          .from('service_providers')
-          .select('avg_rating')
-          .eq('unit_id', activeUnitId!)
-          .eq('status', 'active')
-          .gt('avg_rating', 0),
-
-        // 3. Documents expiring in the next 30 days
-        supabase
-          .from('provider_documents')
-          .select('id', { count: 'exact', head: true })
-          .eq('unit_id', activeUnitId!)
-          .lte('expires_at', in30Days)
-          .gte('expires_at', now.toISOString().split('T')[0]),
-
-        // 4. Event providers scheduled this month (not cancelled)
-        supabase
-          .from('event_providers')
-          .select('id', { count: 'exact', head: true })
-          .eq('unit_id', activeUnitId!)
-          .neq('status', 'cancelled')
-          .gte('created_at', monthStart)
-          .lte('created_at', monthEnd),
-
-        // 5. Completed event_providers without a rating
-        supabase
-          .from('event_providers')
-          .select('id')
-          .eq('unit_id', activeUnitId!)
-          .eq('status', 'completed'),
-      ])
+      ] = await Promise.all([q1, q2, q3, q4, q5])
 
       // Calculate average rating across all rated providers
       const ratedProviders = ratedResult.data ?? []

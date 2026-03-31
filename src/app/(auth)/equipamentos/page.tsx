@@ -14,6 +14,7 @@ import { EmptyState } from '@/components/shared/empty-state'
 import { useEquipment, useEquipmentCategories } from '@/hooks/use-equipment'
 import { EquipmentCard, EquipmentCardSkeleton } from '@/components/features/equipment/equipment-card'
 import { useDebounce } from '@/hooks/use-debounce'
+import { useLoadingTimeout } from '@/hooks/use-loading-timeout'
 import type { EquipmentStatus } from '@/types/database.types'
 
 const STATUS_OPTS: { value: string; label: string }[] = [
@@ -32,11 +33,13 @@ export default function EquipamentosPage() {
   const debouncedSearch = useDebounce(search, 300)
 
   const { data: categories = [] } = useEquipmentCategories()
-  const { data: equipmentList = [], isLoading, error } = useEquipment({
+  const { data: equipmentList = [], isLoading, error, refetch } = useEquipment({
     search:   debouncedSearch,
     category: category || undefined,
     status:   status !== 'all' ? [status as EquipmentStatus] : undefined,
   })
+
+  const isTimedOut = useLoadingTimeout(isLoading)
 
   return (
     <div className="flex flex-col gap-6">
@@ -91,6 +94,13 @@ export default function EquipamentosPage() {
       {error ? (
         <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-6 text-center text-destructive text-sm">
           Erro ao carregar equipamentos. Tente novamente.
+        </div>
+      ) : isLoading && isTimedOut ? (
+        <div className="flex flex-col items-center justify-center py-24 gap-4">
+          <p className="text-text-secondary text-sm">O carregamento está demorando mais que o esperado.</p>
+          <button onClick={() => refetch()} className="text-sm text-primary underline underline-offset-4">
+            Tentar novamente
+          </button>
         </div>
       ) : isLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">

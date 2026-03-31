@@ -45,7 +45,7 @@ export function useProviders(filters?: Partial<ProviderFilters>) {
 
   return useQuery({
     queryKey: ['providers', activeUnitId, filtersKey],
-    enabled: !!activeUnitId && isSessionReady,
+    enabled: isSessionReady,
     staleTime: 30 * 1000,
     retry: (count, error: unknown) => {
       const status = (error as { status?: number; code?: number })?.status
@@ -59,8 +59,9 @@ export function useProviders(filters?: Partial<ProviderFilters>) {
       let query = supabase
         .from('service_providers')
         .select(PROVIDER_LIST_SELECT)
-        .eq('unit_id', activeUnitId!)
         .order('name', { ascending: true })
+
+      if (activeUnitId) query = query.eq('unit_id', activeUnitId)
 
       if (filters?.status && filters.status !== 'all') {
         query = query.eq('status', filters.status)
@@ -129,7 +130,7 @@ export function useProvider(providerId: string | null) {
 
   return useQuery({
     queryKey: ['provider', providerId, activeUnitId],
-    enabled: !!providerId && !!activeUnitId && isSessionReady,
+    enabled: !!providerId && isSessionReady,
     staleTime: 30 * 1000,
     retry: (count, error: unknown) => {
       const status = (error as { status?: number; code?: number })?.status
@@ -139,12 +140,12 @@ export function useProvider(providerId: string | null) {
     },
     queryFn: async (): Promise<ServiceProviderWithDetails> => {
       const supabase = createClient()
-      const { data, error } = await supabase
+      let detailQuery = supabase
         .from('service_providers')
         .select(PROVIDER_DETAIL_SELECT)
         .eq('id', providerId!)
-        .eq('unit_id', activeUnitId!)
-        .single()
+      if (activeUnitId) detailQuery = detailQuery.eq('unit_id', activeUnitId)
+      const { data, error } = await detailQuery.single()
       if (error) throw error
       return data as unknown as ServiceProviderWithDetails
     },
@@ -257,7 +258,7 @@ export function useProviderEvents(providerId: string | null) {
 
   return useQuery({
     queryKey: ['provider-events', providerId, activeUnitId],
-    enabled: !!providerId && !!activeUnitId && isSessionReady,
+    enabled: !!providerId && isSessionReady,
     staleTime: 60 * 1000,
     retry: (count, error: unknown) => {
       const status = (error as { status?: number; code?: number })?.status
@@ -267,12 +268,13 @@ export function useProviderEvents(providerId: string | null) {
     },
     queryFn: async () => {
       const supabase = createClient()
-      const { data, error } = await supabase
+      let eventsQuery = supabase
         .from('event_providers')
         .select(PROVIDER_EVENT_SELECT)
         .eq('provider_id', providerId!)
-        .eq('unit_id', activeUnitId!)
         .order('created_at', { ascending: false })
+      if (activeUnitId) eventsQuery = eventsQuery.eq('unit_id', activeUnitId)
+      const { data, error } = await eventsQuery
       if (error) throw error
       return (data ?? []) as unknown as ProviderEventItem[]
     },

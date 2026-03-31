@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils'
 import { useMaintenanceOrders, type MaintenanceFilters as Filters } from '@/hooks/use-maintenance'
 import { useSectors } from '@/hooks/use-sectors'
 import { useRouter as useNextRouter } from 'next/navigation'
+import { useLoadingTimeout } from '@/hooks/use-loading-timeout'
 
 type ViewMode = 'list' | 'kanban'
 
@@ -95,10 +96,11 @@ function OrdersTabContent() {
     pageSize: 12,
   })
 
-  const { data, isLoading, isError } = useMaintenanceOrders(
+  const { data, isLoading, isError, refetch } = useMaintenanceOrders(
     viewMode === 'kanban' ? { ...filters, status: undefined } : filters
   )
   const { data: sectors = [] } = useSectors(true)
+  const isTimedOut = useLoadingTimeout(isLoading)
 
   const orders     = data?.data ?? []
   const totalPages = data?.totalPages ?? 1
@@ -153,7 +155,14 @@ function OrdersTabContent() {
       ) : (
         /* Lista */
         <>
-          {isLoading ? (
+          {isLoading && isTimedOut ? (
+            <div className="flex flex-col items-center justify-center py-24 gap-4">
+              <p className="text-text-secondary text-sm">O carregamento está demorando mais que o esperado.</p>
+              <button onClick={() => refetch()} className="text-sm text-primary underline underline-offset-4">
+                Tentar novamente
+              </button>
+            </div>
+          ) : isLoading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
               {Array.from({ length: 6 }).map((_, i) => (
                 <MaintenanceCardSkeleton key={i} />
