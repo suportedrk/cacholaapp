@@ -188,24 +188,24 @@ export const EventCard = memo(function EventCard({ event }: EventCardProps) {
         )}>
           <div className="flex flex-wrap gap-x-4 gap-y-1 pt-2.5 mt-2.5 border-t border-border">
             {event.client_phone && (
-              <a
-                href={`tel:${event.client_phone.replace(/\D/g, '')}`}
-                onClick={(e) => e.stopPropagation()}
+              <button
+                type="button"
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.location.href = `tel:${event.client_phone!.replace(/\D/g, '')}` }}
                 className="inline-flex items-center gap-1 text-xs text-text-link hover:underline"
               >
                 <Phone className="w-3 h-3 shrink-0" />
                 {event.client_phone}
-              </a>
+              </button>
             )}
             {event.client_email && (
-              <a
-                href={`mailto:${event.client_email}`}
-                onClick={(e) => e.stopPropagation()}
+              <button
+                type="button"
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.location.href = `mailto:${event.client_email}` }}
                 className="inline-flex items-center gap-1 text-xs text-text-link hover:underline truncate max-w-[200px]"
               >
                 <Mail className="w-3 h-3 shrink-0" />
                 {event.client_email}
-              </a>
+              </button>
             )}
           </div>
         </div>
