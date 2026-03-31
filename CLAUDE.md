@@ -2002,6 +2002,7 @@ Estas regras resolvem o bug "Skeleton Loading Infinito" causado por race conditi
 | Sub-queries herdam `enabled` do hook pai | Todos os `useQuery` dentro de um hook composto recebem o mesmo `enabled` guard |
 | AuthGuard é self-contained | Faz próprio `getSession()` — não depende de provider pai |
 | `onAuthStateChange SIGNED_IN` invalida cache | `AuthCacheSync` em `providers.tsx` já cuida disso — não duplicar |
+| `AuthCacheSync` ignora o primeiro `SIGNED_IN` | Supabase v2 dispara `SIGNED_IN` imediatamente ao subscrever quando já há sessão. Invalidar nesse momento reseta queries em-flight de volta a `isPending`, causando skeleton infinito. Solução: `isInitialEvent = true` flag — pula o primeiro evento por mount |
 
 ---
 
