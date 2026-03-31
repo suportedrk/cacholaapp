@@ -18,12 +18,23 @@ function AuthCacheSync() {
 
   useEffect(() => {
     const supabase = createClient()
+    // Supabase v2 fires SIGNED_IN immediately on subscription when a session already
+    // exists. Invalidating queries at that moment resets in-flight fetches back to
+    // isPending, causing persistent skeleton loading. We skip the very first event
+    // per mount; only subsequent SIGNED_IN events (real login after sign-out) matter.
+    let isInitialEvent = true
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'SIGNED_IN') {
+        if (isInitialEvent) {
+          isInitialEvent = false
+          return
+        }
         qc.invalidateQueries()
       } else if (event === 'SIGNED_OUT') {
         qc.clear()
       }
+      isInitialEvent = false
     })
     return () => subscription.unsubscribe()
   }, [qc])

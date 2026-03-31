@@ -193,9 +193,11 @@ export function useChangeEquipmentStatus() {
 
 export function useEquipmentCategories() {
   const { activeUnitId } = useUnitStore()
+  const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
 
   return useQuery({
     queryKey: ['equipment-categories', activeUnitId],
+    enabled: isSessionReady,
     queryFn: async () => {
       let q = createClient()
         .from('equipment')
