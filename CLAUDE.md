@@ -1991,12 +1991,19 @@ Branch: `claude/optimistic-poitras`
 
 Estas regras resolvem o bug "Skeleton Loading Infinito" causado por race condition entre session, Zustand hydration e TanStack Query. **Toda nova query deve seguir estes padrões.**
 
+### Proteção Global (2026-03-31)
+1. **`AppReadyGate`** (`src/components/app-ready-gate.tsx`) — renderiza filhos SOMENTE quando `isSessionReady && _hasHydrated`. Resolve a race condition entre `AuthGuard.getSession()` e `onRehydrateStorage` do Zustand persist. Adicionado em `(auth)/layout.tsx` logo após `<AuthGuard>`.
+2. **`useLoadingTimeout`** (`src/hooks/use-loading-timeout.ts`) — safety net: se `isLoading` durar >12s, retorna `isTimedOut=true` → página exibe "Tentar novamente" em vez de skeleton infinito. Aplicado em Dashboard, Eventos, Checklists, Manutenção, Equipamentos, Prestadores.
+3. **`!!activeUnitId` NUNCA deve ser obrigatório em `enabled`** — `activeUnitId=null` é estado legítimo para super_admin/diretor (visão consolidada). Usar filtro condicional no queryFn: `if (activeUnitId) query = query.eq('unit_id', activeUnitId)`.
+
 | Regra | Como aplicar |
 |-------|-------------|
-| `enabled` obrigatório em toda `useQuery` | `enabled: !!activeUnitId && isSessionReady` (ou só `isSessionReady` se não depende de unidade) |
+| `enabled` obrigatório em toda `useQuery` | `enabled: isSessionReady` (adicionar `!!id` quando a query depende de um ID) |
+| NUNCA `enabled: !!activeUnitId && isSessionReady` | `activeUnitId=null` é legítimo para super_admin → query nunca dispara → skeleton infinito |
 | `isSessionReady` vem de `useAuthReadyStore` | `const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)` |
 | Retry nunca retentar 401/403 | `retry: (count, err) => count < 3 && err?.status !== 401 && err?.status !== 403` |
 | Páginas DEVEM tratar `isError` | Nunca só `isLoading` — sempre `isError` também com banner "Tentar novamente" |
+| Páginas DEVEM usar `useLoadingTimeout` | `const isTimedOut = useLoadingTimeout(isLoading)` — exibe retry após 12s |
 | Zustand com persist precisa de `_hasHydrated` | Ver `unit-store.ts` como referência — `onRehydrateStorage` seta flag |
 | Não fazer `getUser()` interno em hooks | Usar `isSessionReady` como gate; `getUser()` antes de ready retorna null |
 | Sub-queries herdam `enabled` do hook pai | Todos os `useQuery` dentro de um hook composto recebem o mesmo `enabled` guard |
