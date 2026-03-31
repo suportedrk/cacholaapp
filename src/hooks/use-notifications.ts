@@ -1,29 +1,20 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
+import { useAuth } from '@/hooks/use-auth'
 import type { AppNotification } from '@/types/database.types'
-import { useAuthReadyStore } from '@/stores/auth-store'
 
 // ─────────────────────────────────────────────────────────────
 // HOOK PRINCIPAL
 // ─────────────────────────────────────────────────────────────
 export function useNotifications() {
   const qc = useQueryClient()
-  const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
-  const [userId, setUserId] = useState<string | null>(null)
-
-  // Obtém userId somente quando a sessão já está confirmada pelo AuthGuard.
-  // Antes de isSessionReady, getUser() retornaria null, deixando userId=null
-  // para sempre e a query nunca dispararia.
-  useEffect(() => {
-    if (!isSessionReady) return
-    const supabase = createClient()
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUserId(user?.id ?? null)
-    })
-  }, [isSessionReady])
+  // Usa o profile já disponível no AuthProvider — evita getUser() extra
+  // que disputaria o lock de auth com auth-guard e use-auth.
+  const { profile, loading } = useAuth()
+  const userId = (!loading && profile?.id) ? profile.id : null
 
   // ── Query: últimas 50 notificações ──
   const query = useQuery({
