@@ -245,7 +245,11 @@ export function ItemCommentsSheet({
           scrollToBottom()
         },
       )
-      .subscribe()
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          supabase.removeChannel(channel)
+        }
+      })
     return () => { supabase.removeChannel(channel) }
   }, [open, itemId, qc])
 

@@ -54,7 +54,14 @@ export function useNotifications() {
           qc.invalidateQueries({ queryKey: ['notifications', userId] })
         }
       )
-      .subscribe()
+      .subscribe((status) => {
+        // Se o WebSocket não está disponível (Docker local / Kong não configurado),
+        // encerrar o channel para não saturar o console com erros de reconexão.
+        // O polling fallback (refetchInterval: 60s) mantém as notificações atualizadas.
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          supabase.removeChannel(channel)
+        }
+      })
 
     return () => {
       supabase.removeChannel(channel)

@@ -11,8 +11,23 @@ export function createClient() {
   if (!_client) {
     _client = createBrowserClient<Database>(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        realtime: {
+          params: { eventsPerSecond: 1 },
+          // Backoff exponencial com teto de 60s — evita loop infinito de
+          // reconexão quando o WebSocket não está acessível (Kong Docker local).
+          // Em produção com Realtime configurado, o comportamento é o mesmo
+          // mas as conexões terão sucesso antes de atingir o teto.
+          reconnectAfterMs: (tries: number) =>
+            Math.min(1000 * Math.pow(2, tries), 60_000),
+        },
+      }
     )
+    // Desconectar Realtime no init — nenhum WebSocket é aberto automaticamente.
+    // Channels individuais (notificações, comentários) reconectam ao subscrever.
+    // TODO: remover esta linha quando o Realtime estiver configurado em produção.
+    _client.realtime.disconnect()
   }
   return _client
 }
