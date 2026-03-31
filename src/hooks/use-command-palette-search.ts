@@ -3,6 +3,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useUnitStore } from '@/stores/unit-store'
+import { useAuthReadyStore } from '@/stores/auth-store'
 
 // ── Index types ───────────────────────────────────────────────
 
@@ -50,6 +51,7 @@ export interface CommandPaletteIndex {
 
 export function useCommandPaletteIndex(enabled: boolean) {
   const activeUnitId = useUnitStore((s) => s.activeUnitId)
+  const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
 
   return useQuery({
     queryKey: ['cmd-palette-index', activeUnitId],
@@ -117,7 +119,7 @@ export function useCommandPaletteIndex(enabled: boolean) {
         providers:   (prRes.data  ?? []) as IndexProvider[],
       }
     },
-    enabled,
+    enabled: enabled && isSessionReady,
     staleTime: 2 * 60 * 1000,
     gcTime:    5 * 60 * 1000,
   })
