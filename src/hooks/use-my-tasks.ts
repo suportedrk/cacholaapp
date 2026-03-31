@@ -118,7 +118,7 @@ export function useMyCompletedTasksCount(userId: string | null) {
         .select('id', { count: 'exact', head: true })
         .eq('done_by', userId!)
         .eq('status', 'done')
-        .gte('updated_at', since)
+        .gte('done_at', since)
 
       if (error) throw error
       return count ?? 0
