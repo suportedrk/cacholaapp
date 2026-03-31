@@ -2003,6 +2003,8 @@ Estas regras resolvem o bug "Skeleton Loading Infinito" causado por race conditi
 | AuthGuard é self-contained | Faz próprio `getSession()` — não depende de provider pai |
 | `onAuthStateChange SIGNED_IN` invalida cache | `AuthCacheSync` em `providers.tsx` já cuida disso — não duplicar |
 | `AuthCacheSync` ignora o primeiro `SIGNED_IN` | Supabase v2 dispara `SIGNED_IN` imediatamente ao subscrever quando já há sessão. Invalidar nesse momento reseta queries em-flight de volta a `isPending`, causando skeleton infinito. Solução: `isInitialEvent = true` flag — pula o primeiro evento por mount |
+| `createClient()` é singleton | `createBrowserClient` gera uma instância nova a cada chamada. Múltiplas instâncias competem pelo mesmo localStorage lock (`lock:sb-localhost-auth-token`), causando timeouts de 5s que travam TODAS as chamadas autenticadas (skeleton infinito). `src/lib/supabase/client.ts` mantém um singleton `_client` — uma instância = um lock |
+| NUNCA chamar `getUser()`/`getSession()` fora de queryFn/mutationFn | Em `useEffect` com Strict Mode (`reactStrictMode: true`), efeitos rodam 2× no mount. `getUser()` em efeito = 2 lock acquisitions concorrentes. Usar `useAuth().profile.id` quando precisar do userId em hooks — já está disponível sem lock extra |
 
 ---
 
