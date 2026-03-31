@@ -335,14 +335,14 @@ export function HistoryTab() {
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs text-muted-foreground shrink-0">Setor:</span>
           <Select
-            value={filters.sector_id ?? '__all__'}
-            onValueChange={(v) => setFilters((f) => ({ ...f, sector_id: v === '__all__' ? undefined : (v ?? undefined) }))}
+            value={filters.sector_id ?? ''}
+            onValueChange={(v) => setFilters((f) => ({ ...f, sector_id: v || undefined }))}
           >
             <SelectTrigger className="h-8 text-xs w-40">
               <SelectValue placeholder="Todos os setores" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="__all__">Todos os setores</SelectItem>
+              <SelectItem value="">Todos os setores</SelectItem>
               {sectors.map((s) => (
                 <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
               ))}
@@ -351,14 +351,14 @@ export function HistoryTab() {
 
           <span className="text-xs text-muted-foreground">Fornecedor:</span>
           <Select
-            value={filters.supplier_id ?? '__all__'}
-            onValueChange={(v) => setFilters((f) => ({ ...f, supplier_id: v === '__all__' ? undefined : (v ?? undefined) }))}
+            value={filters.supplier_id ?? ''}
+            onValueChange={(v) => setFilters((f) => ({ ...f, supplier_id: v || undefined }))}
           >
             <SelectTrigger className="h-8 text-xs w-44">
               <SelectValue placeholder="Todos" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="__all__">Todos</SelectItem>
+              <SelectItem value="">Todos</SelectItem>
               {suppliers.map((s) => (
                 <SelectItem key={s.id} value={s.id}>{s.company_name}</SelectItem>
               ))}

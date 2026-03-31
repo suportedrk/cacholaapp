@@ -76,16 +76,16 @@ export function SupplierList() {
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground shrink-0">Categoria:</span>
           <Select
-            value={filters.category ?? '__all__'}
+            value={filters.category ?? ''}
             onValueChange={(v) =>
-              setFilters((f) => ({ ...f, category: v === '__all__' ? undefined : (v ?? undefined) }))
+              setFilters((f) => ({ ...f, category: v || undefined }))
             }
           >
             <SelectTrigger className="h-8 text-xs w-36">
               <SelectValue placeholder="Todas" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="__all__">Todas</SelectItem>
+              <SelectItem value="">Todas</SelectItem>
               {SUPPLIER_CATEGORIES.map((cat) => (
                 <SelectItem key={cat} value={cat}>{cat}</SelectItem>
               ))}
