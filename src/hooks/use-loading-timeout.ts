@@ -13,6 +13,7 @@ export function useLoadingTimeout(isLoading: boolean, timeoutMs = 12_000) {
 
   useEffect(() => {
     if (!isLoading) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsTimedOut(false)
       return
     }
