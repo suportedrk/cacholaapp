@@ -1611,16 +1611,9 @@ Branch: `claude/optimistic-poitras`
 
 ### Prompt 13 — Dashboard KPIs com Sparklines e Tendências
 - **`src/hooks/use-dashboard.ts`** — novos tipos `SparkPoint`, `KpiMetric`, `DashboardKpis` + hook `useDashboardKpis()`:
-  - 4 queries paralelas: events (6m), maintenance_orders (all), checklists (all), next event
   - `buildMonths(now, 6)` → array `['yyyy-MM' × 6]` oldest first
   - `trendPct(curr, prev)` → % change rounded, `null` quando prev=0
-  - Events: agrupados por mês — `count`, `confirmed`, `guests` (cap 9999 para dados corrompidos do Ploomes)
-  - Conversion: `Math.round((confirmed / count) * 100)` por mês
-  - Guests: soma de `guest_count` válidos (0 < gc ≤ 9999)
-  - Maintenance: `value` = currently open (status != completed/cancelled); spark = created/month
-  - Checklists: `value` = currently pending; spark = created/month
-  - `nextEventDays`: `differenceInCalendarDays(parseISO(date + 'T12:00:00'), now)` — mínimo 0
-  - `staleTime: 2min`; imports adicionados: `subMonths`, `differenceInCalendarDays`, `parseISO`
+  - `staleTime: 2min`; retry não retenta 401/403
 - **`src/components/features/dashboard/kpi-card.tsx`** (novo):
   - `TrendBadge`: pill verde (TrendingUp ↑), vermelho (TrendingDown ↓), cinza (Minus —)
   - `KpiCardSkeleton`: header + value + sparkline skeleton
@@ -1631,13 +1624,35 @@ Branch: `claude/optimistic-poitras`
   - `IntersectionObserver` → `isInView` → `isAnimationActive` — sparkline desenha ao entrar viewport
   - `animationDuration={800}` + `animationEasing="ease-out"`
   - `gradId = kpi-grad-${label}` único por card para evitar conflitos SVG
-- **`src/app/(auth)/dashboard/page.tsx`** — substituição completa dos 2 grids de `StatsCard`:
-  - Grid único `grid-cols-2 md:grid-cols-3 gap-3` com 6 `KpiCard`s
-  - Cores de stroke hex (Recharts): `BRAND_GREEN[500]`, `#16A34A`, `#D97706`, `#DC2626`, `#EA580C`
-  - Manutenção: `icon-red` + `STROKE.red` quando `value > 5`, senão `icon-orange` + `STROKE.orange`
-  - "Próximo Evento": valor formatado "Hoje!" / "1 dia" / "N dias" / "—"; reusa events.spark
-  - Imports: `useDashboardKpis`, `KpiCard`, `BRAND_GREEN`; removidos `StatsCard`, `useDashboardStats`, `useDashboardMaintenanceStats`
-  - Stagger `animate-fade-up` com delays 0–250ms (50ms cada)
+  - `invertTrend?: boolean` — inverte semântica de cores (menos = melhor); usado em Manutenções e Checklists
+
+### fix(dashboard): KPIs corrigidos + remoção Próximo Evento (2026-04-01)
+
+#### Regras de negócio dos 5 KPIs
+
+| KPI | Valor | Período | Regra |
+|-----|-------|---------|-------|
+| Eventos do Mês | COUNT | data da festa no mês atual | `status = 'confirmed'` |
+| Taxa de Conversão | % | data da festa no mês atual | `confirmed / (confirmed + lost)` × 100 |
+| Leads do Mês | COUNT | data da festa no mês atual | todos os status (confirmed + lost) |
+| Manutenções Abertas | COUNT | snapshot atual | `status NOT IN (completed, cancelled)` |
+| Checklists Pendentes | COUNT | snapshot atual | `status NOT IN (completed, cancelled)` |
+
+#### StatusId Ploomes → status DB
+- `StatusId=1` (Em aberto) → `confirmed` (já estava no stage "Festa Fechada")
+- `StatusId=2` (Ganho) → `confirmed`
+- `StatusId=3` (Perdido) → `lost`
+- **NÃO usar `created_at`** para agrupar por mês — todos os eventos têm `created_at` igual à data do sync Ploomes (batch), não à data de criação do deal. Usar sempre o campo `date` (data da festa).
+
+#### Tendências de Manutenções e Checklists
+- Comparação: count aberto **agora** vs count aberto **há 30 dias** (via `completed_at`)
+- Cores **invertidas** (`invertTrend=true`): queda = verde (melhora), alta = vermelho (piora)
+- Sparkline: novas ordens/checklists criados por mês (proxy de atividade)
+
+#### Layout
+- Grid: `grid-cols-2 md:grid-cols-3 lg:grid-cols-5` (5 cards); 5º com `col-span-2 md:col-span-1`
+- Card "Próximo Evento" (6º KPI) removido
+- `NextEventCard` sidebar e hook `useNextEvent` removidos — calendário ocupa largura total (`grid-cols-1`)
 
 ### Prompt 14 — Centro de Notificações Slide-Over
 - **`src/app/globals.css`** — 3 novos `@keyframes`:

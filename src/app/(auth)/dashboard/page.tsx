@@ -4,17 +4,15 @@ import { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek } from 'date-fns'
 import {
-  Calendar, TrendingUp, Users, AlertTriangle, ClipboardList, Clock, WifiOff,
+  Calendar, TrendingUp, UserPlus, AlertTriangle, ClipboardList, WifiOff,
 } from 'lucide-react'
 import { PageHeader } from '@/components/shared/page-header'
 import { KpiCard } from '@/components/features/dashboard/kpi-card'
-import { NextEventCard } from '@/components/features/dashboard/next-event-card'
 import { CalendarView, type CalendarViewType } from '@/components/features/dashboard/calendar-view'
 import { EventQuickView } from '@/components/features/dashboard/event-quick-view'
 import { SetupChecklistCard } from '@/components/features/onboarding/setup-checklist-card'
 import {
   useDashboardKpis,
-  useNextEvent,
   useCalendarEvents,
   useCalendarMaintenance,
   type CalendarEvent,
@@ -56,8 +54,7 @@ export default function DashboardPage() {
     return { dateFrom: d, dateTo: d }
   }, [currentDate, calView])
 
-  const { data: kpis,     isLoading: loadingKpis, refetch: refetchKpis } = useDashboardKpis()
-  const { data: nextEvent, isLoading: loadingNext } = useNextEvent()
+  const { data: kpis, isLoading: loadingKpis, refetch: refetchKpis } = useDashboardKpis()
   const {
     data: calEvents = [],
     isLoading: loadingCal,
@@ -66,7 +63,7 @@ export default function DashboardPage() {
   } = useCalendarEvents(dateFrom, dateTo)
   const { data: calMaintenance = [] } = useCalendarMaintenance(dateFrom, dateTo, showMaintenance)
 
-  const isTimedOut = useLoadingTimeout(loadingKpis || loadingNext || loadingCal)
+  const isTimedOut = useLoadingTimeout(loadingKpis || loadingCal)
 
   // Greeting (client-only to avoid hydration mismatch)
   const [greeting, setGreeting] = useState('Olá')
@@ -78,16 +75,8 @@ export default function DashboardPage() {
 
   // Dynamic maintenance color: red if > 5 open orders
   const mnValue = kpis?.maintenance.value ?? 0
-  const mnStroke   = mnValue > 5 ? STROKE.red    : STROKE.orange
+  const mnStroke    = mnValue > 5 ? STROKE.red   : STROKE.orange
   const mnIconClass = mnValue > 5 ? 'icon-red'   : 'icon-orange'
-
-  // Next event formatted value
-  const nextDays = kpis?.nextEventDays
-  const nextValue =
-    nextDays === null || nextDays === undefined ? '—'
-    : nextDays === 0 ? 'Hoje!'
-    : nextDays === 1 ? '1 dia'
-    : `${nextDays} dias`
 
   if (isTimedOut) {
     return (
@@ -110,8 +99,8 @@ export default function DashboardPage() {
       {/* ── Setup checklist (admins) ── */}
       <SetupChecklistCard />
 
-      {/* ── KPI Grid ── */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+      {/* ── KPI Grid — 5 cards: 2 colunas mobile, 3 tablet, 5 desktop ── */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
         <KpiCard
           label="Eventos do Mês"
           value={kpis?.events.value ?? 0}
@@ -137,13 +126,13 @@ export default function DashboardPage() {
           className="animate-fade-up [animation-delay:50ms]"
         />
         <KpiCard
-          label="Convidados"
-          value={kpis?.guests.value ?? 0}
-          icon={Users}
+          label="Leads do Mês"
+          value={kpis?.leads.value ?? 0}
+          icon={UserPlus}
           iconClass="icon-amber"
           strokeColor={STROKE.amber}
-          spark={kpis?.guests.spark ?? []}
-          trend={kpis?.guests.trend}
+          spark={kpis?.leads.spark ?? []}
+          trend={kpis?.leads.trend}
           href="/eventos"
           isLoading={loadingKpis}
           className="animate-fade-up [animation-delay:100ms]"
@@ -156,10 +145,12 @@ export default function DashboardPage() {
           strokeColor={mnStroke}
           spark={kpis?.maintenance.spark ?? []}
           trend={kpis?.maintenance.trend}
+          invertTrend
           href="/manutencao"
           isLoading={loadingKpis}
           className="animate-fade-up [animation-delay:150ms]"
         />
+        {/* 5º card: col-span-2 no mobile para preencher a linha; normal no md/lg */}
         <KpiCard
           label="Checklists Pendentes"
           value={kpis?.checklists.value ?? 0}
@@ -168,21 +159,10 @@ export default function DashboardPage() {
           strokeColor={STROKE.amber}
           spark={kpis?.checklists.spark ?? []}
           trend={kpis?.checklists.trend}
+          invertTrend
           href="/checklists"
           isLoading={loadingKpis}
-          className="animate-fade-up [animation-delay:200ms]"
-        />
-        <KpiCard
-          label="Próximo Evento"
-          value={nextValue}
-          icon={Clock}
-          iconClass="icon-brand"
-          strokeColor={STROKE.brand}
-          spark={kpis?.events.spark ?? []}
-          trend={null}
-          href="/eventos"
-          isLoading={loadingKpis}
-          className="animate-fade-up [animation-delay:250ms]"
+          className="animate-fade-up [animation-delay:200ms] col-span-2 md:col-span-1"
         />
       </div>
 
@@ -199,25 +179,21 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* ── Próximo evento + Calendário ── */}
-      <div className="grid grid-cols-1 xl:grid-cols-[300px_1fr] gap-4 items-start">
-        <NextEventCard event={nextEvent} isLoading={loadingNext} />
-
-        <div data-tour="calendar">
-          <CalendarView
-            events={calEvents}
-            maintenanceItems={calMaintenance}
-            showMaintenance={showMaintenance}
-            onToggleMaintenance={() => setShowMaintenance((v) => !v)}
-            currentDate={currentDate}
-            view={calView}
-            onDateChange={setCurrentDate}
-            onViewChange={setCalView}
-            onEventClick={setSelectedEvent}
-            onMaintenanceClick={(id) => router.push(`/manutencao/${id}`)}
-            isLoading={loadingCal}
-          />
-        </div>
+      {/* ── Calendário — largura total ── */}
+      <div data-tour="calendar">
+        <CalendarView
+          events={calEvents}
+          maintenanceItems={calMaintenance}
+          showMaintenance={showMaintenance}
+          onToggleMaintenance={() => setShowMaintenance((v) => !v)}
+          currentDate={currentDate}
+          view={calView}
+          onDateChange={setCurrentDate}
+          onViewChange={setCalView}
+          onEventClick={setSelectedEvent}
+          onMaintenanceClick={(id) => router.push(`/manutencao/${id}`)}
+          isLoading={loadingCal}
+        />
       </div>
 
       {/* ── Quick view drawer ── */}

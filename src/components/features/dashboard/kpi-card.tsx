@@ -11,8 +11,18 @@ import type { SparkPoint } from '@/hooks/use-dashboard'
 
 // ── Trend badge ────────────────────────────────────────────────
 
-function TrendBadge({ trend }: { trend: number | null | undefined }) {
+function TrendBadge({
+  trend,
+  invertTrend = false,
+}: {
+  trend: number | null | undefined
+  invertTrend?: boolean
+}) {
   if (trend == null) return null
+
+  // Para KPIs onde MENOS é melhor (manutenções, checklists pendentes),
+  // inversão semântica: queda = verde, alta = vermelho.
+  const isGoodChange = trend > 0 ? !invertTrend : invertTrend
 
   if (trend > 0) {
     return (
@@ -21,8 +31,9 @@ function TrendBadge({ trend }: { trend: number | null | undefined }) {
         className={cn(
           'inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5',
           'text-[11px] font-semibold leading-none',
-          'bg-green-50 text-green-700 border border-green-200',
-          'dark:bg-green-900/30 dark:text-green-300 dark:border-green-800',
+          isGoodChange
+            ? 'bg-green-50 text-green-700 border border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800'
+            : 'bg-red-50 text-red-700 border border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800',
         )}
       >
         <TrendingUp className="w-3 h-3" />
@@ -38,8 +49,9 @@ function TrendBadge({ trend }: { trend: number | null | undefined }) {
         className={cn(
           'inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5',
           'text-[11px] font-semibold leading-none',
-          'bg-red-50 text-red-700 border border-red-200',
-          'dark:bg-red-900/30 dark:text-red-300 dark:border-red-800',
+          isGoodChange
+            ? 'bg-green-50 text-green-700 border border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800'
+            : 'bg-red-50 text-red-700 border border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800',
         )}
       >
         <TrendingDown className="w-3 h-3" />
@@ -97,6 +109,9 @@ interface KpiCardProps {
   strokeColor: string  // hex color for Recharts
   spark: SparkPoint[]
   trend?: number | null
+  /** Inverte a semântica das cores: queda = verde (melhor), alta = vermelho (pior).
+   *  Use para KPIs onde menos é desejável (ex: manutenções abertas, checklists pendentes). */
+  invertTrend?: boolean
   href: string
   isLoading?: boolean
   className?: string
@@ -110,6 +125,7 @@ export function KpiCard({
   strokeColor,
   spark,
   trend,
+  invertTrend = false,
   href,
   isLoading,
   className,
@@ -165,7 +181,7 @@ export function KpiCard({
             {label}
           </span>
         </div>
-        <TrendBadge trend={trend} />
+        <TrendBadge trend={trend} invertTrend={invertTrend} />
       </div>
 
       {/* ── Value ── */}

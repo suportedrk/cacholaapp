@@ -3,8 +3,8 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { format, startOfMonth, endOfMonth, subMonths, differenceInCalendarDays, parseISO } from 'date-fns'
-import type { EventWithDetails, EventStatus, MaintenanceType } from '@/types/database.types'
+import { format, startOfMonth, endOfMonth, subMonths, subDays } from 'date-fns'
+import type { EventStatus, MaintenanceType } from '@/types/database.types'
 import { useUnitStore } from '@/stores/unit-store'
 import { useAuthReadyStore } from '@/stores/auth-store'
 import { useOnlineStatus } from './use-online-status'
@@ -94,43 +94,6 @@ export function useDashboardStats() {
   })
 }
 
-// ─────────────────────────────────────────────────────────────
-// PRÓXIMO EVENTO
-// ─────────────────────────────────────────────────────────────
-export function useNextEvent() {
-  const { activeUnitId } = useUnitStore()
-  const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
-  return useQuery({
-    queryKey: ['dashboard', 'next-event', activeUnitId],
-    enabled: isSessionReady,
-    queryFn: async () => {
-      const supabase = createClient()
-      const today = format(new Date(), 'yyyy-MM-dd')
-
-      let q = supabase
-        .from('events')
-        .select(`
-          *,
-          event_type:event_types(id, name),
-          package:packages(id, name),
-          venue:venues(id, name, capacity),
-          staff:event_staff(id, role_in_event, user:users(id, name, avatar_url))
-        `)
-        .gte('date', today)
-        .not('status', 'in', '("finished","post_event","lost")')
-      if (activeUnitId) q = q.eq('unit_id', activeUnitId)
-      const { data, error } = await q
-        .order('date', { ascending: true })
-        .order('start_time', { ascending: true })
-        .limit(1)
-        .maybeSingle()
-
-      if (error) throw error
-      return data as unknown as EventWithDetails | null
-    },
-    staleTime: 60 * 1000,
-  })
-}
 
 // ─────────────────────────────────────────────────────────────
 // STATS DE MANUTENÇÃO
@@ -286,12 +249,11 @@ export type KpiMetric = {
 }
 
 export type DashboardKpis = {
-  events:      KpiMetric  // total events this month
-  conversion:  KpiMetric  // % confirmed / total this month
-  guests:      KpiMetric  // sum guest_count this month
-  maintenance: KpiMetric  // currently open orders (spark = new/month)
-  checklists:  KpiMetric  // currently pending (spark = new/month)
-  nextEventDays: number | null
+  events:      KpiMetric  // confirmed events by event date this month
+  conversion:  KpiMetric  // confirmed / (confirmed + lost) by created_at month
+  leads:       KpiMetric  // all events created this month (any status)
+  maintenance: KpiMetric  // currently open orders (trend vs 30 days ago)
+  checklists:  KpiMetric  // currently pending (trend vs 30 days ago)
 }
 
 /** Returns array of 'yyyy-MM' strings for the last `count` months (oldest first) */
@@ -313,106 +275,111 @@ export function useDashboardKpis() {
   return useQuery({
     queryKey: ['dashboard', 'kpis', activeUnitId],
     enabled: isSessionReady,
+    staleTime: 2 * 60 * 1000,
+    retry: (count, err: { status?: number } | null) =>
+      count < 3 && err?.status !== 401 && err?.status !== 403,
     queryFn: async (): Promise<DashboardKpis> => {
-      const supabase  = createClient()
-      const now       = new Date()
+      const supabase   = createClient()
+      const now        = new Date()
       const rangeStart = startOfMonth(subMonths(now, 5))
-      const months    = buildMonths(now, 6)
-      const curMo     = months[5]   // current month 'yyyy-MM'
-      const prevMo    = months[4]   // previous month
-      const today     = format(now, 'yyyy-MM-dd')
+      const months     = buildMonths(now, 6)
+      const curMo      = months[5]   // 'yyyy-MM' mês atual
+      const prevMo     = months[4]   // mês anterior
+      const thirtyDaysAgo = subDays(now, 30)
 
-      // ── Build queries ────────────────────────────────────────
+      // ── Query 1: todos os eventos por data da festa (incluindo lost)
+      // Usado para: Eventos do Mês, Leads do Mês e Taxa de Conversão.
+      // NÃO usar created_at — todos os eventos foram sincronizados do Ploomes em batch
+      // (created_at = data do sync, não data de criação do deal).
       const evQ = (() => {
         let q = supabase
           .from('events')
-          .select('date, status, guest_count')
+          .select('date, status')
           .gte('date', format(rangeStart, 'yyyy-MM-dd'))
-          .neq('status', 'lost')
         if (activeUnitId) q = q.eq('unit_id', activeUnitId)
         return q
       })()
 
+      // ── Query 2: todas as ordens de manutenção (sem filtro de data)
+      // Inclui completed_at para calcular "estava aberta há 30 dias"
       const mnQ = (() => {
         let q = supabase
           .from('maintenance_orders')
-          .select('created_at, status')
+          .select('created_at, status, completed_at')
         if (activeUnitId) q = q.eq('unit_id', activeUnitId)
         return q
       })()
 
+      // ── Query 3: todos os checklists (sem filtro de data)
+      // Inclui completed_at para calcular "estava pendente há 30 dias"
       const clQ = (() => {
         let q = supabase
           .from('checklists')
-          .select('created_at, status')
+          .select('created_at, status, completed_at')
         if (activeUnitId) q = q.eq('unit_id', activeUnitId)
         return q
       })()
 
-      const nextQ = (() => {
-        let q = supabase
-          .from('events')
-          .select('date')
-          .gte('date', today)
-          .not('status', 'in', '("finished","post_event","lost")')
-          .order('date', { ascending: true })
-          .limit(1)
-        if (activeUnitId) q = q.eq('unit_id', activeUnitId)
-        return q.maybeSingle()
-      })()
+      const [evRes, mnRes, clRes] = await Promise.all([evQ, mnQ, clQ])
 
-      const [evRes, mnRes, clRes, nextRes] = await Promise.all([evQ, mnQ, clQ, nextQ])
+      const evAll    = evRes.data  ?? []
+      const mnOrders = mnRes.data  ?? []
+      const clItems  = clRes.data  ?? []
 
-      const events   = evRes.data   ?? []
-      const mnOrders = mnRes.data   ?? []
-      const clItems  = clRes.data   ?? []
-      const nextEv   = nextRes.data
-
-      // ── Events by month ──────────────────────────────────────
-      type EvBucket = { count: number; confirmed: number; guests: number }
+      // ── Buckets por mês (data da festa) ─────────────────────
+      type EvBucket = { confirmed: number; lost: number }
       const evByMo: Record<string, EvBucket> = {}
-      months.forEach((m) => { evByMo[m] = { count: 0, confirmed: 0, guests: 0 } })
-      events.forEach((e) => {
+      months.forEach((m) => { evByMo[m] = { confirmed: 0, lost: 0 } })
+      evAll.forEach((e) => {
         const m = e.date.substring(0, 7)
-        if (evByMo[m]) {
-          evByMo[m].count++
-          if (e.status === 'confirmed') evByMo[m].confirmed++
-          // Sanity check: cap guest_count to avoid corrupted Ploomes values
-          const gc = e.guest_count as number | null
-          if (typeof gc === 'number' && gc > 0 && gc <= 9999) {
-            evByMo[m].guests += gc
-          }
-        }
+        if (!evByMo[m]) return
+        if (e.status === 'confirmed') evByMo[m].confirmed++
+        else if (e.status === 'lost') evByMo[m].lost++
       })
 
+      // ── Eventos do Mês — só confirmados ──────────────────────
       const eventsKpi: KpiMetric = {
-        value: evByMo[curMo]?.count ?? 0,
-        trend: trendPct(evByMo[curMo]?.count ?? 0, evByMo[prevMo]?.count ?? 0),
-        spark: months.map((m) => ({ v: evByMo[m]?.count ?? 0 })),
+        value: evByMo[curMo]?.confirmed ?? 0,
+        trend: trendPct(evByMo[curMo]?.confirmed ?? 0, evByMo[prevMo]?.confirmed ?? 0),
+        spark: months.map((m) => ({ v: evByMo[m]?.confirmed ?? 0 })),
       }
 
-      const toCvt = (m: string) => {
-        const d = evByMo[m]
-        return d && d.count > 0 ? Math.round((d.confirmed / d.count) * 100) : 0
+      // ── Leads do Mês — confirmados + perdidos ────────────────
+      const totalForMo = (m: string) =>
+        (evByMo[m]?.confirmed ?? 0) + (evByMo[m]?.lost ?? 0)
+      const leadsKpi: KpiMetric = {
+        value: totalForMo(curMo),
+        trend: trendPct(totalForMo(curMo), totalForMo(prevMo)),
+        spark: months.map((m) => ({ v: totalForMo(m) })),
+      }
+
+      // ── Taxa de Conversão — confirmed / (confirmed + lost) ───
+      const toCvt = (m: string): number => {
+        const total = totalForMo(m)
+        return total > 0 ? Math.round(((evByMo[m]?.confirmed ?? 0) / total) * 100) : 0
       }
       const conversionKpi: KpiMetric = {
         value: toCvt(curMo),
-        trend: trendPct(toCvt(curMo), toCvt(prevMo)),
+        trend: totalForMo(curMo) > 0 ? trendPct(toCvt(curMo), toCvt(prevMo)) : null,
         spark: months.map((m) => ({ v: toCvt(m) })),
       }
 
-      const gCur  = evByMo[curMo]?.guests  ?? 0
-      const gPrev = evByMo[prevMo]?.guests ?? 0
-      const guestsKpi: KpiMetric = {
-        value: gCur,
-        trend: trendPct(gCur, gPrev),
-        spark: months.map((m) => ({ v: evByMo[m]?.guests ?? 0 })),
-      }
-
-      // ── Maintenance ──────────────────────────────────────────
+      // ── Manutenções Abertas — trend vs 30 dias atrás ─────────
       const mnOpenNow = mnOrders.filter(
         (o) => o.status !== 'completed' && o.status !== 'cancelled',
       ).length
+
+      // Estava aberta há 30 dias = criada antes do corte E não concluída antes do corte
+      const mnOpen30 = mnOrders.filter((o) => {
+        if (o.status === 'cancelled') return false
+        if (new Date(o.created_at) > thirtyDaysAgo) return false
+        if (o.completed_at) return new Date(o.completed_at) > thirtyDaysAgo
+        // status=completed sem completed_at: assume concluída antes do corte
+        if (o.status === 'completed') return false
+        return true
+      }).length
+
+      // Sparkline: novas ordens abertas por mês (proxy de atividade)
       const mnByMo: Record<string, number> = {}
       months.forEach((m) => { mnByMo[m] = 0 })
       mnOrders.forEach((o) => {
@@ -421,14 +388,25 @@ export function useDashboardKpis() {
       })
       const maintenanceKpi: KpiMetric = {
         value: mnOpenNow,
-        trend: trendPct(mnByMo[curMo] ?? 0, mnByMo[prevMo] ?? 0),
+        trend: mnOpen30 === 0 && mnOpenNow === 0 ? 0
+             : mnOpen30 === 0 ? null
+             : trendPct(mnOpenNow, mnOpen30),
         spark: months.map((m) => ({ v: mnByMo[m] ?? 0 })),
       }
 
-      // ── Checklists ───────────────────────────────────────────
+      // ── Checklists Pendentes — trend vs 30 dias atrás ────────
       const clPendingNow = clItems.filter(
         (c) => c.status !== 'completed' && c.status !== 'cancelled',
       ).length
+
+      const clPending30 = clItems.filter((c) => {
+        if (c.status === 'cancelled') return false
+        if (new Date(c.created_at) > thirtyDaysAgo) return false
+        if (c.completed_at) return new Date(c.completed_at) > thirtyDaysAgo
+        if (c.status === 'completed') return false
+        return true
+      }).length
+
       const clByMo: Record<string, number> = {}
       months.forEach((m) => { clByMo[m] = 0 })
       clItems.forEach((c) => {
@@ -437,26 +415,19 @@ export function useDashboardKpis() {
       })
       const checklistsKpi: KpiMetric = {
         value: clPendingNow,
-        trend: trendPct(clByMo[curMo] ?? 0, clByMo[prevMo] ?? 0),
+        trend: clPending30 === 0 && clPendingNow === 0 ? 0
+             : clPending30 === 0 ? null
+             : trendPct(clPendingNow, clPending30),
         spark: months.map((m) => ({ v: clByMo[m] ?? 0 })),
-      }
-
-      // ── Next event days ──────────────────────────────────────
-      let nextEventDays: number | null = null
-      if (nextEv?.date) {
-        const diff = differenceInCalendarDays(parseISO(`${nextEv.date}T12:00:00`), now)
-        nextEventDays = Math.max(0, diff)
       }
 
       return {
         events:      eventsKpi,
         conversion:  conversionKpi,
-        guests:      guestsKpi,
+        leads:       leadsKpi,
         maintenance: maintenanceKpi,
         checklists:  checklistsKpi,
-        nextEventDays,
       }
     },
-    staleTime: 2 * 60 * 1000,
   })
 }
