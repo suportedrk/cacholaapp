@@ -12,6 +12,7 @@ import {
   Building2,
   Package,
   Handshake,
+  BookOpen,
 } from 'lucide-react'
 import { ROUTES } from '@/lib/constants'
 import type { Module } from '@/types/permissions'
@@ -54,8 +55,9 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: 'Usuários',       href: ROUTES.users,      icon: Users,     module: 'users'      },
       { label: 'Unidades',       href: ROUTES.units,      icon: Building2, module: 'users'      },
-      { label: 'Logs',           href: ROUTES.auditLogs,  icon: ScrollText,module: 'audit_logs' },
-      { label: 'Configurações',  href: ROUTES.settings,   icon: Settings,  module: 'settings'   },
+      { label: 'Logs',           href: ROUTES.auditLogs,    icon: ScrollText, module: 'audit_logs' },
+      { label: 'Configurações',  href: ROUTES.settings,     icon: Settings,   module: 'settings'   },
+      { label: 'Regras de Negócio', href: ROUTES.businessRules, icon: BookOpen, module: 'settings' },
     ],
   },
 ]

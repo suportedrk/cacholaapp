@@ -407,6 +407,7 @@ docker compose -f docker-compose.prod.yml logs -f app
 | `/admin/logs` | `(auth)/admin/logs/page.tsx` | ✅ funcional (Fase 3 Bloco 4) |
 | `/configuracoes/integracoes/ploomes` | `(auth)/configuracoes/integracoes/ploomes/page.tsx` | ✅ funcional (Fase 4) |
 | `/configuracoes/integracoes/ploomes/mapeamento` | `(auth)/configuracoes/integracoes/ploomes/mapeamento/page.tsx` | ✅ funcional (Fase 4) |
+| `/configuracoes/regras` | `(auth)/configuracoes/regras/page.tsx` | ✅ funcional |
 | `/checklists/minhas-tarefas` | `(auth)/checklists/minhas-tarefas/page.tsx` | ✅ funcional (P9) |
 | `/login` | `(public)/login/page.tsx` | ✅ funcional |
 | `/recuperar-senha` | `(public)/recuperar-senha/page.tsx` | ✅ funcional |
@@ -1653,6 +1654,36 @@ Branch: `claude/optimistic-poitras`
 - Grid: `grid-cols-2 md:grid-cols-3 lg:grid-cols-5` (5 cards); 5º com `col-span-2 md:col-span-1`
 - Card "Próximo Evento" (6º KPI) removido
 - `NextEventCard` sidebar e hook `useNextEvent` removidos — calendário ocupa largura total (`grid-cols-1`)
+
+### feat(regras): Página de Regras de Negócio (2026-04-01)
+
+**Rota:** `/configuracoes/regras`
+**Arquivo:** `src/app/(auth)/configuracoes/regras/page.tsx`
+
+#### Estrutura
+- Página estática somente leitura — sem banco, sem hooks, sem formulários
+- `BUSINESS_RULES: BusinessRule[]` — array hardcoded com todas as regras
+- `BusinessRule` interface: `id, module, name, description, calculation[], comparison?, note?, updatedAt`
+- `MODULE_CONFIG`: mapeamento `Module → { label, Icon, badgeClass }` para rendering genérico
+
+#### Componentes
+- `RuleCard`: card `outlined` com seções "O que mede" / "Como calcula" / "Comparação" / Nota (callout azul `bg-blue-50 border-l-4`)
+- `ModuleSection`: acordeão CSS grid (`0fr→1fr`), `defaultOpen` prop; badge "Em breve" para módulos sem regras
+- Busca local: `useState(search)` → `useMemo` filtra `name + description + calculation + note`; empty state com botão "Limpar busca"
+
+#### Módulos com regras
+- **Dashboard** (5 regras): Eventos do Mês, Taxa de Conversão, Leads do Mês, Manutenções Abertas, Checklists Pendentes
+
+#### Módulos planejados (em breve)
+- Eventos, Checklists, Manutenção, Prestadores
+
+#### Navegação
+- `ROUTES.businessRules = '/configuracoes/regras'` em `src/lib/constants/index.ts`
+- Item "Regras de Negócio" (`BookOpen`) no grupo "Administração" em `nav-items.ts`
+- `'regras': 'Regras de Negócio'` em `SEGMENT_LABELS` do breadcrumb
+
+#### Como adicionar novas regras
+Basta adicionar um objeto `BusinessRule` ao array `BUSINESS_RULES` no topo da página. Não requer migration, hook ou API.
 
 ### Prompt 14 — Centro de Notificações Slide-Over
 - **`src/app/globals.css`** — 3 novos `@keyframes`:

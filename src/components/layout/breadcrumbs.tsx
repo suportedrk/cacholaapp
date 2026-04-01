@@ -17,6 +17,7 @@ export const SEGMENT_LABELS: Record<string, string> = {
   relatorios:     'Relatórios',
   perfil:         'Meu Perfil',
   configuracoes:  'Configurações',
+  regras:         'Regras de Negócio',
   integracoes:    'Integrações',
   ploomes:        'Ploomes',
   mapeamento:     'Mapeamento',

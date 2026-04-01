@@ -63,6 +63,7 @@ export const ROUTES = {
   equipment: '/equipamentos',
   myTasks: '/checklists/minhas-tarefas',
   providers: '/prestadores',
+  businessRules: '/configuracoes/regras',
 } as const
 
 // ============================================================
