@@ -28,7 +28,7 @@ interface Props {
 
 export function Step5Prestadores({ targetUnitId, data, onChange }: Props) {
   const [search, setSearch] = useState('')
-  const { data: units } = useAllUnits()
+  const { data: units, isLoading: loadingUnits } = useAllUnits()
   const sourceUnits = (units ?? []).filter((u) => u.id !== targetUnitId)
 
   const { data: providers, isLoading: loadingProviders } = useSourceProviders(
@@ -117,6 +117,18 @@ export function Step5Prestadores({ targetUnitId, data, onChange }: Props) {
               Unidade de origem <span className="text-destructive">*</span>
             </label>
             <div className="space-y-2">
+              {loadingUnits && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                  <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                  Carregando unidades...
+                </div>
+              )}
+              {!loadingUnits && sourceUnits.length === 0 && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                  <Handshake className="w-4 h-4 shrink-0" />
+                  Nenhuma outra unidade disponível.
+                </div>
+              )}
               {sourceUnits.map((unit) => (
                 <button
                   key={unit.id}

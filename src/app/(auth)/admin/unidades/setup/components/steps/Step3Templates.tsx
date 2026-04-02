@@ -1,6 +1,6 @@
 'use client'
 
-import { Copy, CheckCircle2, Circle, ChevronDown, ChevronUp, Loader2 } from 'lucide-react'
+import { Copy, CheckCircle2, Circle, ChevronDown, ChevronUp, Loader2, Building2 } from 'lucide-react'
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
 import { useCopyableData, useAllUnits } from '@/hooks/use-unit-setup'
@@ -110,7 +110,7 @@ function CopyPreview({ sourceUnitId, targetUnitId }: { sourceUnitId: string; tar
 // ─────────────────────────────────────────────────────────────
 
 export function Step3Templates({ targetUnitId, data, onChange }: Props) {
-  const { data: units } = useAllUnits()
+  const { data: units, isLoading: loadingUnits } = useAllUnits()
   const sourceUnits = (units ?? []).filter((u) => u.id !== targetUnitId)
 
   return (
@@ -165,8 +165,17 @@ export function Step3Templates({ targetUnitId, data, onChange }: Props) {
               Unidade de origem <span className="text-destructive">*</span>
             </label>
             <div className="space-y-2">
-              {sourceUnits.length === 0 && (
-                <p className="text-sm text-muted-foreground">Nenhuma outra unidade disponível.</p>
+              {loadingUnits && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                  <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                  Carregando unidades...
+                </div>
+              )}
+              {!loadingUnits && sourceUnits.length === 0 && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                  <Building2 className="w-4 h-4 shrink-0" />
+                  Nenhuma outra unidade disponível.
+                </div>
               )}
               {sourceUnits.map((unit) => (
                 <button
