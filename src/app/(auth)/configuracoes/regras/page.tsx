@@ -388,7 +388,7 @@ export default function RegrasPage() {
           <Search className="w-10 h-10 text-muted-foreground/40" />
           <p className="text-sm text-muted-foreground">
             Nenhuma regra encontrada para{' '}
-            <span className="font-medium text-foreground">"{search}"</span>
+            <span className="font-medium text-foreground">&quot;{search}&quot;</span>
           </p>
           <button
             onClick={() => setSearch('')}

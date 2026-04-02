@@ -107,9 +107,9 @@ export function UnitSetupWizard({ unitId, initialStatus }: Props) {
   function isStep1Valid() {
     return step1.name.trim().length >= 2 && step1.slug.trim().length >= 2
   }
-  function isStep2Valid() { return true } // Ploomes é opcional
+  function _isStep2Valid() { return true } // Ploomes é opcional
   function isStep3Valid() { return !step3.copyFrom || !!step3.sourceUnitId }
-  function isStep4Valid() { return true } // equipe é opcional
+  function _isStep4Valid() { return true } // equipe é opcional
   function isStep5Valid() { return !step5.copyFrom || !!step5.sourceUnitId }
 
   function getStepError(idx: number) {
