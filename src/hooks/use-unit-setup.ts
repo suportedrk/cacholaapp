@@ -11,8 +11,6 @@ import { useAuthReadyStore } from '@/stores/auth-store'
 import { createClient } from '@/lib/supabase/client'
 import type { UserRole } from '@/types/database.types'
 
-const supabase = createClient()
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
@@ -115,6 +113,7 @@ export function useSystemUsers() {
   return useQuery({
     queryKey: ['system-users-all'],
     queryFn: async () => {
+      const supabase = createClient()
       const { data, error } = await supabase
         .from('users')
         .select('id, name, role, avatar_url, is_active')
@@ -136,6 +135,7 @@ export function useUnitTeam(unitId: string | null) {
   return useQuery({
     queryKey: ['unit-team', unitId],
     queryFn: async () => {
+      const supabase = createClient()
       const { data, error } = await supabase
         .from('user_units')
         .select('user_id, role')
@@ -155,6 +155,7 @@ export function useSourceProviders(sourceUnitId: string | null) {
   return useQuery({
     queryKey: ['source-providers', sourceUnitId],
     queryFn: async () => {
+      const supabase = createClient()
       const { data, error } = await supabase
         .from('service_providers')
         .select('id, name, document_number, tags, avg_rating, status, provider_contacts(type, value, is_primary)')
@@ -177,6 +178,7 @@ export function useAllUnits() {
   return useQuery({
     queryKey: ['all-units'],
     queryFn: async () => {
+      const supabase = createClient()
       const { data, error } = await supabase
         .from('units')
         .select('id, name, slug')
