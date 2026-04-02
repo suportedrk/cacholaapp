@@ -49,8 +49,9 @@ export interface Database {
       unit_settings:        { Row: UnitSettings;        Insert: Partial<UnitSettings>;   Update: Partial<UnitSettings>;   Relationships: [] }
       equipment_categories: { Row: EquipmentCategory;   Insert: Partial<EquipmentCategory>; Update: Partial<EquipmentCategory>; Relationships: [] }
       // Integração Ploomes CRM
-      ploomes_config:       { Row: PloomesConfigRow;    Insert: Partial<PloomesConfigRow>; Update: Partial<PloomesConfigRow>; Relationships: [] }
-      ploomes_sync_log:     { Row: PloomesSyncLog;      Insert: Partial<PloomesSyncLog>; Update: Partial<PloomesSyncLog>; Relationships: [] }
+      ploomes_config:        { Row: PloomesConfigRow;      Insert: Partial<PloomesConfigRow>;      Update: Partial<PloomesConfigRow>;      Relationships: [] }
+      ploomes_sync_log:      { Row: PloomesSyncLog;        Insert: Partial<PloomesSyncLog>;        Update: Partial<PloomesSyncLog>;        Relationships: [] }
+      ploomes_unit_mapping:  { Row: PloomesUnitMapping;    Insert: Partial<PloomesUnitMapping>;    Update: Partial<PloomesUnitMapping>;    Relationships: [] }
       // Prestadores de Serviços (Migration 021)
       service_categories:   { Row: ServiceCategory;     Insert: Partial<ServiceCategory>;    Update: Partial<ServiceCategory>;    Relationships: [] }
       service_providers:    { Row: ServiceProvider;     Insert: Partial<ServiceProvider>;    Update: Partial<ServiceProvider>;    Relationships: [] }
@@ -775,6 +776,16 @@ export type PloomesSyncLog = {
   triggered_by_user_id: string | null
   unit_id: string | null
   created_at: string
+}
+
+export type PloomesUnitMapping = {
+  id: string
+  ploomes_value: string
+  ploomes_object_id: number | null
+  unit_id: string
+  is_active: boolean
+  created_at: string
+  updated_at: string
 }
 
 // ─────────────────────────────────────────────────────────────

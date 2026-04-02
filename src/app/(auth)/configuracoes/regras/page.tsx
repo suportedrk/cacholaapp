@@ -7,6 +7,7 @@ import {
   ClipboardList,
   Wrench,
   Handshake,
+  Settings2,
   Search,
   Info,
   ChevronDown,
@@ -18,7 +19,7 @@ import { PageHeader } from '@/components/shared/page-header'
 // TIPOS
 // ─────────────────────────────────────────────────────────────
 
-type Module = 'dashboard' | 'events' | 'checklists' | 'maintenance' | 'providers'
+type Module = 'dashboard' | 'events' | 'checklists' | 'maintenance' | 'providers' | 'settings'
 
 interface BusinessRule {
   id: string
@@ -125,6 +126,24 @@ const BUSINESS_RULES: BusinessRule[] = [
       'Assim como manutenções, menos é melhor — cores de tendência invertidas: queda = verde (bom), alta = vermelho (ruim).',
     updatedAt: 'Abril 2026',
   },
+  {
+    id: 'settings-ploomes-unit-mapping',
+    module: 'settings',
+    name: 'Associação de Unidade por Deal',
+    description:
+      'Define a qual unidade do Cachola OS cada deal/evento importado do Ploomes pertence.',
+    calculation: [
+      'Ao importar um deal, o sync lê o campo "Unidade Escolhida" (ObjectValueName)',
+      'Consulta a tabela ploomes_unit_mapping para encontrar o unit_id correspondente',
+      'Se não encontrar mapeamento exato, tenta busca parcial no nome da unidade (ilike)',
+      'Se ainda não encontrar, atribui à primeira unidade ativa (fallback)',
+    ],
+    comparison:
+      'Configurável via banco — adicionar linha em ploomes_unit_mapping para novas unidades sem necessidade de redeploy.',
+    note:
+      'Valores mapeados atualmente: "Cachola PINHEIROS" → Buffet Cachola Pinheiros | "Cachola MOEMA" → Buffet Cachola Moema. Ao criar uma nova unidade no Ploomes, inserir o mapeamento correspondente na tabela ploomes_unit_mapping.',
+    updatedAt: '2026-04-02',
+  },
 ]
 
 // ─────────────────────────────────────────────────────────────
@@ -135,14 +154,15 @@ const MODULE_CONFIG: Record<
   Module,
   { label: string; Icon: React.ComponentType<{ className?: string }>; badgeClass: string }
 > = {
-  dashboard:   { label: 'Dashboard',  Icon: LayoutDashboard, badgeClass: 'badge-brand' },
-  events:      { label: 'Eventos',    Icon: CalendarDays,    badgeClass: 'badge-blue'  },
-  checklists:  { label: 'Checklists', Icon: ClipboardList,   badgeClass: 'badge-green' },
-  maintenance: { label: 'Manutenção', Icon: Wrench,          badgeClass: 'badge-amber' },
-  providers:   { label: 'Prestadores',Icon: Handshake,       badgeClass: 'badge-purple'},
+  dashboard:   { label: 'Dashboard',    Icon: LayoutDashboard, badgeClass: 'badge-brand' },
+  events:      { label: 'Eventos',      Icon: CalendarDays,    badgeClass: 'badge-blue'  },
+  checklists:  { label: 'Checklists',   Icon: ClipboardList,   badgeClass: 'badge-green' },
+  maintenance: { label: 'Manutenção',   Icon: Wrench,          badgeClass: 'badge-amber' },
+  providers:   { label: 'Prestadores',  Icon: Handshake,       badgeClass: 'badge-purple'},
+  settings:    { label: 'Configurações',Icon: Settings2,       badgeClass: 'badge-gray'  },
 }
 
-const MODULES_ORDER: Module[] = ['dashboard', 'events', 'checklists', 'maintenance', 'providers']
+const MODULES_ORDER: Module[] = ['dashboard', 'settings', 'events', 'checklists', 'maintenance', 'providers']
 const MODULES_COMING_SOON: Module[] = ['events', 'checklists', 'maintenance', 'providers']
 
 // ─────────────────────────────────────────────────────────────

@@ -1336,6 +1336,31 @@ Role:  super_admin (32 permissões)
 - [x] `src/app/(auth)/configuracoes/integracoes/ploomes/mapeamento/page.tsx`: página visual com 4 seções carregadas do banco
 - [x] 4 componentes mapping-*-card.tsx: Pipeline, Fields, Contact, Status
 
+### Fase 4 — Mapeamento de Unidade Configurável (2026-04-02)
+
+#### Bug corrigido
+`resolveUnitId` em `sync.ts` tinha um early return `if (unitId) return unitId` que, ao receber `options.unitId`, ignorava completamente o `parsed.unitName` do deal. Resultado: todos os deals eram atribuídos à mesma unidade (Pinheiros) independente do valor do campo "Unidade Escolhida" no Ploomes.
+
+#### Solução implementada
+- [x] `supabase/migrations/022_ploomes_unit_mapping.sql`: tabela `ploomes_unit_mapping` (ploomes_value TEXT UNIQUE → unit_id UUID FK), trigger updated_at, índice parcial em ploomes_value (is_active=true), RLS (settings:view/edit), seed Pinheiros ("Cachola PINHEIROS" → ObjectId 609551206) + Moema ("Cachola MOEMA")
+- [x] `src/lib/ploomes/sync.ts`: `resolveUnitId(supabase, unitName?)` refatorado com prioridade:
+  1. Lookup exato em `ploomes_unit_mapping` (maybeSingle, sem erro se não encontrar)
+  2. Fallback ilike em `units.name` (compatibilidade legada)
+  3. Fallback final: primeira unidade ativa
+- [x] `src/lib/ploomes/sync.ts`: deal loop agora resolve `dealUnitId` primeiro, depois faz filter por `options.unitId` (sem early return)
+- [x] `src/types/database.types.ts`: `PloomesUnitMapping` type + entrada em `Database['public']['Tables']`
+- [x] `src/app/(auth)/configuracoes/regras/page.tsx`: módulo `settings` + regra "Associação de Unidade por Deal" com lógica de prioridade documentada
+
+#### Campo do Ploomes
+- **FieldKey:** `deal_A583075F-D19C-4034-A479-36625C621660` (campo customizado "Unidade Escolhida")
+- **ValueKey:** `ObjectValueName` (texto do item selecionado, ex: "Cachola PINHEIROS")
+- **ObjectId:** `ploomes_object_id` armazenado como backup (ex: 609551206), não usado no lookup primário
+
+#### Como adicionar nova unidade
+1. Criar a unidade em `/admin/unidades`
+2. Inserir no banco: `INSERT INTO ploomes_unit_mapping (ploomes_value, unit_id) VALUES ('Cachola NOVA_UNIDADE', '<uuid>');`
+3. Disparar re-sync manual em `/configuracoes/integracoes/ploomes`
+
 ### Fase 4 — Status 'lost' + Paginação Ploomes (2026-03-27)
 - **StatusId no Ploomes (padrão global):** 1=Em aberto, 2=Ganho, 3=Perdido (NOT 1=Ganho como assumido originalmente)
 - **REGRA:** Todos os deals no stage "Festa Fechada" são importados.
@@ -2140,3 +2165,5 @@ Estas regras resolvem o bug "Skeleton Loading Infinito" causado por race conditi
 | Registro de webhook idempotente | `/api/ploomes/webhook-register` verifica se já existe webhook para a URL antes de criar. Evita duplicatas no Ploomes ao chamar o endpoint mais de uma vez. |
 | Página de mapeamento lê do banco (não hardcoded) | `ploomes/mapeamento/page.tsx` usa `usePloomesConfig(unitId)` → `/api/ploomes/config`. Quando o admin atualizar os mapeamentos no banco, a tela reflete automaticamente sem deploy. |
 | Notificação de falhas após 3 erros consecutivos | Cron verifica os últimos 3 logs de sync. Se todos falharam e não houve notificação similar nas últimas 2h, cria notificação interna para todos os super_admins via `create_notification` RPC. |
+| `ploomes_unit_mapping` separado de `ploomes_config` | `ploomes_config` é por unidade (1 row por unidade — UNIQUE unit_id). O mapeamento de valor Ploomes → unidade é global (mapeia qualquer valor do campo "Unidade Escolhida" para qualquer unidade do sistema). Tabela separada evita ambiguidade e é escalável para N unidades. |
+| `resolveUnitId` sem early return por `unitId` | O bug original: `if (unitId) return unitId` ignorava `parsed.unitName` quando o sync era scoped a uma unidade. A nova lógica sempre prioriza o mapeamento do deal (campo "Unidade Escolhida"), e só usa `options.unitId` como filtro pós-resolução para descartar deals de outras unidades. |

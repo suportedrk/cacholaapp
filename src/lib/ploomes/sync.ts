@@ -65,18 +65,30 @@ async function getSystemUserId(supabase: AdminClient): Promise<string> {
 }
 
 /**
- * Resolve unit_id:
- * - Se `unitId` fornecido, retorna ele diretamente.
- * - Senão, tenta casar `unitName` com `units.name` (case-insensitive).
- * - Fallback: primeira unidade ativa.
+ * Resolve unit_id para um deal:
+ * 1. Lookup em `ploomes_unit_mapping` pelo ObjectValueName (mais confiável)
+ * 2. Fallback: ilike em `units.name` (compatibilidade)
+ * 3. Fallback: primeira unidade ativa
  */
 async function resolveUnitId(
   supabase: AdminClient,
-  unitId: string | null,
   unitName?: string,
 ): Promise<string | null> {
-  if (unitId) return unitId
+  // 1. Mapeamento explícito (tabela configurável)
+  if (unitName) {
+    const { data: mapped } = await supabase
+      .from('ploomes_unit_mapping')
+      .select('unit_id')
+      .eq('ploomes_value', unitName)
+      .eq('is_active', true)
+      .maybeSingle()
+    if (mapped?.unit_id) return mapped.unit_id
 
+    // Avisa sobre valores não mapeados (pode indicar nova unidade no Ploomes)
+    console.warn(`[Ploomes sync] Valor de unidade não mapeado: "${unitName}". Usando fallback.`)
+  }
+
+  // 2. Fallback: ilike em units.name (legacy)
   if (unitName) {
     const { data } = await supabase
       .from('units')
@@ -84,17 +96,17 @@ async function resolveUnitId(
       .ilike('name', `%${unitName}%`)
       .eq('is_active', true)
       .limit(1)
-      .single()
+      .maybeSingle()
     if (data?.id) return data.id
   }
 
-  // Fallback: primeira unidade ativa
+  // 3. Fallback final: primeira unidade ativa
   const { data: first } = await supabase
     .from('units')
     .select('id')
     .eq('is_active', true)
     .limit(1)
-    .single()
+    .maybeSingle()
   return first?.id ?? null
 }
 
@@ -244,21 +256,20 @@ export async function syncDeals(
       try {
         const parsed = parseDeal(deal)
 
-        // Se filtrando por unit, verificar correspondência
-        if (options.unitId) {
-          const resolved = await resolveUnitId(supabase, options.unitId, parsed.unitName)
-          if (resolved !== options.unitId) {
-            // Deal não pertence a esta unidade — pular
-            continue
-          }
-        }
-
-        const unitId = await resolveUnitId(supabase, options.unitId ?? null, parsed.unitName)
-        if (!unitId) {
+        // Determinar a unidade do deal via mapeamento configurável
+        const dealUnitId = await resolveUnitId(supabase, parsed.unitName)
+        if (!dealUnitId) {
           console.warn(`[Ploomes sync] Deal ${deal.Id}: unit_id não resolvido, pulando.`)
           result.dealsErrors++
           continue
         }
+
+        // Se o sync é scoped a uma unidade específica, pular deals de outras unidades
+        if (options.unitId && dealUnitId !== options.unitId) {
+          continue
+        }
+
+        const unitId = dealUnitId
 
         // Resolver venue_id
         let venueId: string | null = null
