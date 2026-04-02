@@ -24,10 +24,8 @@ export function createClient() {
         },
       }
     )
-    // Desconectar Realtime no init — nenhum WebSocket é aberto automaticamente.
-    // Channels individuais (notificações, comentários) reconectam ao subscrever.
-    // TODO: remover esta linha quando o Realtime estiver configurado em produção.
-    _client.realtime.disconnect()
+    // Realtime habilitado em produção via wss://api.cachola.cloud/realtime/v1/
+    // (Nginx WebSocket proxy configurado). Workaround de disconnect() removido.
   }
   return _client
 }
