@@ -64,6 +64,7 @@ export const ROUTES = {
   myTasks: '/checklists/minhas-tarefas',
   providers: '/prestadores',
   businessRules: '/configuracoes/regras',
+  unitSetup: '/admin/unidades/setup',
 } as const
 
 // ============================================================
