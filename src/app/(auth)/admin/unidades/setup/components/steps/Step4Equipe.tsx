@@ -42,7 +42,7 @@ const ROLE_OPTIONS: UserRole[] = [
 
 export function Step4Equipe({ targetUnitId, data, onChange }: Props) {
   const [search, setSearch] = useState('')
-  const { data: allUsers, isLoading: loadingUsers } = useSystemUsers()
+  const { data: allUsers, isLoading: loadingUsers, isError: errorUsers } = useSystemUsers()
   const { data: existingTeam } = useUnitTeam(targetUnitId)
 
   // Usuários que já estão vinculados à unidade
@@ -130,6 +130,10 @@ export function Step4Equipe({ targetUnitId, data, onChange }: Props) {
           <Loader2 className="w-4 h-4 animate-spin" />
           Carregando colaboradores...
         </div>
+      ) : errorUsers ? (
+        <p className="text-sm text-destructive py-4">
+          Erro ao carregar colaboradores. Tente novamente.
+        </p>
       ) : (
         <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
           {filtered.length === 0 && (

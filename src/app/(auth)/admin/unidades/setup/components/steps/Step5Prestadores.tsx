@@ -31,7 +31,7 @@ export function Step5Prestadores({ targetUnitId, data, onChange }: Props) {
   const { data: units, isLoading: loadingUnits } = useAllUnits()
   const sourceUnits = (units ?? []).filter((u) => u.id !== targetUnitId)
 
-  const { data: providers, isLoading: loadingProviders } = useSourceProviders(
+  const { data: providers, isLoading: loadingProviders, isError: errorProviders } = useSourceProviders(
     data.copyFrom ? data.sourceUnitId : null
   )
 
@@ -190,6 +190,10 @@ export function Step5Prestadores({ targetUnitId, data, onChange }: Props) {
                   <Loader2 className="w-4 h-4 animate-spin" />
                   Carregando prestadores...
                 </div>
+              ) : errorProviders ? (
+                <p className="text-sm text-destructive py-4">
+                  Erro ao carregar prestadores. Tente novamente.
+                </p>
               ) : (
                 <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
                   {filtered.length === 0 && (
@@ -199,8 +203,6 @@ export function Step5Prestadores({ targetUnitId, data, onChange }: Props) {
                   )}
                   {filtered.map((provider) => {
                     const selected = isSelected(provider.id)
-                    const primaryContact = (provider.provider_contacts as unknown as Array<{ type: string; value: string; is_primary: boolean }>)
-                      ?.find((c) => c.is_primary) ?? null
 
                     return (
                       <button
@@ -236,9 +238,6 @@ export function Step5Prestadores({ targetUnitId, data, onChange }: Props) {
                               </span>
                             )}
                           </div>
-                          {primaryContact && (
-                            <p className="text-xs text-muted-foreground truncate">{primaryContact.value}</p>
-                          )}
                           {provider.tags?.length > 0 && (
                             <p className="text-xs text-muted-foreground truncate">{provider.tags.slice(0, 2).join(', ')}</p>
                           )}

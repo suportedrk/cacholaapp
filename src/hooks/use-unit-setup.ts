@@ -158,7 +158,7 @@ export function useSourceProviders(sourceUnitId: string | null) {
       const supabase = createClient()
       const { data, error } = await supabase
         .from('service_providers')
-        .select('id, name, document_number, tags, avg_rating, status, provider_contacts(type, value, is_primary)')
+        .select('id, name, document_number, tags, avg_rating, status')
         .eq('unit_id', sourceUnitId!)
         .eq('status', 'active')
         .order('name')
