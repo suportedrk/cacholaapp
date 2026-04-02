@@ -37,6 +37,12 @@ export async function proxy(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname
 
+  // Rotas /api/ fazem sua própria autenticação (CRON_SECRET, webhook key, etc.)
+  // Não redirecionar — deixar passar sem interferência do middleware.
+  if (pathname.startsWith('/api/')) {
+    return supabaseResponse
+  }
+
   // Verificação de rota pública
   const isPublicRoute = PUBLIC_ROUTES.some(
     (route) => pathname === route || pathname.startsWith(route)
