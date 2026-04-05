@@ -84,6 +84,7 @@ export function useEventsTabCounts() {
     queryKey: ['events-tab-counts', activeUnitId],
     enabled: isSessionReady,
     staleTime: 2 * 60 * 1000,
+    networkMode: 'always',
     retry: (failureCount, error: unknown) => {
       const status = (error as { status?: number })?.status
       if (status === 401 || status === 403) return false
@@ -139,6 +140,7 @@ export function useEventsInfinite(filters: EventFiltersInfinite) {
     queryKey: ['events-infinite', activeUnitId, tab, status, search],
     enabled: isSessionReady,
     staleTime: 30 * 1000,
+    networkMode: 'always',
     initialPageParam: 0 as number,
     retry: (failureCount, error: unknown) => {
       const st = (error as { status?: number })?.status
@@ -203,6 +205,7 @@ export function useEventsKpis() {
     queryKey: ['events-kpis', activeUnitId],
     enabled:  isSessionReady,
     staleTime: 2 * 60 * 1000,
+    networkMode: 'always',
     retry: (failureCount, error: unknown) => {
       const st = (error as { status?: number })?.status
       if (st === 401 || st === 403) return false

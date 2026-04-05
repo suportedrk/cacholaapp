@@ -40,6 +40,9 @@ export function UnitSwitcher() {
     setActiveUnit(unitId, unitObj)
     // Invalidar todas as queries dependentes de unidade
     qc.invalidateQueries({ queryKey: ['events'] })
+    qc.invalidateQueries({ queryKey: ['events-infinite'] })
+    qc.invalidateQueries({ queryKey: ['events-tab-counts'] })
+    qc.invalidateQueries({ queryKey: ['events-kpis'] })
     qc.invalidateQueries({ queryKey: ['checklists'] })
     qc.invalidateQueries({ queryKey: ['maintenance'] })
     qc.invalidateQueries({ queryKey: ['dashboard'] })
