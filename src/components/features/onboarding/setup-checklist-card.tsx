@@ -118,7 +118,7 @@ export function SetupChecklistCard() {
               <span
                 className={cn(
                   'flex-1 font-medium',
-                  item.done && 'line-through text-muted-foreground',
+                  item.done ? 'line-through text-muted-foreground' : 'text-foreground',
                 )}
               >
                 {item.label}
