@@ -9,10 +9,7 @@ import { ArrowLeft, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { createClient } from '@/lib/supabase/client'
 import { Step1Dados, type Step1Data } from './components/steps/Step1Dados'
-
-const supabase = createClient()
 
 // ─────────────────────────────────────────────────────────────
 // Page
@@ -39,29 +36,23 @@ export default function NovaUnidadeSetupPage() {
     }
     setCreating(true)
     try {
-      const { data: newUnit, error } = await supabase
-        .from('units')
-        .insert({
+      const res = await fetch('/api/admin/units', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           name: data.name.trim(),
           slug: data.slug.trim(),
           address: data.address.trim() || null,
           phone: data.phone.trim() || null,
-          is_active: true,
-        })
-        .select('id')
-        .single()
-
-      if (error) {
-        if (error.code === '23505') {
-          toast.error('Já existe uma unidade com esse slug. Escolha um diferente.')
-        } else {
-          toast.error(error.message)
-        }
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok) {
+        toast.error(json.error ?? 'Erro ao criar unidade.')
         return
       }
-
       toast.success('Unidade criada! Continuando o setup...')
-      router.push(`/admin/unidades/${newUnit.id}/setup`)
+      router.push(`/admin/unidades/${json.unit.id}/setup`)
     } catch {
       toast.error('Erro ao criar unidade.')
     } finally {
