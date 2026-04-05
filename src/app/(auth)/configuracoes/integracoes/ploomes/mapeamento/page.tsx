@@ -6,7 +6,7 @@ import { ptBR } from 'date-fns/locale'
 import {
   GitBranch, Database, User, CheckCircle2,
   RotateCw, Check, AlertCircle, Info, MapPin,
-  FlaskConical, ArrowRight, HelpCircle, RefreshCw,
+  FlaskConical, ArrowRight, HelpCircle, RefreshCw, Eye, EyeOff, KeyRound,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -145,6 +145,71 @@ function SaveIndicator({ state }: { state: SaveState }) {
       {state === 'saving' && 'Salvando…'}
       {state === 'saved'  && 'Salvo'}
       {state === 'error'  && 'Erro ao salvar'}
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────
+// SECTION 0 — CHAVE DE API
+// ─────────────────────────────────────────────────────────────
+
+interface ApiKeySectionProps {
+  userKey: string
+  onChange: (value: string) => void
+  disabled: boolean
+}
+
+function ApiKeySection({ userKey, onChange, disabled }: ApiKeySectionProps) {
+  const [showKey, setShowKey] = useState(false)
+  const hasKey = userKey.trim().length > 0
+
+  return (
+    <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+      <SectionHeader
+        icon={KeyRound}
+        title="Chave de API"
+        description="User-Key para autenticar nas chamadas à API do Ploomes"
+        badge={
+          hasKey
+            ? <span className="badge-green border text-[10px] px-2 py-0.5 rounded-full font-medium flex items-center gap-1"><Check className="h-3 w-3" /> Configurada</span>
+            : <span className="badge-amber border text-[10px] px-2 py-0.5 rounded-full font-medium">Não configurada</span>
+        }
+      />
+
+      <div className="px-5 py-4 space-y-3">
+        <div className="relative">
+          <input
+            type={showKey ? 'text' : 'password'}
+            value={userKey}
+            onChange={(e) => onChange(e.target.value)}
+            disabled={disabled}
+            placeholder="Cole aqui a sua User-Key do Ploomes"
+            autoComplete="off"
+            className={cn(
+              'w-full h-10 rounded-lg border border-border bg-background px-3 pr-10 text-sm font-mono',
+              'focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary',
+              'disabled:opacity-50 disabled:cursor-not-allowed',
+              'placeholder:text-muted-foreground placeholder:font-sans',
+            )}
+          />
+          <button
+            type="button"
+            onClick={() => setShowKey((v) => !v)}
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+            aria-label={showKey ? 'Ocultar chave' : 'Mostrar chave'}
+          >
+            {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </button>
+        </div>
+
+        <div className="flex items-start gap-2 px-1">
+          <Info className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Encontre sua User-Key em <strong>Configurações → Integrações → API</strong> no painel do Ploomes.
+            A chave é armazenada no banco de dados por unidade — não é necessário configurar variável de ambiente.
+          </p>
+        </div>
+      </div>
     </div>
   )
 }
@@ -524,6 +589,9 @@ export default function PloomesFieldMappingPage() {
   const { activeUnitId } = useUnitStore()
   const { data: config, isLoading, isError } = usePloomesConfig(activeUnitId)
 
+  // Editable state (api key section)
+  const [userKey, setUserKey] = useState('')
+
   // Editable state (pipeline section)
   const [pipelineId,  setPipelineId]  = useState('')
   const [stageId,     setStageId]     = useState('')
@@ -547,6 +615,7 @@ export default function PloomesFieldMappingPage() {
   // Hydrate local state when config loads
   useEffect(() => {
     if (!config) return
+    setUserKey(config.user_key ?? '')
     setPipelineId(String(config.pipeline_id ?? ''))
     setStageId(String(config.stage_id ?? ''))
     setWonStatusId(String(config.won_status_id ?? ''))
@@ -568,6 +637,7 @@ export default function PloomesFieldMappingPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             unit_id:          activeUnitId,
+            user_key:         userKey.trim(),
             pipeline_id:      parseInt(pipelineId, 10) || null,
             stage_id:         parseInt(stageId, 10) || null,
             won_status_id:    parseInt(wonStatusId, 10) || null,
@@ -582,7 +652,7 @@ export default function PloomesFieldMappingPage() {
       }
     }, 500)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pipelineId, stageId, wonStatusId, contactMappings, activeUnitId, config])
+  }, [userKey, pipelineId, stageId, wonStatusId, contactMappings, activeUnitId, config])
 
   // Handlers that update state AND trigger save
   function handlePipelineChange(field: 'pipelineId' | 'stageId' | 'wonStatusId', value: string) {
@@ -590,6 +660,18 @@ export default function PloomesFieldMappingPage() {
     if (field === 'stageId')     setStageId(value)
     if (field === 'wonStatusId') setWonStatusId(value)
   }
+
+  // Guard: skip user_key save if value just came from hydration
+  const prevUserKey = useRef('')
+  useEffect(() => {
+    if (prevUserKey.current === userKey) return
+    prevUserKey.current = userKey
+    const cfg = configRef.current
+    if (!cfg) return
+    if (userKey === (cfg.user_key ?? '')) return
+    triggerSave()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userKey])
 
   // Use effect to trigger save when pipeline fields change
   // Guard: skip if values just came from config hydration (no real user edit)
@@ -711,6 +793,12 @@ export default function PloomesFieldMappingPage() {
       {/* Sections */}
       {config && (
         <div className="space-y-4">
+          <ApiKeySection
+            userKey={userKey}
+            onChange={setUserKey}
+            disabled={isSaving}
+          />
+
           <PipelineSection
             pipelineId={pipelineId}
             stageId={stageId}

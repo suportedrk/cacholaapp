@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { ploomesGetOne } from '@/lib/ploomes/client'
+import { loadPloomesConfig } from '@/lib/ploomes/sync'
 import { parseDeal } from '@/lib/ploomes/field-mapping'
 import type { PloomesDeal } from '@/lib/ploomes/types'
 
@@ -19,8 +20,12 @@ export async function GET(
 
     const { dealId } = await params
 
+    const dbConfig = await loadPloomesConfig(supabase, null)
+    const userKey = dbConfig?.user_key || process.env.PLOOMES_USER_KEY || ''
+
     const deal = await ploomesGetOne<PloomesDeal>(
       `Deals(${dealId})?$expand=OtherProperties,Contact($select=Id,Name,Email,Phones),Attachments`,
+      userKey,
     )
 
     return NextResponse.json({ deal, parsed: parseDeal(deal) })

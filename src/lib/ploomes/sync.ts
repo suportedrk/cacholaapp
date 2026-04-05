@@ -217,6 +217,8 @@ export async function syncDeals(
 
     const pipelineId = dbConfig?.pipeline_id ?? DEFAULT_PIPELINE_ID
     const stageId    = dbConfig?.stage_id    ?? DEFAULT_STAGE_ID
+    // User-Key: prioridade para a chave salva no banco; fallback para env var
+    const userKey    = dbConfig?.user_key || process.env.PLOOMES_USER_KEY || ''
     // Regra de negócio: todos os deals no stage "Festa Fechada" são importados.
     // StatusId determina o status do evento:
     //   2 (Perdido) → 'lost' (mantido para estatísticas, oculto por padrão na UI)
@@ -241,7 +243,7 @@ export async function syncDeals(
         `$orderby=CreateDate desc`,
       ].join('&')
 
-      const response = await ploomesGet<PloomesDeal>(`Deals?${queryParts}`)
+      const response = await ploomesGet<PloomesDeal>(`Deals?${queryParts}`, userKey)
       const page = response.value ?? []
       allDeals.push(...page)
 

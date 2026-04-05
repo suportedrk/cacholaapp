@@ -741,6 +741,7 @@ export type SystemConfig = {
 export type PloomesConfigRow = {
   id: string
   unit_id: string
+  user_key: string
   pipeline_id: number
   stage_id: number
   won_status_id: number

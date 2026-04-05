@@ -101,6 +101,7 @@ export async function PATCH(req: NextRequest) {
 
   // Campos permitidos para atualização
   const allowed = [
+    'user_key',
     'pipeline_id', 'stage_id', 'won_status_id',
     'field_mappings', 'contact_mappings', 'status_mappings',
     'webhook_url', 'webhook_registered_at', 'is_active',

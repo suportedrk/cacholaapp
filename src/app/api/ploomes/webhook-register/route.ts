@@ -8,8 +8,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { createClient } from '@/lib/supabase/server'
+import { loadPloomesConfig } from '@/lib/ploomes/sync'
 
-const USER_KEY    = process.env.PLOOMES_USER_KEY ?? ''
 const APP_URL     = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
 const PLOOMES_API = 'https://api2.ploomes.com'
 
@@ -29,13 +29,13 @@ type PloomesODataResponse<T> = {
 
 // ── Helpers Ploomes API ───────────────────────────────────────
 
-async function ploomesFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
-  if (!USER_KEY) throw new Error('PLOOMES_USER_KEY não configurada.')
+async function ploomesFetch<T>(path: string, userKey: string, options: RequestInit = {}): Promise<T> {
+  if (!userKey) throw new Error('Chave de API do Ploomes não configurada. Configure em Integrações → Ploomes → Mapeamento.')
 
   const res = await fetch(`${PLOOMES_API}/${path}`, {
     ...options,
     headers: {
-      'User-Key': USER_KEY,
+      'User-Key': userKey,
       'Content-Type': 'application/json',
       ...(options.headers ?? {}),
     },
@@ -77,9 +77,15 @@ export async function POST(req: NextRequest) {
   const webhookUrl = `${APP_URL}/api/webhooks/ploomes`
 
   try {
+    // Carregar chave do banco (com fallback para env var)
+    const supabase = await createAdminClient()
+    const dbConfig = await loadPloomesConfig(supabase, unitId)
+    const userKey = dbConfig?.user_key || process.env.PLOOMES_USER_KEY || ''
+
     // ── 1. Verificar se já existe webhook para esta URL ───────
     const existing = await ploomesFetch<PloomesODataResponse<PloomesWebhook>>(
       `Webhooks?$filter=Url eq '${encodeURIComponent(webhookUrl)}'`,
+      userKey,
     )
 
     let webhookId: number | null = null
@@ -90,7 +96,7 @@ export async function POST(req: NextRequest) {
       console.info(`[webhook-register] Webhook já registrado no Ploomes (Id=${webhookId})`)
     } else {
       // ── 2. Registrar webhook novo no Ploomes ─────────────────
-      const created = await ploomesFetch<PloomesWebhook>('Webhooks', {
+      const created = await ploomesFetch<PloomesWebhook>('Webhooks', userKey, {
         method: 'POST',
         body: JSON.stringify({
           Url: webhookUrl,
@@ -106,8 +112,6 @@ export async function POST(req: NextRequest) {
     }
 
     // ── 3. Persistir em ploomes_config ────────────────────────
-    const supabase = await createAdminClient()
-
     const { error: updateError } = await supabase
       .from('ploomes_config')
       .update({
