@@ -624,7 +624,9 @@ export default function PloomesFieldMappingPage() {
 
   // Auto-save with 500ms debounce
   const triggerSave = useCallback(() => {
-    if (!config || !activeUnitId) return
+    // Usa config.unit_id como fallback quando activeUnitId é null (super_admin vendo todas)
+    const effectiveUnitId = activeUnitId ?? config?.unit_id ?? null
+    if (!config || !effectiveUnitId) return
 
     if (saveTimer.current) clearTimeout(saveTimer.current)
     if (savedTimer.current) clearTimeout(savedTimer.current)
@@ -636,7 +638,7 @@ export default function PloomesFieldMappingPage() {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            unit_id:          activeUnitId,
+            unit_id:          effectiveUnitId,
             user_key:         userKey.trim(),
             pipeline_id:      parseInt(pipelineId, 10) || null,
             stage_id:         parseInt(stageId, 10) || null,
