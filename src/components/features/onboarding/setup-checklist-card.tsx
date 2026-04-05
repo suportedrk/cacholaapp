@@ -68,7 +68,7 @@ export function SetupChecklistCard() {
   const pct = Math.round((doneCount / items.length) * 100)
 
   return (
-    <div className="rounded-2xl border-2 border-primary/20 bg-brand-50 dark:bg-brand-950/20 p-4 relative">
+    <div className="rounded-2xl border-2 border-primary/20 bg-brand-50 dark:bg-brand-950/40 p-4 relative">
       {/* Dismiss */}
       <button
         onClick={handleDismiss}
@@ -107,7 +107,7 @@ export function SetupChecklistCard() {
                 'w-full flex items-center gap-2.5 text-left rounded-xl px-2.5 py-2 text-sm transition-colors',
                 item.done
                   ? 'opacity-55 cursor-default'
-                  : 'hover:bg-white/70 dark:hover:bg-white/[0.06] cursor-pointer',
+                  : 'hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer',
               )}
             >
               {item.done ? (
