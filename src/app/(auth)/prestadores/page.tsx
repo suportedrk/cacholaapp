@@ -33,7 +33,7 @@ export default function PrestadoresPage() {
     refetch,
   } = useProviders(filters)
 
-  const isTimedOut = useLoadingTimeout(providersLoading || kpisLoading)
+  const { isTimedOut, retry } = useLoadingTimeout(providersLoading || kpisLoading)
 
   // ── Handlers ───────────────────────────────────────────────
   function handleCreateProvider() {
@@ -124,7 +124,7 @@ export default function PrestadoresPage() {
       ) : (providersLoading || categoriesLoading) && isTimedOut ? (
         <div className="flex flex-col items-center justify-center py-24 gap-4">
           <p className="text-text-secondary text-sm">O carregamento está demorando mais que o esperado.</p>
-          <button onClick={() => refetch()} className="text-sm text-primary underline underline-offset-4">
+          <button onClick={retry} className="text-sm text-primary underline underline-offset-4">
             Tentar novamente
           </button>
         </div>

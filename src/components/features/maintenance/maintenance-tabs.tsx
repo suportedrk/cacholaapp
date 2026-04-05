@@ -100,7 +100,7 @@ function OrdersTabContent() {
     viewMode === 'kanban' ? { ...filters, status: undefined } : filters
   )
   const { data: sectors = [] } = useSectors(true)
-  const isTimedOut = useLoadingTimeout(isLoading)
+  const { isTimedOut, retry } = useLoadingTimeout(isLoading)
 
   const orders     = data?.data ?? []
   const totalPages = data?.totalPages ?? 1
@@ -158,7 +158,7 @@ function OrdersTabContent() {
           {isLoading && isTimedOut ? (
             <div className="flex flex-col items-center justify-center py-24 gap-4">
               <p className="text-text-secondary text-sm">O carregamento está demorando mais que o esperado.</p>
-              <button onClick={() => refetch()} className="text-sm text-primary underline underline-offset-4">
+              <button onClick={retry} className="text-sm text-primary underline underline-offset-4">
                 Tentar novamente
               </button>
             </div>

@@ -63,7 +63,7 @@ export default function DashboardPage() {
   } = useCalendarEvents(dateFrom, dateTo)
   const { data: calMaintenance = [] } = useCalendarMaintenance(dateFrom, dateTo, showMaintenance)
 
-  const isTimedOut = useLoadingTimeout(loadingKpis || loadingCal)
+  const { isTimedOut, retry } = useLoadingTimeout(loadingKpis || loadingCal)
 
   // Greeting (client-only to avoid hydration mismatch)
   const [greeting, setGreeting] = useState('Olá')
@@ -82,7 +82,7 @@ export default function DashboardPage() {
     return (
       <div className="flex flex-col items-center justify-center py-24 gap-4">
         <p className="text-text-secondary text-sm">O carregamento está demorando mais que o esperado.</p>
-        <button onClick={() => refetchKpis()} className="text-sm text-primary underline underline-offset-4">
+        <button onClick={retry} className="text-sm text-primary underline underline-offset-4">
           Tentar novamente
         </button>
       </div>

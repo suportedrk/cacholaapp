@@ -129,7 +129,33 @@ function AuthBootstrap() {
       isInitialEvent = false
     })
 
-    return () => subscription.unsubscribe()
+    // ── Visibilitychange: re-valida sessão ao retornar de background ─────────
+    // Quando a aba fica em background por muito tempo, o browser pode suspender
+    // os timers de autoRefreshToken do Supabase. Ao voltar, o JWT pode estar
+    // expirado e as queries do React Query (refetchOnWindowFocus) disparariam
+    // com token inválido, causando 401s ou bloqueios no lock do localStorage.
+    //
+    // A solução: forçar getSession() ANTES de qualquer query disparar. Se a
+    // sessão for nula (refresh token também expirou), redireciona para login.
+    // Caso contrário, startAutoRefresh() reativa o timer suspenso pelo browser.
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState !== 'visible') return
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        resetAuth()
+        resetUnit()
+        qc.clear()
+        routerRef.current.push('/login')
+        return
+      }
+      supabase.auth.startAutoRefresh()
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      subscription.unsubscribe()
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
   }, [qc]) // router via ref — não entra no array de deps
 
   return null

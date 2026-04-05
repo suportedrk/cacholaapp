@@ -43,7 +43,7 @@ function ChecklistsContent() {
   }
 
   const { data, isLoading, isError, refetch } = useChecklists(filters)
-  const isTimedOut = useLoadingTimeout(isLoading)
+  const { isTimedOut, retry } = useLoadingTimeout(isLoading)
 
   const checklists = data?.checklists ?? []
   const total      = data?.total ?? 0
@@ -100,7 +100,7 @@ function ChecklistsContent() {
       {isLoading && isTimedOut && (
         <div className="flex flex-col items-center justify-center py-24 gap-4">
           <p className="text-text-secondary text-sm">O carregamento está demorando mais que o esperado.</p>
-          <button onClick={() => refetch()} className="text-sm text-primary underline underline-offset-4">
+          <button onClick={retry} className="text-sm text-primary underline underline-offset-4">
             Tentar novamente
           </button>
         </div>

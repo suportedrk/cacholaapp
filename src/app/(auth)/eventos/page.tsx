@@ -112,7 +112,7 @@ function EventosContent() {
     search: debouncedSearch || undefined,
   })
 
-  const isTimedOut = useLoadingTimeout(isLoading)
+  const { isTimedOut, retry } = useLoadingTimeout(isLoading)
 
   // Achata todas as páginas em lista única
   const allEvents = useMemo(
@@ -144,7 +144,7 @@ function EventosContent() {
     return (
       <div className="flex flex-col items-center justify-center py-24 gap-4">
         <p className="text-text-secondary text-sm">O carregamento está demorando mais que o esperado.</p>
-        <button onClick={() => window.location.reload()} className="text-sm text-primary underline underline-offset-4">
+        <button onClick={retry} className="text-sm text-primary underline underline-offset-4">
           Tentar novamente
         </button>
       </div>
