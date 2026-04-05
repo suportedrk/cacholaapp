@@ -91,33 +91,32 @@ export function useEventsTabCounts() {
       return failureCount < 3
     },
     queryFn: async () => {
+      // Uma única query retorna todos os eventos (id + date).
+      // Contagem feita client-side para evitar 4 aquisições simultâneas do
+      // lock de auth do Supabase (navigator.locks.request, modo exclusivo).
       const supabase = createClient()
       const now = new Date()
 
-      const makeCount = async (dateFrom?: string, dateTo?: string) => {
-        let q = supabase
-          .from('events')
-          .select('id', { count: 'exact', head: true })
-          .neq('status', 'lost')
-        if (activeUnitId) q = q.eq('unit_id', activeUnitId)
-        if (dateFrom)     q = q.gte('date', dateFrom)
-        if (dateTo)       q = q.lte('date', dateTo)
-        const { count } = await q
-        return count ?? 0
-      }
+      let q = supabase
+        .from('events')
+        .select('date')
+        .neq('status', 'lost')
+        .limit(5000)
+      if (activeUnitId) q = q.eq('unit_id', activeUnitId)
+
+      const { data } = await q
+      const dates = (data ?? []).map((r: { date: string }) => r.date)
 
       const todayStr  = format(now, 'yyyy-MM-dd')
       const weekRange = getTabDateRange('week', now)!
       const monRange  = getTabDateRange('month', now)!
 
-      const [today, week, month, all] = await Promise.all([
-        makeCount(todayStr, todayStr),
-        makeCount(weekRange.start, weekRange.end),
-        makeCount(monRange.start,  monRange.end),
-        makeCount(),
-      ])
-
-      return { today, week, month, all } as Record<TabKey, number>
+      return {
+        all:   dates.length,
+        today: dates.filter((d) => d === todayStr).length,
+        week:  dates.filter((d) => d >= weekRange.start && d <= weekRange.end).length,
+        month: dates.filter((d) => d >= monRange.start  && d <= monRange.end).length,
+      } as Record<TabKey, number>
     },
   })
 }

@@ -130,24 +130,53 @@ function AuthBootstrap() {
     })
 
     // ── Visibilitychange: re-valida sessão ao retornar de background ─────────
-    // Quando a aba fica em background por muito tempo, o browser pode suspender
-    // os timers de autoRefreshToken do Supabase. Ao voltar, o JWT pode estar
-    // expirado e as queries do React Query (refetchOnWindowFocus) disparariam
-    // com token inválido, causando 401s ou bloqueios no lock do localStorage.
+    // Quando a aba fica em background, o browser pode suspender o timer de
+    // autoRefreshToken do Supabase. Ao voltar, verificamos o estado da sessão
+    // SEM chamar getSession() (que adquire um lock exclusivo de auth e
+    // competiria com os refetchOnWindowFocus das queries que disparam ao mesmo
+    // tempo, causando serialização e loading infinito de até 12s).
     //
-    // A solução: forçar getSession() ANTES de qualquer query disparar. Se a
-    // sessão for nula (refresh token também expirou), redireciona para login.
-    // Caso contrário, startAutoRefresh() reativa o timer suspenso pelo browser.
-    const handleVisibilityChange = async () => {
+    // Em vez disso:
+    //  1. Lemos a sessão já cached no Zustand store (sem lock)
+    //  2. Se não há sessão → redireciona para login imediatamente
+    //  3. Se o token está expirado → agendamos getSession() com 300ms de
+    //     atraso para não correr com o mount das queries
+    //  4. Se o token é válido → apenas reativos o timer de autoRefresh
+    const handleVisibilityChange = () => {
       if (document.visibilityState !== 'visible') return
-      const { data: { session } } = await supabase.auth.getSession()
+
+      const { session } = useAuthReadyStore.getState()
+
       if (!session) {
+        // Sem sessão em memória — usuário provavelmente foi deslogado
         resetAuth()
         resetUnit()
         qc.clear()
         routerRef.current.push('/login')
         return
       }
+
+      const expiresAt = session.expires_at ?? 0
+      const nowSec    = Math.floor(Date.now() / 1000)
+      const isExpired = expiresAt - nowSec < 60 // expirado ou expira em < 60s
+
+      if (isExpired) {
+        // Token expirado: agendar refresh APÓS as queries montarem (300ms)
+        // para evitar lock contention com refetchOnWindowFocus
+        setTimeout(() => {
+          supabase.auth.getSession().then(({ data: { session: fresh } }) => {
+            if (!fresh) {
+              resetAuth()
+              resetUnit()
+              qc.clear()
+              routerRef.current.push('/login')
+            }
+          })
+        }, 300)
+        return
+      }
+
+      // Token válido: reativar timer suspenso pelo browser
       supabase.auth.startAutoRefresh()
     }
     document.addEventListener('visibilitychange', handleVisibilityChange)
