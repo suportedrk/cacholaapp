@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import type { Unit, UserUnit, UserUnitWithUnit, UserRole } from '@/types/database.types'
 import { useAuthReadyStore } from '@/stores/auth-store'
+import { useUnitStore } from '@/stores/unit-store'
 
 // ─────────────────────────────────────────────────────────────
 // LISTAR TODAS AS UNIDADES (para admin)
@@ -137,9 +138,24 @@ export function useCreateUnit() {
       if (!res.ok) throw new Error(json.error ?? 'Erro ao criar unidade.')
       return json.unit as Unit
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       qc.invalidateQueries({ queryKey: ['units'] })
       toast.success('Unidade criada com sucesso!')
+
+      // Atualiza userUnits no Zustand para que o UnitSwitcher mostre a nova unidade
+      // sem exigir logout/login do usuário
+      const userId = useAuthReadyStore.getState().user?.id
+      if (userId) {
+        const supabase = createClient()
+        const { data } = await supabase
+          .from('user_units')
+          .select('*, unit:units(id, name, slug, is_active)')
+          .eq('user_id', userId)
+          .order('is_default', { ascending: false })
+        if (data) {
+          useUnitStore.getState().setUserUnits(data as unknown as UserUnitWithUnit[])
+        }
+      }
     },
     onError: (err: Error) => toast.error(err.message),
   })
