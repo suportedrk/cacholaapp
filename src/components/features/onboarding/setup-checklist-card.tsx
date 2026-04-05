@@ -68,11 +68,11 @@ export function SetupChecklistCard() {
   const pct = Math.round((doneCount / items.length) * 100)
 
   return (
-    <div className="rounded-2xl border-2 border-primary/20 bg-brand-50 dark:bg-brand-950/40 p-4 relative">
+    <div className="rounded-2xl border-2 border-primary/20 bg-brand-50 dark:bg-brand-900/30 p-4 relative">
       {/* Dismiss */}
       <button
         onClick={handleDismiss}
-        className="absolute top-3 right-3 rounded-lg p-1 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+        className="absolute top-3 right-3 rounded-lg p-1 text-gray-500 dark:text-gray-400 hover:bg-black/5 dark:hover:bg-white/10 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
         aria-label="Fechar"
       >
         <X className="w-4 h-4" />
@@ -80,16 +80,16 @@ export function SetupChecklistCard() {
 
       {/* Header */}
       <div className="pr-8 mb-2.5">
-        <h3 className="text-sm font-semibold text-foreground">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
           Complete a configuração do Cachola OS
         </h3>
-        <p className="text-xs text-muted-foreground mt-0.5">
+        <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
           {doneCount} de {items.length} etapas concluídas
         </p>
       </div>
 
       {/* Progress bar */}
-      <div className="h-1.5 bg-border rounded-full mb-3.5 overflow-hidden">
+      <div className="h-1.5 bg-black/10 dark:bg-white/10 rounded-full mb-3.5 overflow-hidden">
         <div
           className="h-full bg-primary rounded-full transition-all duration-500"
           style={{ width: `${pct}%` }}
@@ -113,18 +113,20 @@ export function SetupChecklistCard() {
               {item.done ? (
                 <CheckCircle2 className="w-4 h-4 shrink-0 text-primary" />
               ) : (
-                <Circle className="w-4 h-4 shrink-0 text-muted-foreground" />
+                <Circle className="w-4 h-4 shrink-0 text-gray-400 dark:text-gray-500" />
               )}
               <span
                 className={cn(
                   'flex-1 font-medium',
-                  item.done ? 'line-through text-muted-foreground' : 'text-foreground',
+                  item.done
+                    ? 'line-through text-gray-500 dark:text-gray-500'
+                    : 'text-gray-800 dark:text-gray-100',
                 )}
               >
                 {item.label}
               </span>
               {!item.done && (
-                <ChevronRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                <ChevronRight className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 shrink-0" />
               )}
             </button>
           </li>
