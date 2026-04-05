@@ -128,20 +128,20 @@ export function useCreateUnit() {
       address?: string | null
       phone?: string | null
     }) => {
-      const supabase = createClient()
-      const { data: unit, error } = await supabase
-        .from('units')
-        .insert(data)
-        .select()
-        .single()
-      if (error) throw error
-      return unit as Unit
+      const res = await fetch('/api/admin/units', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? 'Erro ao criar unidade.')
+      return json.unit as Unit
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['units'] })
       toast.success('Unidade criada com sucesso!')
     },
-    onError: () => toast.error('Erro ao criar unidade.'),
+    onError: (err: Error) => toast.error(err.message),
   })
 }
 
