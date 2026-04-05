@@ -34,6 +34,17 @@ export function Sidebar({ isOpen, isCollapsed, onClose, onToggleCollapse }: Side
   const pathname = usePathname()
   const { logoUrl, displayName } = useSidebarLogo()
 
+  // O item ativo é o mais específico que faz match com o pathname atual.
+  // Sem isso, "/checklists" ficaria ativo junto com "/checklists/minhas-tarefas".
+  const allNavItems = NAV_GROUPS.flatMap((g) => g.items)
+  const activeHref = allNavItems
+    .filter((item) =>
+      item.href === '/'
+        ? pathname === '/'
+        : pathname === item.href || pathname.startsWith(item.href + '/')
+    )
+    .sort((a, b) => b.href.length - a.href.length)[0]?.href ?? null
+
   return (
     <>
       {/* ── Overlay mobile ── */}
@@ -143,10 +154,7 @@ export function Sidebar({ isOpen, isCollapsed, onClose, onToggleCollapse }: Side
               {/* Items */}
               <div className="px-2 space-y-0.5">
                 {group.items.map((item) => {
-                  const isActive =
-                    item.href === '/dashboard'
-                      ? pathname === '/dashboard'
-                      : pathname.startsWith(item.href)
+                  const isActive = item.href === activeHref
 
                   const linkClassName = cn(
                     'flex items-center rounded-lg min-h-[44px]',
