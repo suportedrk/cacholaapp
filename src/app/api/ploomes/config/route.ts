@@ -115,18 +115,24 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: 'Nenhum campo válido para atualizar.' }, { status: 400 })
   }
 
-  const supabase = await createAdminClient()
+  // Usa createClient (cookie auth) para que as políticas RLS de UPDATE se apliquem.
+  // O manager autenticado via cookie tem permissão de UPDATE pela migration 024.
+  const supabase = await createClient()
 
   const { data, error } = await supabase
     .from('ploomes_config')
     .update(update)
     .eq('unit_id', unit_id)
     .select()
-    .single()
+    .maybeSingle()
 
   if (error) {
     console.error('[PATCH /api/ploomes/config]', error)
-    return NextResponse.json({ error: 'Erro ao atualizar configuração.' }, { status: 500 })
+    return NextResponse.json({ error: 'Erro ao atualizar configuração.', detail: error.message, code: error.code }, { status: 500 })
+  }
+
+  if (!data) {
+    return NextResponse.json({ error: 'Configuração não encontrada para esta unidade.' }, { status: 404 })
   }
 
   return NextResponse.json({ config: data })
