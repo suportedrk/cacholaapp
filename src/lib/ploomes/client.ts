@@ -3,13 +3,19 @@
 // ============================================================
 // Singleton com autenticação via User-Key, retry automático
 // (3x com backoff exponencial) para erros 429/5xx e timeout de 30s.
+//
+// A User-Key é lida preferencialmente da tabela `ploomes_config`
+// no banco de dados (por unidade). O env var PLOOMES_USER_KEY
+// serve apenas como fallback de compatibilidade.
 
 import type { PloomesODataResponse } from './types'
 
-const BASE_URL  = process.env.PLOOMES_API_URL  ?? 'https://api2.ploomes.com/'
-const USER_KEY  = process.env.PLOOMES_USER_KEY ?? ''
+const BASE_URL  = process.env.PLOOMES_API_URL ?? 'https://api2.ploomes.com/'
 const TIMEOUT   = 30_000 // 30s
 const MAX_RETRY = 3
+
+/** Fallback: chave configurada via variável de ambiente (legado) */
+const ENV_USER_KEY = process.env.PLOOMES_USER_KEY ?? ''
 
 function sleep(ms: number) {
   return new Promise<void>((resolve) => setTimeout(resolve, ms))
@@ -28,15 +34,18 @@ async function fetchWithTimeout(url: string, opts: RequestInit, timeoutMs: numbe
 async function ploomesRequest<T>(
   path: string,
   options: RequestInit = {},
+  userKey?: string,
 ): Promise<T> {
-  if (!USER_KEY) {
-    throw new Error('PLOOMES_USER_KEY não configurada. Adicione ao .env.')
+  const key = userKey || ENV_USER_KEY
+
+  if (!key) {
+    throw new Error('Chave de API do Ploomes não configurada. Acesse Configurações → Integrações → Ploomes → Mapeamento e informe a User-Key.')
   }
 
   const url = `${BASE_URL.replace(/\/$/, '')}/${path.replace(/^\//, '')}`
 
   const headers: HeadersInit = {
-    'User-Key': USER_KEY,
+    'User-Key': key,
     'Content-Type': 'application/json',
     ...(options.headers ?? {}),
   }
@@ -96,27 +105,29 @@ async function ploomesRequest<T>(
 // ── API pública ──────────────────────────────────────────────
 
 /** GET que retorna uma lista OData `{ value: T[] }` */
-export async function ploomesGet<T>(path: string): Promise<PloomesODataResponse<T>> {
-  return ploomesRequest<PloomesODataResponse<T>>(path)
+export async function ploomesGet<T>(path: string, userKey?: string): Promise<PloomesODataResponse<T>> {
+  return ploomesRequest<PloomesODataResponse<T>>(path, {}, userKey)
 }
 
 /** GET que retorna um único item */
-export async function ploomesGetOne<T>(path: string): Promise<T> {
-  return ploomesRequest<T>(path)
+export async function ploomesGetOne<T>(path: string, userKey?: string): Promise<T> {
+  return ploomesRequest<T>(path, {}, userKey)
 }
 
 /** POST com JSON body */
-export async function ploomesPost<T>(path: string, body: unknown): Promise<T> {
+export async function ploomesPost<T>(path: string, body: unknown, userKey?: string): Promise<T> {
   return ploomesRequest<T>(path, {
     method: 'POST',
     body: JSON.stringify(body),
-  })
+  }, userKey)
 }
 
 /** POST multipart/form-data (upload de arquivo) */
-export async function ploomesUpload<T>(path: string, formData: FormData): Promise<T> {
-  if (!USER_KEY) {
-    throw new Error('PLOOMES_USER_KEY não configurada.')
+export async function ploomesUpload<T>(path: string, formData: FormData, userKey?: string): Promise<T> {
+  const key = userKey || ENV_USER_KEY
+
+  if (!key) {
+    throw new Error('Chave de API do Ploomes não configurada.')
   }
 
   const url = `${BASE_URL.replace(/\/$/, '')}/${path.replace(/^\//, '')}`
@@ -125,7 +136,7 @@ export async function ploomesUpload<T>(path: string, formData: FormData): Promis
     url,
     {
       method: 'POST',
-      headers: { 'User-Key': USER_KEY },
+      headers: { 'User-Key': key },
       body: formData,
     },
     TIMEOUT,
