@@ -33,7 +33,7 @@ export default function EquipamentosPage() {
   const debouncedSearch = useDebounce(search, 300)
 
   const { data: categories = [] } = useEquipmentCategories()
-  const { data: equipmentList = [], isLoading, error, refetch } = useEquipment({
+  const { data: equipmentList = [], isLoading, error } = useEquipment({
     search:   debouncedSearch,
     category: category || undefined,
     status:   status !== 'all' ? [status as EquipmentStatus] : undefined,

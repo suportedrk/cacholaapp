@@ -42,7 +42,7 @@ function ChecklistsContent() {
     pageSize:   18,
   }
 
-  const { data, isLoading, isError, refetch } = useChecklists(filters)
+  const { data, isLoading, isError } = useChecklists(filters)
   const { isTimedOut, retry } = useLoadingTimeout(isLoading)
 
   const checklists = data?.checklists ?? []
