@@ -90,7 +90,7 @@ export async function GET(request: Request) {
         // E-mail
         const email = await getUserEmail(user_id)
         if (email) {
-          const { subject, html } = tplEventTomorrow(event.title, event.id, tomorrowLabel)
+          const { subject, html } = tplEventTomorrow({ eventTitle: event.title, eventId: event.id, eventDate: tomorrowLabel })
           await sendEmail(email, subject, html)
         }
       }
@@ -126,7 +126,7 @@ export async function GET(request: Request) {
       // E-mail
       const email = await getUserEmail(cl.assigned_to)
       if (email) {
-        const { subject, html } = tplChecklistOverdue(cl.title, cl.id)
+        const { subject, html } = tplChecklistOverdue({ checklistTitle: cl.title, checklistId: cl.id })
         await sendEmail(email, subject, html)
       }
     }
@@ -161,7 +161,7 @@ export async function GET(request: Request) {
       // E-mail
       const email = await getUserEmail(order.assigned_to)
       if (email) {
-        const { subject, html } = tplMaintenanceOverdue(order.title, order.id)
+        const { subject, html } = tplMaintenanceOverdue({ orderTitle: order.title, orderId: order.id })
         await sendEmail(email, subject, html)
       }
     }
