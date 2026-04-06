@@ -52,6 +52,14 @@ const FALLBACK_CATEGORIES = [
   'Hidráulica', 'Decoração', 'Audiovisual', 'Climatização', 'Outro',
 ]
 
+// base-ui renderiza o value bruto até o popup abrir — exibimos o label explicitamente.
+const EQUIPMENT_STATUS_OPTS = [
+  { value: 'active',    label: 'Ativo' },
+  { value: 'inactive',  label: 'Inativo' },
+  { value: 'in_repair', label: 'Em Reparo' },
+  { value: 'retired',   label: 'Aposentado' },
+]
+
 // ─────────────────────────────────────────────────────────────
 // PROPS
 // ─────────────────────────────────────────────────────────────
@@ -205,12 +213,20 @@ export function EquipmentForm({ equipment, onSuccess }: Props) {
           {/* Categoria */}
           <div className="space-y-1.5">
             <Label>Categoria</Label>
-            <Select value={form.category || '__none__'} onValueChange={(v: string | null) => set('category', v === '__none__' ? '' : (v ?? ''))}>
+            <Select
+              value={form.category || null}
+              onValueChange={(v: string | null) => set('category', v ?? '')}
+            >
               <SelectTrigger>
-                <SelectValue placeholder="Selecionar categoria..." />
+                {form.category ? (
+                  <span data-slot="select-value" className="flex flex-1 text-left">
+                    {form.category}
+                  </span>
+                ) : (
+                  <SelectValue placeholder="Selecionar categoria..." />
+                )}
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="__none__">Sem categoria</SelectItem>
                 {categoryOptions.map((c) => (
                   <SelectItem key={c} value={c}>{c}</SelectItem>
                 ))}
@@ -221,15 +237,19 @@ export function EquipmentForm({ equipment, onSuccess }: Props) {
           {/* Status */}
           <div className="space-y-1.5">
             <Label>Status</Label>
-            <Select value={form.status} onValueChange={(v: string | null) => set('status', v ?? 'active')}>
+            <Select
+              value={form.status}
+              onValueChange={(v: string | null) => set('status', v ?? 'active')}
+            >
               <SelectTrigger>
-                <SelectValue />
+                <span data-slot="select-value" className="flex flex-1 text-left">
+                  {EQUIPMENT_STATUS_OPTS.find((o) => o.value === form.status)?.label ?? form.status}
+                </span>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="active">Ativo</SelectItem>
-                <SelectItem value="inactive">Inativo</SelectItem>
-                <SelectItem value="in_repair">Em Reparo</SelectItem>
-                <SelectItem value="retired">Aposentado</SelectItem>
+                {EQUIPMENT_STATUS_OPTS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
