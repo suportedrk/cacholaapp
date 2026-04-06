@@ -15,7 +15,6 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { ROUTES, ROLE_LABELS } from '@/lib/constants'
-import { cn } from '@/lib/utils'
 import type { UserRole } from '@/types/database.types'
 
 const AVAILABLE_ROLES: UserRole[] = ['super_admin', 'diretor', 'gerente', 'vendedora', 'decoracao', 'manutencao', 'financeiro', 'rh', 'freelancer', 'entregador']
