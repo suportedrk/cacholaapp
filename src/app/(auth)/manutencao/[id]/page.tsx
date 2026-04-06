@@ -16,7 +16,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { ConfirmDialog } from '@/components/shared/confirm-dialog'
 import { UserAvatar } from '@/components/shared/user-avatar'
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger,
 } from '@/components/ui/select'
 import {
   useMaintenanceOrder,

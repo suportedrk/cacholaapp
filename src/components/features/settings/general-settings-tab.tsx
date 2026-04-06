@@ -5,7 +5,7 @@ import { Loader2, Globe, Building2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger,
 } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { useUnitStore } from '@/stores/unit-store'
