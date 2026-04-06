@@ -5,7 +5,7 @@ import { DollarSign, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { FilterChip } from '@/components/shared/filter-chip'
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger,
 } from '@/components/ui/select'
 import { EmptyState } from '@/components/shared/empty-state'
 import { CostCard, CostCardSkeleton } from './cost-card'
