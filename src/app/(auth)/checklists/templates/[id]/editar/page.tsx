@@ -9,6 +9,9 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { PageHeader } from '@/components/shared/page-header'
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select'
 import { SortableTemplateItems, type TemplateItemDraft } from '@/components/features/checklists/sortable-template-items'
 import { useChecklistTemplate, useUpdateTemplate, useChecklistCategories } from '@/hooks/use-checklists'
 import { useUsers } from '@/hooks/use-users'
@@ -187,32 +190,41 @@ export default function EditarTemplatePage() {
           {categories.length > 0 && (
             <div className="space-y-1.5">
               <Label htmlFor="tpl-category">Categoria</Label>
-              <select
-                id="tpl-category"
-                value={categoryId}
-                onChange={(e) => setCategoryId(e.target.value)}
-                className="w-full h-9 rounded-lg border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              <Select
+                value={categoryId || null}
+                onValueChange={(v) => setCategoryId(v ?? '')}
               >
-                <option value="">Sem categoria</option>
-                {categories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>{cat.name}</option>
-                ))}
-              </select>
+                <SelectTrigger size="sm" className="w-full">
+                  {categoryId
+                    ? <span data-slot="select-value" className="flex flex-1 text-left">{categories.find((c) => c.id === categoryId)?.name ?? 'Categoria'}</span>
+                    : <SelectValue placeholder="Sem categoria" />}
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           )}
 
           <div className="space-y-1.5">
             <Label htmlFor="tpl-priority">Prioridade padrão</Label>
-            <select
-              id="tpl-priority"
+            <Select
               value={defaultPriority}
-              onChange={(e) => setDefaultPriority(e.target.value as Priority)}
-              className="w-full h-9 rounded-lg border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              onValueChange={(v) => v && setDefaultPriority(v as Priority)}
             >
-              {(Object.keys(PRIORITY_LABELS) as Priority[]).map((p) => (
-                <option key={p} value={p}>{PRIORITY_LABELS[p]}</option>
-              ))}
-            </select>
+              <SelectTrigger size="sm" className="w-full">
+                <span data-slot="select-value" className="flex flex-1 text-left">
+                  {PRIORITY_LABELS[defaultPriority]}
+                </span>
+              </SelectTrigger>
+              <SelectContent>
+                {(Object.keys(PRIORITY_LABELS) as Priority[]).map((p) => (
+                  <SelectItem key={p} value={p}>{PRIORITY_LABELS[p]}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </div>

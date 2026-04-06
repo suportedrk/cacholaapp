@@ -4,6 +4,9 @@ import { useState, useEffect } from 'react'
 import { AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatCurrency, parseCurrency } from '@/lib/utils/providers'
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select'
 import { PRICE_TYPE_LABELS } from '@/types/providers'
 import type { PriceType, ServiceCategory } from '@/types/providers'
 
@@ -114,22 +117,25 @@ export function ServiceInlineForm({
           <label className="block text-sm font-medium text-foreground">
             Categoria <span className="text-destructive">*</span>
           </label>
-          <select
-            value={draft.category_id}
-            onChange={(e) => set('category_id', e.target.value)}
-            aria-invalid={!!errors.category_id}
-            className={cn(
-              inputBase, 'cursor-pointer appearance-none pr-8',
-              errors.category_id && 'border-destructive focus:ring-destructive/30',
-            )}
+          <Select
+            value={draft.category_id || null}
+            onValueChange={(v) => set('category_id', v ?? '')}
           >
-            <option value="">Selecione...</option>
-            {availableCategories.map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.icon} {cat.name}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className={cn('w-full', errors.category_id && 'border-destructive')}>
+              {draft.category_id
+                ? <span data-slot="select-value" className="flex flex-1 text-left">{availableCategories.find((c) => c.id === draft.category_id)?.name ?? 'Categoria'}</span>
+                : <SelectValue placeholder="Selecione..." />}
+            </SelectTrigger>
+            <SelectContent>
+              {availableCategories.length === 0
+                ? <SelectItem value="__empty__" disabled>Nenhuma categoria disponível</SelectItem>
+                : availableCategories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id}>
+                      {cat.icon} {cat.name}
+                    </SelectItem>
+                  ))}
+            </SelectContent>
+          </Select>
           {errors.category_id && (
             <p className="flex items-center gap-1 text-xs text-destructive">
               <AlertCircle className="w-3 h-3 shrink-0" />
@@ -143,15 +149,21 @@ export function ServiceInlineForm({
           <label className="block text-sm font-medium text-foreground">
             Tipo de Preço <span className="text-destructive">*</span>
           </label>
-          <select
+          <Select
             value={draft.price_type}
-            onChange={(e) => set('price_type', e.target.value as PriceType)}
-            className={cn(inputBase, 'cursor-pointer appearance-none pr-8')}
+            onValueChange={(v) => v && set('price_type', v as PriceType)}
           >
-            {(Object.keys(PRICE_TYPE_LABELS) as PriceType[]).map((t) => (
-              <option key={t} value={t}>{PRICE_TYPE_LABELS[t]}</option>
-            ))}
-          </select>
+            <SelectTrigger className="w-full">
+              <span data-slot="select-value" className="flex flex-1 text-left">
+                {PRICE_TYPE_LABELS[draft.price_type]}
+              </span>
+            </SelectTrigger>
+            <SelectContent>
+              {(Object.keys(PRICE_TYPE_LABELS) as PriceType[]).map((t) => (
+                <SelectItem key={t} value={t}>{PRICE_TYPE_LABELS[t]}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 

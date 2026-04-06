@@ -374,9 +374,11 @@ export function EventForm({ event }: EventFormProps) {
                   : <SelectValue placeholder="Selecionar tipo..." />}
               </SelectTrigger>
               <SelectContent>
-                {eventTypes.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                ))}
+                {eventTypes.length === 0
+                  ? <SelectItem value="__empty__" disabled>Nenhum tipo cadastrado</SelectItem>
+                  : eventTypes.map((t) => (
+                      <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                    ))}
               </SelectContent>
             </Select>
           </div>
@@ -393,9 +395,11 @@ export function EventForm({ event }: EventFormProps) {
                   : <SelectValue placeholder="Selecionar pacote..." />}
               </SelectTrigger>
               <SelectContent>
-                {packages.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                ))}
+                {packages.length === 0
+                  ? <SelectItem value="__empty__" disabled>Nenhum pacote cadastrado</SelectItem>
+                  : packages.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                    ))}
               </SelectContent>
             </Select>
           </div>
@@ -412,11 +416,13 @@ export function EventForm({ event }: EventFormProps) {
                   : <SelectValue placeholder="Selecionar salão..." />}
               </SelectTrigger>
               <SelectContent>
-                {venues.map((v) => (
-                  <SelectItem key={v.id} value={v.id}>
-                    {v.name}{v.capacity ? ` (cap. ${v.capacity})` : ''}
-                  </SelectItem>
-                ))}
+                {venues.length === 0
+                  ? <SelectItem value="__empty__" disabled>Nenhum salão cadastrado</SelectItem>
+                  : venues.map((v) => (
+                      <SelectItem key={v.id} value={v.id}>
+                        {v.name}{v.capacity ? ` (cap. ${v.capacity})` : ''}
+                      </SelectItem>
+                    ))}
               </SelectContent>
             </Select>
           </div>

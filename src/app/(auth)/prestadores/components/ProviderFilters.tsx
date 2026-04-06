@@ -3,6 +3,9 @@
 import { useRef } from 'react'
 import { Search, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select'
 import { PROVIDER_STATUS_LABELS } from '@/types/providers'
 import type { ProviderFilters, ServiceCategory, ProviderStatus } from '@/types/providers'
 
@@ -59,60 +62,56 @@ export function ProviderFiltersBar({
       {/* Filter row */}
       <div className="flex flex-wrap items-center gap-2">
         {/* Categoria */}
-        <select
-          value={filters.category_id}
-          onChange={(e) => onFilterChange('category_id', e.target.value)}
-          aria-label="Filtrar por categoria"
-          className={cn(
-            'h-9 pl-3 pr-8 rounded-lg border border-border bg-background',
-            'text-sm text-foreground appearance-none cursor-pointer',
-            'focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary',
-          )}
+        <Select
+          value={filters.category_id === 'all' ? null : (filters.category_id || null)}
+          onValueChange={(v) => onFilterChange('category_id', v ?? 'all')}
         >
-          <option value="all">Todas categorias</option>
-          {categories.map((cat) => (
-            <option key={cat.id} value={cat.id}>
-              {cat.name}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger size="sm" className="min-w-[150px]">
+            {filters.category_id && filters.category_id !== 'all'
+              ? <span data-slot="select-value" className="flex flex-1 text-left">{categories.find((c) => c.id === filters.category_id)?.name ?? 'Categoria'}</span>
+              : <SelectValue placeholder="Todas categorias" />}
+          </SelectTrigger>
+          <SelectContent>
+            {categories.map((cat) => (
+              <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
         {/* Status */}
-        <select
-          value={filters.status}
-          onChange={(e) => onFilterChange('status', e.target.value as ProviderStatus | 'all')}
-          aria-label="Filtrar por status"
-          className={cn(
-            'h-9 pl-3 pr-8 rounded-lg border border-border bg-background',
-            'text-sm text-foreground appearance-none cursor-pointer',
-            'focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary',
-          )}
+        <Select
+          value={filters.status === 'all' ? null : (filters.status || null)}
+          onValueChange={(v) => onFilterChange('status', (v ?? 'all') as ProviderStatus | 'all')}
         >
-          <option value="all">Todos status</option>
-          {(Object.keys(PROVIDER_STATUS_LABELS) as ProviderStatus[]).map((s) => (
-            <option key={s} value={s}>
-              {PROVIDER_STATUS_LABELS[s]}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger size="sm" className="min-w-[130px]">
+            {filters.status && filters.status !== 'all'
+              ? <span data-slot="select-value" className="flex flex-1 text-left">{PROVIDER_STATUS_LABELS[filters.status as ProviderStatus]}</span>
+              : <SelectValue placeholder="Todos status" />}
+          </SelectTrigger>
+          <SelectContent>
+            {(Object.keys(PROVIDER_STATUS_LABELS) as ProviderStatus[]).map((s) => (
+              <SelectItem key={s} value={s}>{PROVIDER_STATUS_LABELS[s]}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
         {/* Avaliação mínima */}
-        <select
-          value={filters.min_rating}
-          onChange={(e) => onFilterChange('min_rating', Number(e.target.value))}
-          aria-label="Filtrar por avaliação mínima"
-          className={cn(
-            'h-9 pl-3 pr-8 rounded-lg border border-border bg-background',
-            'text-sm text-foreground appearance-none cursor-pointer',
-            'focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary',
-          )}
+        <Select
+          value={filters.min_rating === 0 ? null : String(filters.min_rating)}
+          onValueChange={(v) => onFilterChange('min_rating', v ? Number(v) : 0)}
         >
-          <option value={0}>Qualquer avaliação</option>
-          <option value={1}>★ 1+</option>
-          <option value={2}>★ 2+</option>
-          <option value={3}>★ 3+</option>
-          <option value={4}>★ 4+</option>
-        </select>
+          <SelectTrigger size="sm" className="min-w-[150px]">
+            {filters.min_rating && filters.min_rating > 0
+              ? <span data-slot="select-value" className="flex flex-1 text-left">{'★'.repeat(filters.min_rating)}+</span>
+              : <SelectValue placeholder="Qualquer avaliação" />}
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="1">★ 1+</SelectItem>
+            <SelectItem value="2">★ 2+</SelectItem>
+            <SelectItem value="3">★ 3+</SelectItem>
+            <SelectItem value="4">★ 4+</SelectItem>
+          </SelectContent>
+        </Select>
 
         {/* Limpar filtros */}
         {hasActiveFilters && (

@@ -4,6 +4,9 @@ import { Users, Search, Loader2 } from 'lucide-react'
 import { useState, useMemo } from 'react'
 import { cn } from '@/lib/utils'
 import { Input } from '@/components/ui/input'
+import {
+  Select, SelectContent, SelectItem, SelectTrigger,
+} from '@/components/ui/select'
 import { useSystemUsers, useUnitTeam } from '@/hooks/use-unit-setup'
 import type { UserRole } from '@/types/database.types'
 import { ROLE_LABELS } from '@/lib/constants'
@@ -187,17 +190,23 @@ export function Step4Equipe({ targetUnitId, data, onChange }: Props) {
 
                   {/* Role na nova unidade */}
                   {selected && (
-                    <select
-                      value={getRole(user.id)}
-                      onChange={(e) => updateRole(user.id, e.target.value as UserRole)}
-                      onClick={(e) => e.stopPropagation()}
-                      className="text-xs border border-border rounded-md px-2 py-1 bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary shrink-0"
-                      aria-label={`Papel de ${user.name} nesta unidade`}
-                    >
-                      {ROLE_OPTIONS.map((role) => (
-                        <option key={role} value={role}>{ROLE_LABELS[role] ?? role}</option>
-                      ))}
-                    </select>
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <Select
+                        value={getRole(user.id)}
+                        onValueChange={(v) => v && updateRole(user.id, v as UserRole)}
+                      >
+                        <SelectTrigger size="sm" className="min-w-[110px] shrink-0" aria-label={`Papel de ${user.name} nesta unidade`}>
+                          <span data-slot="select-value" className="flex flex-1 text-left text-xs">
+                            {ROLE_LABELS[getRole(user.id)] ?? getRole(user.id)}
+                          </span>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ROLE_OPTIONS.map((role) => (
+                            <SelectItem key={role} value={role}>{ROLE_LABELS[role] ?? role}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   )}
                 </div>
               </div>

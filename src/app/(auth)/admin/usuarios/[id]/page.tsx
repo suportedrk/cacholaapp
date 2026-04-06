@@ -6,6 +6,9 @@ import { Loader2, Save, UserX, UserCheck, Building2, Eye } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  Select, SelectContent, SelectItem, SelectTrigger,
+} from '@/components/ui/select'
 import { StatusBadge } from '@/components/shared/status-badge'
 import { UserAvatar } from '@/components/shared/user-avatar'
 import { useUser, useUpdateUser, useDeactivateUser, useReactivateUser } from '@/hooks/use-users'
@@ -224,15 +227,21 @@ export default function EditarUsuarioPage() {
                   {uu.is_default && (
                     <span className="text-xs text-primary font-medium shrink-0">Padrão</span>
                   )}
-                  <select
+                  <Select
                     value={uu.role}
-                    onChange={(e) => updateRole({ id: uu.id, userId: uu.user_id, role: e.target.value as UserRole })}
-                    className="h-8 rounded-md border border-input bg-background px-2 py-1 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    onValueChange={(v) => v && updateRole({ id: uu.id, userId: uu.user_id, role: v as UserRole })}
                   >
-                    {Object.entries(ROLE_LABELS).map(([r, label]) => (
-                      <option key={r} value={r}>{label}</option>
-                    ))}
-                  </select>
+                    <SelectTrigger size="sm" className="min-w-[120px]">
+                      <span data-slot="select-value" className="flex flex-1 text-left text-xs">
+                        {ROLE_LABELS[uu.role as UserRole] ?? uu.role}
+                      </span>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(ROLE_LABELS).map(([r, label]) => (
+                        <SelectItem key={r} value={r}>{label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <Button
                     variant="ghost"
                     size="sm"

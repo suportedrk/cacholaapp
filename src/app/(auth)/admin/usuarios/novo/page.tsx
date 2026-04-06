@@ -7,6 +7,9 @@ import { useIsReadOnly } from '@/hooks/use-read-only'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  Select, SelectContent, SelectItem, SelectTrigger,
+} from '@/components/ui/select'
 import { ROLE_LABELS, ROUTES } from '@/lib/constants'
 import type { UserRole } from '@/types/database.types'
 import { toast } from 'sonner'
@@ -104,19 +107,21 @@ export default function NovoUsuarioPage() {
 
         <div className="space-y-1.5">
           <Label htmlFor="role">Cargo *</Label>
-          <select
-            id="role"
+          <Select
             value={role}
-            onChange={(e) => setRole(e.target.value as UserRole)}
-            className="flex h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            required
+            onValueChange={(v) => v && setRole(v as UserRole)}
           >
-            {ROLES.map((r) => (
-              <option key={r} value={r}>
-                {ROLE_LABELS[r]}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="w-full">
+              <span data-slot="select-value" className="flex flex-1 text-left">
+                {ROLE_LABELS[role]}
+              </span>
+            </SelectTrigger>
+            <SelectContent>
+              {ROLES.map((r) => (
+                <SelectItem key={r} value={r}>{ROLE_LABELS[r]}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="flex flex-wrap gap-3 pt-2">

@@ -4,6 +4,9 @@ import { useState, useEffect } from 'react'
 import { AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatPhone } from '@/lib/utils/providers'
+import {
+  Select, SelectContent, SelectItem, SelectTrigger,
+} from '@/components/ui/select'
 import { CONTACT_TYPE_LABELS } from '@/types/providers'
 import type { ContactType } from '@/types/providers'
 
@@ -108,15 +111,21 @@ export function ContactInlineForm({ initialData, onSubmit, onCancel }: Props) {
           <label className="block text-sm font-medium text-foreground">
             Tipo <span className="text-destructive">*</span>
           </label>
-          <select
+          <Select
             value={draft.type}
-            onChange={(e) => handleTypeChange(e.target.value as ContactType)}
-            className={cn(inputBase, 'cursor-pointer appearance-none pr-8')}
+            onValueChange={(v) => v && handleTypeChange(v as ContactType)}
           >
-            {(Object.keys(CONTACT_TYPE_LABELS) as ContactType[]).map((t) => (
-              <option key={t} value={t}>{CONTACT_TYPE_LABELS[t]}</option>
-            ))}
-          </select>
+            <SelectTrigger className="w-full">
+              <span data-slot="select-value" className="flex flex-1 text-left">
+                {CONTACT_TYPE_LABELS[draft.type]}
+              </span>
+            </SelectTrigger>
+            <SelectContent>
+              {(Object.keys(CONTACT_TYPE_LABELS) as ContactType[]).map((t) => (
+                <SelectItem key={t} value={t}>{CONTACT_TYPE_LABELS[t]}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Valor */}

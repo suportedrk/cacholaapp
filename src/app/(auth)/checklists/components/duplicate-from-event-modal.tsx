@@ -7,6 +7,9 @@ import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 import { useEvents } from '@/hooks/use-events'
 import { useEventChecklists } from '@/hooks/use-checklists'
@@ -430,16 +433,21 @@ export function DuplicateFromEventModal({
             <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
               Responsável (substitui o original)
             </label>
-            <select
-              value={assignedTo}
-              onChange={(e) => setAssignedTo(e.target.value)}
-              className="w-full h-10 px-3 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
+            <Select
+              value={assignedTo || null}
+              onValueChange={(v) => setAssignedTo(v ?? '')}
             >
-              <option value="">Manter responsável original</option>
-              {users.map((u) => (
-                <option key={u.id} value={u.id}>{u.name}</option>
-              ))}
-            </select>
+              <SelectTrigger className="w-full">
+                {assignedTo
+                  ? <span data-slot="select-value" className="flex flex-1 text-left">{users.find((u) => u.id === assignedTo)?.name ?? 'Usuário'}</span>
+                  : <SelectValue placeholder="Manter responsável original" />}
+              </SelectTrigger>
+              <SelectContent>
+                {users.map((u) => (
+                  <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* ── Copy options ── */}

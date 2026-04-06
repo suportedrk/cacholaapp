@@ -14,6 +14,9 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { PageHeader } from '@/components/shared/page-header'
 import { EmptyState } from '@/components/shared/empty-state'
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select'
 import { ConfirmDialog } from '@/components/shared/confirm-dialog'
 import { Skeleton } from '@/components/ui/skeleton'
 import { createClient } from '@/lib/supabase/client'
@@ -254,16 +257,21 @@ export default function TemplatesPage() {
           className="flex-1 h-9 rounded-lg border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
         />
         {categories.length > 0 && (
-          <select
-            value={categoryId}
-            onChange={(e) => setCategoryId(e.target.value)}
-            className="h-9 rounded-lg border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          <Select
+            value={categoryId || null}
+            onValueChange={(v) => setCategoryId(v ?? '')}
           >
-            <option value="">Todas as categorias</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
+            <SelectTrigger size="sm" className="min-w-[160px]">
+              {categoryId
+                ? <span data-slot="select-value" className="flex flex-1 text-left">{categories.find((c) => c.id === categoryId)?.name ?? 'Categoria'}</span>
+                : <SelectValue placeholder="Todas as categorias" />}
+            </SelectTrigger>
+            <SelectContent>
+              {categories.map((c) => (
+                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         )}
         {inactiveCount > 0 && (
           <button
