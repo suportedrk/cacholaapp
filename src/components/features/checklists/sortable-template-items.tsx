@@ -24,6 +24,9 @@ import {
   Camera, Star, Clock,
 } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 import { PRIORITY_LABELS } from '@/types/database.types'
 import type { Priority } from '@/types/database.types'
@@ -210,17 +213,23 @@ function SortableItem({
           <div className="grid grid-cols-3 gap-2">
             <div className="space-y-1">
               <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Prioridade</label>
-              <select
+              <Select
                 value={item.defaultPriority}
-                onChange={(e) => onUpdate({ defaultPriority: e.target.value as Priority })}
+                onValueChange={(v) => v && onUpdate({ defaultPriority: v as Priority })}
                 disabled={disabled}
-                className={FIELD_SELECT}
               >
-                <option value="low">Baixa</option>
-                <option value="medium">Média</option>
-                <option value="high">Alta</option>
-                <option value="urgent">Urgente</option>
-              </select>
+                <SelectTrigger size="sm" className="w-full">
+                  <span data-slot="select-value" className="flex flex-1 text-left">
+                    {PRIORITY_LABELS[item.defaultPriority]}
+                  </span>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="low">Baixa</SelectItem>
+                  <SelectItem value="medium">Média</SelectItem>
+                  <SelectItem value="high">Alta</SelectItem>
+                  <SelectItem value="urgent">Urgente</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-1">
@@ -273,19 +282,24 @@ function SortableItem({
             {users.length > 0 && (
               <div className="space-y-1">
                 <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Responsável padrão</label>
-                <select
-                  value={item.defaultAssignedToUserId ?? ''}
-                  onChange={(e) => onUpdate({ defaultAssignedToUserId: e.target.value || null })}
+                <Select
+                  value={item.defaultAssignedToUserId || null}
+                  onValueChange={(v) => onUpdate({ defaultAssignedToUserId: v ?? null })}
                   disabled={disabled}
-                  className={FIELD_SELECT}
                 >
-                  <option value="">Nenhum</option>
-                  {users.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.name.split(' ').slice(0, 2).join(' ')}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger size="sm" className="w-full">
+                    {item.defaultAssignedToUserId
+                      ? <span data-slot="select-value" className="flex flex-1 text-left">{users.find((u) => u.id === item.defaultAssignedToUserId)?.name.split(' ').slice(0, 2).join(' ') ?? 'Usuário'}</span>
+                      : <SelectValue placeholder="Nenhum" />}
+                  </SelectTrigger>
+                  <SelectContent>
+                    {users.map((u) => (
+                      <SelectItem key={u.id} value={u.id}>
+                        {u.name.split(' ').slice(0, 2).join(' ')}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             )}
           </div>

@@ -6,6 +6,9 @@ import { Copy, X, CalendarDays } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Button } from '@/components/ui/button'
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 import { useEvents } from '@/hooks/use-events'
 import { useUsers } from '@/hooks/use-users'
@@ -229,18 +232,23 @@ export function DuplicateChecklistModal({
             <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
               Responsável
             </label>
-            <select
-              value={assignedTo}
-              onChange={(e) => setAssignedTo(e.target.value)}
-              className="w-full h-10 px-3 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
+            <Select
+              value={assignedTo || null}
+              onValueChange={(v) => setAssignedTo(v ?? '')}
             >
-              <option value="">Nenhum</option>
-              {users.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.id === checklist.assigned_to ? `Manter: ${u.name}` : u.name}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger className="w-full">
+                {assignedTo
+                  ? <span data-slot="select-value" className="flex flex-1 text-left">{users.find((u) => u.id === assignedTo)?.name ?? 'Usuário'}</span>
+                  : <SelectValue placeholder="Nenhum" />}
+              </SelectTrigger>
+              <SelectContent>
+                {users.map((u) => (
+                  <SelectItem key={u.id} value={u.id}>
+                    {u.id === checklist.assigned_to ? `Manter: ${u.name}` : u.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Prazo */}

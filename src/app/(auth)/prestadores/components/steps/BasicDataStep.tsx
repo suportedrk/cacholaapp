@@ -8,6 +8,9 @@ import {
   validateCPF,
   validateCNPJ,
 } from '@/lib/utils/providers'
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select'
 import { PROVIDER_STATUS_LABELS } from '@/types/providers'
 import type { DocumentType, ProviderStatus } from '@/types/providers'
 
@@ -272,15 +275,21 @@ export function BasicDataStep({ data, errors, onChange, onClearError }: Props) {
           {/* Status */}
           <div className="space-y-1.5">
             <label className="block text-sm font-medium text-foreground">Status</label>
-            <select
+            <Select
               value={data.status}
-              onChange={(e) => onChange('status', e.target.value as ProviderStatus)}
-              className={cn(inputBase, 'cursor-pointer appearance-none pr-8')}
+              onValueChange={(v) => v && onChange('status', v as ProviderStatus)}
             >
-              {(Object.keys(PROVIDER_STATUS_LABELS) as ProviderStatus[]).map((s) => (
-                <option key={s} value={s}>{PROVIDER_STATUS_LABELS[s]}</option>
-              ))}
-            </select>
+              <SelectTrigger className="w-full">
+                <span data-slot="select-value" className="flex flex-1 text-left">
+                  {PROVIDER_STATUS_LABELS[data.status]}
+                </span>
+              </SelectTrigger>
+              <SelectContent>
+                {(Object.keys(PROVIDER_STATUS_LABELS) as ProviderStatus[]).map((s) => (
+                  <SelectItem key={s} value={s}>{PROVIDER_STATUS_LABELS[s]}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Instagram */}
@@ -336,16 +345,21 @@ export function BasicDataStep({ data, errors, onChange, onClearError }: Props) {
               UF
               <span className="text-xs text-muted-foreground font-normal ml-1">(opcional)</span>
             </label>
-            <select
-              value={data.state}
-              onChange={(e) => onChange('state', e.target.value)}
-              className={cn(inputBase, 'cursor-pointer appearance-none pr-8')}
+            <Select
+              value={data.state || null}
+              onValueChange={(v) => onChange('state', v ?? '')}
             >
-              <option value="">—</option>
-              {BR_STATES.map((s) => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
+              <SelectTrigger className="w-full">
+                {data.state
+                  ? <span data-slot="select-value" className="flex flex-1 text-left">{data.state}</span>
+                  : <SelectValue placeholder="—" />}
+              </SelectTrigger>
+              <SelectContent>
+                {BR_STATES.map((s) => (
+                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Cidade */}

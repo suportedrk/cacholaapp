@@ -317,9 +317,11 @@ export function MaintenanceForm({ order, onSuccess }: Props) {
                 <SelectValue placeholder="Selecionar setor..." />
               </SelectTrigger>
               <SelectContent>
-                {sectors.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                ))}
+                {sectors.length === 0
+                  ? <SelectItem value="__empty__" disabled>Nenhum setor cadastrado</SelectItem>
+                  : sectors.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                    ))}
               </SelectContent>
             </Select>
           </div>
@@ -343,11 +345,13 @@ export function MaintenanceForm({ order, onSuccess }: Props) {
                 )}
               </SelectTrigger>
               <SelectContent>
-                {equipmentList.map((eq) => (
-                  <SelectItem key={eq.id} value={eq.id}>
-                    {eq.name}{eq.location ? ` — ${eq.location}` : ''}
-                  </SelectItem>
-                ))}
+                {equipmentList.length === 0
+                  ? <SelectItem value="__empty__" disabled>Nenhum equipamento cadastrado</SelectItem>
+                  : equipmentList.map((eq) => (
+                      <SelectItem key={eq.id} value={eq.id}>
+                        {eq.name}{eq.location ? ` — ${eq.location}` : ''}
+                      </SelectItem>
+                    ))}
               </SelectContent>
             </Select>
           </div>
@@ -406,12 +410,14 @@ export function MaintenanceForm({ order, onSuccess }: Props) {
                 )}
               </SelectTrigger>
               <SelectContent>
-                {suppliers.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>
-                    {s.trade_name ?? s.company_name}
-                    {s.category ? ` (${s.category})` : ''}
-                  </SelectItem>
-                ))}
+                {suppliers.length === 0
+                  ? <SelectItem value="__empty__" disabled>Nenhum fornecedor cadastrado</SelectItem>
+                  : suppliers.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.trade_name ?? s.company_name}
+                        {s.category ? ` (${s.category})` : ''}
+                      </SelectItem>
+                    ))}
               </SelectContent>
             </Select>
           </div>

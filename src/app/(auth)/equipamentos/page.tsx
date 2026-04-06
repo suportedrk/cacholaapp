@@ -72,9 +72,11 @@ export default function EquipamentosPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todas as categorias</SelectItem>
-            {categories.map((c) => (
-              <SelectItem key={c} value={c}>{c}</SelectItem>
-            ))}
+            {categories.length === 0
+              ? <SelectItem value="__empty__" disabled>Nenhuma categoria cadastrada</SelectItem>
+              : categories.map((c) => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                ))}
           </SelectContent>
         </Select>
 

@@ -4,6 +4,9 @@ import { useState, useRef } from 'react'
 import { Upload, FileText, X, AlertCircle, Calendar } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getDocumentExpiryStatus } from '@/lib/utils/providers'
+import {
+  Select, SelectContent, SelectItem, SelectTrigger,
+} from '@/components/ui/select'
 import { DOC_TYPE_LABELS } from '@/types/providers'
 import type { DocType } from '@/types/providers'
 
@@ -212,15 +215,21 @@ export function DocDraftCard({ draft, index, onUpdate, onRemove }: DocDraftCardP
           <label className="block text-xs font-medium text-foreground">
             Tipo <span className="text-destructive">*</span>
           </label>
-          <select
+          <Select
             value={draft.doc_type}
-            onChange={(e) => onUpdate(index, { doc_type: e.target.value as DocType })}
-            className={cn(inputBase, 'cursor-pointer appearance-none pr-8')}
+            onValueChange={(v) => v && onUpdate(index, { doc_type: v as DocType })}
           >
-            {(Object.keys(DOC_TYPE_LABELS) as DocType[]).map((t) => (
-              <option key={t} value={t}>{DOC_TYPE_LABELS[t]}</option>
-            ))}
-          </select>
+            <SelectTrigger size="sm" className="w-full">
+              <span data-slot="select-value" className="flex flex-1 text-left">
+                {DOC_TYPE_LABELS[draft.doc_type]}
+              </span>
+            </SelectTrigger>
+            <SelectContent>
+              {(Object.keys(DOC_TYPE_LABELS) as DocType[]).map((t) => (
+                <SelectItem key={t} value={t}>{DOC_TYPE_LABELS[t]}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 

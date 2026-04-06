@@ -11,6 +11,9 @@ import { Badge } from '@/components/ui/badge'
 import { useUnit, useUpdateUnit, useUnitUsers, useAddUserToUnit, useRemoveUserFromUnit, useUpdateUserUnitRole } from '@/hooks/use-units'
 import { useUsers } from '@/hooks/use-users'
 import { ConfirmDialog } from '@/components/shared/confirm-dialog'
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select'
 import { ROUTES, ROLE_LABELS } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 import type { UserRole } from '@/types/database.types'
@@ -167,31 +170,38 @@ export default function EditarUnidadePage() {
         {/* Adicionar usuário */}
         {availableUsers.length > 0 && (
           <form onSubmit={handleAddUser} className="flex gap-2 flex-wrap">
-            <select
-              value={addUserId}
-              onChange={(e) => setAddUserId(e.target.value)}
-              className={cn(
-                'flex-1 min-w-[160px] h-10 rounded-md border border-input bg-background px-3 py-2 text-sm',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
-              )}
+            <Select
+              value={addUserId || null}
+              onValueChange={(v) => setAddUserId(v ?? '')}
             >
-              <option value="">Selecionar usuário...</option>
-              {availableUsers.map((u) => (
-                <option key={u.id} value={u.id}>{u.name}</option>
-              ))}
-            </select>
-            <select
+              <SelectTrigger className="flex-1 min-w-[160px]">
+                {addUserId
+                  ? <span data-slot="select-value" className="flex flex-1 text-left">{availableUsers.find((u) => u.id === addUserId)?.name ?? 'Usuário'}</span>
+                  : <SelectValue placeholder="Selecionar usuário..." />}
+              </SelectTrigger>
+              <SelectContent>
+                {availableUsers.length === 0
+                  ? <SelectItem value="__empty__" disabled>Nenhum usuário disponível</SelectItem>
+                  : availableUsers.map((u) => (
+                      <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                    ))}
+              </SelectContent>
+            </Select>
+            <Select
               value={addRole}
-              onChange={(e) => setAddRole(e.target.value as UserRole)}
-              className={cn(
-                'h-10 rounded-md border border-input bg-background px-3 py-2 text-sm',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
-              )}
+              onValueChange={(v) => v && setAddRole(v as UserRole)}
             >
-              {AVAILABLE_ROLES.map((r) => (
-                <option key={r} value={r}>{ROLE_LABELS[r] ?? r}</option>
-              ))}
-            </select>
+              <SelectTrigger className="min-w-[140px]">
+                <span data-slot="select-value" className="flex flex-1 text-left">
+                  {ROLE_LABELS[addRole] ?? addRole}
+                </span>
+              </SelectTrigger>
+              <SelectContent>
+                {AVAILABLE_ROLES.map((r) => (
+                  <SelectItem key={r} value={r}>{ROLE_LABELS[r] ?? r}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Button type="submit" disabled={!addUserId || addingUser} size="sm">
               {addingUser ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Vincular'}
             </Button>
@@ -215,18 +225,21 @@ export default function EditarUnidadePage() {
                     <p className="font-medium text-sm truncate">{user?.name ?? 'Usuário'}</p>
                     <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
                   </div>
-                  <select
+                  <Select
                     value={uu.role}
-                    onChange={(e) => updateRole({ id: uu.id, userId: uu.user_id, role: e.target.value as UserRole })}
-                    className={cn(
-                      'h-8 rounded-md border border-input bg-background px-2 py-1 text-xs',
-                      'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring'
-                    )}
+                    onValueChange={(v) => v && updateRole({ id: uu.id, userId: uu.user_id, role: v as UserRole })}
                   >
-                    {AVAILABLE_ROLES.map((r) => (
-                      <option key={r} value={r}>{ROLE_LABELS[r] ?? r}</option>
-                    ))}
-                  </select>
+                    <SelectTrigger size="sm" className="min-w-[120px]">
+                      <span data-slot="select-value" className="flex flex-1 text-left text-xs">
+                        {ROLE_LABELS[uu.role as UserRole] ?? uu.role}
+                      </span>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {AVAILABLE_ROLES.map((r) => (
+                        <SelectItem key={r} value={r}>{ROLE_LABELS[r] ?? r}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <ConfirmDialog
                     title="Remover usuário"
                     description={`Remover ${user?.name ?? 'este usuário'} desta unidade?`}
