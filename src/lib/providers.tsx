@@ -196,6 +196,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       new QueryClient({
         defaultOptions: {
           queries: {
+            networkMode: 'always', // ignora navigator.onLine — evita lock contention no Supabase auth
             staleTime: 60 * 1000, // 1 minuto
             // Não retentar erros de autenticação — falhar rápido
             retry: (failureCount, error: unknown) => {
