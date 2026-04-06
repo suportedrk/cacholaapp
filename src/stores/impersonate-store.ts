@@ -56,6 +56,7 @@ export const useImpersonateStore = create<ImpersonateState>((set) => ({
 
   startImpersonating: ({ profile, userUnits, permissions }) => {
     // Importação lazy para evitar dependência circular
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { useUnitStore } = require('@/stores/unit-store') as typeof import('@/stores/unit-store')
     const unitState = useUnitStore.getState()
 
@@ -92,6 +93,7 @@ export const useImpersonateStore = create<ImpersonateState>((set) => ({
   },
 
   stopImpersonating: () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { useUnitStore } = require('@/stores/unit-store') as typeof import('@/stores/unit-store')
     const unitState = useUnitStore.getState()
     const store = useImpersonateStore.getState()

@@ -927,13 +927,31 @@ Modal `createPortal(document.body)` com overlay + painel centrado:
 - [x] `src/app/api/cron/check-alerts/route.ts`: alertas maintenance_overdue + maintenance_due_soon adicionados
 - [x] `src/components/shared/confirm-dialog.tsx`: refatorado para suportar `trigger` prop (DialogTrigger) + `destructive` bool
 
-### Fase 2 — Bloco 3: E-mails com Resend (2026-03-27)
-- [x] `resend` instalado como dependência
-- [x] `src/lib/email.ts`: `sendEmail(to, subject, html)` com graceful fallback, 4 templates: `tplMaintenanceEmergency`, `tplMaintenanceOverdue`, `tplEventTomorrow`, `tplChecklistOverdue` — HTML responsivo com cores da marca (#7C8D78)
-- [x] `src/app/api/email/maintenance-emergency/route.ts`: POST route que busca destinatários, checa `preferences.notifications.email` e envia e-mail de emergência
-- [x] `src/hooks/use-maintenance.ts`: chama `POST /api/email/maintenance-emergency` fire-and-forget no `onSuccess` de ordem emergencial
-- [x] `src/app/api/cron/check-alerts/route.ts`: adicionado `sendEmail` para event_tomorrow, checklist_overdue e maintenance_overdue — sempre checando preferência do usuário antes
-- [x] `.env.example`: `RESEND_API_KEY` e `EMAIL_FROM` adicionados
+### Fase 2 — Bloco 3: E-mails com Nodemailer + Hostinger SMTP (2026-04-06)
+> **Migrado de Resend → nodemailer** (Resend nunca foi configurado em produção)
+
+#### SMTP Supabase GoTrue (VPS — /opt/supabase/supabase/docker/.env)
+- [x] `supabase-auth` configurado com Hostinger SMTP (smtp.hostinger.com:465 SSL)
+- [x] Credenciais: `noreply@cachola.cloud` / remetente "Cachola OS"
+- [x] Testado: `user_recovery_requested` com duration ~2.2s (SMTP real, não Noop)
+- [x] Conta real do admin: `bruno.casaletti@grupodrk.com.br` confirmada + role `super_admin`
+
+#### Next.js app (nodemailer)
+- [x] `nodemailer@6.9.0` instalado (v6 — v8 sem types); `resend` removido
+- [x] `src/types/nodemailer.d.ts`: declarações TypeScript manuais (sem @types/nodemailer)
+- [x] `src/lib/email.ts`: reescrito — singleton `_transporter`, lazy init, graceful fallback sem SMTP vars
+- [x] `src/lib/email-templates/base.ts`: `wrapInLayout()` — layout HTML responsivo com #7C8D78/#E3DAD1
+- [x] `src/lib/email-templates/maintenance-emergency.ts`: template com parâmetros nomeados `{ orderTitle, orderId, description?, sector? }`
+- [x] `src/lib/email-templates/maintenance-overdue.ts`: template com `{ orderTitle, orderId, assignedTo?, daysOverdue? }`
+- [x] `src/lib/email-templates/event-tomorrow.ts`: template com `{ eventTitle, eventId, eventDate, startTime?, clientName? }`
+- [x] `src/lib/email-templates/checklist-overdue.ts`: template com `{ checklistTitle, checklistId, eventTitle?, pendingItems? }`
+- [x] `src/lib/email-templates/generic-notification.ts`: template genérico `{ title, message, link?, linkLabel?, preheader? }`
+- [x] `src/app/api/email/maintenance-emergency/route.ts`: atualizado para API nomeada
+- [x] `src/app/api/cron/check-alerts/route.ts`: atualizado para API nomeada
+- [x] `next.config.ts`: `@next/bundle-analyzer` via `require()` condicional (evita erro v16 não publicado)
+- [x] `.env.example`: documentação SMTP (substituiu Resend)
+- [x] **Deploy VPS**: `npm install` + build OK + pm2 restart + SMTP vars no `.env.local`
+- [x] **Testes E2E**: nodemailer VERIFY OK + EMAIL_SENT (`<9b94add6...@cachola.cloud>`) + GoTrue recovery 200 OK
 
 ### Fase 2.5 — Multi-Unidade (2026-03-27)
 - [x] `supabase/migrations/010_fase25_units.sql`: tabelas `units` (slug UNIQUE) + `user_units` (role por unidade, is_default), `unit_id` nullable→NOT NULL em events/checklists/checklist_templates/maintenance_orders, nullable em audit_logs + config tables (event_types, packages, venues, checklist_categories, sectors, user_permissions), RLS completo com `get_user_unit_ids()` + `is_global_viewer()`, seed Pinheiros
@@ -2184,8 +2202,11 @@ Estas regras resolvem o bug "Skeleton Loading Infinito" causado por race conditi
 | Canvas compression antes do upload | Imagens comprimidas para max 1200px / 80% quality (fotos) e max 600px / 85% quality (avatar) via Canvas API antes do upload. Reduz banda e storage. |
 | Dois botões de upload (câmera + galeria) | Mobile-first: botão "Câmera" usa `capture="environment"` (força câmera traseira), botão "Galeria" abre seletor de arquivos. Melhor UX do que um único input. |
 | `PhotoLightbox` sem Radix Dialog | Lightbox é um overlay `fixed inset-0 z-[100]` puro com navegação via teclado (Escape/Arrows). Mais leve e sem dependência de Radix para esse caso de uso. |
-| E-mail emergency via API route (não hook) | `RESEND_API_KEY` é server-only. Hook client-side chama `POST /api/email/maintenance-emergency` fire-and-forget. Cron chama `sendEmail()` diretamente (já server-side). |
-| Resend graceful fallback | `sendEmail()` nunca lança exceção — erros são `console.error`. Se `RESEND_API_KEY` ausente, apenas avisa no log e segue. Fluxo principal nunca é interrompido por falha de e-mail. |
+| E-mail emergency via API route (não hook) | `SMTP_*` vars são server-only. Hook client-side chama `POST /api/email/maintenance-emergency` fire-and-forget. Cron chama `sendEmail()` diretamente (já server-side). |
+| nodemailer graceful fallback | `sendEmail()` nunca lança exceção — erros são `console.error`. Se `SMTP_HOST/USER/PASS` ausentes, apenas avisa no log e segue. Fluxo principal nunca é interrompido por falha de e-mail. |
+| nodemailer v6 (não v8) | nodemailer v8 não tem `@types/nodemailer`. v6.9.x tem tipos via `@types/nodemailer@6.4.x`. Porém `@types/nodemailer` não instala limpo neste projeto — solução: `src/types/nodemailer.d.ts` manual. |
+| `@next/bundle-analyzer` via require() condicional | `@next/bundle-analyzer` v16.2.x não existe no npm (Next.js 16 muito novo). Static import falha no build. Solução: `process.env.ANALYZE === 'true' ? require('@next/bundle-analyzer')({...}) : null`. |
+| GoTrue SMTP deve usar `--force-recreate` | `docker compose restart auth` NÃO relê o `.env` — o container continua com as vars antigas. Usar `docker compose up -d --force-recreate auth` para aplicar novas vars de ambiente. |
 | `preferences.notifications.email` já existia | O toggle de e-mail no perfil já existia como `notifEmail` (mapeado para `preferences.notifications.email`). Nenhuma migração necessária — campo já no JSONB. |
 | Multi-unidade com `activeUnitId` no Zustand (não na URL) | URL-based unit routing (ex: `/pinheiros/eventos`) forçaria refactor de todas as rotas. Zustand + localStorage = troca de unidade sem navegar. RLS garante isolamento no banco. |
 | `activeUnitId = null` = todas as unidades | super_admin/diretor veem dados agregados de todas as unidades quando null. Hooks não adicionam filtro unit_id nesse caso. Stats no dashboard somam todas as unidades. |
