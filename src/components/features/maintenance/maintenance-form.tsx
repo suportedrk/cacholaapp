@@ -73,6 +73,37 @@ const DAY_OF_WEEK_OPTS = [
   { value: '6', label: 'Sábado' },
 ]
 
+// base-ui renderiza o value bruto até o popup abrir (ItemText só monta quando o popup abre).
+// Por isso exibimos o label explicitamente nos triggers em vez de depender de SelectValue.
+const TYPE_OPTS = [
+  { value: 'emergency', label: '🔴 Emergencial' },
+  { value: 'preventive', label: '🔵 Preventiva' },
+  { value: 'punctual',   label: '🟡 Pontual' },
+  { value: 'recurring',  label: '🟢 Recorrente' },
+]
+const PRIORITY_OPTS = [
+  { value: 'critical', label: 'Crítica' },
+  { value: 'high',     label: 'Alta' },
+  { value: 'medium',   label: 'Média' },
+  { value: 'low',      label: 'Baixa' },
+]
+const STATUS_OPTS = [
+  { value: 'open',           label: 'Aberta' },
+  { value: 'in_progress',    label: 'Em Andamento' },
+  { value: 'waiting_parts',  label: 'Aguardando Peças' },
+  { value: 'completed',      label: 'Concluída' },
+  { value: 'cancelled',      label: 'Cancelada' },
+]
+const FREQ_OPTS = [
+  { value: 'daily',   label: 'Diário' },
+  { value: 'weekly',  label: 'Semanal' },
+  { value: 'monthly', label: 'Mensal' },
+]
+
+function findLabel<T extends { value: string; label: string }>(opts: T[], value: string): string {
+  return opts.find((o) => o.value === value)?.label ?? value
+}
+
 // ─────────────────────────────────────────────────────────────
 // COMPONENTE
 // ─────────────────────────────────────────────────────────────
@@ -225,13 +256,14 @@ export function MaintenanceForm({ order, onSuccess }: Props) {
             <Label>Tipo <span className="text-destructive">*</span></Label>
             <Select value={form.type} onValueChange={(v) => set('type', v)}>
               <SelectTrigger className={cn(errors.type && 'border-destructive')}>
-                <SelectValue />
+                <span data-slot="select-value" className="flex flex-1 text-left">
+                  {findLabel(TYPE_OPTS, form.type)}
+                </span>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="emergency">🔴 Emergencial</SelectItem>
-                <SelectItem value="preventive">🔵 Preventiva</SelectItem>
-                <SelectItem value="punctual">🟡 Pontual</SelectItem>
-                <SelectItem value="recurring">🟢 Recorrente</SelectItem>
+                {TYPE_OPTS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -240,12 +272,15 @@ export function MaintenanceForm({ order, onSuccess }: Props) {
           <div className="space-y-1.5">
             <Label>Prioridade</Label>
             <Select value={form.priority} onValueChange={(v) => set('priority', v)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <span data-slot="select-value" className="flex flex-1 text-left">
+                  {findLabel(PRIORITY_OPTS, form.priority)}
+                </span>
+              </SelectTrigger>
               <SelectContent>
-                <SelectItem value="critical">Crítica</SelectItem>
-                <SelectItem value="high">Alta</SelectItem>
-                <SelectItem value="medium">Média</SelectItem>
-                <SelectItem value="low">Baixa</SelectItem>
+                {PRIORITY_OPTS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -254,13 +289,15 @@ export function MaintenanceForm({ order, onSuccess }: Props) {
           <div className="space-y-1.5">
             <Label>Status</Label>
             <Select value={form.status} onValueChange={(v) => set('status', v)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <span data-slot="select-value" className="flex flex-1 text-left">
+                  {findLabel(STATUS_OPTS, form.status)}
+                </span>
+              </SelectTrigger>
               <SelectContent>
-                <SelectItem value="open">Aberta</SelectItem>
-                <SelectItem value="in_progress">Em Andamento</SelectItem>
-                <SelectItem value="waiting_parts">Aguardando Peças</SelectItem>
-                <SelectItem value="completed">Concluída</SelectItem>
-                <SelectItem value="cancelled">Cancelada</SelectItem>
+                {STATUS_OPTS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -290,14 +327,22 @@ export function MaintenanceForm({ order, onSuccess }: Props) {
           <div className="space-y-1.5">
             <Label>Equipamento / Ativo</Label>
             <Select
-              value={form.equipment_id || '__none__'}
-              onValueChange={(v) => set('equipment_id', v === '__none__' ? '' : v)}
+              value={form.equipment_id || null}
+              onValueChange={(v) => set('equipment_id', v ?? '')}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Selecionar equipamento..." />
+                {form.equipment_id ? (
+                  <span data-slot="select-value" className="flex flex-1 text-left">
+                    {(() => {
+                      const eq = equipmentList.find((e) => e.id === form.equipment_id)
+                      return eq ? `${eq.name}${eq.location ? ` — ${eq.location}` : ''}` : ''
+                    })()}
+                  </span>
+                ) : (
+                  <SelectValue placeholder="Selecionar equipamento..." />
+                )}
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="__none__">Nenhum</SelectItem>
                 {equipmentList.map((eq) => (
                   <SelectItem key={eq.id} value={eq.id}>
                     {eq.name}{eq.location ? ` — ${eq.location}` : ''}
@@ -343,14 +388,24 @@ export function MaintenanceForm({ order, onSuccess }: Props) {
           <div className="space-y-1.5">
             <Label>Fornecedor externo</Label>
             <Select
-              value={form.supplier_id || '__none__'}
-              onValueChange={(v) => set('supplier_id', v === '__none__' ? '' : v)}
+              value={form.supplier_id || null}
+              onValueChange={(v) => set('supplier_id', v ?? '')}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Selecionar fornecedor..." />
+                {form.supplier_id ? (
+                  <span data-slot="select-value" className="flex flex-1 text-left">
+                    {(() => {
+                      const s = suppliers.find((x) => x.id === form.supplier_id)
+                      return s
+                        ? `${s.trade_name ?? s.company_name}${s.category ? ` (${s.category})` : ''}`
+                        : ''
+                    })()}
+                  </span>
+                ) : (
+                  <SelectValue placeholder="Selecionar fornecedor..." />
+                )}
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="__none__">Nenhum</SelectItem>
                 {suppliers.map((s) => (
                   <SelectItem key={s.id} value={s.id}>
                     {s.trade_name ?? s.company_name}
@@ -392,11 +447,15 @@ export function MaintenanceForm({ order, onSuccess }: Props) {
                 value={form.recurrence_frequency}
                 onValueChange={(v) => set('recurrence_frequency', v)}
               >
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <span data-slot="select-value" className="flex flex-1 text-left">
+                    {findLabel(FREQ_OPTS, form.recurrence_frequency)}
+                  </span>
+                </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="daily">Diário</SelectItem>
-                  <SelectItem value="weekly">Semanal</SelectItem>
-                  <SelectItem value="monthly">Mensal</SelectItem>
+                  {FREQ_OPTS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -425,7 +484,11 @@ export function MaintenanceForm({ order, onSuccess }: Props) {
                   value={form.recurrence_day_of_week}
                   onValueChange={(v) => set('recurrence_day_of_week', v)}
                 >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger>
+                    <span data-slot="select-value" className="flex flex-1 text-left">
+                      {findLabel(DAY_OF_WEEK_OPTS, form.recurrence_day_of_week)}
+                    </span>
+                  </SelectTrigger>
                   <SelectContent>
                     {DAY_OF_WEEK_OPTS.map((d) => (
                       <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
