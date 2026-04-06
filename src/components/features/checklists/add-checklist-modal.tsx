@@ -13,6 +13,9 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 import { useChecklistTemplates } from '@/hooks/use-checklists'
 import type { TemplateWithItems } from '@/types/database.types'
@@ -145,18 +148,19 @@ export function AddChecklistModal({
 
               {/* Responsável */}
               <div className="space-y-1.5">
-                <Label htmlFor="cl-assigned" className="text-sm">Responsável</Label>
-                <select
-                  id="cl-assigned"
-                  value={assignedTo}
-                  onChange={(e) => setAssignedTo(e.target.value)}
-                  className="w-full h-9 rounded-lg border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                >
-                  <option value="">Sem responsável</option>
-                  {users.map((u) => (
-                    <option key={u.id} value={u.id}>{u.name}</option>
-                  ))}
-                </select>
+                <Label className="text-sm">Responsável</Label>
+                <Select value={assignedTo || null} onValueChange={(v) => setAssignedTo(v ?? '')}>
+                  <SelectTrigger className="h-9">
+                    {assignedTo
+                      ? <span data-slot="select-value" className="flex flex-1 text-left">{users.find((u) => u.id === assignedTo)?.name ?? assignedTo}</span>
+                      : <SelectValue placeholder="Sem responsável" />}
+                  </SelectTrigger>
+                  <SelectContent>
+                    {users.map((u) => (
+                      <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Data limite */}

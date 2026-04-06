@@ -144,14 +144,15 @@ export function QuickCostSheet({ open, onOpenChange, orderId }: Props) {
           <div className="space-y-1.5">
             <Label>Tipo *</Label>
             <Select
-              value={costType || '__none__'}
-              onValueChange={(v) => { setCostType(v === '__none__' ? '' : v as MaintenanceCostType); if (errors.type) setErrors((p) => ({ ...p, type: '' })) }}
+              value={costType || null}
+              onValueChange={(v) => { setCostType(v as MaintenanceCostType); if (errors.type) setErrors((p) => ({ ...p, type: '' })) }}
             >
               <SelectTrigger className={`h-12 text-base ${errors.type ? 'border-destructive' : ''}`}>
-                <SelectValue placeholder="Selecionar tipo..." />
+                {costType
+                  ? <span data-slot="select-value" className="flex flex-1 text-left">{COST_TYPE_LABELS[costType as MaintenanceCostType]}</span>
+                  : <SelectValue placeholder="Selecionar tipo..." />}
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="__none__">Selecionar tipo...</SelectItem>
                 {(Object.entries(COST_TYPE_LABELS) as [MaintenanceCostType, string][]).map(([k, v]) => (
                   <SelectItem key={k} value={k}>{v}</SelectItem>
                 ))}

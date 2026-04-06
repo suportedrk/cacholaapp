@@ -181,14 +181,15 @@ export function CostFormModal({ open, onOpenChange, preOrderId }: CostFormModalP
           <div className="space-y-1.5">
             <Label>Ordem de Serviço <span className="text-destructive">*</span></Label>
             <Select
-              value={form.order_id || '__none__'}
-              onValueChange={(v) => set('order_id', v === '__none__' ? '' : (v ?? ''))}
+              value={form.order_id || null}
+              onValueChange={(v) => set('order_id', v ?? '')}
             >
               <SelectTrigger className={errors.order_id ? 'border-destructive' : ''}>
-                <SelectValue placeholder="Selecionar ordem..." />
+                {form.order_id
+                  ? <span data-slot="select-value" className="flex flex-1 text-left">{orders.find((o) => o.id === form.order_id)?.title ?? form.order_id}</span>
+                  : <SelectValue placeholder="Selecionar ordem..." />}
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="__none__">Selecionar ordem...</SelectItem>
                 {orders.map((o) => (
                   <SelectItem key={o.id} value={o.id}>
                     {o.title}
@@ -239,14 +240,15 @@ export function CostFormModal({ open, onOpenChange, preOrderId }: CostFormModalP
             <div className="space-y-1.5">
               <Label>Tipo <span className="text-destructive">*</span></Label>
               <Select
-                value={form.cost_type || '__none__'}
-                onValueChange={(v) => set('cost_type', (v === '__none__' ? '' : (v ?? '')) as MaintenanceCostType | '')}
+                value={form.cost_type || null}
+                onValueChange={(v) => set('cost_type', (v ?? '') as MaintenanceCostType | '')}
               >
                 <SelectTrigger className={errors.cost_type ? 'border-destructive' : ''}>
-                  <SelectValue placeholder="Tipo..." />
+                  {form.cost_type
+                    ? <span data-slot="select-value" className="flex flex-1 text-left">{COST_TYPE_LABELS[form.cost_type as MaintenanceCostType]}</span>
+                    : <SelectValue placeholder="Tipo..." />}
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__none__">Tipo...</SelectItem>
                   {(Object.entries(COST_TYPE_LABELS) as [MaintenanceCostType, string][]).map(([k, v]) => (
                     <SelectItem key={k} value={k}>{v}</SelectItem>
                   ))}

@@ -38,6 +38,13 @@ import { useState } from 'react'
 import { useOrderCosts, useCurrentUser, MANAGER_ROLES, formatBRL } from '@/hooks/use-maintenance-costs'
 import type { MaintenanceStatus } from '@/types/database.types'
 
+const INLINE_STATUS_OPTS: { value: MaintenanceStatus; label: string }[] = [
+  { value: 'open',          label: 'Aberta' },
+  { value: 'in_progress',   label: 'Em Andamento' },
+  { value: 'waiting_parts', label: 'Aguardando Peças' },
+  { value: 'completed',     label: 'Concluída' },
+]
+
 const FREQ_LABEL: Record<string, string> = {
   daily: 'Diário', weekly: 'Semanal', monthly: 'Mensal',
 }
@@ -191,13 +198,14 @@ export default function DetalheOrdemPage({
               onValueChange={(v) => changeStatus.mutate({ id: order.id, status: v as MaintenanceStatus })}
             >
               <SelectTrigger className="h-8 text-xs w-44">
-                <SelectValue />
+                <span data-slot="select-value" className="flex flex-1 text-left">
+                  {INLINE_STATUS_OPTS.find((o) => o.value === order.status)?.label ?? order.status}
+                </span>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="open">Aberta</SelectItem>
-                <SelectItem value="in_progress">Em Andamento</SelectItem>
-                <SelectItem value="waiting_parts">Aguardando Peças</SelectItem>
-                <SelectItem value="completed">Concluída</SelectItem>
+                {INLINE_STATUS_OPTS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

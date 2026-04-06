@@ -5,7 +5,7 @@ import { format, subDays, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import {
   Calendar, ChevronDown, ChevronUp, ClipboardList,
-  RefreshCw, Search, User, Camera,
+  RefreshCw, Search, Camera,
 } from 'lucide-react'
 import {
   Dialog, DialogContent, DialogTitle,
@@ -14,6 +14,9 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 import {
   useCreateChecklist,
@@ -523,19 +526,18 @@ export function CreateChecklistModal({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="cl-priority" className="text-sm font-medium">Prioridade</Label>
-              <div className="relative">
-                <select
-                  id="cl-priority"
-                  value={priority}
-                  onChange={(e) => setPriority(e.target.value as Priority)}
-                  className="w-full h-10 rounded-lg border border-border bg-background px-3 pr-8 text-sm text-foreground appearance-none focus:outline-none focus:ring-2 focus:ring-ring transition-colors hover:border-border-strong"
-                >
+              <Select value={priority} onValueChange={(v) => v && setPriority(v as Priority)}>
+                <SelectTrigger className="h-10">
+                  <span data-slot="select-value" className="flex flex-1 text-left">
+                    {PRIORITY_LABELS[priority]}
+                  </span>
+                </SelectTrigger>
+                <SelectContent>
                   {PRIORITY_OPTIONS.map((p) => (
-                    <option key={p} value={p}>{PRIORITY_LABELS[p]}</option>
+                    <SelectItem key={p} value={p}>{PRIORITY_LABELS[p]}</SelectItem>
                   ))}
-                </select>
-                <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-              </div>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-1.5">
@@ -554,22 +556,19 @@ export function CreateChecklistModal({
 
           {/* ─── Responsável ─── */}
           <div className="space-y-1.5">
-            <Label htmlFor="cl-assigned" className="text-sm font-medium">Responsável</Label>
-            <div className="relative">
-              <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-              <select
-                id="cl-assigned"
-                value={assignedTo}
-                onChange={(e) => setAssignedTo(e.target.value)}
-                className="w-full h-10 rounded-lg border border-border bg-background pl-9 pr-8 text-sm text-foreground appearance-none focus:outline-none focus:ring-2 focus:ring-ring transition-colors hover:border-border-strong"
-              >
-                <option value="">Sem responsável</option>
+            <Label className="text-sm font-medium">Responsável</Label>
+            <Select value={assignedTo || null} onValueChange={(v) => setAssignedTo(v ?? '')}>
+              <SelectTrigger className="h-10">
+                {assignedTo
+                  ? <span data-slot="select-value" className="flex flex-1 text-left">{usersData.find((u) => u.id === assignedTo)?.name ?? assignedTo}</span>
+                  : <SelectValue placeholder="Sem responsável" />}
+              </SelectTrigger>
+              <SelectContent>
                 {usersData.map((u) => (
-                  <option key={u.id} value={u.id}>{u.name}</option>
+                  <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
                 ))}
-              </select>
-              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-            </div>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
