@@ -1,9 +1,11 @@
 import type { NextConfig } from 'next'
 import withPWA from '@ducanh2912/next-pwa'
-import BundleAnalyzer from '@next/bundle-analyzer'
 
 // Uso: ANALYZE=true npm run build
-const withBundleAnalyzer = BundleAnalyzer({ enabled: process.env.ANALYZE === 'true' })
+// @next/bundle-analyzer é opcional — não quebra o build se não estiver instalado
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const BundleAnalyzer = process.env.ANALYZE === 'true' ? require('@next/bundle-analyzer')({ enabled: true }) : null
+const withBundleAnalyzer = (cfg: NextConfig) => BundleAnalyzer ? BundleAnalyzer(cfg) : cfg
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,

@@ -56,7 +56,7 @@ export async function POST(request: Request) {
 
     if (toList.length === 0) return Response.json({ ok: true, sent: 0 })
 
-    const { subject, html } = tplMaintenanceEmergency(order.title, orderId)
+    const { subject, html } = tplMaintenanceEmergency({ orderTitle: order.title, orderId })
     await sendEmail(toList, subject, html)
 
     return Response.json({ ok: true, sent: toList.length })
