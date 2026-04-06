@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
 import { Loader2, UserPlus } from 'lucide-react'
 import { useIsReadOnly } from '@/hooks/use-read-only'
 import { Button } from '@/components/ui/button'
@@ -25,6 +26,7 @@ export default function NovoUsuarioPage() {
   const [role, setRole] = useState<UserRole>('vendedora')
   const [isPending, setIsPending] = useState(false)
   const isReadOnly = useIsReadOnly()
+  const queryClient = useQueryClient()
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -50,6 +52,8 @@ export default function NovoUsuarioPage() {
       }
 
       toast.success('Usuário criado com sucesso! Um e-mail de boas-vindas foi enviado.')
+      // Invalida o cache para a lista de usuários recarregar imediatamente
+      await queryClient.invalidateQueries({ queryKey: ['users'] })
       router.push(ROUTES.users)
     } catch {
       toast.error('Erro inesperado. Tente novamente.')

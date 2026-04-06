@@ -2,7 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 // Rotas públicas (não requerem autenticação)
-const PUBLIC_ROUTES = ['/login', '/recuperar-senha', '/auth/callback']
+const PUBLIC_ROUTES = ['/login', '/recuperar-senha', '/auth/callback', '/auth/confirm', '/email-templates']
 
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
