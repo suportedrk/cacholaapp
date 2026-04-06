@@ -13,6 +13,9 @@ import { InstallBanner } from '@/components/features/pwa/install-banner'
 import { SplashScreen } from '@/components/features/pwa/splash-screen'
 import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts'
 import { UnitAccentWrapper } from './unit-accent-wrapper'
+import { ImpersonateBanner } from './impersonate-banner'
+import { useImpersonateStore } from '@/stores/impersonate-store'
+import { cn } from '@/lib/utils'
 
 interface AppLayoutProps {
   children: React.ReactNode
@@ -43,6 +46,9 @@ export function AppLayout({ children }: AppLayoutProps) {
   const [scrolled, setScrolled]                 = useState(false)
   const mainRef = useRef<HTMLElement>(null)
 
+  // Banner de impersonate eleva o layout em 40px (h-10)
+  const isImpersonating = useImpersonateStore((s) => s.isImpersonating)
+
   // Restore collapse state from localStorage
   useEffect(() => {
     const stored = localStorage.getItem(COLLAPSED_KEY)
@@ -71,7 +77,10 @@ export function AppLayout({ children }: AppLayoutProps) {
 
   return (
     <UnitAccentWrapper>
-      <div className="flex h-svh bg-background overflow-hidden">
+      {/* Banner de impersonate — fixo acima de tudo, z-[60] */}
+      <ImpersonateBanner />
+
+      <div className={cn('flex bg-background overflow-hidden', isImpersonating ? 'h-[calc(100svh-2.5rem)]' : 'h-svh')}>
         {/* Global layers */}
         <OnboardingLayer />
         <KeyboardLayer />

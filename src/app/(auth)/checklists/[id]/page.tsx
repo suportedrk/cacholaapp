@@ -12,6 +12,7 @@ import { ConfirmDialog } from '@/components/shared/confirm-dialog'
 import { useOfflineChecklist } from '@/hooks/use-offline-checklist'
 import { useCompleteChecklist } from '@/hooks/use-checklists'
 import { useAuth } from '@/hooks/use-auth'
+import { useIsReadOnly } from '@/hooks/use-read-only'
 import { calcProgress } from '@/components/features/checklists/checklist-progress'
 import { cn } from '@/lib/utils'
 import { ChecklistDetailHeader } from './components/checklist-detail-header'
@@ -187,7 +188,8 @@ export default function ChecklistFillPage() {
 
   const isCompleted = checklist?.status === 'completed'
   const isCancelled = checklist?.status === 'cancelled'
-  const isReadOnly  = isCompleted || isCancelled
+  const isImpersonating = useIsReadOnly()
+  const isReadOnly  = isCompleted || isCancelled || isImpersonating
 
   // ── Loading ──
   if (isLoading) return <ChecklistLoadingSkeleton />

@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { Clock } from 'lucide-react'
+import { useIsReadOnly } from '@/hooks/use-read-only'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -25,6 +26,7 @@ export default function NovoTemplatePage() {
   const router = useRouter()
   const { profile } = useAuth()
   const createTemplate = useCreateTemplate()
+  const isReadOnly = useIsReadOnly()
   const { data: categories = [] } = useChecklistCategories()
   const { data: users = [] } = useUsers()
 
@@ -173,7 +175,7 @@ export default function NovoTemplatePage() {
         <Button
           size="sm"
           onClick={handleSave}
-          disabled={!isValid || createTemplate.isPending}
+          disabled={!isValid || createTemplate.isPending || isReadOnly}
         >
           {createTemplate.isPending ? 'Salvando...' : 'Salvar Template'}
         </Button>

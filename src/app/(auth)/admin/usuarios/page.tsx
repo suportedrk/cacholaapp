@@ -3,14 +3,17 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Search, UserPlus, Loader2, Users } from 'lucide-react'
+import { Search, UserPlus, Loader2, Users, Eye } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { UserAvatar } from '@/components/shared/user-avatar'
 import { StatusBadge } from '@/components/shared/status-badge'
 import { useUsers } from '@/hooks/use-users'
+import { useAuth } from '@/hooks/use-auth'
+import { useStartImpersonate } from '@/hooks/use-impersonate'
 import { ROLE_LABELS, ROUTES } from '@/lib/constants'
 import { cn } from '@/lib/utils'
+import type { UserRole } from '@/types/database.types'
 
 export default function UsuariosPage() {
   const router = useRouter()
@@ -21,6 +24,25 @@ export default function UsuariosPage() {
     search: search.length >= 2 ? search : undefined,
     isActive: filterActive,
   })
+
+  // realProfile = quem está realmente logado (não muda com impersonate)
+  const { realProfile } = useAuth()
+  const isSuperAdmin = realProfile?.role === 'super_admin'
+
+  const startImpersonate = useStartImpersonate()
+  // Rastrear qual botão está carregando (para feedback por linha)
+  const [loadingUserId, setLoadingUserId] = useState<string | null>(null)
+
+  async function handleViewAs(userId: string) {
+    setLoadingUserId(userId)
+    try {
+      await startImpersonate.mutateAsync(userId)
+      // Redirecionar para o dashboard com o contexto do usuário impersonado
+      router.push(ROUTES.dashboard)
+    } finally {
+      setLoadingUserId(null)
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -109,39 +131,66 @@ export default function UsuariosPage() {
           </div>
 
           <ul className="divide-y divide-border">
-            {users.map((user) => (
-              <li key={user.id}>
-                <div className="flex items-center gap-3 px-4 py-3 hover:bg-accent/50 transition-colors md:grid md:grid-cols-[auto_1fr_auto_auto_auto] md:gap-4">
-                  <UserAvatar name={user.name} avatarUrl={user.avatar_url} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">{user.name}</p>
-                    <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+            {users.map((user) => {
+              const canViewAs =
+                isSuperAdmin &&
+                user.id !== realProfile?.id &&
+                (user.role as UserRole) !== 'super_admin'
+              const isLoadingThis = loadingUserId === user.id
+
+              return (
+                <li key={user.id}>
+                  <div className="flex items-center gap-3 px-4 py-3 hover:bg-accent/50 transition-colors md:grid md:grid-cols-[auto_1fr_auto_auto_auto] md:gap-4">
+                    <UserAvatar name={user.name} avatarUrl={user.avatar_url} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{user.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                    </div>
+                    <div className="hidden md:block">
+                      <span className="text-xs text-muted-foreground">
+                        {ROLE_LABELS[user.role] ?? user.role}
+                      </span>
+                    </div>
+                    <div className="hidden md:block">
+                      <StatusBadge active={user.is_active} />
+                    </div>
+                    <div className="flex items-center gap-1 ml-auto md:ml-0">
+                      {/* Botão "Ver como" — apenas super_admin, excluindo si mesmo e outros super_admins */}
+                      {canViewAs && (
+                        <button
+                          onClick={() => handleViewAs(user.id)}
+                          disabled={isLoadingThis || loadingUserId !== null}
+                          title={`Ver como ${user.name}`}
+                          aria-label={`Visualizar sistema como ${user.name}`}
+                          className={cn(
+                            'p-2 rounded-lg transition-colors min-h-[36px] flex items-center justify-center',
+                            'text-muted-foreground hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30',
+                            (isLoadingThis || loadingUserId !== null) && 'opacity-50 cursor-not-allowed'
+                          )}
+                        >
+                          {isLoadingThis
+                            ? <Loader2 className="w-4 h-4 animate-spin" />
+                            : <Eye className="w-4 h-4" />
+                          }
+                        </button>
+                      )}
+                      <Link
+                        href={`${ROUTES.users}/${user.id}`}
+                        className="px-3 py-1.5 text-xs font-medium rounded-lg text-primary hover:bg-primary/10 transition-colors min-h-[36px] flex items-center"
+                      >
+                        Editar
+                      </Link>
+                      <Link
+                        href={`${ROUTES.users}/${user.id}/permissoes`}
+                        className="px-3 py-1.5 text-xs font-medium rounded-lg text-muted-foreground hover:bg-accent transition-colors min-h-[36px] flex items-center"
+                      >
+                        Permissões
+                      </Link>
+                    </div>
                   </div>
-                  <div className="hidden md:block">
-                    <span className="text-xs text-muted-foreground">
-                      {ROLE_LABELS[user.role] ?? user.role}
-                    </span>
-                  </div>
-                  <div className="hidden md:block">
-                    <StatusBadge active={user.is_active} />
-                  </div>
-                  <div className="flex items-center gap-1 ml-auto md:ml-0">
-                    <Link
-                      href={`${ROUTES.users}/${user.id}`}
-                      className="px-3 py-1.5 text-xs font-medium rounded-lg text-primary hover:bg-primary/10 transition-colors min-h-[36px] flex items-center"
-                    >
-                      Editar
-                    </Link>
-                    <Link
-                      href={`${ROUTES.users}/${user.id}/permissoes`}
-                      className="px-3 py-1.5 text-xs font-medium rounded-lg text-muted-foreground hover:bg-accent transition-colors min-h-[36px] flex items-center"
-                    >
-                      Permissões
-                    </Link>
-                  </div>
-                </div>
-              </li>
-            ))}
+                </li>
+              )
+            })}
           </ul>
         </div>
       )}
