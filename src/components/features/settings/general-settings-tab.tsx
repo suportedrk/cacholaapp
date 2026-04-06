@@ -109,7 +109,9 @@ export function GeneralSettingsTab() {
             <Label>Fuso horário</Label>
             <Select value={timezone} onValueChange={(v: string | null) => setTimezone(v ?? 'America/Sao_Paulo')}>
               <SelectTrigger>
-                <SelectValue />
+                <span data-slot="select-value" className="flex flex-1 text-left">
+                  {TIMEZONES.find((tz) => tz.value === timezone)?.label ?? timezone}
+                </span>
               </SelectTrigger>
               <SelectContent>
                 {TIMEZONES.map((tz) => (
@@ -123,7 +125,9 @@ export function GeneralSettingsTab() {
             <Label>Formato de data</Label>
             <Select value={dateFormat} onValueChange={(v: string | null) => setDateFormat(v ?? 'DD/MM/YYYY')}>
               <SelectTrigger>
-                <SelectValue />
+                <span data-slot="select-value" className="flex flex-1 text-left">
+                  {DATE_FORMATS.find((f) => f.value === dateFormat)?.label ?? dateFormat}
+                </span>
               </SelectTrigger>
               <SelectContent>
                 {DATE_FORMATS.map((f) => (

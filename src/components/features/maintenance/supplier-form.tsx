@@ -197,14 +197,15 @@ export function SupplierForm({ supplier, onSuccess, onCancel }: Props) {
           <div className="space-y-1.5">
             <Label>Categoria</Label>
             <Select
-              value={form.category || '__none__'}
-              onValueChange={(v) => set('category', v === '__none__' ? '' : (v ?? ''))}
+              value={form.category || null}
+              onValueChange={(v) => set('category', v ?? '')}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Selecionar categoria..." />
+                {form.category
+                  ? <span data-slot="select-value" className="flex flex-1 text-left">{form.category}</span>
+                  : <SelectValue placeholder="Selecionar categoria..." />}
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="__none__">Sem categoria</SelectItem>
                 {SUPPLIER_CATEGORIES.map((cat) => (
                   <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                 ))}

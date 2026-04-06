@@ -282,7 +282,9 @@ export function EventForm({ event }: EventFormProps) {
               onValueChange={(v) => setField('status', (v ?? 'pending') as EventStatus)}
             >
               <SelectTrigger>
-                <SelectValue />
+                <span data-slot="select-value" className="flex flex-1 text-left">
+                  {STATUS_OPTIONS.find((o) => o.value === form.status)?.label ?? form.status}
+                </span>
               </SelectTrigger>
               <SelectContent>
                 {STATUS_OPTIONS.map((o) => (
@@ -363,11 +365,13 @@ export function EventForm({ event }: EventFormProps) {
           <div className="space-y-1.5">
             <Label>Tipo de Evento</Label>
             <Select
-              value={form.event_type_id}
+              value={form.event_type_id || null}
               onValueChange={(v) => setField('event_type_id', v ?? '')}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Selecionar tipo..." />
+                {form.event_type_id
+                  ? <span data-slot="select-value" className="flex flex-1 text-left">{eventTypes.find((t) => t.id === form.event_type_id)?.name ?? form.event_type_id}</span>
+                  : <SelectValue placeholder="Selecionar tipo..." />}
               </SelectTrigger>
               <SelectContent>
                 {eventTypes.map((t) => (
@@ -380,11 +384,13 @@ export function EventForm({ event }: EventFormProps) {
           <div className="space-y-1.5">
             <Label>Pacote Contratado</Label>
             <Select
-              value={form.package_id}
+              value={form.package_id || null}
               onValueChange={(v) => setField('package_id', v ?? '')}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Selecionar pacote..." />
+                {form.package_id
+                  ? <span data-slot="select-value" className="flex flex-1 text-left">{packages.find((p) => p.id === form.package_id)?.name ?? form.package_id}</span>
+                  : <SelectValue placeholder="Selecionar pacote..." />}
               </SelectTrigger>
               <SelectContent>
                 {packages.map((p) => (
@@ -397,11 +403,13 @@ export function EventForm({ event }: EventFormProps) {
           <div className="space-y-1.5">
             <Label>Local / Salão</Label>
             <Select
-              value={form.venue_id}
+              value={form.venue_id || null}
               onValueChange={(v) => setField('venue_id', v ?? '')}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Selecionar salão..." />
+                {form.venue_id
+                  ? <span data-slot="select-value" className="flex flex-1 text-left">{(() => { const venue = venues.find((v) => v.id === form.venue_id); return venue ? `${venue.name}${venue.capacity ? ` (cap. ${venue.capacity})` : ''}` : form.venue_id })()}</span>
+                  : <SelectValue placeholder="Selecionar salão..." />}
               </SelectTrigger>
               <SelectContent>
                 {venues.map((v) => (

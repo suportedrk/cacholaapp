@@ -10,6 +10,10 @@ import { useProviders } from '@/hooks/use-providers'
 import { useProviderScheduleConflicts, useAddProviderToEvent } from '@/hooks/use-event-providers'
 import { useDebounce } from '@/hooks/use-debounce'
 import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select'
+import { Label } from '@/components/ui/label'
+import {
   PRICE_TYPE_LABELS,
   EVENT_PROVIDER_STATUS_LABELS,
 } from '@/types/providers'
@@ -198,39 +202,43 @@ export function AddProviderModal({ eventId, eventDate, existingProviderIds, onCl
                 {/* Category — only show when provider has multiple services */}
                 {providerCategories.length > 1 && (
                   <div>
-                    <label className="block text-xs font-medium text-text-secondary mb-1.5">
+                    <Label className="text-xs font-medium text-text-secondary mb-1.5 block">
                       Categoria <span className="text-destructive">*</span>
-                    </label>
-                    <select
-                      value={categoryId}
-                      onChange={(e) => setCategoryId(e.target.value)}
-                      required
-                      className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-ring"
-                    >
-                      <option value="">Selecionar categoria...</option>
-                      {providerCategories.map((s) => (
-                        <option key={s.id} value={s.category_id}>
-                          {s.category?.name ?? 'Sem nome'}
-                        </option>
-                      ))}
-                    </select>
+                    </Label>
+                    <Select value={categoryId || null} onValueChange={(v) => setCategoryId(v ?? '')}>
+                      <SelectTrigger className="h-10">
+                        {categoryId
+                          ? <span data-slot="select-value" className="flex flex-1 text-left">{providerCategories.find((s) => s.category_id === categoryId)?.category?.name ?? categoryId}</span>
+                          : <SelectValue placeholder="Selecionar categoria..." />}
+                      </SelectTrigger>
+                      <SelectContent>
+                        {providerCategories.map((s) => (
+                          <SelectItem key={s.id} value={s.category_id}>
+                            {s.category?.name ?? 'Sem nome'}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 )}
 
                 {/* Status */}
                 <div>
-                  <label className="block text-xs font-medium text-text-secondary mb-1.5">
+                  <Label className="text-xs font-medium text-text-secondary mb-1.5 block">
                     Status
-                  </label>
-                  <select
-                    value={status}
-                    onChange={(e) => setStatus(e.target.value as EventProviderStatus)}
-                    className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-ring"
-                  >
-                    {(Object.entries(EVENT_PROVIDER_STATUS_LABELS) as [EventProviderStatus, string][]).map(([k, v]) => (
-                      <option key={k} value={k}>{v}</option>
-                    ))}
-                  </select>
+                  </Label>
+                  <Select value={status} onValueChange={(v) => v && setStatus(v as EventProviderStatus)}>
+                    <SelectTrigger className="h-10">
+                      <span data-slot="select-value" className="flex flex-1 text-left">
+                        {EVENT_PROVIDER_STATUS_LABELS[status]}
+                      </span>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(Object.entries(EVENT_PROVIDER_STATUS_LABELS) as [EventProviderStatus, string][]).map(([k, v]) => (
+                        <SelectItem key={k} value={k}>{v}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 {/* Price + type */}
@@ -249,18 +257,21 @@ export function AddProviderModal({ eventId, eventDate, existingProviderIds, onCl
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-text-secondary mb-1.5">
+                    <Label className="text-xs font-medium text-text-secondary mb-1.5 block">
                       Cobrança
-                    </label>
-                    <select
-                      value={priceType}
-                      onChange={(e) => setPriceType(e.target.value as PriceType)}
-                      className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-ring"
-                    >
-                      {(Object.entries(PRICE_TYPE_LABELS) as [PriceType, string][]).map(([k, v]) => (
-                        <option key={k} value={k}>{v}</option>
-                      ))}
-                    </select>
+                    </Label>
+                    <Select value={priceType} onValueChange={(v) => v && setPriceType(v as PriceType)}>
+                      <SelectTrigger className="h-10">
+                        <span data-slot="select-value" className="flex flex-1 text-left">
+                          {PRICE_TYPE_LABELS[priceType]}
+                        </span>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(Object.entries(PRICE_TYPE_LABELS) as [PriceType, string][]).map(([k, v]) => (
+                          <SelectItem key={k} value={k}>{v}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 

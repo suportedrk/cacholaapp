@@ -128,7 +128,9 @@ export function CostsTab() {
             onValueChange={(v) => setFilters((f) => ({ ...f, period: (v ?? 'this_month') as CostFilters['period'] }))}
           >
             <SelectTrigger className="h-8 text-xs w-40">
-              <SelectValue />
+              <span data-slot="select-value" className="flex flex-1 text-left">
+                {PERIOD_OPTIONS.find((o) => o.value === (filters.period ?? 'this_month'))?.label ?? (filters.period ?? 'this_month')}
+              </span>
             </SelectTrigger>
             <SelectContent>
               {PERIOD_OPTIONS.map((opt) => (

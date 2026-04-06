@@ -128,14 +128,15 @@ function ContactForm({ supplierId, initial, contactId, onDone }: ContactFormProp
         <div className="space-y-1">
           <Label>Função</Label>
           <Select
-            value={form.role || '__none__'}
-            onValueChange={(v) => set('role', v === '__none__' ? '' : (v ?? ''))}
+            value={form.role || null}
+            onValueChange={(v) => set('role', v ?? '')}
           >
             <SelectTrigger className="h-9">
-              <SelectValue placeholder="Selecionar..." />
+              {form.role
+                ? <span data-slot="select-value" className="flex flex-1 text-left">{form.role}</span>
+                : <SelectValue placeholder="Selecionar..." />}
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="__none__">Sem função</SelectItem>
               {ROLE_OPTIONS.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
             </SelectContent>
           </Select>
