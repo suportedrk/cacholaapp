@@ -47,7 +47,7 @@ export async function POST(request: Request) {
       email,
       {
         data: { name, phone, role },
-        redirectTo: `${appUrl}/auth/callback`,
+        redirectTo: `${appUrl}/auth/confirm`,
       },
     )
 
