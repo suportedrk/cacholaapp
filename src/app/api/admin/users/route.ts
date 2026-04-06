@@ -38,11 +38,18 @@ export async function POST(request: Request) {
 
     const adminSupabase = await createAdminClient()
 
-    const { data: newUser, error: createError } = await adminSupabase.auth.admin.createUser({
+    // inviteUserByEmail envia e-mail de convite via GoTrue (SMTP configurado)
+    // e gera token mágico para o usuário definir a senha.
+    // O campo "data" equivale a user_metadata — lido pelo trigger handle_new_user().
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://cachola.cloud'
+
+    const { data: newUser, error: createError } = await adminSupabase.auth.admin.inviteUserByEmail(
       email,
-      email_confirm: false,
-      user_metadata: { name, phone, role },
-    })
+      {
+        data: { name, phone, role },
+        redirectTo: `${appUrl}/auth/callback`,
+      },
+    )
 
     if (createError) {
       const msg = createError.message.includes('already registered')
