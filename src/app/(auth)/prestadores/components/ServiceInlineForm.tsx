@@ -124,16 +124,14 @@ export function ServiceInlineForm({
             <SelectTrigger className={cn('w-full', errors.category_id && 'border-destructive')}>
               {draft.category_id
                 ? <span data-slot="select-value" className="flex flex-1 text-left">{availableCategories.find((c) => c.id === draft.category_id)?.name ?? 'Categoria'}</span>
-                : <SelectValue placeholder="Selecione..." />}
+                : <SelectValue placeholder={availableCategories.length === 0 ? 'Sem categorias disponíveis' : 'Selecione...'} />}
             </SelectTrigger>
             <SelectContent>
-              {availableCategories.length === 0
-                ? <SelectItem value="__empty__" disabled>Nenhuma categoria disponível</SelectItem>
-                : availableCategories.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.id}>
-                      {cat.icon} {cat.name}
-                    </SelectItem>
-                  ))}
+              {availableCategories.map((cat) => (
+                <SelectItem key={cat.id} value={cat.id}>
+                  {cat.icon} {cat.name}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
           {errors.category_id && (

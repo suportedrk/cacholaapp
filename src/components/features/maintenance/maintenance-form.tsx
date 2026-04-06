@@ -314,14 +314,12 @@ export function MaintenanceForm({ order, onSuccess }: Props) {
             <Label>Setor / Local</Label>
             <Select value={form.sector_id} onValueChange={(v) => set('sector_id', v)}>
               <SelectTrigger>
-                <SelectValue placeholder="Selecionar setor..." />
+                <SelectValue placeholder={sectors.length === 0 ? 'Sem setores cadastrados' : 'Selecionar setor...'} />
               </SelectTrigger>
               <SelectContent>
-                {sectors.length === 0
-                  ? <SelectItem value="__empty__" disabled>Nenhum setor cadastrado</SelectItem>
-                  : sectors.map((s) => (
-                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                    ))}
+                {sectors.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -341,17 +339,15 @@ export function MaintenanceForm({ order, onSuccess }: Props) {
                     })()}
                   </span>
                 ) : (
-                  <SelectValue placeholder="Selecionar equipamento..." />
+                  <SelectValue placeholder={equipmentList.length === 0 ? 'Sem equipamentos cadastrados' : 'Selecionar equipamento...'} />
                 )}
               </SelectTrigger>
               <SelectContent>
-                {equipmentList.length === 0
-                  ? <SelectItem value="__empty__" disabled>Nenhum equipamento cadastrado</SelectItem>
-                  : equipmentList.map((eq) => (
-                      <SelectItem key={eq.id} value={eq.id}>
-                        {eq.name}{eq.location ? ` — ${eq.location}` : ''}
-                      </SelectItem>
-                    ))}
+                {equipmentList.map((eq) => (
+                  <SelectItem key={eq.id} value={eq.id}>
+                    {eq.name}{eq.location ? ` — ${eq.location}` : ''}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -406,18 +402,16 @@ export function MaintenanceForm({ order, onSuccess }: Props) {
                     })()}
                   </span>
                 ) : (
-                  <SelectValue placeholder="Selecionar fornecedor..." />
+                  <SelectValue placeholder={suppliers.length === 0 ? 'Sem fornecedores cadastrados' : 'Selecionar fornecedor...'} />
                 )}
               </SelectTrigger>
               <SelectContent>
-                {suppliers.length === 0
-                  ? <SelectItem value="__empty__" disabled>Nenhum fornecedor cadastrado</SelectItem>
-                  : suppliers.map((s) => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {s.trade_name ?? s.company_name}
-                        {s.category ? ` (${s.category})` : ''}
-                      </SelectItem>
-                    ))}
+                {suppliers.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.trade_name ?? s.company_name}
+                    {s.category ? ` (${s.category})` : ''}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

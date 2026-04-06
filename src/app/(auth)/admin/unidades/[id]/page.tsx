@@ -179,11 +179,9 @@ export default function EditarUnidadePage() {
                   : <SelectValue placeholder="Selecionar usuário..." />}
               </SelectTrigger>
               <SelectContent>
-                {availableUsers.length === 0
-                  ? <SelectItem value="__empty__" disabled>Nenhum usuário disponível</SelectItem>
-                  : availableUsers.map((u) => (
-                      <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
-                    ))}
+                {availableUsers.map((u) => (
+                  <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <Select

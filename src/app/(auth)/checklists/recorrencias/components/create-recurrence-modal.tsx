@@ -206,14 +206,12 @@ export function CreateRecurrenceModal({
               <SelectTrigger className="w-full">
                 {templateId
                   ? <span data-slot="select-value" className="flex flex-1 text-left">{templates.find((t) => t.id === templateId)?.title ?? 'Template'}</span>
-                  : <SelectValue placeholder="Selecione um template…" />}
+                  : <SelectValue placeholder={templates.length === 0 ? 'Sem templates disponíveis' : 'Selecione um template…'} />}
               </SelectTrigger>
               <SelectContent>
-                {templates.length === 0
-                  ? <SelectItem value="__empty__" disabled>Nenhum template disponível</SelectItem>
-                  : templates.map((t) => (
-                      <SelectItem key={t.id} value={t.id}>{t.title}</SelectItem>
-                    ))}
+                {templates.map((t) => (
+                  <SelectItem key={t.id} value={t.id}>{t.title}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

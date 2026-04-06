@@ -371,14 +371,12 @@ export function EventForm({ event }: EventFormProps) {
               <SelectTrigger>
                 {form.event_type_id
                   ? <span data-slot="select-value" className="flex flex-1 text-left">{eventTypes.find((t) => t.id === form.event_type_id)?.name ?? form.event_type_id}</span>
-                  : <SelectValue placeholder="Selecionar tipo..." />}
+                  : <SelectValue placeholder={eventTypes.length === 0 ? 'Sem tipos cadastrados' : 'Selecionar tipo...'} />}
               </SelectTrigger>
               <SelectContent>
-                {eventTypes.length === 0
-                  ? <SelectItem value="__empty__" disabled>Nenhum tipo cadastrado</SelectItem>
-                  : eventTypes.map((t) => (
-                      <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                    ))}
+                {eventTypes.map((t) => (
+                  <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -392,14 +390,12 @@ export function EventForm({ event }: EventFormProps) {
               <SelectTrigger>
                 {form.package_id
                   ? <span data-slot="select-value" className="flex flex-1 text-left">{packages.find((p) => p.id === form.package_id)?.name ?? form.package_id}</span>
-                  : <SelectValue placeholder="Selecionar pacote..." />}
+                  : <SelectValue placeholder={packages.length === 0 ? 'Sem pacotes cadastrados' : 'Selecionar pacote...'} />}
               </SelectTrigger>
               <SelectContent>
-                {packages.length === 0
-                  ? <SelectItem value="__empty__" disabled>Nenhum pacote cadastrado</SelectItem>
-                  : packages.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                    ))}
+                {packages.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -413,16 +409,14 @@ export function EventForm({ event }: EventFormProps) {
               <SelectTrigger>
                 {form.venue_id
                   ? <span data-slot="select-value" className="flex flex-1 text-left">{(() => { const venue = venues.find((v) => v.id === form.venue_id); return venue ? `${venue.name}${venue.capacity ? ` (cap. ${venue.capacity})` : ''}` : form.venue_id })()}</span>
-                  : <SelectValue placeholder="Selecionar salão..." />}
+                  : <SelectValue placeholder={venues.length === 0 ? 'Sem salões cadastrados' : 'Selecionar salão...'} />}
               </SelectTrigger>
               <SelectContent>
-                {venues.length === 0
-                  ? <SelectItem value="__empty__" disabled>Nenhum salão cadastrado</SelectItem>
-                  : venues.map((v) => (
-                      <SelectItem key={v.id} value={v.id}>
-                        {v.name}{v.capacity ? ` (cap. ${v.capacity})` : ''}
-                      </SelectItem>
-                    ))}
+                {venues.map((v) => (
+                  <SelectItem key={v.id} value={v.id}>
+                    {v.name}{v.capacity ? ` (cap. ${v.capacity})` : ''}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
