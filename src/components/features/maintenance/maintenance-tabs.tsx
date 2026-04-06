@@ -96,7 +96,7 @@ function OrdersTabContent() {
     pageSize: 12,
   })
 
-  const { data, isLoading, isError, refetch } = useMaintenanceOrders(
+  const { data, isLoading, isError } = useMaintenanceOrders(
     viewMode === 'kanban' ? { ...filters, status: undefined } : filters
   )
   const { data: sectors = [] } = useSectors(true)

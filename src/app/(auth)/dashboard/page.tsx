@@ -54,7 +54,7 @@ export default function DashboardPage() {
     return { dateFrom: d, dateTo: d }
   }, [currentDate, calView])
 
-  const { data: kpis, isLoading: loadingKpis, refetch: refetchKpis } = useDashboardKpis()
+  const { data: kpis, isLoading: loadingKpis } = useDashboardKpis()
   const {
     data: calEvents = [],
     isLoading: loadingCal,
