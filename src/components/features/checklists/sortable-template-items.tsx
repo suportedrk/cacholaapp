@@ -65,7 +65,6 @@ const PRIORITY_BADGE: Record<Priority, string> = {
   urgent: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800',
 }
 
-const FIELD_SELECT = 'w-full h-8 rounded-lg border border-border bg-background px-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring'
 
 function createEmptyItem(tempId: string): TemplateItemDraft {
   return {
