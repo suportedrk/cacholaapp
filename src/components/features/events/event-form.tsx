@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Loader2, X } from 'lucide-react'
+import { Loader2, X, EyeOff } from 'lucide-react'
+import { useIsReadOnly } from '@/hooks/use-read-only'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Button } from '@/components/ui/button'
@@ -87,6 +88,7 @@ export function EventForm({ event }: EventFormProps) {
   const createEvent = useCreateEvent()
   const updateEvent = useUpdateEvent()
   const isLoading = createEvent.isPending || updateEvent.isPending
+  const isReadOnly = useIsReadOnly()
 
   // ─── Estado do formulário ───
   const [form, setForm] = useState<FormData>({
@@ -510,7 +512,7 @@ export function EventForm({ event }: EventFormProps) {
       </section>
 
       {/* ── Botões ── */}
-      <div className="flex items-center gap-3 pt-2">
+      <div className="flex flex-wrap items-center gap-3 pt-2">
         <Button
           type="button"
           variant="outline"
@@ -519,10 +521,16 @@ export function EventForm({ event }: EventFormProps) {
         >
           Cancelar
         </Button>
-        <Button type="submit" disabled={isLoading}>
+        <Button type="submit" disabled={isLoading || isReadOnly}>
           {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
           {isEditing ? 'Salvar Alterações' : 'Criar Evento'}
         </Button>
+        {isReadOnly && (
+          <span className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
+            <EyeOff className="w-3.5 h-3.5" />
+            Modo visualização — ações desabilitadas
+          </span>
+        )}
       </div>
     </form>
   )

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { Loader2, Save, UserX, UserCheck, Building2 } from 'lucide-react'
+import { Loader2, Save, UserX, UserCheck, Building2, Eye } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -10,6 +10,8 @@ import { StatusBadge } from '@/components/shared/status-badge'
 import { UserAvatar } from '@/components/shared/user-avatar'
 import { useUser, useUpdateUser, useDeactivateUser, useReactivateUser } from '@/hooks/use-users'
 import { useUserUnits, useRemoveUserFromUnit, useUpdateUserUnitRole } from '@/hooks/use-units'
+import { useAuth } from '@/hooks/use-auth'
+import { useStartImpersonate } from '@/hooks/use-impersonate'
 import { ROLE_LABELS, ROUTES } from '@/lib/constants'
 import type { UserRole } from '@/types/database.types'
 
@@ -25,6 +27,15 @@ export default function EditarUsuarioPage() {
   const { data: userUnits } = useUserUnits(id)
   const { mutate: removeFromUnit } = useRemoveUserFromUnit()
   const { mutate: updateRole } = useUpdateUserUnitRole()
+
+  // "Ver como" — apenas para super_admin real
+  const { realProfile } = useAuth()
+  const startImpersonate = useStartImpersonate()
+  const canViewAs =
+    realProfile?.role === 'super_admin' &&
+    !!user &&
+    user.id !== realProfile.id &&
+    (user.role as UserRole) !== 'super_admin'
 
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
@@ -71,9 +82,30 @@ export default function EditarUsuarioPage() {
   return (
     <div className="max-w-2xl space-y-6">
       {/* Cabeçalho */}
-      <div>
-        <h1 className="text-2xl font-semibold text-foreground tracking-tight">Editar Usuário</h1>
-        <p className="mt-0.5 text-sm text-muted-foreground">Dados pessoais e status</p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground tracking-tight">Editar Usuário</h1>
+          <p className="mt-0.5 text-sm text-muted-foreground">Dados pessoais e status</p>
+        </div>
+        {canViewAs && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={startImpersonate.isPending}
+            onClick={async () => {
+              await startImpersonate.mutateAsync(user!.id)
+              router.push(ROUTES.dashboard)
+            }}
+            className="shrink-0 border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-400 dark:hover:bg-amber-950/30"
+          >
+            {startImpersonate.isPending
+              ? <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              : <Eye className="w-4 h-4 mr-2" />
+            }
+            Ver como {user!.name.split(' ')[0]}
+          </Button>
+        )}
       </div>
 
       {/* Card principal */}

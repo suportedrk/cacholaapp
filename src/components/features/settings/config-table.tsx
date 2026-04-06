@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { ConfirmDialog } from '@/components/shared/confirm-dialog'
 import { cn } from '@/lib/utils'
+import { useIsReadOnly } from '@/hooks/use-read-only'
 
 export interface ConfigItem {
   id: string
@@ -52,6 +53,7 @@ export function ConfigTable({
   const [editState, setEditState] = useState<EditState | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<ConfigItem | null>(null)
   const [saving, setSaving] = useState(false)
+  const isReadOnly = useIsReadOnly()
 
   async function handleCreate() {
     if (!newName.trim()) return
@@ -165,26 +167,31 @@ export function ConfigTable({
                   )}
                   <Switch
                     checked={item.is_active}
-                    onCheckedChange={() => handleToggleActive(item)}
+                    onCheckedChange={() => !isReadOnly && handleToggleActive(item)}
+                    disabled={isReadOnly}
                     className="shrink-0"
                     aria-label={item.is_active ? 'Desativar' : 'Ativar'}
                   />
-                  <button
-                    onClick={() => setEditState({
-                      id: item.id,
-                      name: item.name,
-                      extra: extraField ? String(item[extraField.key] ?? '') : '',
-                    })}
-                    className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
-                  >
-                    <Pencil className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    onClick={() => setDeleteTarget(item)}
-                    className="text-muted-foreground hover:text-destructive transition-colors shrink-0"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  {!isReadOnly && (
+                    <>
+                      <button
+                        onClick={() => setEditState({
+                          id: item.id,
+                          name: item.name,
+                          extra: extraField ? String(item[extraField.key] ?? '') : '',
+                        })}
+                        className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => setDeleteTarget(item)}
+                        className="text-muted-foreground hover:text-destructive transition-colors shrink-0"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </>
+                  )}
                 </>
               )}
             </div>
@@ -222,7 +229,7 @@ export function ConfigTable({
         )}
       </div>
 
-      {!isCreating && (
+      {!isCreating && !isReadOnly && (
         <Button variant="outline" size="sm" onClick={() => setIsCreating(true)} className="w-full sm:w-auto">
           <Plus className="w-3.5 h-3.5 mr-1.5" />
           Adicionar {title.toLowerCase()}

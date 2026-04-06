@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
+import { useIsReadOnly } from '@/hooks/use-read-only'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -21,6 +22,7 @@ function toSlug(name: string) {
 export default function NovaUnidadePage() {
   const router = useRouter()
   const { mutate: createUnit, isPending } = useCreateUnit()
+  const isReadOnly = useIsReadOnly()
 
   const [name, setName] = useState('')
   const [slug, setSlug] = useState('')
@@ -108,7 +110,7 @@ export default function NovaUnidadePage() {
           <Button type="button" variant="outline" onClick={() => router.back()} className="flex-1">
             Cancelar
           </Button>
-          <Button type="submit" disabled={isPending || !name.trim() || !slug.trim()} className="flex-1">
+          <Button type="submit" disabled={isPending || isReadOnly || !name.trim() || !slug.trim()} className="flex-1">
             {isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
             Criar Unidade
           </Button>

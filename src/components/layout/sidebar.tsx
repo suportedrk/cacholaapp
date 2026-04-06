@@ -14,6 +14,8 @@ import { cn } from '@/lib/utils'
 import { APP_NAME } from '@/lib/constants'
 import { useUnitBrand } from '@/hooks/use-unit-settings'
 import { createClient } from '@/lib/supabase/client'
+import { useAuth } from '@/hooks/use-auth'
+import type { Role } from '@/types/permissions'
 
 interface SidebarProps {
   isOpen: boolean
@@ -33,6 +35,10 @@ function useSidebarLogo() {
 export function Sidebar({ isOpen, isCollapsed, onClose, onToggleCollapse }: SidebarProps) {
   const pathname = usePathname()
   const { logoUrl, displayName } = useSidebarLogo()
+  const { profile } = useAuth()
+
+  // Role efetivo: quando impersonando, profile já é o do impersonado (P2)
+  const effectiveRole = (profile?.role ?? 'freelancer') as Role
 
   // O item ativo é o mais específico que faz match com o pathname atual.
   // Sem isso, "/checklists" ficaria ativo junto com "/checklists/minhas-tarefas".
@@ -44,6 +50,16 @@ export function Sidebar({ isOpen, isCollapsed, onClose, onToggleCollapse }: Side
         : pathname === item.href || pathname.startsWith(item.href + '/')
     )
     .sort((a, b) => b.href.length - a.href.length)[0]?.href ?? null
+
+  // Filtra grupos removendo itens que o role atual não pode ver.
+  // Grupos que ficarem completamente vazios são omitidos.
+  const visibleGroups = NAV_GROUPS.map((group) => ({
+    ...group,
+    items: group.items.filter((item) => {
+      if (!item.allowedRoles || item.allowedRoles.length === 0) return true
+      return item.allowedRoles.includes(effectiveRole)
+    }),
+  })).filter((group) => group.items.length > 0)
 
   return (
     <>
@@ -130,7 +146,7 @@ export function Sidebar({ isOpen, isCollapsed, onClose, onToggleCollapse }: Side
 
         {/* ── Navegação ── */}
         <nav className="flex-1 overflow-y-auto overflow-x-hidden py-3">
-          {NAV_GROUPS.map((group, gi) => (
+          {visibleGroups.map((group, gi) => (
             <div key={gi} className={gi > 0 ? 'mt-1' : ''}>
               {/* Label de seção */}
               {group.label && (

@@ -6,6 +6,7 @@ export type AuditAction =
   | 'activated' | 'deactivated'
   | 'permission_changed' | 'login' | 'logout'
   | 'password_reset_requested'
+  | 'impersonate_start'
 
 export type AuditModule =
   | 'users' | 'events' | 'maintenance' | 'checklists'

@@ -6,14 +6,23 @@ import type { UserPermission } from '@/types/database.types'
 import type { PermissionMap, Module, Action } from '@/types/permissions'
 import { toast } from 'sonner'
 import { useAuthReadyStore } from '@/stores/auth-store'
+import { useImpersonateStore } from '@/stores/impersonate-store'
 
 const supabase = createClient()
 
 export function useUserPermissions(userId: string | null | undefined) {
   const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
-  return useQuery({
+
+  // Impersonate: quando o userId pedido é o do usuário impersonado, retornar
+  // as permissões já resolvidas pela API (evita query com RLS do admin real,
+  // que retornaria dados errados ou vazios para o userId do impersonado).
+  const { isImpersonating, impersonatedProfile, impersonatedPermissions } = useImpersonateStore()
+  const isForImpersonated = isImpersonating && !!userId && userId === impersonatedProfile?.id
+
+  const query = useQuery({
     queryKey: ['permissions', userId],
-    enabled: !!userId && isSessionReady,
+    // Desabilita a query quando estamos servindo do store (regras de hooks: sempre chamado)
+    enabled: !!userId && isSessionReady && !isForImpersonated,
     queryFn: async () => {
       if (!userId) return null
 
@@ -39,6 +48,20 @@ export function useUserPermissions(userId: string | null | undefined) {
     },
     staleTime: 5 * 60 * 1000, // permissões raramente mudam — revalida a cada 5min
   })
+
+  // Retornar permissões do store quando impersonando o usuário alvo
+  if (isForImpersonated) {
+    return {
+      ...query,
+      data: impersonatedPermissions,
+      isLoading: false,
+      isPending: false,
+      isError: false,
+      error: null,
+    }
+  }
+
+  return query
 }
 
 export function useUpdatePermission() {

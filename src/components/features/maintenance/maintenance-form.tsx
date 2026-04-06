@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Loader2, RefreshCw } from 'lucide-react'
+import { Loader2, RefreshCw, EyeOff } from 'lucide-react'
+import { useIsReadOnly } from '@/hooks/use-read-only'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -186,6 +187,7 @@ export function MaintenanceForm({ order, onSuccess }: Props) {
   }
 
   const isSaving = createOrder.isPending || updateOrder.isPending
+  const isReadOnly = useIsReadOnly()
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
@@ -486,10 +488,16 @@ export function MaintenanceForm({ order, onSuccess }: Props) {
         >
           Cancelar
         </Button>
-        <Button type="submit" disabled={isSaving} className="w-full sm:w-auto">
+        <Button type="submit" disabled={isSaving || isReadOnly} className="w-full sm:w-auto">
           {isSaving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
           {isEditing ? 'Salvar Alterações' : 'Criar Ordem'}
         </Button>
+        {isReadOnly && (
+          <span className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 w-full sm:w-auto">
+            <EyeOff className="w-3.5 h-3.5 shrink-0" />
+            Modo visualização — ações desabilitadas
+          </span>
+        )}
       </div>
     </form>
   )

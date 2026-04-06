@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2, UserPlus } from 'lucide-react'
+import { useIsReadOnly } from '@/hooks/use-read-only'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -20,6 +21,7 @@ export default function NovoUsuarioPage() {
   const [phone, setPhone] = useState('')
   const [role, setRole] = useState<UserRole>('vendedora')
   const [isPending, setIsPending] = useState(false)
+  const isReadOnly = useIsReadOnly()
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -118,7 +120,7 @@ export default function NovoUsuarioPage() {
         </div>
 
         <div className="flex flex-wrap gap-3 pt-2">
-          <Button type="submit" disabled={isPending}>
+          <Button type="submit" disabled={isPending || isReadOnly}>
             {isPending ? (
               <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Criando...</>
             ) : (
