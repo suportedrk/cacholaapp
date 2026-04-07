@@ -2,7 +2,7 @@
 
 import { Suspense, useState, useCallback, useMemo } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
-import { SearchX, PartyPopper, CalendarX, Loader2 } from 'lucide-react'
+import { SearchX, PartyPopper, CalendarX, Loader2, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { PageHeader } from '@/components/shared/page-header'
@@ -13,6 +13,7 @@ import { EventTemporalTabs } from '@/components/features/events/event-temporal-t
 import { EventDayGroup } from '@/components/features/events/event-day-group'
 import { EventsKpiCards } from '@/components/features/events/events-kpi-cards'
 import { useEventsInfinite, useEventsTabCounts, useEventsKpis, type TabKey } from '@/hooks/use-events'
+import { useEventConflicts } from '@/hooks/use-event-conflicts'
 import { useLoadingTimeout } from '@/hooks/use-loading-timeout'
 import { usePloomesIntegrationActive } from '@/hooks/use-ploomes-sync'
 import { useUnitStore } from '@/stores/unit-store'
@@ -98,6 +99,16 @@ function EventosContent() {
   const { data: ploomesActive } = usePloomesIntegrationActive(activeUnitId)
   const { data: tabCounts, isLoading: countsLoading } = useEventsTabCounts()
   const { data: kpis, isLoading: kpisLoading } = useEventsKpis()
+
+  // Conflitos de horário entre eventos da unidade
+  const { data: conflicts = [] } = useEventConflicts()
+  const conflictingIds = useMemo(() => {
+    if (conflicts.length === 0) return new Set<string>()
+    const ids = new Set<string>()
+    for (const c of conflicts) { ids.add(c.event_id_a); ids.add(c.event_id_b) }
+    return ids
+  }, [conflicts])
+  const conflictingCount = conflictingIds.size
 
   const {
     data,
@@ -221,6 +232,21 @@ function EventosContent() {
         )}
       </div>
 
+      {/* Banner de conflito de horário */}
+      {conflictingCount > 0 && (
+        <div className="flex items-start gap-3 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-800 dark:bg-amber-950/30">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+          <div className="flex-1 text-sm">
+            <span className="font-medium text-amber-800 dark:text-amber-300">
+              Conflito de horário detectado
+            </span>
+            <span className="ml-1 text-amber-700 dark:text-amber-400">
+              — {conflictingCount} evento{conflictingCount !== 1 ? 's' : ''} com intervalo inferior a 2h entre festas na mesma data.
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Estado de erro */}
       {isError && (
         <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/20 text-sm text-destructive">
@@ -287,7 +313,7 @@ function EventosContent() {
                       className="animate-fade-up"
                       style={{ animationDelay: `${Math.min(idx, 9) * 50}ms`, animationFillMode: 'backwards' }}
                     >
-                      <EventCard event={event} />
+                      <EventCard event={event} hasConflict={conflictingIds.has(event.id)} />
                     </div>
                   ))}
                 </div>
