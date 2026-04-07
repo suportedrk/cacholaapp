@@ -187,6 +187,60 @@ Ver `.env.example` para lista completa.
 
 ---
 
+## GIT WORKFLOW — REGRAS OBRIGATÓRIAS
+
+### Fluxo padrão (toda feature, fix ou melhoria)
+```bash
+# 1. Sempre partir de develop atualizado
+git checkout develop
+git pull origin develop
+
+# 2. Fazer o trabalho, commitar
+git add -A
+git commit -m "tipo(escopo): descrição"
+
+# 3. Push develop → CI roda aqui
+git push origin develop
+
+# 4. Somente após CI verde: merge para main
+git checkout main
+git pull origin main
+git merge --no-ff develop -m "tipo(escopo): descrição"
+git push origin main
+
+# 5. Voltar para develop
+git checkout develop
+```
+
+### Regras absolutas
+- NUNCA commitar diretamente em `main`
+- NUNCA mergear develop → main com CI vermelho
+- NUNCA fazer `git pull origin develop` na VPS — VPS usa sempre `main`
+- SEMPRE rodar `npx tsc --noEmit 2>&1 | grep -v "\.next"` antes de commitar
+- SEMPRE usar `--no-ff` no merge
+
+### Deploy na VPS
+```bash
+cd /opt/cacholaapp
+git pull origin main
+NODE_OPTIONS=--max-old-space-size=4096 npm run build
+pm2 restart cacholaos
+```
+
+### Migrations no deploy
+Se o commit incluir arquivos em `supabase/migrations/`:
+```bash
+# Aplicar ANTES do build
+docker exec -i supabase-db psql -U postgres -d postgres \
+  < supabase/migrations/[arquivo].sql
+
+# Confirmar criação
+docker exec -i supabase-db psql -U postgres -d postgres \
+  -c "\df [nome_da_funcao]"
+```
+
+---
+
 ## COMANDOS ÚTEIS
 
 ### Desenvolvimento
