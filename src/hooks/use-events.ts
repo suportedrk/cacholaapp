@@ -146,7 +146,8 @@ export function useEventsByIds(ids: string[]) {
         .order('date',       { ascending: true })
         .order('start_time', { ascending: true })
       if (error) throw error
-      return (data ?? []) as EventForList[]
+      // Supabase infere SelectQueryError nas relações — cast via unknown necessário
+      return (data ?? []) as unknown as EventForList[]
     },
   })
 }
