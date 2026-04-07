@@ -4,6 +4,8 @@ import { memo } from 'react'
 import Link from 'next/link'
 import { parseISO, isToday, isFuture, startOfDay } from 'date-fns'
 import { Clock, MapPin, Users, Package as PackageIcon, Phone, Mail, Tag, Handshake, AlertTriangle } from 'lucide-react'
+
+export type ConflictType = 'overlap' | 'short_gap' | null
 import { EventStatusBadge } from '@/components/shared/event-status-badge'
 import { PloomeBadge } from '@/components/features/ploomes/ploomes-badge'
 import { cn } from '@/lib/utils'
@@ -55,10 +57,10 @@ function getInitials(name: string): string {
 
 interface EventCardProps {
   event: EventCardEvent
-  hasConflict?: boolean
+  conflictType?: ConflictType
 }
 
-export const EventCard = memo(function EventCard({ event, hasConflict = false }: EventCardProps) {
+export const EventCard = memo(function EventCard({ event, conflictType = null }: EventCardProps) {
   const formatTime  = (t: string) => t.slice(0, 5)
   const isLost      = event.status === 'lost'
   const progress    = calcChecklistProgress(event)
@@ -108,10 +110,16 @@ export const EventCard = memo(function EventCard({ event, hasConflict = false }:
               Sem checklist
             </span>
           )}
-          {hasConflict && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">
+          {conflictType === 'overlap' && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-medium text-red-700 dark:bg-red-900/40 dark:text-red-400">
               <AlertTriangle className="h-2.5 w-2.5 shrink-0" />
-              Conflito
+              Sobreposição
+            </span>
+          )}
+          {conflictType === 'short_gap' && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">
+              <Clock className="h-2.5 w-2.5 shrink-0" />
+              Intervalo &lt; 2h
             </span>
           )}
           {event.ploomes_deal_id && <PloomeBadge size="xs" />}
