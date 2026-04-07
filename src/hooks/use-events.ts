@@ -165,6 +165,9 @@ export function useEventsInfinite(filters: EventFiltersInfinite) {
       const dateRange = getTabDateRange(tab, now)
       if (dateRange) {
         query = query.gte('date', dateRange.start).lte('date', dateRange.end)
+      } else if (!search?.trim() && !status?.length) {
+        // Aba "Todos" sem filtros: exibe apenas eventos a partir de hoje
+        query = query.gte('date', format(now, 'yyyy-MM-dd'))
       }
 
       if (status?.length) {

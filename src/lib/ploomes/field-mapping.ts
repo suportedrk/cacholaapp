@@ -6,7 +6,7 @@
 
 import type { PloomesDeal, PloomesOtherProperty, ParsedDeal } from './types'
 
-const PLOOMES_APP_URL = 'https://app.ploomes.com'
+const PLOOMES_APP_URL = 'https://app10.ploomes.com'
 
 // ── Tipo interno do mapa ──────────────────────────────────────
 type ValueKey =
@@ -117,7 +117,7 @@ export function parseDeal(deal: PloomesDeal): ParsedDeal {
     clientEmail: deal.Contact?.Email,
     clientPhone: deal.Contact?.Phones?.[0]?.PhoneNumber,
     amount: deal.Amount,
-    ploomesUrl: `${PLOOMES_APP_URL}/negocios/${deal.Id}`,
+    ploomesUrl: `${PLOOMES_APP_URL}/deal/${deal.Id}`,
   }
 
   // Pré-calcular lookup por prefixo para suportar GUIDs parciais ou completos

@@ -2,7 +2,7 @@
 
 import { Suspense, useState, useCallback, useMemo } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
-import { Info, SearchX, PartyPopper, CalendarX, Loader2 } from 'lucide-react'
+import { SearchX, PartyPopper, CalendarX, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { PageHeader } from '@/components/shared/page-header'
@@ -36,7 +36,7 @@ const STATUS_COLOR: Record<EventStatus, FilterChipColor> = {
   lost:        'gray',
 }
 
-const MAIN_STATUSES = (Object.keys(STATUS_CONFIG) as EventStatus[]).filter((s) => s !== 'lost')
+const MAIN_STATUSES: EventStatus[] = ['confirmed']
 
 // ─────────────────────────────────────────────────────────────
 // Helper: agrupa eventos por data
@@ -153,17 +153,6 @@ function EventosContent() {
 
   return (
     <div className="space-y-4">
-      {/* Banner Ploomes ativo */}
-      {ploomesActive && (
-        <div className="flex items-start gap-2.5 rounded-xl border border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/40 px-4 py-3 text-sm text-blue-800 dark:text-blue-300">
-          <Info className="h-4 w-4 shrink-0 mt-0.5 text-blue-500" />
-          <p>
-            Os eventos são gerenciados pelo <strong>Ploomes CRM</strong>. Use o Cachola OS para operar as festas.
-            {' '}<a href="/configuracoes/integracoes/ploomes" className="underline underline-offset-2 hover:text-blue-900 dark:hover:text-blue-100 transition-colors">Configurar integração</a>
-          </p>
-        </div>
-      )}
-
       {/* KPI Cards */}
       <EventsKpiCards
         tabCounts={tabCounts}
