@@ -90,6 +90,9 @@ export interface Database {
       // ── Helpers de RLS (Fase 2.5) ───────────────────────────────────
       get_user_unit_ids:             { Args: Record<string, never>; Returns: string[] }
       is_global_viewer:              { Args: Record<string, never>; Returns: boolean }
+      // ── Conflito de horário entre eventos (Migration 027) ────────────
+      get_event_conflicts:           { Args: { p_unit_id: string }; Returns: { event_id_a: string; event_id_b: string; conflict_date: string; gap_minutes: number }[] }
+      get_conflicting_event_ids:     { Args: { p_unit_id: string }; Returns: { event_id: string }[] }
     }
     Enums: Record<string, never>
   }
