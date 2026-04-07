@@ -2,11 +2,12 @@ import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-// Callback de autenticação (após verificação de e-mail, reset de senha, etc.)
+// Callback de autenticação (e-mail, reset de senha, OAuth, etc.)
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
-  const next = searchParams.get('next') ?? '/dashboard'
+  // "next" é o parâmetro legado; "redirectTo" é enviado pelo fluxo OAuth do login
+  const next = searchParams.get('redirectTo') ?? searchParams.get('next') ?? '/dashboard'
 
   if (code) {
     const supabase = await createClient()
