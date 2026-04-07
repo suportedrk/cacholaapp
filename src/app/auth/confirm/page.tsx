@@ -17,10 +17,12 @@ export default function AuthConfirmPage() {
     const refreshToken = params.get('refresh_token')
     const type         = params.get('type') // 'invite' | 'recovery' | 'signup'
 
+    /* eslint-disable react-hooks/set-state-in-effect */
     if (!accessToken || !refreshToken) {
       setError('Link inválido ou expirado.')
       return
     }
+    /* eslint-enable react-hooks/set-state-in-effect */
 
     const supabase = createClient()
     supabase.auth

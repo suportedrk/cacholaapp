@@ -165,7 +165,7 @@ type SubmitState = 'idle' | 'loading' | 'success'
 function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { signIn, loading, isAuthenticated } = useAuth()
+  const { signIn, isAuthenticated } = useAuth()
 
   const [email, setEmail]                 = useState('')
   const [password, setPassword]           = useState('')
