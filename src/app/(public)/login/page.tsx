@@ -243,7 +243,10 @@ function LoginForm() {
     }
   }
 
-  const isLoading = submitState === 'loading' || loading
+  // Não usar `loading` de useAuth — o Supabase client auto-detecta #access_token=
+  // na URL e seta loading=true por um instante, causando spinner sem o usuário submeter.
+  // O redirectTo já é tratado pelo useEffect acima quando isAuthenticated=true.
+  const isLoading = submitState === 'loading'
   const isSuccess = submitState === 'success'
 
   return (
