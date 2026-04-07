@@ -6,33 +6,26 @@ import Link from 'next/link'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import {
-  ArrowLeft, Pencil, Trash2, Calendar, Clock, MapPin, Users, Package,
+  ArrowLeft, Calendar, Clock, MapPin, Users, Package,
   Plus, ExternalLink, Wrench, PartyPopper, Truck, User2,
-  CheckSquare, MessageCircle, Phone, Mail, MoreVertical,
+  CheckSquare, MessageCircle, Phone, Mail,
   ClipboardList, History, Tag, Star, Camera, Music2, CakeSlice,
   DollarSign, School, BookText, Check, X as XIcon,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuGroup,
-  DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
-import { EventStatusBadge, STATUS_CONFIG } from '@/components/shared/event-status-badge'
-import { ConfirmDialog } from '@/components/shared/confirm-dialog'
+import { EventStatusBadge } from '@/components/shared/event-status-badge'
 import { UserAvatar } from '@/components/shared/user-avatar'
 import { CreateChecklistModal } from '@/app/(auth)/checklists/components/create-checklist-modal'
 import { EventTimeline } from '@/components/features/events/event-timeline'
 import { MaintenanceStatusBadge, MaintenancePriorityBadge } from '@/components/features/maintenance/maintenance-status-badge'
-import { useEvent, useDeleteEvent, useChangeEventStatus } from '@/hooks/use-events'
+import { useEvent } from '@/hooks/use-events'
 import { useEventChecklists } from '@/hooks/use-checklists'
 import { useEventMaintenances } from '@/hooks/use-maintenance'
 import { AccordionSection } from './components/AccordionSection'
 import { ProvidersSection } from './components/sections/ProvidersSection'
 import { cn } from '@/lib/utils'
-import type { EventStatus, ChecklistForList } from '@/types/database.types'
-
-const ALL_STATUSES = Object.keys(STATUS_CONFIG) as EventStatus[]
+import type { ChecklistForList } from '@/types/database.types'
 
 // ── Avatar helpers ──────────────────────────────────────────────
 const AVATAR_COLORS = [
@@ -275,12 +268,9 @@ export default function EventoDetailPage() {
   const router  = useRouter()
 
   const { data: event, isLoading, isError } = useEvent(id)
-  const deleteEvent  = useDeleteEvent()
-  const changeStatus = useChangeEventStatus()
   const { data: checklists = [], isLoading: checklistsLoading } = useEventChecklists(id)
   const { data: maintenances = [] } = useEventMaintenances(id)
 
-  const [deleteOpen, setDeleteOpen]       = useState(false)
   const [addChecklistOpen, setAddChecklistOpen] = useState(false)
 
   const checklistsSectionRef = useRef<HTMLDivElement | null>(null)
@@ -345,10 +335,9 @@ export default function EventoDetailPage() {
   }
   function formatTime(t: string) { return t.slice(0, 5) }
 
-  async function handleDelete() {
-    await deleteEvent.mutateAsync(id)
-    router.push('/eventos')
-  }
+  const ploomesUrl = event.ploomes_deal_id
+    ? `https://app10.ploomes.com/deal/${event.ploomes_deal_id}`
+    : event.ploomes_url
 
   return (
     <div className="space-y-4 pb-20 md:pb-0">
@@ -373,9 +362,9 @@ export default function EventoDetailPage() {
         </span>
 
         <div className="flex items-center gap-2 ml-auto shrink-0">
-          {event.ploomes_url && (
+          {ploomesUrl && (
             <a
-              href={event.ploomes_url}
+              href={ploomesUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="hidden sm:inline-flex items-center gap-1.5 text-xs text-text-secondary hover:text-text-primary border border-border rounded-lg px-2.5 py-1.5 transition-colors hover:bg-muted"
@@ -384,48 +373,6 @@ export default function EventoDetailPage() {
               Ploomes
             </a>
           )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => router.push(`/eventos/${id}/editar`)}
-          >
-            <Pencil className="w-4 h-4 sm:mr-1.5" />
-            <span className="hidden sm:inline">Editar</span>
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-background hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-              <MoreVertical className="w-4 h-4" />
-              <span className="sr-only">Mais opções</span>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-52">
-              <DropdownMenuLabel>Mudar status</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuGroup>
-                {ALL_STATUSES.filter((s) => s !== event.status).map((s) => (
-                  <DropdownMenuItem
-                    key={s}
-                    onClick={() => changeStatus.mutate({ id, status: s })}
-                  >
-                    <EventStatusBadge status={s} size="sm" className="pointer-events-none" />
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuGroup>
-              <DropdownMenuSeparator />
-              {event.ploomes_url && (
-                <DropdownMenuItem onClick={() => window.open(event.ploomes_url!, '_blank')}>
-                  <ExternalLink className="w-3.5 h-3.5 mr-2" />
-                  Abrir no Ploomes
-                </DropdownMenuItem>
-              )}
-              <DropdownMenuItem
-                className="text-destructive focus:text-destructive"
-                onClick={() => setDeleteOpen(true)}
-              >
-                <Trash2 className="w-3.5 h-3.5 mr-2" />
-                Excluir evento
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
       </div>
 
@@ -822,20 +769,10 @@ export default function EventoDetailPage() {
         onCreated={() => setAddChecklistOpen(false)}
       />
 
-      <ConfirmDialog
-        open={deleteOpen}
-        onOpenChange={setDeleteOpen}
-        title="Excluir evento?"
-        description={`O evento "${event.title}" será excluído permanentemente. Esta ação não pode ser desfeita.`}
-        confirmLabel="Excluir"
-        loading={deleteEvent.isPending}
-        onConfirm={handleDelete}
-      />
-
       {/* Mobile Quick Actions */}
       <QuickActionsBar
         phone={event.client_phone}
-        ploomesUrl={event.ploomes_url}
+        ploomesUrl={ploomesUrl}
         onChecklistsClick={scrollToChecklists}
       />
     </div>
