@@ -31,7 +31,8 @@ export default function AuthConfirmPage() {
           return
         }
         // Reload completo para o middleware detectar a sessão nos cookies
-        const next = type === 'invite' ? '/perfil?convite=1' : '/dashboard'
+        // Convites: página de definir senha. Recovery/outros: dashboard.
+        const next = type === 'invite' ? '/auth/setup-senha' : '/dashboard'
         window.location.href = next
       })
   }, [])
