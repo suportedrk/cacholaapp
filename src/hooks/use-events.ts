@@ -121,6 +121,37 @@ export function useEventsTabCounts() {
 }
 
 // ─────────────────────────────────────────────────────────────
+// BUSCA POR IDs ESPECÍFICOS (filtros de conflito)
+// Busca todos os eventos cujos IDs estão no array fornecido,
+// sem paginação — usado pelos filtros de sobreposição/intervalo.
+// ─────────────────────────────────────────────────────────────
+export function useEventsByIds(ids: string[]) {
+  const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
+
+  return useQuery<EventForList[]>({
+    queryKey: ['events-by-ids', ids],
+    enabled:  isSessionReady && ids.length > 0,
+    staleTime: 30 * 1000,
+    retry: (count, error: unknown) => {
+      const st = (error as { status?: number })?.status
+      if (st === 401 || st === 403) return false
+      return count < 2
+    },
+    queryFn: async () => {
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from('events')
+        .select(EVENT_FOR_LIST_SELECT)
+        .in('id', ids)
+        .order('date',       { ascending: true })
+        .order('start_time', { ascending: true })
+      if (error) throw error
+      return (data ?? []) as EventForList[]
+    },
+  })
+}
+
+// ─────────────────────────────────────────────────────────────
 // LISTAGEM INFINITA (página principal de eventos)
 // ─────────────────────────────────────────────────────────────
 export type EventFiltersInfinite = {

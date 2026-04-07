@@ -12,7 +12,7 @@ import { EventCard, EventCardSkeleton } from '@/components/features/events/event
 import { EventTemporalTabs } from '@/components/features/events/event-temporal-tabs'
 import { EventDayGroup } from '@/components/features/events/event-day-group'
 import { EventsKpiCards } from '@/components/features/events/events-kpi-cards'
-import { useEventsInfinite, useEventsTabCounts, useEventsKpis, type TabKey } from '@/hooks/use-events'
+import { useEventsInfinite, useEventsTabCounts, useEventsKpis, useEventsByIds, type TabKey } from '@/hooks/use-events'
 import {
   useEventConflicts,
   useOverlappingEventIds,
@@ -111,14 +111,28 @@ function EventosContent() {
   const { data: kpis, isLoading: kpisLoading } = useEventsKpis()
 
   // Conflitos de horário
-  useEventConflicts() // mantém o cache aquecido
+  const { isLoading: conflictsLoading } = useEventConflicts()
   const overlappingIds = useOverlappingEventIds()
   const shortGapIds    = useShortGapEventIds()
 
-  // Se o filtro ativo é de conflito, desativar o filtro de data >= hoje
+  // Se o filtro ativo é de conflito, buscar os eventos por ID (servidor)
   const isConflictFilter = activeFilter === 'overlap' || activeFilter === 'short_gap'
 
-  // Status para a query (só quando o filtro ativo é um EventStatus)
+  // IDs a buscar quando filtro de conflito ativo (array ordenado = queryKey estável)
+  const conflictEventIds = useMemo(() => {
+    if (activeFilter === 'overlap')   return Array.from(overlappingIds).sort()
+    if (activeFilter === 'short_gap') return Array.from(shortGapIds).sort()
+    return []
+  }, [activeFilter, overlappingIds, shortGapIds])
+
+  // Query específica para filtros de conflito (sem paginação)
+  const {
+    data:      conflictEventsData,
+    isLoading: conflictEventsLoading,
+    isError:   conflictEventsError,
+  } = useEventsByIds(conflictEventIds)
+
+  // Status para a query de listagem normal
   const queryStatus: EventStatus[] | undefined = useMemo(() => {
     if (!activeFilter || isConflictFilter) return undefined
     return [activeFilter as EventStatus]
@@ -126,33 +140,36 @@ function EventosContent() {
 
   const {
     data,
-    isLoading,
-    isError,
+    isLoading:         listLoading,
+    isError:           listError,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
   } = useEventsInfinite({
     tab,
-    status:       queryStatus,
-    search:       debouncedSearch || undefined,
-    noDateFilter: isConflictFilter,
+    status: queryStatus,
+    search: debouncedSearch || undefined,
   })
+
+  // Unifica loading/error dependendo do modo ativo
+  const isLoading = isConflictFilter
+    ? (conflictsLoading || conflictEventsLoading)
+    : listLoading
+  const isError = isConflictFilter ? conflictEventsError : listError
 
   const { isTimedOut, retry } = useLoadingTimeout(isLoading)
 
-  // Achata todas as páginas em lista única
+  // Eventos a exibir: por IDs (conflito) ou paginado (normal)
   const allEvents = useMemo(
     () => data?.pages.flatMap((p) => p.events) ?? [],
     [data]
   )
   const total = data?.pages[0]?.total ?? 0
 
-  // Filtragem client-side por conflito
-  const displayEvents = useMemo(() => {
-    if (activeFilter === 'overlap')    return allEvents.filter((e) => overlappingIds.has(e.id))
-    if (activeFilter === 'short_gap')  return allEvents.filter((e) => shortGapIds.has(e.id))
-    return allEvents
-  }, [allEvents, activeFilter, overlappingIds, shortGapIds])
+  const displayEvents = useMemo(
+    () => isConflictFilter ? (conflictEventsData ?? []) : allEvents,
+    [isConflictFilter, conflictEventsData, allEvents]
+  )
 
   const grouped = useMemo(() => groupEventsByDate(displayEvents), [displayEvents])
 
