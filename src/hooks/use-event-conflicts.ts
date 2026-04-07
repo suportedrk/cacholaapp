@@ -46,7 +46,7 @@ export function useEventConflicts() {
 // ─────────────────────────────────────────────────────────────
 // useConflictingEventIds
 // Retorna um Set memoizado com os IDs de todos os eventos
-// que participam de algum conflito.
+// que participam de algum conflito (qualquer tipo).
 // Estável entre renders — só recriado quando `data` muda.
 // ─────────────────────────────────────────────────────────────
 export function useConflictingEventIds(): Set<string> {
@@ -58,6 +58,46 @@ export function useConflictingEventIds(): Set<string> {
     for (const conflict of data) {
       ids.add(conflict.event_id_a)
       ids.add(conflict.event_id_b)
+    }
+    return ids
+  }, [data])
+}
+
+// ─────────────────────────────────────────────────────────────
+// useOverlappingEventIds
+// IDs de eventos com sobreposição direta (gap_minutes <= 0).
+// ─────────────────────────────────────────────────────────────
+export function useOverlappingEventIds(): Set<string> {
+  const { data } = useEventConflicts()
+
+  return useMemo(() => {
+    if (!data || data.length === 0) return new Set<string>()
+    const ids = new Set<string>()
+    for (const c of data) {
+      if (c.gap_minutes <= 0) {
+        ids.add(c.event_id_a)
+        ids.add(c.event_id_b)
+      }
+    }
+    return ids
+  }, [data])
+}
+
+// ─────────────────────────────────────────────────────────────
+// useShortGapEventIds
+// IDs de eventos com intervalo insuficiente (0 < gap_minutes < 120).
+// ─────────────────────────────────────────────────────────────
+export function useShortGapEventIds(): Set<string> {
+  const { data } = useEventConflicts()
+
+  return useMemo(() => {
+    if (!data || data.length === 0) return new Set<string>()
+    const ids = new Set<string>()
+    for (const c of data) {
+      if (c.gap_minutes > 0 && c.gap_minutes < 120) {
+        ids.add(c.event_id_a)
+        ids.add(c.event_id_b)
+      }
     }
     return ids
   }, [data])

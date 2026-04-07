@@ -127,15 +127,16 @@ export type EventFiltersInfinite = {
   tab: TabKey
   status?: EventStatus[]
   search?: string
+  noDateFilter?: boolean  // desativa o filtro date >= hoje (usado por filtros de conflito)
 }
 
 export function useEventsInfinite(filters: EventFiltersInfinite) {
   const { activeUnitId } = useUnitStore()
   const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
-  const { tab, status, search } = filters
+  const { tab, status, search, noDateFilter } = filters
 
   return useInfiniteQuery({
-    queryKey: ['events-infinite', activeUnitId, tab, status, search],
+    queryKey: ['events-infinite', activeUnitId, tab, status, search, noDateFilter],
     enabled: isSessionReady,
     staleTime: 30 * 1000,
     initialPageParam: 0 as number,
@@ -165,8 +166,9 @@ export function useEventsInfinite(filters: EventFiltersInfinite) {
       const dateRange = getTabDateRange(tab, now)
       if (dateRange) {
         query = query.gte('date', dateRange.start).lte('date', dateRange.end)
-      } else if (!search?.trim() && !status?.length) {
+      } else if (!noDateFilter && !search?.trim() && !status?.length) {
         // Aba "Todos" sem filtros: exibe apenas eventos a partir de hoje
+        // (noDateFilter=true desativa isso para filtros de conflito)
         query = query.gte('date', format(now, 'yyyy-MM-dd'))
       }
 

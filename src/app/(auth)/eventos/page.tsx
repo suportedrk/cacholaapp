@@ -2,7 +2,7 @@
 
 import { Suspense, useState, useCallback, useMemo } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
-import { SearchX, PartyPopper, CalendarX, Loader2, AlertTriangle } from 'lucide-react'
+import { SearchX, PartyPopper, CalendarX, Loader2, AlertTriangle, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { PageHeader } from '@/components/shared/page-header'
@@ -13,7 +13,11 @@ import { EventTemporalTabs } from '@/components/features/events/event-temporal-t
 import { EventDayGroup } from '@/components/features/events/event-day-group'
 import { EventsKpiCards } from '@/components/features/events/events-kpi-cards'
 import { useEventsInfinite, useEventsTabCounts, useEventsKpis, type TabKey } from '@/hooks/use-events'
-import { useEventConflicts } from '@/hooks/use-event-conflicts'
+import {
+  useEventConflicts,
+  useOverlappingEventIds,
+  useShortGapEventIds,
+} from '@/hooks/use-event-conflicts'
 import { useLoadingTimeout } from '@/hooks/use-loading-timeout'
 import { usePloomesIntegrationActive } from '@/hooks/use-ploomes-sync'
 import { useUnitStore } from '@/stores/unit-store'
@@ -23,6 +27,12 @@ import type { EventStatus } from '@/types/database.types'
 import type { FilterChipColor } from '@/components/shared/filter-chip'
 import { Search, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
+
+// ─────────────────────────────────────────────────────────────
+// Tipos
+// ─────────────────────────────────────────────────────────────
+type ConflictFilter = 'overlap' | 'short_gap'
+type ActiveFilter   = EventStatus | ConflictFilter | null
 
 // ─────────────────────────────────────────────────────────────
 // Configuração de chips de status
@@ -91,24 +101,28 @@ function EventosContent() {
   // Aba ativa (persistida na URL)
   const tab = (searchParams.get('tab') as TabKey) ?? 'all'
 
-  // Filtros locais
-  const [statusFilters, setStatusFilters] = useState<EventStatus[]>([])
-  const [searchInput, setSearchInput]     = useState('')
+  // Filtro ativo (status OU tipo de conflito — mutuamente exclusivos)
+  const [activeFilter, setActiveFilter] = useState<ActiveFilter>(null)
+  const [searchInput, setSearchInput]   = useState('')
   const debouncedSearch = useDebounce(searchInput, 300)
 
   const { data: ploomesActive } = usePloomesIntegrationActive(activeUnitId)
   const { data: tabCounts, isLoading: countsLoading } = useEventsTabCounts()
   const { data: kpis, isLoading: kpisLoading } = useEventsKpis()
 
-  // Conflitos de horário entre eventos da unidade
-  const { data: conflicts = [] } = useEventConflicts()
-  const conflictingIds = useMemo(() => {
-    if (conflicts.length === 0) return new Set<string>()
-    const ids = new Set<string>()
-    for (const c of conflicts) { ids.add(c.event_id_a); ids.add(c.event_id_b) }
-    return ids
-  }, [conflicts])
-  const conflictingCount = conflictingIds.size
+  // Conflitos de horário
+  useEventConflicts() // mantém o cache aquecido
+  const overlappingIds = useOverlappingEventIds()
+  const shortGapIds    = useShortGapEventIds()
+
+  // Se o filtro ativo é de conflito, desativar o filtro de data >= hoje
+  const isConflictFilter = activeFilter === 'overlap' || activeFilter === 'short_gap'
+
+  // Status para a query (só quando o filtro ativo é um EventStatus)
+  const queryStatus: EventStatus[] | undefined = useMemo(() => {
+    if (!activeFilter || isConflictFilter) return undefined
+    return [activeFilter as EventStatus]
+  }, [activeFilter, isConflictFilter])
 
   const {
     data,
@@ -119,8 +133,9 @@ function EventosContent() {
     isFetchingNextPage,
   } = useEventsInfinite({
     tab,
-    status: statusFilters,
-    search: debouncedSearch || undefined,
+    status:       queryStatus,
+    search:       debouncedSearch || undefined,
+    noDateFilter: isConflictFilter,
   })
 
   const { isTimedOut, retry } = useLoadingTimeout(isLoading)
@@ -130,26 +145,32 @@ function EventosContent() {
     () => data?.pages.flatMap((p) => p.events) ?? [],
     [data]
   )
-  const total   = data?.pages[0]?.total ?? 0
-  const grouped = useMemo(() => groupEventsByDate(allEvents), [allEvents])
+  const total = data?.pages[0]?.total ?? 0
 
-  // Troca de aba: atualiza URL, limpa filtros de status
+  // Filtragem client-side por conflito
+  const displayEvents = useMemo(() => {
+    if (activeFilter === 'overlap')    return allEvents.filter((e) => overlappingIds.has(e.id))
+    if (activeFilter === 'short_gap')  return allEvents.filter((e) => shortGapIds.has(e.id))
+    return allEvents
+  }, [allEvents, activeFilter, overlappingIds, shortGapIds])
+
+  const grouped = useMemo(() => groupEventsByDate(displayEvents), [displayEvents])
+
+  // Troca de aba: atualiza URL, limpa filtros
   const handleTabChange = useCallback((newTab: TabKey) => {
     const params = new URLSearchParams(searchParams.toString())
     params.set('tab', newTab)
     router.replace(`${pathname}?${params.toString()}`, { scroll: false })
-    setStatusFilters([])
+    setActiveFilter(null)
   }, [searchParams, pathname, router])
 
-  // Toggle de status (multi-select)
-  const toggleStatus = useCallback((status: EventStatus) => {
-    setStatusFilters((prev) =>
-      prev.includes(status) ? prev.filter((s) => s !== status) : [...prev, status]
-    )
+  // Toggle de filtro — exclusivo (click no ativo limpa, click em outro troca)
+  const toggleFilter = useCallback((value: ActiveFilter) => {
+    setActiveFilter((prev) => prev === value ? null : value)
   }, [])
 
   const hasSearch  = debouncedSearch.trim().length > 0
-  const hasFilters = statusFilters.length > 0
+  const hasFilter  = activeFilter !== null
 
   if (isTimedOut) {
     return (
@@ -201,29 +222,83 @@ function EventosContent() {
         )}
       </div>
 
-      {/* Chips de status */}
+      {/* Chips de filtro */}
       <div className="flex flex-wrap items-center gap-2">
+        {/* Chips de status */}
         {MAIN_STATUSES.map((status) => (
           <FilterChip
             key={status}
             label={STATUS_CONFIG[status].label}
-            active={statusFilters.includes(status)}
+            active={activeFilter === status}
             color={STATUS_COLOR[status]}
-            onClick={() => toggleStatus(status)}
+            onClick={() => toggleFilter(status)}
           />
         ))}
+
         {/* Separador + "Perdido" */}
         <span className="w-px h-5 bg-border self-center mx-0.5" />
         <FilterChip
           label="Perdido"
-          active={statusFilters.includes('lost')}
+          active={activeFilter === 'lost'}
           color="gray"
-          onClick={() => toggleStatus('lost')}
+          onClick={() => toggleFilter('lost')}
         />
+
+        {/* Separador + chips de conflito */}
+        <span className="w-px h-5 bg-border self-center mx-0.5" />
+
+        {/* Chip: Sobreposição de horário */}
+        <button
+          onClick={() => toggleFilter('overlap')}
+          className={cn(
+            'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium transition-colors',
+            activeFilter === 'overlap'
+              ? 'border-red-300 bg-red-100 text-red-700 dark:border-red-700 dark:bg-red-900/40 dark:text-red-400'
+              : 'border-border bg-background text-muted-foreground hover:bg-muted'
+          )}
+        >
+          <AlertTriangle className="h-3.5 w-3.5" />
+          Conflito de horário
+          {overlappingIds.size > 0 && (
+            <span className={cn(
+              'rounded-full px-1.5 py-0.5 text-xs font-semibold',
+              activeFilter === 'overlap'
+                ? 'bg-red-200 text-red-800 dark:bg-red-800 dark:text-red-200'
+                : 'bg-muted text-muted-foreground'
+            )}>
+              {overlappingIds.size}
+            </span>
+          )}
+        </button>
+
+        {/* Chip: Intervalo < 2h */}
+        <button
+          onClick={() => toggleFilter('short_gap')}
+          className={cn(
+            'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium transition-colors',
+            activeFilter === 'short_gap'
+              ? 'border-amber-300 bg-amber-100 text-amber-700 dark:border-amber-700 dark:bg-amber-900/40 dark:text-amber-400'
+              : 'border-border bg-background text-muted-foreground hover:bg-muted'
+          )}
+        >
+          <Clock className="h-3.5 w-3.5" />
+          Intervalo &lt; 2h
+          {shortGapIds.size > 0 && (
+            <span className={cn(
+              'rounded-full px-1.5 py-0.5 text-xs font-semibold',
+              activeFilter === 'short_gap'
+                ? 'bg-amber-200 text-amber-800 dark:bg-amber-800 dark:text-amber-200'
+                : 'bg-muted text-muted-foreground'
+            )}>
+              {shortGapIds.size}
+            </span>
+          )}
+        </button>
+
         {/* Botão limpar filtros */}
-        {hasFilters && (
+        {hasFilter && (
           <button
-            onClick={() => setStatusFilters([])}
+            onClick={() => setActiveFilter(null)}
             className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors ml-1"
           >
             <X className="w-3.5 h-3.5" />
@@ -232,17 +307,21 @@ function EventosContent() {
         )}
       </div>
 
-      {/* Banner de conflito de horário */}
-      {conflictingCount > 0 && (
+      {/* Banner de conflitos (separado por tipo) */}
+      {(overlappingIds.size > 0 || shortGapIds.size > 0) && (
         <div className="flex items-start gap-3 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-800 dark:bg-amber-950/30">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
-          <div className="flex-1 text-sm">
-            <span className="font-medium text-amber-800 dark:text-amber-300">
-              Conflito de horário detectado
-            </span>
-            <span className="ml-1 text-amber-700 dark:text-amber-400">
-              — {conflictingCount} evento{conflictingCount !== 1 ? 's' : ''} com intervalo inferior a 2h entre festas na mesma data.
-            </span>
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+            {overlappingIds.size > 0 && (
+              <span className="font-medium text-red-700 dark:text-red-400">
+                {overlappingIds.size} com sobreposição de horário
+              </span>
+            )}
+            {shortGapIds.size > 0 && (
+              <span className="font-medium text-amber-800 dark:text-amber-300">
+                {shortGapIds.size} com intervalo inferior a 2h
+              </span>
+            )}
           </div>
         </div>
       )}
@@ -264,7 +343,7 @@ function EventosContent() {
       )}
 
       {/* Empty states */}
-      {!isLoading && !isError && allEvents.length === 0 && (
+      {!isLoading && !isError && displayEvents.length === 0 && (
         <>
           {hasSearch ? (
             <EmptyState
@@ -272,6 +351,17 @@ function EventosContent() {
               title={`Nenhum resultado para "${debouncedSearch}"`}
               description="Tente buscar por outro nome, tema ou contratante."
               action={{ label: 'Limpar busca', onClick: () => setSearchInput('') }}
+            />
+          ) : isConflictFilter ? (
+            <EmptyState
+              icon={AlertTriangle}
+              title="Nenhum conflito encontrado"
+              description={
+                activeFilter === 'overlap'
+                  ? 'Nenhuma festa com sobreposição de horário.'
+                  : 'Nenhuma festa com intervalo inferior a 2h.'
+              }
+              action={{ label: 'Limpar filtro', onClick: () => setActiveFilter(null) }}
             />
           ) : tab !== 'all' ? (
             <EmptyState
@@ -300,7 +390,7 @@ function EventosContent() {
       )}
 
       {/* Lista agrupada por dia */}
-      {!isLoading && allEvents.length > 0 && (
+      {!isLoading && displayEvents.length > 0 && (
         <>
           <div className="space-y-1">
             {Array.from(grouped.entries()).map(([date, dayEvents]) => (
@@ -313,7 +403,14 @@ function EventosContent() {
                       className="animate-fade-up"
                       style={{ animationDelay: `${Math.min(idx, 9) * 50}ms`, animationFillMode: 'backwards' }}
                     >
-                      <EventCard event={event} hasConflict={conflictingIds.has(event.id)} />
+                      <EventCard
+                        event={event}
+                        conflictType={
+                          overlappingIds.has(event.id) ? 'overlap' :
+                          shortGapIds.has(event.id)   ? 'short_gap' :
+                          null
+                        }
+                      />
                     </div>
                   ))}
                 </div>
@@ -324,9 +421,12 @@ function EventosContent() {
           {/* Contador e Load More */}
           <div className="flex flex-col items-center gap-3 pt-2">
             <p className="text-xs text-muted-foreground">
-              Exibindo {allEvents.length} de {total} evento{total !== 1 ? 's' : ''}
+              {isConflictFilter
+                ? `${displayEvents.length} evento${displayEvents.length !== 1 ? 's' : ''} com conflito`
+                : `Exibindo ${displayEvents.length} de ${total} evento${total !== 1 ? 's' : ''}`
+              }
             </p>
-            {hasNextPage && (
+            {hasNextPage && !isConflictFilter && (
               <Button
                 variant="outline"
                 onClick={() => fetchNextPage()}
