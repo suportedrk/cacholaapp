@@ -77,7 +77,7 @@ export async function proxy(request: NextRequest) {
         response.cookies.set(cookie.name, cookie.value, {
           path: cookie.path,
           domain: cookie.domain,
-          expires: cookie.expires ? new Date(cookie.expires * 1000) : undefined,
+          expires: cookie.expires,
           httpOnly: cookie.httpOnly,
           secure: cookie.secure,
           sameSite: cookie.sameSite as 'strict' | 'lax' | 'none' | undefined,
