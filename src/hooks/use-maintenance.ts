@@ -300,6 +300,7 @@ export function useCompleteMaintenanceOrder() {
             type:            order.type,
             priority:        order.priority,
             sector_id:       order.sector_id,
+            unit_id:         order.unit_id,
             equipment_id:    order.equipment_id,
             status:          'open',
             assigned_to:     order.assigned_to,
