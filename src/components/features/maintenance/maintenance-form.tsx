@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Loader2, RefreshCw, EyeOff, Camera } from 'lucide-react'
 import { useIsReadOnly } from '@/hooks/use-read-only'
@@ -372,9 +373,9 @@ export function MaintenanceForm({ order, onSuccess }: Props) {
             {equipmentList.length === 0 && (
               <p className="text-xs text-muted-foreground">
                 Cadastre equipamentos em{' '}
-                <a href="/equipamentos" className="underline underline-offset-2 hover:text-foreground transition-colors">
+                <Link href="/equipamentos" className="underline underline-offset-2 hover:text-foreground transition-colors">
                   Equipamentos
-                </a>
+                </Link>
               </p>
             )}
           </div>
@@ -454,9 +455,9 @@ export function MaintenanceForm({ order, onSuccess }: Props) {
             {suppliers.length === 0 && (
               <p className="text-xs text-muted-foreground">
                 Cadastre fornecedores em{' '}
-                <a href="/manutencao/fornecedores/novo" className="underline underline-offset-2 hover:text-foreground transition-colors">
+                <Link href="/manutencao/fornecedores/novo" className="underline underline-offset-2 hover:text-foreground transition-colors">
                   Manutenção → Fornecedores
-                </a>
+                </Link>
               </p>
             )}
           </div>
