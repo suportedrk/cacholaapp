@@ -88,12 +88,12 @@ export function KanbanCardContent({
         {/* Row 3: assignee + due date */}
         <div className="flex items-center justify-between gap-1.5">
           {order.assigned_user ? (
-            <div className="flex items-center gap-1 min-w-0">
+            <div className="flex items-center gap-1.5 min-w-0">
               <UserAvatar
                 name={order.assigned_user.name}
                 avatarUrl={order.assigned_user.avatar_url}
                 size="sm"
-                className="w-4 h-4 text-[8px]"
+                className="shrink-0"
               />
               <span className="text-[10px] text-muted-foreground truncate">{firstName}</span>
             </div>
