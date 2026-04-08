@@ -149,12 +149,13 @@ export function KanbanBoard({ filters }: KanbanBoardProps) {
   const [overId, setOverId] = useState<string | null>(null)
 
   // Fetch all active statuses at once (no pagination for kanban)
-  const boardFilters: MaintenanceFilters = {
+  // useMemo ensures a stable reference so the query key doesn't change on every render
+  const boardFilters = useMemo<MaintenanceFilters>(() => ({
     ...filters,
     status: ['open', 'in_progress', 'waiting_parts', 'completed'],
     pageSize: 300,
     page: 1,
-  }
+  }), [filters])
 
   const { data } = useMaintenanceOrders(boardFilters)
   const allOrders = data?.data ?? []

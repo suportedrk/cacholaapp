@@ -461,7 +461,17 @@ export default function DetalheOrdemPage({
             <CostCardSkeleton />
           </div>
         ) : costs.length === 0 ? (
-          <p className="text-sm text-muted-foreground italic">Nenhum custo registrado.</p>
+          <>
+            <p className="text-sm text-muted-foreground italic">Nenhum custo registrado.</p>
+            {order.cost_estimate && (
+              <div className="rounded-lg bg-muted/30 border border-border p-3 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Estimativa</span>
+                  <span className="font-medium">{formatBRL(Number(order.cost_estimate))}</span>
+                </div>
+              </div>
+            )}
+          </>
         ) : (
           <>
             <div className="space-y-2">

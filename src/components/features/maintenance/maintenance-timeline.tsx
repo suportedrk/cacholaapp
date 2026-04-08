@@ -40,6 +40,7 @@ const ACTION_LABEL: Record<string, string> = {
   update: 'Ordem atualizada',
   delete: 'Ordem excluída',
   // Valores de logAudit()
+  create:     'Ordem criada',
   created:    'Ordem criada',
   updated:    'Ordem atualizada',
   deleted:    'Ordem excluída',
@@ -106,6 +107,7 @@ function AuditActionBadge({ action }: { action?: string }) {
 // ─────────────────────────────────────────────────────────────
 function TimelineDot({ kind, action }: { kind: TimelineKind; action?: string }) {
   const base = 'w-7 h-7 rounded-full flex items-center justify-center shrink-0 ring-2 ring-background'
+  const a = (action ?? '').toLowerCase()
 
   if (kind === 'cost') return (
     <div className={cn(base, 'bg-green-100 dark:bg-green-900/30')}>
@@ -117,18 +119,17 @@ function TimelineDot({ kind, action }: { kind: TimelineKind; action?: string }) 
       <Image className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
     </div>
   )
-  // Audit
-  if (action === 'INSERT') return (
+  // Audit — normalize to lowercase (DB stores 'create'/'insert', 'delete')
+  if (a === 'insert' || a === 'create' || a === 'created') return (
     <div className={cn(base, 'bg-primary/10')}>
       <Plus className="w-3.5 h-3.5 text-primary" />
     </div>
   )
-  if (action === 'DELETE') return (
+  if (a === 'delete' || a === 'deleted') return (
     <div className={cn(base, 'bg-red-100 dark:bg-red-900/30')}>
       <AlertCircle className="w-3.5 h-3.5 text-red-600 dark:text-red-400" />
     </div>
   )
-  // UPDATE — check if status changed to completed
   return (
     <div className={cn(base, 'bg-muted')}>
       <RefreshCw className="w-3.5 h-3.5 text-muted-foreground" />
@@ -206,7 +207,7 @@ function TimelineItem({ event, isLast }: { event: TimelineEvent; isLast: boolean
 
     return (
       <p className="text-xs text-foreground">
-        {ACTION_LABEL[normalizedAction] ?? event.action}
+        {ACTION_LABEL[normalizedAction] ?? 'Ação registrada'}
       </p>
     )
   }
