@@ -78,12 +78,13 @@ export function CostFormModal({ open, onOpenChange, preOrderId }: CostFormModalP
   const submitCost   = useSubmitCost()
   const uploadReceipt = useUploadReceipt()
 
-  // Open orders for select
+  // Open orders for select — only needed when no preOrderId is provided
   const { data: ordersData } = useMaintenanceOrders({
     status: ['open', 'in_progress', 'waiting_parts'],
     page: 1, pageSize: 100,
   })
   const orders = ordersData?.data ?? []
+  const showOrderSelect = !preOrderId
 
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }))
@@ -92,7 +93,7 @@ export function CostFormModal({ open, onOpenChange, preOrderId }: CostFormModalP
 
   function validate(): boolean {
     const errs: Partial<Record<keyof FormState, string>> = {}
-    if (!form.order_id)   errs.order_id   = 'Selecione uma ordem'
+    if (showOrderSelect && !form.order_id) errs.order_id = 'Selecione uma ordem'
     if (!form.description.trim()) errs.description = 'Descrição é obrigatória'
     if (parseCurrency(form.amountDisplay) <= 0) errs.amountDisplay = 'Informe um valor válido'
     if (!form.cost_type)  errs.cost_type  = 'Selecione o tipo'
@@ -177,28 +178,30 @@ export function CostFormModal({ open, onOpenChange, preOrderId }: CostFormModalP
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Ordem */}
-          <div className="space-y-1.5">
-            <Label>Ordem de Serviço <span className="text-destructive">*</span></Label>
-            <Select
-              value={form.order_id || null}
-              onValueChange={(v) => set('order_id', v ?? '')}
-            >
-              <SelectTrigger className={errors.order_id ? 'border-destructive' : ''}>
-                {form.order_id
-                  ? <span data-slot="select-value" className="flex flex-1 text-left">{orders.find((o) => o.id === form.order_id)?.title ?? form.order_id}</span>
-                  : <SelectValue placeholder="Selecionar ordem..." />}
-              </SelectTrigger>
-              <SelectContent>
-                {orders.map((o) => (
-                  <SelectItem key={o.id} value={o.id}>
-                    {o.title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.order_id && <p className="text-xs text-destructive">{errors.order_id}</p>}
-          </div>
+          {/* Ordem — hidden when opened from order detail (preOrderId provided) */}
+          {showOrderSelect && (
+            <div className="space-y-1.5">
+              <Label>Ordem de Serviço <span className="text-destructive">*</span></Label>
+              <Select
+                value={form.order_id || null}
+                onValueChange={(v) => set('order_id', v ?? '')}
+              >
+                <SelectTrigger className={errors.order_id ? 'border-destructive' : ''}>
+                  {form.order_id
+                    ? <span data-slot="select-value" className="flex flex-1 text-left">{orders.find((o) => o.id === form.order_id)?.title ?? form.order_id}</span>
+                    : <SelectValue placeholder="Selecionar ordem..." />}
+                </SelectTrigger>
+                <SelectContent>
+                  {orders.map((o) => (
+                    <SelectItem key={o.id} value={o.id}>
+                      {o.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.order_id && <p className="text-xs text-destructive">{errors.order_id}</p>}
+            </div>
+          )}
 
           {/* Descrição */}
           <div className="space-y-1.5">
