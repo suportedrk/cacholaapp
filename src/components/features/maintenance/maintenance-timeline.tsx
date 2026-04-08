@@ -35,9 +35,18 @@ interface TimelineEvent {
 }
 
 const ACTION_LABEL: Record<string, string> = {
-  INSERT: 'criou esta ordem',
-  UPDATE: 'atualizou',
-  DELETE: 'excluiu esta ordem',
+  // Valores do trigger PostgreSQL (TG_OP)
+  insert: 'Ordem criada',
+  update: 'Ordem atualizada',
+  delete: 'Ordem excluída',
+  // Valores de logAudit()
+  created:    'Ordem criada',
+  updated:    'Ordem atualizada',
+  deleted:    'Ordem excluída',
+  activated:  'Registro ativado',
+  deactivated: 'Registro desativado',
+  permission_changed: 'Permissão alterada',
+  status_change: 'Status alterado',
 }
 
 const STATUS_LABEL: Record<string, string> = {
@@ -66,6 +75,30 @@ const PHOTO_TYPE_LABEL: Record<string, string> = {
   before: 'Antes',
   after:  'Depois',
   during: 'Durante',
+}
+
+// ─────────────────────────────────────────────────────────────
+// ACTION BADGE (small icon overlaid on avatar, bottom-right)
+// ─────────────────────────────────────────────────────────────
+function AuditActionBadge({ action }: { action?: string }) {
+  const a = (action ?? '').toLowerCase()
+  const base = 'absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full ring-1 ring-background flex items-center justify-center'
+
+  if (a === 'insert' || a === 'created') return (
+    <span className={cn(base, 'bg-primary/10')}>
+      <Plus className="w-2 h-2 text-primary" />
+    </span>
+  )
+  if (a === 'delete' || a === 'deleted') return (
+    <span className={cn(base, 'bg-red-100 dark:bg-red-900/30')}>
+      <AlertCircle className="w-2 h-2 text-red-600 dark:text-red-400" />
+    </span>
+  )
+  return (
+    <span className={cn(base, 'bg-muted')}>
+      <RefreshCw className="w-2 h-2 text-muted-foreground" />
+    </span>
+  )
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -109,6 +142,8 @@ function TimelineDot({ kind, action }: { kind: TimelineKind; action?: string }) 
 function TimelineItem({ event, isLast }: { event: TimelineEvent; isLast: boolean }) {
   const relativeTime = formatDistanceToNow(new Date(event.createdAt), { addSuffix: true, locale: ptBR })
   const absoluteTime = format(new Date(event.createdAt), "d MMM yyyy 'às' HH:mm", { locale: ptBR })
+  const hasUserAvatar = event.kind === 'audit' && !!event.user
+  const normalizedAction = (event.action ?? '').toLowerCase()
 
   function renderContent() {
     if (event.kind === 'cost') {
@@ -145,10 +180,11 @@ function TimelineItem({ event, isLast }: { event: TimelineEvent; isLast: boolean
       )
     }
 
-    // Audit
+    // Audit — normalize action to handle both INSERT/UPDATE/DELETE and created/updated/deleted
     const statusChange = (event.newData?.status as string | undefined)
+    const isUpdate = normalizedAction === 'update' || normalizedAction === 'updated'
 
-    if (event.action === 'UPDATE' && statusChange) {
+    if (isUpdate && statusChange) {
       const isCompletion = statusChange === 'completed'
       return (
         <p className="text-xs text-foreground">
@@ -160,17 +196,17 @@ function TimelineItem({ event, isLast }: { event: TimelineEvent; isLast: boolean
       )
     }
 
-    if (event.action === 'UPDATE') {
+    if (isUpdate) {
       const fields = Object.keys(event.newData ?? {}).filter((k) => k !== 'updated_at')
       const label = fields.length === 1
-        ? `campo "${fields[0]}" atualizado`
-        : fields.length > 1 ? `${fields.length} campos atualizados` : 'atualizou esta ordem'
+        ? `Campo "${fields[0]}" atualizado`
+        : fields.length > 1 ? `${fields.length} campos atualizados` : 'Ordem atualizada'
       return <p className="text-xs text-foreground">{label}</p>
     }
 
     return (
       <p className="text-xs text-foreground">
-        {ACTION_LABEL[event.action ?? ''] ?? event.action}
+        {ACTION_LABEL[normalizedAction] ?? event.action}
       </p>
     )
   }
@@ -178,22 +214,28 @@ function TimelineItem({ event, isLast }: { event: TimelineEvent; isLast: boolean
   return (
     <li className="flex gap-3">
       <div className="flex flex-col items-center shrink-0">
-        <TimelineDot kind={event.kind} action={event.action} />
+        {/* Avatar in left col for audit events with user; icon dot for others */}
+        {hasUserAvatar ? (
+          <div className="relative shrink-0">
+            <UserAvatar
+              name={event.user!.name}
+              avatarUrl={event.user!.avatar_url}
+              size="sm"
+            />
+            <AuditActionBadge action={event.action} />
+          </div>
+        ) : (
+          <TimelineDot kind={event.kind} action={event.action} />
+        )}
         {!isLast && <div className="flex-1 w-0.5 bg-border mt-1 min-h-[1.5rem]" />}
       </div>
 
       <div className="flex-1 pb-4 min-w-0">
-        {/* Actor */}
+        {/* Actor name — avatar moved to left col, name stays in right col */}
         {event.user && (
-          <div className="flex items-center gap-1.5 mb-0.5">
-            <UserAvatar
-              name={event.user.name}
-              avatarUrl={event.user.avatar_url}
-              size="sm"
-              className="w-4 h-4 text-[8px]"
-            />
-            <span className="text-[11px] font-medium text-foreground truncate">{event.user.name}</span>
-          </div>
+          <span className="block text-[11px] font-medium text-foreground truncate mb-0.5">
+            {event.user.name}
+          </span>
         )}
 
         {renderContent()}
