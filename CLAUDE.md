@@ -1007,6 +1007,32 @@ Modal `createPortal(document.body)` com overlay + painel centrado:
 - [x] **Deploy VPS**: `npm install` + build OK + pm2 restart + SMTP vars no `.env.local`
 - [x] **Testes E2E**: nodemailer VERIFY OK + EMAIL_SENT (`<9b94add6...@cachola.cloud>`) + GoTrue recovery 200 OK
 
+### Fase 2 — Google OAuth (2026-04-08)
+
+#### GoTrue — Configuração na VPS (`/opt/supabase/supabase/docker/.env`)
+- [x] Provider habilitado via `GOTRUE_EXTERNAL_GOOGLE_ENABLED`, `GOTRUE_EXTERNAL_GOOGLE_CLIENT_ID`, `GOTRUE_EXTERNAL_GOOGLE_SECRET`
+- [x] `GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI=https://api.cachola.cloud/auth/v1/callback` (GoTrue ↔ Google — via Kong)
+- [x] **ATENÇÃO:** `docker-compose.yml` usa `${ADDITIONAL_REDIRECT_URLS}` (NÃO `GOTRUE_URI_ALLOW_LIST`) para popular `GOTRUE_URI_ALLOW_LIST` no container
+  - Sempre atualizar `ADDITIONAL_REDIRECT_URLS` no `.env`:
+  - `ADDITIONAL_REDIRECT_URLS=https://cachola.cloud/auth/confirm,https://cachola.cloud/auth/callback,https://cachola.cloud/**`
+  - Após alterar, obrigatório: `docker compose up -d --force-recreate auth` (restart não relê .env)
+- [x] **Nginx:** OAuth define múltiplos cookies grandes (~8–12 KB) — necessário no bloco do site:
+  ```
+  proxy_buffer_size 128k;
+  proxy_buffers 4 256k;
+  proxy_busy_buffers_size 256k;
+  ```
+
+#### Next.js — Callback route (`/auth/callback/route.ts`)
+- [x] Usa `process.env.NEXT_PUBLIC_SITE_URL` para montar o redirect — NUNCA `request.url` nem `window.location.origin` (PM2 retorna `http://127.0.0.1:3001` internamente)
+- [x] `exchangeCodeForSession(code)` + redirect para `${siteUrl}${next}` em caso de sucesso
+- [x] Em caso de erro: redirect para `/login?error=callback_error`
+
+#### Segurança — Bloqueio de contas não autorizadas
+- [x] `supabase/migrations/028_block_unauthorized_oauth.sql`: trigger `on_auth_user_created_oauth_check` em `auth.users` — bloqueia criação de conta Google se e-mail não constar em `public.users`
+- [x] `supabase/migrations/029_block_inactive_oauth.sql`: atualiza o trigger para também bloquear usuários com `is_active = false`
+- [x] Função `public.block_unauthorized_oauth_signup()` em schema `public` (Supabase self-hosted bloqueia CREATE FUNCTION no schema `auth` para o role `postgres`)
+
 ### Fase 2.5 — Multi-Unidade (2026-03-27)
 - [x] `supabase/migrations/010_fase25_units.sql`: tabelas `units` (slug UNIQUE) + `user_units` (role por unidade, is_default), `unit_id` nullable→NOT NULL em events/checklists/checklist_templates/maintenance_orders, nullable em audit_logs + config tables (event_types, packages, venues, checklist_categories, sectors, user_permissions), RLS completo com `get_user_unit_ids()` + `is_global_viewer()`, seed Pinheiros
 - [x] `src/types/database.types.ts`: Unit, UserUnit, UserUnitWithUnit types; `unit_id` em todas entidades
@@ -2269,6 +2295,10 @@ Estas regras resolvem o bug "Skeleton Loading Infinito" causado por race conditi
 | E-mail emergency via API route (não hook) | `SMTP_*` vars são server-only. Hook client-side chama `POST /api/email/maintenance-emergency` fire-and-forget. Cron chama `sendEmail()` diretamente (já server-side). |
 | nodemailer graceful fallback | `sendEmail()` nunca lança exceção — erros são `console.error`. Se `SMTP_HOST/USER/PASS` ausentes, apenas avisa no log e segue. Fluxo principal nunca é interrompido por falha de e-mail. |
 | nodemailer v6 (não v8) | nodemailer v8 não tem `@types/nodemailer`. v6.9.x tem tipos via `@types/nodemailer@6.4.x`. Porém `@types/nodemailer` não instala limpo neste projeto — solução: `src/types/nodemailer.d.ts` manual. |
+| `ADDITIONAL_REDIRECT_URLS` (não `GOTRUE_URI_ALLOW_LIST`) no Supabase self-hosted | O `docker-compose.yml` oficial do Supabase define `GOTRUE_URI_ALLOW_LIST: ${ADDITIONAL_REDIRECT_URLS}`. Alterar `GOTRUE_URI_ALLOW_LIST` no `.env` não tem efeito — é a variável errada. Sempre editar `ADDITIONAL_REDIRECT_URLS`. Após editar, obrigatório `--force-recreate auth` (restart simples não relê .env). |
+| Google OAuth callback route usa `NEXT_PUBLIC_SITE_URL` | PM2 executa Next.js em `http://127.0.0.1:3001`. `request.url.origin` retorna `http://127.0.0.1:3001` (não acessível pelo browser). Sempre usar `process.env.NEXT_PUBLIC_SITE_URL` para construir redirects pós-OAuth. |
+| Google OAuth cookies grandes exigem buffers Nginx maiores | OAuth define múltiplos cookies de sessão (~8–12 KB total). Sem `proxy_buffer_size 128k` / `proxy_buffers 4 256k`, Nginx retorna 502 Bad Gateway silencioso. Aplicar no bloco do site em `/etc/nginx/sites-available/cachola.cloud`. |
+| Trigger OAuth em `public` (não `auth`) | Supabase self-hosted bloqueia `CREATE FUNCTION` no schema `auth` para o role `postgres`. Função `block_unauthorized_oauth_signup()` criada em `public` com `SECURITY DEFINER` — mesmo padrão de `handle_new_user()`. |
 | `@next/bundle-analyzer` via require() condicional | `@next/bundle-analyzer` v16.2.x não existe no npm (Next.js 16 muito novo). Static import falha no build. Solução: `process.env.ANALYZE === 'true' ? require('@next/bundle-analyzer')({...}) : null`. |
 | GoTrue SMTP deve usar `--force-recreate` | `docker compose restart auth` NÃO relê o `.env` — o container continua com as vars antigas. Usar `docker compose up -d --force-recreate auth` para aplicar novas vars de ambiente. |
 | `preferences.notifications.email` já existia | O toggle de e-mail no perfil já existia como `notifEmail` (mapeado para `preferences.notifications.email`). Nenhuma migração necessária — campo já no JSONB. |
