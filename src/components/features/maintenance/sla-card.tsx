@@ -10,6 +10,7 @@ import { Separator } from '@/components/ui/separator'
 // HELPERS
 // ─────────────────────────────────────────────────────────────
 function formatDuration(ms: number): string {
+  if (!Number.isFinite(ms)) return '—'
   const abs = Math.abs(ms)
   const days    = Math.floor(abs / 86_400_000)
   const hours   = Math.floor((abs % 86_400_000) / 3_600_000)
@@ -61,7 +62,10 @@ export function SlaCard({ createdAt, dueDate }: Props) {
   // eslint-disable-next-line react-hooks/purity
   const now      = Date.now()
   const created  = new Date(createdAt).getTime()
-  const due      = parseISO(dueDate + 'T23:59:59').getTime()
+  const due      = dueDate ? parseISO(dueDate + 'T23:59:59').getTime() : NaN
+
+  // Guard: if either date is invalid, render nothing rather than NaN UI
+  if (!Number.isFinite(created) || !Number.isFinite(due)) return null
 
   const total    = due - created
   const elapsed  = now - created

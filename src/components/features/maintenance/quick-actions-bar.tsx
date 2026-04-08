@@ -47,7 +47,8 @@ export function QuickActionsBar({ orderId, currentStatus, canComplete }: Props) 
       if (!user) { toast.error('Não autenticado'); return }
 
       const compressed = await compressImage(file, 1200, 0.8)
-      const path = `${orderId}/quick-${Date.now()}.jpg`
+      // Sanitize path: strip leading slashes and any accidental bucket prefix
+      const path = `${orderId}/quick-${Date.now()}.jpg`.replace(/^\/+/, '')
 
       const { error: uploadErr } = await supabase.storage
         .from('maintenance-photos')

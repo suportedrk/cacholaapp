@@ -6,7 +6,7 @@ import { format, isPast, parseISO, formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import {
   AlertTriangle, Calendar, MapPin, User, Wrench, Camera,
-  Building2, DollarSign,
+  Building2,
 } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { UserAvatar } from '@/components/shared/user-avatar'
@@ -146,9 +146,8 @@ export const MaintenanceCard = memo(function MaintenanceCard({ order }: Props) {
             {/* Right side: deadline + photo count + cost */}
             <div className="ml-auto flex items-center gap-2 shrink-0">
               {order.cost_estimate != null && (
-                <span className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground">
-                  <DollarSign className="w-3 h-3" />
-                  {order.cost_estimate.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                <span className="text-[10px] text-muted-foreground">
+                  {Number(order.cost_estimate).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                 </span>
               )}
               {photoCount > 0 && (
