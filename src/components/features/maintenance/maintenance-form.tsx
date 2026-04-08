@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Loader2, RefreshCw, EyeOff } from 'lucide-react'
+import { Loader2, RefreshCw, EyeOff, Camera } from 'lucide-react'
 import { useIsReadOnly } from '@/hooks/use-read-only'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -312,9 +312,19 @@ export function MaintenanceForm({ order, onSuccess }: Props) {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <Label>Setor / Local</Label>
-            <Select value={form.sector_id} onValueChange={(v) => set('sector_id', v)}>
+            <Select
+              value={form.sector_id || null}
+              onValueChange={(v) => set('sector_id', v ?? '')}
+              disabled={sectors.length === 0}
+            >
               <SelectTrigger>
-                <SelectValue placeholder={sectors.length === 0 ? 'Sem setores cadastrados' : 'Selecionar setor...'} />
+                {form.sector_id ? (
+                  <span data-slot="select-value" className="flex flex-1 text-left">
+                    {sectors.find((s) => s.id === form.sector_id)?.name ?? form.sector_id}
+                  </span>
+                ) : (
+                  <SelectValue placeholder={sectors.length === 0 ? 'Nenhum setor cadastrado' : 'Selecionar setor...'} />
+                )}
               </SelectTrigger>
               <SelectContent>
                 {sectors.map((s) => (
@@ -322,6 +332,14 @@ export function MaintenanceForm({ order, onSuccess }: Props) {
                 ))}
               </SelectContent>
             </Select>
+            {sectors.length === 0 && (
+              <p className="text-xs text-muted-foreground">
+                Cadastre setores em{' '}
+                <a href="/configuracoes" className="underline underline-offset-2 hover:text-foreground transition-colors">
+                  Configurações
+                </a>
+              </p>
+            )}
           </div>
 
           <div className="space-y-1.5">
@@ -329,6 +347,7 @@ export function MaintenanceForm({ order, onSuccess }: Props) {
             <Select
               value={form.equipment_id || null}
               onValueChange={(v) => set('equipment_id', v ?? '')}
+              disabled={equipmentList.length === 0}
             >
               <SelectTrigger>
                 {form.equipment_id ? (
@@ -339,7 +358,7 @@ export function MaintenanceForm({ order, onSuccess }: Props) {
                     })()}
                   </span>
                 ) : (
-                  <SelectValue placeholder={equipmentList.length === 0 ? 'Sem equipamentos cadastrados' : 'Selecionar equipamento...'} />
+                  <SelectValue placeholder={equipmentList.length === 0 ? 'Nenhum equipamento cadastrado' : 'Selecionar equipamento...'} />
                 )}
               </SelectTrigger>
               <SelectContent>
@@ -350,6 +369,14 @@ export function MaintenanceForm({ order, onSuccess }: Props) {
                 ))}
               </SelectContent>
             </Select>
+            {equipmentList.length === 0 && (
+              <p className="text-xs text-muted-foreground">
+                Cadastre equipamentos em{' '}
+                <a href="/equipamentos" className="underline underline-offset-2 hover:text-foreground transition-colors">
+                  Equipamentos
+                </a>
+              </p>
+            )}
           </div>
         </div>
       </section>
@@ -362,9 +389,18 @@ export function MaintenanceForm({ order, onSuccess }: Props) {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <Label>Responsável interno</Label>
-            <Select value={form.assigned_to} onValueChange={(v) => set('assigned_to', v)}>
+            <Select
+              value={form.assigned_to || null}
+              onValueChange={(v) => set('assigned_to', v ?? '')}
+            >
               <SelectTrigger>
-                <SelectValue placeholder="Selecionar responsável..." />
+                {form.assigned_to ? (
+                  <span data-slot="select-value" className="flex flex-1 text-left">
+                    {users.find((u) => u.id === form.assigned_to)?.name ?? form.assigned_to}
+                  </span>
+                ) : (
+                  <SelectValue placeholder="Selecionar responsável..." />
+                )}
               </SelectTrigger>
               <SelectContent>
                 {users.map((u) => (
@@ -390,6 +426,7 @@ export function MaintenanceForm({ order, onSuccess }: Props) {
             <Select
               value={form.supplier_id || null}
               onValueChange={(v) => set('supplier_id', v ?? '')}
+              disabled={suppliers.length === 0}
             >
               <SelectTrigger>
                 {form.supplier_id ? (
@@ -402,7 +439,7 @@ export function MaintenanceForm({ order, onSuccess }: Props) {
                     })()}
                   </span>
                 ) : (
-                  <SelectValue placeholder={suppliers.length === 0 ? 'Sem fornecedores cadastrados' : 'Selecionar fornecedor...'} />
+                  <SelectValue placeholder={suppliers.length === 0 ? 'Nenhum fornecedor cadastrado' : 'Selecionar fornecedor...'} />
                 )}
               </SelectTrigger>
               <SelectContent>
@@ -414,6 +451,14 @@ export function MaintenanceForm({ order, onSuccess }: Props) {
                 ))}
               </SelectContent>
             </Select>
+            {suppliers.length === 0 && (
+              <p className="text-xs text-muted-foreground">
+                Cadastre fornecedores em{' '}
+                <a href="/manutencao/fornecedores/novo" className="underline underline-offset-2 hover:text-foreground transition-colors">
+                  Manutenção → Fornecedores
+                </a>
+              </p>
+            )}
           </div>
 
           {/* Estimativa de custo */}
@@ -532,19 +577,18 @@ export function MaintenanceForm({ order, onSuccess }: Props) {
       )}
 
       {/* ── Seção 5: Fotos ────────────────────────────────────── */}
-      <section className="space-y-4">
-        <h2 className="text-base font-semibold text-foreground">Fotos</h2>
-        <Separator />
-        <div className="rounded-lg border-2 border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-          Upload de fotos disponível na tela de detalhe após criação.
+      {!isEditing && (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Camera className="w-4 h-4 shrink-0" />
+          <span>Fotos podem ser adicionadas após criar a ordem</span>
         </div>
-      </section>
+      )}
 
       {/* ── Ações ─────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row gap-3 justify-end pt-2">
         <Button
           type="button"
-          variant="outline"
+          variant="ghost"
           onClick={() => router.back()}
           disabled={isSaving}
           className="w-full sm:w-auto"
