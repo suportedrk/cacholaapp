@@ -137,7 +137,11 @@ export function PhotoDropZone({
       setProgress(45)
 
       const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`
-      const storagePath = `${folder}/${fileName}`
+      // Sanitize: remove leading slashes and any accidental bucket-name prefix
+      const rawPath = `${folder}/${fileName}`
+      const storagePath = rawPath
+        .replace(/^\/+/, '')                                  // strip leading slashes
+        .replace(new RegExp(`^${bucket}/`, 'i'), '')          // strip accidental bucket prefix
 
       progressTimer.current = setInterval(
         () => setProgress((p) => Math.min(p + 4, 88)),
