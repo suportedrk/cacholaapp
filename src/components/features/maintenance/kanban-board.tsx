@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import {
   DndContext,
   DragOverlay,
@@ -246,14 +247,17 @@ export function KanbanBoard({ filters }: KanbanBoardProps) {
         ))}
       </div>
 
-      {/* Drag overlay — rendered at pointer position */}
-      <DragOverlay dropAnimation={{ duration: 150, easing: 'ease-out' }}>
-        {activeOrder ? (
-          <div className="w-[264px]">
-            <KanbanCardContent order={activeOrder} shadow />
-          </div>
-        ) : null}
-      </DragOverlay>
+      {/* Drag overlay — portaled to document.body to avoid scroll/transform offset bugs */}
+      {createPortal(
+        <DragOverlay dropAnimation={{ duration: 150, easing: 'ease-out' }}>
+          {activeOrder ? (
+            <div className="w-[264px]">
+              <KanbanCardContent order={activeOrder} shadow />
+            </div>
+          ) : null}
+        </DragOverlay>,
+        document.body,
+      )}
     </DndContext>
   )
 }
