@@ -56,6 +56,37 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
+  // Verificar is_active para usuários autenticados em rotas protegidas.
+  // Query leve: SELECT is_active FROM users WHERE id = ? (indexed PK).
+  // Cobre tanto email/senha quanto OAuth — bloqueia sessões de usuários desativados.
+  if (user && !isPublicRoute) {
+    const { data: profile } = await supabase
+      .from('users')
+      .select('is_active')
+      .eq('id', user.id)
+      .single()
+
+    if (profile?.is_active === false) {
+      // Encerrar sessão e copiar cookies limpos para o redirect
+      await supabase.auth.signOut()
+      const url = request.nextUrl.clone()
+      url.pathname = '/login'
+      url.searchParams.set('error', 'inactive')
+      const response = NextResponse.redirect(url)
+      supabaseResponse.cookies.getAll().forEach((cookie) => {
+        response.cookies.set(cookie.name, cookie.value, {
+          path: cookie.path,
+          domain: cookie.domain,
+          expires: cookie.expires ? new Date(cookie.expires * 1000) : undefined,
+          httpOnly: cookie.httpOnly,
+          secure: cookie.secure,
+          sameSite: cookie.sameSite as 'strict' | 'lax' | 'none' | undefined,
+        })
+      })
+      return response
+    }
+  }
+
   // Se autenticado e rota de login → redirecionar para dashboard
   if (user && (pathname === '/login' || pathname === '/')) {
     const url = request.nextUrl.clone()

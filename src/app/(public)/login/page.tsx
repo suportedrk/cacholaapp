@@ -16,7 +16,7 @@ import { createClient } from '@/lib/supabase/client'
 // ERROR CLASSIFICATION
 // ─────────────────────────────────────────────────────────────
 
-type ErrorType = 'credentials' | 'blocked' | 'rate_limit' | 'server' | 'unconfirmed'
+type ErrorType = 'credentials' | 'blocked' | 'inactive' | 'rate_limit' | 'server' | 'unconfirmed'
 
 interface LoginError {
   type: ErrorType
@@ -35,6 +35,9 @@ function classifyError(error: string): LoginError {
   if (lower.includes('email not confirmed') || lower.includes('not confirmed')) {
     return { type: 'unconfirmed', message: 'E-mail não confirmado. Verifique sua caixa de entrada.' }
   }
+  if (lower.includes('inativa') || lower.includes('inactive')) {
+    return { type: 'inactive', message: 'Sua conta está inativa. Contate o administrador do sistema.' }
+  }
   if (lower.includes('blocked') || lower.includes('banned') || lower.includes('disabled') || lower.includes('deactivated')) {
     return { type: 'blocked', message: 'Conta bloqueada ou desativada. Contate o administrador.' }
   }
@@ -51,6 +54,7 @@ function classifyError(error: string): LoginError {
 const ERROR_ICONS: Record<ErrorType, React.ElementType> = {
   credentials: AlertCircle,
   blocked:     AlertCircle,
+  inactive:    AlertCircle,
   rate_limit:  Clock,
   server:      WifiOff,
   unconfirmed: AlertCircle,
@@ -186,10 +190,12 @@ function LoginForm() {
     if (isAuthenticated) router.replace(redirectTo)
   }, [isAuthenticated, router, redirectTo])
 
-  // Callback error (e.g. expired link)
+  // Callback error (e.g. expired link, inactive account)
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    if (callbackError) {
+    if (callbackError === 'inactive') {
+      setLoginError({ type: 'inactive', message: 'Sua conta está inativa. Contate o administrador do sistema.' })
+    } else if (callbackError) {
       setLoginError({ type: 'server', message: 'O link expirou ou é inválido. Solicite um novo.' })
     }
   }, [callbackError])
