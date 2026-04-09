@@ -180,7 +180,7 @@ export function TicketFormModal({ open, onClose, onCreated }: TicketFormModalPro
               </label>
               <Select
                 value={form.nature}
-                onValueChange={(v) => set('nature', v as TicketNature)}
+                onValueChange={(v) => set('nature', (v ?? '') as TicketNature)}
               >
                 <SelectTrigger className={errors.nature ? 'border-destructive' : ''}>
                   <SelectValue placeholder="Selecionar..." />
@@ -202,7 +202,7 @@ export function TicketFormModal({ open, onClose, onCreated }: TicketFormModalPro
               </label>
               <Select
                 value={form.urgency}
-                onValueChange={(v) => set('urgency', v as TicketUrgency)}
+                onValueChange={(v) => set('urgency', (v ?? '') as TicketUrgency)}
               >
                 <SelectTrigger className={errors.urgency ? 'border-destructive' : ''}>
                   <SelectValue placeholder="Selecionar..." />
@@ -241,7 +241,7 @@ export function TicketFormModal({ open, onClose, onCreated }: TicketFormModalPro
             <Select
               value={form.sector_id || 'none'}
               onValueChange={(v) => {
-                set('sector_id', v === 'none' ? '' : v)
+                set('sector_id', v === 'none' ? '' : (v ?? ''))
                 set('item_id', '') // reset item when sector changes
               }}
             >
@@ -262,7 +262,7 @@ export function TicketFormModal({ open, onClose, onCreated }: TicketFormModalPro
             <label className="text-sm font-medium text-text-primary">Categoria</label>
             <Select
               value={form.category_id || 'none'}
-              onValueChange={(v) => set('category_id', v === 'none' ? '' : v)}
+              onValueChange={(v) => set('category_id', v === 'none' ? '' : (v ?? ''))}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Selecionar categoria..." />
@@ -291,7 +291,7 @@ export function TicketFormModal({ open, onClose, onCreated }: TicketFormModalPro
             </label>
             <Select
               value={form.item_id || 'none'}
-              onValueChange={(v) => set('item_id', v === 'none' ? '' : v)}
+              onValueChange={(v) => set('item_id', v === 'none' ? '' : (v ?? ''))}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Selecionar item..." />
