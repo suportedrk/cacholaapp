@@ -242,7 +242,7 @@ function ChamadosContent() {
         {/* Row 2: dropdown filters */}
         <div className="flex items-center gap-2 flex-wrap">
           {/* Sector */}
-          <Select value={sectorId || 'all'} onValueChange={(v) => setSectorId(v === 'all' ? '' : v)}>
+          <Select value={sectorId || 'all'} onValueChange={(v) => setSectorId(v === 'all' ? '' : (v ?? ''))}>
             <SelectTrigger className="h-8 text-xs w-[140px]">
               <SelectValue placeholder="Setor" />
             </SelectTrigger>
@@ -255,7 +255,7 @@ function ChamadosContent() {
           </Select>
 
           {/* Urgency */}
-          <Select value={urgency || 'all'} onValueChange={(v) => setUrgency(v === 'all' ? '' : v as TicketUrgency)}>
+          <Select value={urgency || 'all'} onValueChange={(v) => setUrgency(v === 'all' ? '' : (v ?? '') as TicketUrgency)}>
             <SelectTrigger className="h-8 text-xs w-[130px]">
               <SelectValue placeholder="Urgência" />
             </SelectTrigger>
@@ -269,7 +269,7 @@ function ChamadosContent() {
           </Select>
 
           {/* Nature */}
-          <Select value={nature || 'all'} onValueChange={(v) => setNature(v === 'all' ? '' : v as TicketNature)}>
+          <Select value={nature || 'all'} onValueChange={(v) => setNature(v === 'all' ? '' : (v ?? '') as TicketNature)}>
             <SelectTrigger className="h-8 text-xs w-[130px]">
               <SelectValue placeholder="Natureza" />
             </SelectTrigger>
