@@ -125,7 +125,6 @@ export type SyncResult = {
   dealsUpdated: number
   dealsMarkedLost: number
   dealsErrors: number
-  venuesCreated: number
   typesCreated: number
   errorMessage?: string
   durationMs: number

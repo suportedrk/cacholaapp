@@ -323,7 +323,7 @@ export default function EventoDetailPage() {
 
   const completedChecklists = checklists.filter((c) => c.status === 'completed').length
 
-  const hasPartyInfo  = !!(event.event_type || event.package || event.notes || event.event_category || event.cake_flavor || event.music || event.adult_count || event.kids_under4 || event.kids_over5)
+  const hasPartyInfo  = !!(event.notes || event.event_category || event.cake_flavor || event.music || event.adult_count || event.kids_under4 || event.kids_over5)
   const hasClientInfo = !!(event.client_phone || event.client_email || event.father_name || event.school || event.birthday_date)
   const hasLogisticsExtras = !!(event.setup_time || event.teardown_time || event.show_time)
   const hasServices   = event.has_show || event.decoration_aligned || event.has_decorated_sweets || event.party_favors || event.outside_drinks || !!event.photo_video
@@ -426,12 +426,6 @@ export default function EventoDetailPage() {
               <Clock className="w-4 h-4 shrink-0 text-text-tertiary" />
               <span>{formatTime(event.start_time)} – {formatTime(event.end_time)}</span>
             </div>
-            {event.venue && (
-              <div className="flex items-center gap-2">
-                <MapPin className="w-4 h-4 shrink-0 text-text-tertiary" />
-                <span>{event.venue.name}</span>
-              </div>
-            )}
             {event.guest_count && (
               <div className="flex items-center gap-2">
                 <Users className="w-4 h-4 shrink-0 text-text-tertiary" />
@@ -453,21 +447,6 @@ export default function EventoDetailPage() {
                 <div className="flex items-start gap-3">
                   <span className="text-xs text-text-tertiary w-28 shrink-0 pt-0.5">Tipo</span>
                   <span className="text-sm text-text-primary">{event.event_category}</span>
-                </div>
-              )}
-              {event.event_type && (
-                <div className="flex items-start gap-3">
-                  <span className="text-xs text-text-tertiary w-28 shrink-0 pt-0.5">Categoria</span>
-                  <span className="text-sm text-text-primary">{event.event_type.name}</span>
-                </div>
-              )}
-              {event.package && (
-                <div className="flex items-start gap-3">
-                  <span className="text-xs text-text-tertiary w-28 shrink-0 pt-0.5">Pacote</span>
-                  <div className="flex items-center gap-1.5">
-                    <Package className="w-3.5 h-3.5 text-text-tertiary shrink-0" />
-                    <span className="text-sm text-text-primary">{event.package.name}</span>
-                  </div>
                 </div>
               )}
               {/* Convidados */}
@@ -527,13 +506,6 @@ export default function EventoDetailPage() {
             show={hasLogisticsExtras ? event.show_time : null}
           />
           <div className="mt-2 space-y-1.5 text-sm">
-            {event.venue && (
-              <div className="flex items-center gap-2 text-text-secondary">
-                <MapPin className="w-4 h-4 text-text-tertiary shrink-0" />
-                <span>{event.venue.name}</span>
-                {event.venue.capacity && <span className="text-text-tertiary">· cap. {event.venue.capacity}</span>}
-              </div>
-            )}
             {event.event_location && (
               <div className="flex items-center gap-2 text-text-secondary">
                 <MapPin className="w-4 h-4 text-text-tertiary shrink-0" />

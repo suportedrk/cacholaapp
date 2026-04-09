@@ -160,30 +160,12 @@ export const EventCard = memo(function EventCard({ event, conflictType = null }:
         </div>
       </div>
 
-      {/* Meta: tipo, salão, convidados, pacote */}
+      {/* Meta: convidados, prestadores */}
       <div className="flex flex-wrap gap-x-3 gap-y-1 mt-3">
-        {event.event_type && (
-          <span className="inline-flex items-center gap-1 text-xs text-text-secondary">
-            <span className="w-1.5 h-1.5 rounded-full bg-primary/60 shrink-0" />
-            {event.event_type.name}
-          </span>
-        )}
-        {event.venue && (
-          <span className="inline-flex items-center gap-1 text-xs text-text-secondary">
-            <MapPin className="w-3 h-3 shrink-0" />
-            {event.venue.name}
-          </span>
-        )}
         {event.guest_count && (
           <span className="inline-flex items-center gap-1 text-xs text-text-secondary">
             <Users className="w-3 h-3 shrink-0" />
             {event.guest_count} convidados
-          </span>
-        )}
-        {event.package && (
-          <span className="inline-flex items-center gap-1 text-xs text-text-secondary">
-            <PackageIcon className="w-3 h-3 shrink-0" />
-            {event.package.name}
           </span>
         )}
         {providerCount > 0 && (

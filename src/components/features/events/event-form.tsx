@@ -20,7 +20,6 @@ import {
 import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
-import { useEventTypes, usePackages, useVenues } from '@/hooks/use-event-config'
 import { useUsers } from '@/hooks/use-users'
 import { useCreateEvent, useUpdateEvent } from '@/hooks/use-events'
 import { useAuth } from '@/hooks/use-auth'
@@ -47,10 +46,6 @@ interface FormData {
   birthday_person: string
   birthday_age: string
   guest_count: string
-  // Seção 3 — Detalhes
-  event_type_id: string
-  package_id: string
-  venue_id: string
   // Seção 5 — Observações
   notes: string
   ploomes_deal_id: string
@@ -78,9 +73,6 @@ export function EventForm({ event }: EventFormProps) {
   const isEditing = !!event
 
   // Queries de dados de configuração
-  const { data: eventTypes = [] } = useEventTypes()
-  const { data: packages = [] } = usePackages()
-  const { data: venues = [] } = useVenues()
   const { data: usersData } = useUsers()
   const activeUsers = (usersData ?? []).filter((u: User) => u.is_active)
 
@@ -101,9 +93,6 @@ export function EventForm({ event }: EventFormProps) {
     birthday_person: event?.birthday_person ?? '',
     birthday_age:    event?.birthday_age?.toString() ?? '',
     guest_count:     event?.guest_count?.toString() ?? '',
-    event_type_id:   event?.event_type?.id ?? '',
-    package_id:      event?.package?.id ?? '',
-    venue_id:        event?.venue?.id ?? '',
     notes:           event?.notes ?? '',
     ploomes_deal_id: event?.ploomes_deal_id ?? '',
   })
@@ -170,9 +159,6 @@ export function EventForm({ event }: EventFormProps) {
       birthday_person: form.birthday_person.trim() || null,
       birthday_age:    form.birthday_age ? parseInt(form.birthday_age) : null,
       guest_count:     form.guest_count ? parseInt(form.guest_count) : null,
-      event_type_id:   form.event_type_id || null,
-      package_id:      form.package_id || null,
-      venue_id:        form.venue_id || null,
       notes:           form.notes.trim() || null,
       ploomes_deal_id: form.ploomes_deal_id.trim() || null,
     }
@@ -354,78 +340,7 @@ export function EventForm({ event }: EventFormProps) {
         </div>
       </section>
 
-      <div className="border-t border-border" />
-
-      {/* ── Seção 3: Detalhes do Evento ── */}
-      <section className="space-y-4">
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-          Detalhes do Evento
-        </h2>
-        <div className="grid gap-4">
-          <div className="space-y-1.5">
-            <Label>Tipo de Evento</Label>
-            <Select
-              value={form.event_type_id || null}
-              onValueChange={(v) => setField('event_type_id', v ?? '')}
-            >
-              <SelectTrigger>
-                {form.event_type_id
-                  ? <span data-slot="select-value" className="flex flex-1 text-left">{eventTypes.find((t) => t.id === form.event_type_id)?.name ?? form.event_type_id}</span>
-                  : <SelectValue placeholder={eventTypes.length === 0 ? 'Sem tipos cadastrados' : 'Selecionar tipo...'} />}
-              </SelectTrigger>
-              <SelectContent>
-                {eventTypes.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label>Pacote Contratado</Label>
-            <Select
-              value={form.package_id || null}
-              onValueChange={(v) => setField('package_id', v ?? '')}
-            >
-              <SelectTrigger>
-                {form.package_id
-                  ? <span data-slot="select-value" className="flex flex-1 text-left">{packages.find((p) => p.id === form.package_id)?.name ?? form.package_id}</span>
-                  : <SelectValue placeholder={packages.length === 0 ? 'Sem pacotes cadastrados' : 'Selecionar pacote...'} />}
-              </SelectTrigger>
-              <SelectContent>
-                {packages.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label>Local / Salão</Label>
-            <Select
-              value={form.venue_id || null}
-              onValueChange={(v) => setField('venue_id', v ?? '')}
-            >
-              <SelectTrigger>
-                {form.venue_id
-                  ? <span data-slot="select-value" className="flex flex-1 text-left">{(() => { const venue = venues.find((v) => v.id === form.venue_id); return venue ? `${venue.name}${venue.capacity ? ` (cap. ${venue.capacity})` : ''}` : form.venue_id })()}</span>
-                  : <SelectValue placeholder={venues.length === 0 ? 'Sem salões cadastrados' : 'Selecionar salão...'} />}
-              </SelectTrigger>
-              <SelectContent>
-                {venues.map((v) => (
-                  <SelectItem key={v.id} value={v.id}>
-                    {v.name}{v.capacity ? ` (cap. ${v.capacity})` : ''}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      </section>
-
-      <div className="border-t border-border" />
-
-      {/* ── Seção 4: Equipe ── */}
+{/* -- Seção 4: Equipe ── */}
       <section className="space-y-4">
         <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
           Equipe Designada

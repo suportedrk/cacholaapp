@@ -110,41 +110,6 @@ async function resolveUnitId(
   return first?.id ?? null
 }
 
-/**
- * Resolve venue_id a partir do nome.
- * Cria automaticamente se não existir na unidade.
- * Retorna { id, created } onde created=true indica que foi criado agora.
- */
-async function resolveVenueId(
-  supabase: AdminClient,
-  venueName: string,
-  unitId: string,
-): Promise<{ id: string; created: boolean }> {
-  // Buscar existente
-  const { data: existing } = await supabase
-    .from('venues')
-    .select('id')
-    .eq('unit_id', unitId)
-    .ilike('name', venueName.trim())
-    .limit(1)
-    .single()
-
-  if (existing?.id) return { id: existing.id, created: false }
-
-  // Criar novo
-  const { data: created, error } = await supabase
-    .from('venues')
-    .insert({ name: venueName.trim(), unit_id: unitId, is_active: true })
-    .select('id')
-    .single()
-
-  if (error || !created?.id) {
-    throw new Error(`Falha ao criar venue "${venueName}": ${error?.message}`)
-  }
-
-  console.info(`[Ploomes sync] Venue criado automaticamente: "${venueName}" (unit ${unitId})`)
-  return { id: created.id, created: true }
-}
 
 // ── Sync principal ────────────────────────────────────────────
 
@@ -168,7 +133,6 @@ export async function syncDeals(
     dealsUpdated: 0,
     dealsMarkedLost: 0,
     dealsErrors: 0,
-    venuesCreated: 0,
     typesCreated: 0,
     durationMs: 0,
   }
@@ -204,7 +168,6 @@ export async function syncDeals(
         deals_updated: result.dealsUpdated,
         deals_removed: result.dealsMarkedLost,
         deals_errors: result.dealsErrors,
-        venues_created: result.venuesCreated,
         types_created: result.typesCreated,
         error_message: errorMessage ?? null,
       })
@@ -273,13 +236,6 @@ export async function syncDeals(
 
         const unitId = dealUnitId
 
-        // Resolver venue_id
-        let venueId: string | null = null
-        if (parsed.venueName) {
-          const v = await resolveVenueId(supabase, parsed.venueName, unitId)
-          venueId = v.id
-          if (v.created) result.venuesCreated++
-        }
 
         // Montar payload do evento
         const eventDate = parsed.eventDate ?? new Date().toISOString().substring(0, 10)
@@ -307,7 +263,6 @@ export async function syncDeals(
           guest_count: parsed.guestCount ?? null,
           theme: parsed.theme ?? null,
           notes: parsed.notes ?? null,
-          venue_id: venueId,
           unit_id: unitId,
           created_by: createdBy,
           // Logística

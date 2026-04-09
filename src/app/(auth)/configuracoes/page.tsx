@@ -8,11 +8,6 @@ import { ConfigTable, type ConfigItem } from '@/components/features/settings/con
 import { GeneralSettingsTab } from '@/components/features/settings/general-settings-tab'
 import { BusinessHoursTab } from '@/components/features/settings/business-hours-tab'
 import { BrandIdentityTab } from '@/components/features/settings/brand-identity-tab'
-import {
-  useEventTypes, useCreateEventType, useUpdateEventType, useDeleteEventType,
-  usePackages, useCreatePackage, useUpdatePackage, useDeletePackage,
-  useVenues, useCreateVenue, useUpdateVenue, useDeleteVenue,
-} from '@/hooks/use-event-config'
 import { useSectors, useCreateSector, useUpdateSector, useDeleteSector } from '@/hooks/use-sectors'
 import {
   useEquipmentCategoryItems,
@@ -22,24 +17,6 @@ import {
 } from '@/hooks/use-equipment-categories'
 
 export default function ConfiguracoesPage() {
-  // ── Tipos de Evento ──────────────────────────────────────
-  const { data: eventTypes = [], isLoading: loadingTypes, isError: errorTypes, refetch: refetchTypes } = useEventTypes(false)
-  const createType = useCreateEventType()
-  const updateType = useUpdateEventType()
-  const deleteType = useDeleteEventType()
-
-  // ── Pacotes ──────────────────────────────────────────────
-  const { data: packages = [], isLoading: loadingPackages, isError: errorPackages, refetch: refetchPackages } = usePackages(false)
-  const createPkg = useCreatePackage()
-  const updatePkg = useUpdatePackage()
-  const deletePkg = useDeletePackage()
-
-  // ── Salões ───────────────────────────────────────────────
-  const { data: venues = [], isLoading: loadingVenues, isError: errorVenues, refetch: refetchVenues } = useVenues(false)
-  const createVenue = useCreateVenue()
-  const updateVenue = useUpdateVenue()
-  const deleteVenue = useDeleteVenue()
-
   // ── Setores (manutenção) ─────────────────────────────────
   const { data: sectors = [], isLoading: loadingSectors, isError: errorSectors, refetch: refetchSectors } = useSectors(false)
   const createSector = useCreateSector()
@@ -53,8 +30,8 @@ export default function ConfiguracoesPage() {
   const deleteEquipCat = useDeleteEquipmentCategory()
 
   // Se alguma query de configuração falhou (após a sessão estar pronta), mostra um aviso
-  const hasError = errorTypes || errorPackages || errorVenues || errorSectors || errorEquipCats
-  const refetchAll = () => { void refetchTypes(); void refetchPackages(); void refetchVenues(); void refetchSectors(); void refetchEquipCats() }
+  const hasError = errorSectors || errorEquipCats
+  const refetchAll = () => { void refetchSectors(); void refetchEquipCats() }
 
   return (
     <div className="space-y-6">
@@ -75,12 +52,9 @@ export default function ConfiguracoesPage() {
         </div>
       )}
 
-      <Tabs defaultValue="tipos">
+      <Tabs defaultValue="setores">
         <div className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <TabsList className="min-w-max">
-            <TabsTrigger value="tipos">Tipos de Evento</TabsTrigger>
-            <TabsTrigger value="pacotes">Pacotes</TabsTrigger>
-            <TabsTrigger value="saloes">Salões</TabsTrigger>
             <TabsTrigger value="setores">Setores</TabsTrigger>
             <TabsTrigger value="categorias-equip">Categ. Equipamentos</TabsTrigger>
             <TabsTrigger value="horarios">Horários</TabsTrigger>
@@ -90,51 +64,8 @@ export default function ConfiguracoesPage() {
           </TabsList>
         </div>
 
-        {/* ── Tipos de Evento ── */}
-        <TabsContent value="tipos" className="mt-4 space-y-3">
-          <p className="text-sm text-muted-foreground">
-            Categorias de eventos disponíveis nos formulários (ex: Aniversário, Casamento).
-          </p>
-          <ConfigTable
-            title="Tipo"
-            items={eventTypes as ConfigItem[]}
-            isLoading={loadingTypes}
-            onCreate={(d) => createType.mutateAsync(d as { name: string })}
-            onUpdate={(id, d) => updateType.mutateAsync({ id, data: d })}
-            onDelete={(id) => deleteType.mutateAsync(id)}
-          />
-        </TabsContent>
 
-        {/* ── Pacotes ── */}
-        <TabsContent value="pacotes" className="mt-4 space-y-3">
-          <p className="text-sm text-muted-foreground">
-            Pacotes oferecidos pelo buffet (ex: Básico, Premium, Luxo).
-          </p>
-          <ConfigTable
-            title="Pacote"
-            items={packages as ConfigItem[]}
-            isLoading={loadingPackages}
-            onCreate={(d) => createPkg.mutateAsync(d as { name: string })}
-            onUpdate={(id, d) => updatePkg.mutateAsync({ id, data: d })}
-            onDelete={(id) => deletePkg.mutateAsync(id)}
-          />
-        </TabsContent>
 
-        {/* ── Salões ── */}
-        <TabsContent value="saloes" className="mt-4 space-y-3">
-          <p className="text-sm text-muted-foreground">
-            Locais disponíveis para realização dos eventos.
-          </p>
-          <ConfigTable
-            title="Salão"
-            items={venues as ConfigItem[]}
-            isLoading={loadingVenues}
-            extraField={{ key: 'capacity', label: 'Capacidade', placeholder: 'Ex: 200', type: 'number' }}
-            onCreate={(d) => createVenue.mutateAsync(d as { name: string; capacity?: number })}
-            onUpdate={(id, d) => updateVenue.mutateAsync({ id, data: d })}
-            onDelete={(id) => deleteVenue.mutateAsync(id)}
-          />
-        </TabsContent>
 
         {/* ── Setores ── */}
         <TabsContent value="setores" className="mt-4 space-y-3">

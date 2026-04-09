@@ -19,10 +19,6 @@ export interface Database {
       users:                { Row: User;                Insert: UserInsert;              Update: UserUpdate;              Relationships: [] }
       user_permissions:     { Row: UserPermission;      Insert: UserPermissionInsert;    Update: UserPermissionUpdate;    Relationships: [] }
       role_default_perms:   { Row: RoleDefaultPerm;     Insert: Partial<RoleDefaultPerm>; Update: Partial<RoleDefaultPerm>; Relationships: [] }
-      // Configurações (por unidade — Fase 2.5)
-      event_types:          { Row: EventType;           Insert: Partial<EventType>;      Update: Partial<EventType>;      Relationships: [] }
-      packages:             { Row: Package;             Insert: Partial<Package>;        Update: Partial<Package>;        Relationships: [] }
-      venues:               { Row: Venue;               Insert: Partial<Venue>;          Update: Partial<Venue>;          Relationships: [] }
       checklist_categories: { Row: ChecklistCategory;   Insert: Partial<ChecklistCategory>; Update: Partial<ChecklistCategory>; Relationships: [] }
       // Eventos
       events:               { Row: Event;               Insert: EventInsert;             Update: EventUpdate;             Relationships: [] }
@@ -228,35 +224,6 @@ export type EquipmentCategory = {
 // ─────────────────────────────────────────────────────────────
 // TABELAS DE CONFIGURAÇÃO (por unidade — Fase 2.5)
 // ─────────────────────────────────────────────────────────────
-export type EventType = {
-  id: string
-  name: string
-  unit_id: string
-  is_active: boolean
-  sort_order: number
-  created_at: string
-}
-
-export type Package = {
-  id: string
-  name: string
-  description: string | null
-  unit_id: string
-  is_active: boolean
-  sort_order: number
-  created_at: string
-}
-
-export type Venue = {
-  id: string
-  name: string
-  capacity: number | null
-  unit_id: string
-  is_active: boolean
-  sort_order: number
-  created_at: string
-}
-
 export type ChecklistCategory = {
   id: string
   name: string
@@ -365,7 +332,7 @@ export type RoleDefaultPerm = {
 }
 
 // ─────────────────────────────────────────────────────────────
-// EVENTOS (Fase 1: event_type/package/venue viram FKs UUID)
+// EVENTOS
 // ─────────────────────────────────────────────────────────────
 export type Event = {
   id: string
@@ -376,9 +343,6 @@ export type Event = {
   date: string           // DATE → 'YYYY-MM-DD'
   start_time: string     // TIME → 'HH:MM:SS'
   end_time: string       // TIME → 'HH:MM:SS'
-  event_type_id: string | null
-  package_id: string | null
-  venue_id: string | null
   status: EventStatus
   client_name: string
   client_phone: string | null  // migration 019
@@ -432,9 +396,6 @@ export type EventInsert = {
   guest_count?: number | null
   theme?: string | null
   notes?: string | null
-  event_type_id?: string | null
-  package_id?: string | null
-  venue_id?: string | null
   ploomes_deal_id?: string | null
   ploomes_url?: string | null
   created_by: string
@@ -798,9 +759,6 @@ export type PloomesUnitMapping = {
 
 // Evento com dados completos para cards e detalhe
 export type EventWithDetails = Event & {
-  event_type: Pick<EventType, 'id' | 'name'> | null
-  package: Pick<Package, 'id' | 'name'> | null
-  venue: Pick<Venue, 'id' | 'name' | 'capacity'> | null
   staff: Array<{
     id: string
     role_in_event: string
@@ -810,9 +768,6 @@ export type EventWithDetails = Event & {
 
 // Evento para listagem paginada — inclui progresso de checklists
 export type EventForList = Event & {
-  event_type: Pick<EventType, 'id' | 'name'> | null
-  package: Pick<Package, 'id' | 'name'> | null
-  venue: Pick<Venue, 'id' | 'name' | 'capacity'> | null
   staff: Array<{
     id: string
     role_in_event: string
