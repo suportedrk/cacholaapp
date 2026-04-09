@@ -31,12 +31,13 @@ export interface Database {
       // Checklists Premium (Migration 018)
       checklist_recurrence:     { Row: ChecklistRecurrence;    Insert: Partial<ChecklistRecurrence>;    Update: Partial<ChecklistRecurrence>;    Relationships: [] }
       checklist_item_comments:  { Row: ChecklistItemComment;   Insert: Partial<ChecklistItemComment>;   Update: Partial<ChecklistItemComment>;   Relationships: [] }
-      // Manutenção — Schema 031/032
+      // Manutenção — Schema 031/032 (tabelas novas)
       maintenance_sectors:  { Row: Sector;              Insert: Partial<Sector>;           Update: Partial<Sector>;           Relationships: [] }
       maintenance_tickets:  { Row: MaintenanceTicket;    Insert: Partial<MaintenanceTicket>; Update: Partial<MaintenanceTicket>; Relationships: [] }
       equipment:            { Row: Equipment;           Insert: Partial<Equipment>;        Update: Partial<Equipment>;        Relationships: [] }
+      // Manutenção — ghost types (tabelas dropadas em 032, UI refatorada nos Prompts 4-7)
+      maintenance_orders:   { Row: MaintenanceOrder;    Insert: Partial<MaintenanceOrder>; Update: Partial<MaintenanceOrder>; Relationships: [] }
       maintenance_photos:   { Row: MaintenancePhoto;    Insert: Partial<MaintenancePhoto>; Update: Partial<MaintenancePhoto>; Relationships: [] }
-      // Manutenção — Schema Expandido (Migration 017)
       maintenance_suppliers: { Row: MaintenanceSupplier; Insert: Partial<MaintenanceSupplier>; Update: Partial<MaintenanceSupplier>; Relationships: [] }
       supplier_contacts:     { Row: SupplierContact;     Insert: Partial<SupplierContact>;     Update: Partial<SupplierContact>;     Relationships: [] }
       supplier_documents:    { Row: SupplierDocument;    Insert: Partial<SupplierDocument>;    Update: Partial<SupplierDocument>;    Relationships: [] }
