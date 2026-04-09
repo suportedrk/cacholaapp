@@ -31,9 +31,9 @@ export interface Database {
       // Checklists Premium (Migration 018)
       checklist_recurrence:     { Row: ChecklistRecurrence;    Insert: Partial<ChecklistRecurrence>;    Update: Partial<ChecklistRecurrence>;    Relationships: [] }
       checklist_item_comments:  { Row: ChecklistItemComment;   Insert: Partial<ChecklistItemComment>;   Update: Partial<ChecklistItemComment>;   Relationships: [] }
-      // Manutenção
-      sectors:              { Row: Sector;              Insert: Partial<Sector>;           Update: Partial<Sector>;           Relationships: [] }
-      maintenance_orders:   { Row: MaintenanceOrder;    Insert: Partial<MaintenanceOrder>; Update: Partial<MaintenanceOrder>; Relationships: [] }
+      // Manutenção — Schema 031/032
+      maintenance_sectors:  { Row: Sector;              Insert: Partial<Sector>;           Update: Partial<Sector>;           Relationships: [] }
+      maintenance_tickets:  { Row: MaintenanceOrder;    Insert: Partial<MaintenanceOrder>; Update: Partial<MaintenanceOrder>; Relationships: [] }
       equipment:            { Row: Equipment;           Insert: Partial<Equipment>;        Update: Partial<Equipment>;        Relationships: [] }
       maintenance_photos:   { Row: MaintenancePhoto;    Insert: Partial<MaintenancePhoto>; Update: Partial<MaintenancePhoto>; Relationships: [] }
       // Manutenção — Schema Expandido (Migration 017)
@@ -239,10 +239,12 @@ export type ChecklistCategory = {
 export type Sector = {
   id: string
   name: string
+  description?: string | null
   unit_id: string
   is_active: boolean
   sort_order: number
   created_at: string
+  updated_at: string
 }
 
 // ─────────────────────────────────────────────────────────────

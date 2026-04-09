@@ -157,19 +157,19 @@ export async function POST(req: NextRequest) {
     // ── Sectors ─────────────────────────────────────────────────
     if (should('sectors')) {
       const { data: srcSectors } = await supabase
-        .from('sectors')
+        .from('maintenance_sectors')
         .select('name, sort_order')
         .eq('unit_id', sourceUnitId)
         .eq('is_active', true)
 
       const { data: existingSectors } = await supabase
-        .from('sectors').select('name').eq('unit_id', targetUnitId)
+        .from('maintenance_sectors').select('name').eq('unit_id', targetUnitId)
 
       const existingNames = new Set((existingSectors ?? []).map((s) => s.name.toLowerCase()))
 
       for (const sector of srcSectors ?? []) {
         if (existingNames.has(sector.name.toLowerCase())) { result.skipped++; continue }
-        await supabase.from('sectors').insert({
+        await supabase.from('maintenance_sectors').insert({
           name: sector.name,
           sort_order: sector.sort_order,
           unit_id: targetUnitId,

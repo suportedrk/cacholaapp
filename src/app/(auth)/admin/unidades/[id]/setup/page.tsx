@@ -52,7 +52,7 @@ export default async function UnitSetupPage({
     supabase.from('ploomes_unit_mapping').select('id, ploomes_value').eq('unit_id', unitId).maybeSingle(),
     supabase.from('checklist_templates').select('id', { count: 'exact', head: true }).eq('unit_id', unitId).eq('is_active', true),
     supabase.from('checklist_categories').select('id', { count: 'exact', head: true }).eq('unit_id', unitId).eq('is_active', true),
-    supabase.from('sectors').select('id', { count: 'exact', head: true }).eq('unit_id', unitId).eq('is_active', true),
+    supabase.from('maintenance_sectors').select('id', { count: 'exact', head: true }).eq('unit_id', unitId).eq('is_active', true),
     supabase.from('equipment_categories').select('id', { count: 'exact', head: true }).eq('unit_id', unitId).eq('is_active', true),
     supabase.from('service_categories').select('id', { count: 'exact', head: true }).eq('unit_id', unitId).eq('is_active', true),
     supabase.from('user_units').select('id', { count: 'exact', head: true }).eq('unit_id', unitId),
