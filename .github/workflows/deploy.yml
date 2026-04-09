@@ -1,0 +1,48 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Deploy Cachola OS
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          command_timeout: 12m
+          script: |
+            set -e
+
+            echo "Atualizando codigo..."
+            cd /opt/cacholaapp
+            git pull origin main
+
+            echo "Buildando aplicacao..."
+            NODE_OPTIONS=--max-old-space-size=4096 npm run build
+
+            echo "Reiniciando PM2..."
+            pm2 restart cacholaos
+
+            echo "Deploy concluido!"
+            pm2 status cacholaos
+
+      - name: Notify success
+        if: success()
+        run: echo "Deploy realizado com sucesso em $(date)"
+
+      - name: Notify failure
+        if: failure()
+        run: echo "Deploy falhou em $(date)"
