@@ -48,7 +48,7 @@ export function useMaintenanceItems(onlyActive = false, sectorId?: string | null
 
       const { data, error } = await q
       if (error) throw error
-      return (data ?? []) as MaintenanceItemWithSector[]
+      return (data ?? []) as unknown as MaintenanceItemWithSector[]
     },
   })
 }
