@@ -12,6 +12,7 @@ import type {
   TicketNature,
   TicketUrgency,
   TicketStatus,
+  ExecutionStatus,
 } from '@/types/database.types'
 
 // ─────────────────────────────────────────────────────────────
@@ -259,7 +260,7 @@ export function useUpdateExecution(ticketId: string) {
   const qc = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ id, ...payload }: Partial<{ id: string; status: string; cost: number; description: string }> & { id: string }) => {
+    mutationFn: async ({ id, ...payload }: Partial<{ id: string; status: ExecutionStatus; cost: number; description: string }> & { id: string }) => {
       const supabase = createClient()
       const { data, error } = await supabase
         .from('maintenance_executions')
