@@ -8,6 +8,7 @@ import {
   Users,
   BarChart3,
   Settings,
+  Settings2,
   ScrollText,
   Building2,
   Package,
@@ -72,7 +73,14 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Operações',
     items: [
-      { label: 'Manutenção',   href: ROUTES.maintenance, icon: Wrench,    module: 'maintenance', allowedRoles: OPS_ROLES       },
+      {
+        label: 'Manutenção', href: ROUTES.maintenance, icon: Wrench, module: 'maintenance', allowedRoles: OPS_ROLES,
+        children: [
+          { label: 'Dashboard',     href: ROUTES.maintenanceDashboard, icon: LayoutDashboard, module: 'maintenance', allowedRoles: OPS_ROLES },
+          { label: 'Chamados',      href: ROUTES.maintenanceChamados,  icon: ClipboardList,   module: 'maintenance', allowedRoles: OPS_ROLES },
+          { label: 'Configurações', href: ROUTES.maintenanceConfig,    icon: Settings2,       module: 'maintenance', allowedRoles: OPS_ROLES },
+        ],
+      },
       { label: 'Equipamentos', href: ROUTES.equipment,   icon: Package,   module: 'maintenance', allowedRoles: OPS_ROLES       },
       { label: 'Prestadores',  href: ROUTES.providers,   icon: Handshake, module: 'providers',   allowedRoles: PROVIDER_ROLES  },
       { label: 'Relatórios',   href: ROUTES.reports,     icon: BarChart3, module: 'reports',     allowedRoles: REPORT_ROLES    },
