@@ -496,7 +496,7 @@ function ItensTab() {
           const matchedSector = sectors.find((s) => s.name.toLowerCase() === String(d.sector_name ?? '').toLowerCase())
           await create.mutateAsync({
             name: d.name,
-            sector_id: matchedSector?.id ?? filterSectorId || null,
+            sector_id: matchedSector?.id ?? (filterSectorId || null),
           })
         }}
         onUpdate={async (id, d) => {
