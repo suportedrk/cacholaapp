@@ -67,7 +67,7 @@ export function useUpsertMaintenanceSla() {
         .from('maintenance_sla')
         .upsert(
           {
-            unit_id: activeUnitId,
+            unit_id: activeUnitId ?? undefined,
             urgency_level: payload.urgency_level,
             response_hours: payload.response_hours,
             resolution_hours: payload.resolution_hours,
