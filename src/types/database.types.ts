@@ -32,8 +32,11 @@ export interface Database {
       checklist_recurrence:     { Row: ChecklistRecurrence;    Insert: Partial<ChecklistRecurrence>;    Update: Partial<ChecklistRecurrence>;    Relationships: [] }
       checklist_item_comments:  { Row: ChecklistItemComment;   Insert: Partial<ChecklistItemComment>;   Update: Partial<ChecklistItemComment>;   Relationships: [] }
       // Manutenção — Schema 031/032 (tabelas novas)
-      maintenance_sectors:  { Row: Sector;              Insert: Partial<Sector>;           Update: Partial<Sector>;           Relationships: [] }
-      maintenance_tickets:  { Row: MaintenanceTicket;    Insert: Partial<MaintenanceTicket>; Update: Partial<MaintenanceTicket>; Relationships: [] }
+      maintenance_sectors:    { Row: Sector;                Insert: Partial<Sector>;                Update: Partial<Sector>;                Relationships: [] }
+      maintenance_categories: { Row: MaintenanceCategory;   Insert: Partial<MaintenanceCategory>;   Update: Partial<MaintenanceCategory>;   Relationships: [] }
+      maintenance_items:      { Row: MaintenanceItem;       Insert: Partial<MaintenanceItem>;       Update: Partial<MaintenanceItem>;       Relationships: [] }
+      maintenance_sla:        { Row: MaintenanceSla;        Insert: Partial<MaintenanceSla>;        Update: Partial<MaintenanceSla>;        Relationships: [] }
+      maintenance_tickets:    { Row: MaintenanceTicket;     Insert: Partial<MaintenanceTicket>;     Update: Partial<MaintenanceTicket>;     Relationships: [] }
       equipment:            { Row: Equipment;           Insert: Partial<Equipment>;        Update: Partial<Equipment>;        Relationships: [] }
       // Manutenção — ghost types (tabelas dropadas em 032, UI refatorada nos Prompts 4-7)
       maintenance_orders:   { Row: MaintenanceOrder;    Insert: Partial<MaintenanceOrder>; Update: Partial<MaintenanceOrder>; Relationships: [] }
@@ -266,6 +269,44 @@ export type Sector = {
   unit_id: string
   is_active: boolean
   sort_order: number
+  created_at: string
+  updated_at: string
+}
+
+export type MaintenanceCategory = {
+  id: string
+  unit_id: string
+  name: string
+  color: string        // hex, ex: '#F59E0B'
+  icon: string         // nome do ícone Lucide, ex: 'zap'
+  is_active: boolean
+  sort_order: number
+  created_at: string
+  updated_at: string
+}
+
+export type MaintenanceItem = {
+  id: string
+  unit_id: string
+  sector_id: string | null
+  name: string
+  description: string | null
+  is_active: boolean
+  sort_order: number
+  created_at: string
+  updated_at: string
+}
+
+export type MaintenanceItemWithSector = MaintenanceItem & {
+  sector: Pick<Sector, 'id' | 'name'> | null
+}
+
+export type MaintenanceSla = {
+  id: string
+  unit_id: string
+  urgency_level: 'critical' | 'high' | 'medium' | 'low'
+  response_hours: number
+  resolution_hours: number
   created_at: string
   updated_at: string
 }
