@@ -74,7 +74,7 @@ export function useCreateMaintenanceCategory() {
 
       const { data, error } = await supabase
         .from('maintenance_categories')
-        .insert({ ...payload, unit_id: activeUnitId, sort_order })
+        .insert({ ...payload, unit_id: activeUnitId ?? undefined, sort_order })
         .select()
         .single()
 
