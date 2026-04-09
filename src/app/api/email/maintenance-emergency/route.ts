@@ -20,16 +20,16 @@ export async function POST(request: Request) {
       { auth: { autoRefreshToken: false, persistSession: false } }
     )
 
-    // Fetch order
+    // Fetch ticket
     const { data: order } = await supabase
-      .from('maintenance_orders')
-      .select('title, assigned_to')
+      .from('maintenance_tickets')
+      .select('title, opened_by')
       .eq('id', orderId)
       .single()
 
-    if (!order) return Response.json({ ok: false, reason: 'order not found' })
+    if (!order) return Response.json({ ok: false, reason: 'ticket not found' })
 
-    // Fetch managers + directors + assigned user
+    // Fetch managers + directors + quem abriu
     const { data: managers } = await supabase
       .from('users')
       .select('id, email, preferences')
@@ -39,7 +39,7 @@ export async function POST(request: Request) {
     const recipientIds = new Set<string>(
       (managers ?? []).map((u) => u.id)
     )
-    if (order.assigned_to) recipientIds.add(order.assigned_to)
+    if (order.opened_by) recipientIds.add(order.opened_by)
 
     // Resolve emails + check preferences
     const { data: users } = await supabase
