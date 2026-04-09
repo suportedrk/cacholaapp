@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { ArrowRight, Calendar, Clock, MapPin, Tag } from 'lucide-react'
+import { ArrowRight, Calendar, Clock, Tag } from 'lucide-react'
 import {
   Sheet,
   SheetContent,

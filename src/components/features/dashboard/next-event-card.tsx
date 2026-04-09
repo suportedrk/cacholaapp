@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { ArrowRight, Calendar, Clock, MapPin, Users } from 'lucide-react'
+import { ArrowRight, Calendar, Clock, Users } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EventStatusBadge } from '@/components/shared/event-status-badge'
 import { UserAvatar } from '@/components/shared/user-avatar'
