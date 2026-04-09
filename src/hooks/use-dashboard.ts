@@ -109,9 +109,9 @@ export function useDashboardMaintenanceStats() {
       const today = format(new Date(), 'yyyy-MM-dd')
 
       let q = supabase
-        .from('maintenance_orders')
-        .select('type, status, due_date')
-        .not('status', 'in', '("completed","cancelled")')
+        .from('maintenance_tickets')
+        .select('nature, status, due_at')
+        .not('status', 'in', '("concluded","cancelled")')
       if (activeUnitId) q = q.eq('unit_id', activeUnitId)
       const { data, error } = await q
 
@@ -120,8 +120,8 @@ export function useDashboardMaintenanceStats() {
       const orders = data ?? []
       const open = orders.length
       const urgentToday = orders.filter((o) =>
-        o.type === 'emergency' ||
-        (o.due_date && o.due_date.split('T')[0] <= today)
+        o.nature === 'emergencial' ||
+        (o.due_at && o.due_at.split('T')[0] <= today)
       ).length
 
       return { open, urgentToday } satisfies DashboardMaintenanceStats
@@ -211,12 +211,12 @@ export function useCalendarMaintenance(dateFrom: string, dateTo: string, enabled
     queryFn: async () => {
       const supabase = createClient()
       let q = supabase
-        .from('maintenance_orders')
-        .select('id, title, type, status, due_date, sector:sectors(id, name)')
-        .gte('due_date', `${dateFrom}T00:00:00`)
-        .lte('due_date', `${dateTo}T23:59:59`)
-        .not('status', 'in', '("completed","cancelled")')
-        .order('due_date', { ascending: true })
+        .from('maintenance_tickets')
+        .select('id, title, nature, status, due_at, sector:maintenance_sectors(id, name)')
+        .gte('due_at', `${dateFrom}T00:00:00`)
+        .lte('due_at', `${dateTo}T23:59:59`)
+        .not('status', 'in', '("concluded","cancelled")')
+        .order('due_at', { ascending: true })
       if (activeUnitId) q = q.eq('unit_id', activeUnitId)
       const { data, error } = await q
 
@@ -224,8 +224,8 @@ export function useCalendarMaintenance(dateFrom: string, dateTo: string, enabled
       return (data ?? []).map((o) => ({
         id: o.id,
         title: o.title,
-        date: o.due_date ? o.due_date.split('T')[0] : '',
-        type: o.type,
+        date: o.due_at ? o.due_at.split('T')[0] : '',
+        type: o.nature,
         status: o.status,
         sector: o.sector as unknown as { id: string; name: string } | null,
         entityType: 'maintenance' as const,
@@ -300,12 +300,12 @@ export function useDashboardKpis() {
         return q
       })()
 
-      // ── Query 2: todas as ordens de manutenção (sem filtro de data)
-      // Inclui completed_at para calcular "estava aberta há 30 dias"
+      // ── Query 2: todos os chamados de manutenção (sem filtro de data)
+      // Inclui concluded_at para calcular "estava aberto há 30 dias"
       const mnQ = (() => {
         let q = supabase
-          .from('maintenance_orders')
-          .select('created_at, status, completed_at')
+          .from('maintenance_tickets')
+          .select('created_at, status, concluded_at')
         if (activeUnitId) q = q.eq('unit_id', activeUnitId)
         return q
       })()
@@ -366,16 +366,16 @@ export function useDashboardKpis() {
 
       // ── Manutenções Abertas — trend vs 30 dias atrás ─────────
       const mnOpenNow = mnOrders.filter(
-        (o) => o.status !== 'completed' && o.status !== 'cancelled',
+        (o) => o.status !== 'concluded' && o.status !== 'cancelled',
       ).length
 
-      // Estava aberta há 30 dias = criada antes do corte E não concluída antes do corte
+      // Estava aberto há 30 dias = criado antes do corte E não concluído antes do corte
       const mnOpen30 = mnOrders.filter((o) => {
         if (o.status === 'cancelled') return false
         if (new Date(o.created_at) > thirtyDaysAgo) return false
-        if (o.completed_at) return new Date(o.completed_at) > thirtyDaysAgo
-        // status=completed sem completed_at: assume concluída antes do corte
-        if (o.status === 'completed') return false
+        if (o.concluded_at) return new Date(o.concluded_at) > thirtyDaysAgo
+        // status=concluded sem concluded_at: assume concluído antes do corte
+        if (o.status === 'concluded') return false
         return true
       }).length
 
