@@ -33,7 +33,7 @@ export interface Database {
       checklist_item_comments:  { Row: ChecklistItemComment;   Insert: Partial<ChecklistItemComment>;   Update: Partial<ChecklistItemComment>;   Relationships: [] }
       // Manutenção — Schema 031/032
       maintenance_sectors:  { Row: Sector;              Insert: Partial<Sector>;           Update: Partial<Sector>;           Relationships: [] }
-      maintenance_tickets:  { Row: MaintenanceOrder;    Insert: Partial<MaintenanceOrder>; Update: Partial<MaintenanceOrder>; Relationships: [] }
+      maintenance_tickets:  { Row: MaintenanceTicket;    Insert: Partial<MaintenanceTicket>; Update: Partial<MaintenanceTicket>; Relationships: [] }
       equipment:            { Row: Equipment;           Insert: Partial<Equipment>;        Update: Partial<Equipment>;        Relationships: [] }
       maintenance_photos:   { Row: MaintenancePhoto;    Insert: Partial<MaintenancePhoto>; Update: Partial<MaintenancePhoto>; Relationships: [] }
       // Manutenção — Schema Expandido (Migration 017)
@@ -234,6 +234,28 @@ export type ChecklistCategory = {
 }
 
 // ─────────────────────────────────────────────────────────────
+// MANUTENÇÃO — SCHEMA 031 (novo)
+// ─────────────────────────────────────────────────────────────
+export type MaintenanceTicket = {
+  id: string
+  unit_id: string
+  title: string
+  description?: string | null
+  sector_id?: string | null
+  category_id?: string | null
+  item_id?: string | null
+  nature: 'emergencial' | 'pontual' | 'agendado' | 'preventivo'
+  urgency: 'critical' | 'high' | 'medium' | 'low'
+  status: 'open' | 'in_progress' | 'waiting_part' | 'concluded' | 'cancelled'
+  scheduled_date?: string | null
+  concluded_at?: string | null
+  due_at?: string | null
+  opened_by: string
+  total_cost: number
+  created_at: string
+  updated_at: string
+}
+
 // MANUTENÇÃO — CONFIGURAÇÃO
 // ─────────────────────────────────────────────────────────────
 export type Sector = {
