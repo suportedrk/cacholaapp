@@ -15,8 +15,26 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from '@/components/ui/select'
+
+// ─────────────────────────────────────────────────────────────
+// OPÇÕES DE FILTRO
+// ─────────────────────────────────────────────────────────────
+const URGENCY_FILTER_OPTIONS = [
+  { value: 'all',      label: 'Todas as urgências' },
+  { value: 'critical', label: 'Crítico'            },
+  { value: 'high',     label: 'Alto'               },
+  { value: 'medium',   label: 'Médio'              },
+  { value: 'low',      label: 'Baixo'              },
+]
+
+const NATURE_FILTER_OPTIONS = [
+  { value: 'all',         label: 'Todas as naturezas' },
+  { value: 'emergencial', label: 'Emergencial'         },
+  { value: 'pontual',     label: 'Pontual'             },
+  { value: 'agendado',    label: 'Agendado'            },
+  { value: 'preventivo',  label: 'Preventivo'          },
+]
 import { cn } from '@/lib/utils'
 import { useTickets, type TicketFilters } from '@/hooks/use-tickets'
 import { useSectors } from '@/hooks/use-sectors'
@@ -244,7 +262,11 @@ function ChamadosContent() {
           {/* Sector */}
           <Select value={sectorId || 'all'} onValueChange={(v) => setSectorId(v === 'all' ? '' : (v ?? ''))}>
             <SelectTrigger className="h-8 text-xs w-[140px]">
-              <SelectValue placeholder="Todos os setores" />
+              <span data-slot="select-value">
+                {sectorId
+                  ? (sectors.find((s) => s.id === sectorId)?.name ?? 'Todos os setores')
+                  : 'Todos os setores'}
+              </span>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos os setores</SelectItem>
@@ -257,28 +279,28 @@ function ChamadosContent() {
           {/* Urgency */}
           <Select value={urgency || 'all'} onValueChange={(v) => setUrgency(v === 'all' ? '' : (v ?? '') as TicketUrgency)}>
             <SelectTrigger className="h-8 text-xs w-[130px]">
-              <SelectValue placeholder="Todas as urgências" />
+              <span data-slot="select-value">
+                {URGENCY_FILTER_OPTIONS.find((o) => o.value === (urgency || 'all'))?.label ?? 'Todas as urgências'}
+              </span>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todas as urgências</SelectItem>
-              <SelectItem value="critical">Crítico</SelectItem>
-              <SelectItem value="high">Alto</SelectItem>
-              <SelectItem value="medium">Médio</SelectItem>
-              <SelectItem value="low">Baixo</SelectItem>
+              {URGENCY_FILTER_OPTIONS.map((o) => (
+                <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
 
           {/* Nature */}
           <Select value={nature || 'all'} onValueChange={(v) => setNature(v === 'all' ? '' : (v ?? '') as TicketNature)}>
             <SelectTrigger className="h-8 text-xs w-[130px]">
-              <SelectValue placeholder="Todas as naturezas" />
+              <span data-slot="select-value">
+                {NATURE_FILTER_OPTIONS.find((o) => o.value === (nature || 'all'))?.label ?? 'Todas as naturezas'}
+              </span>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todas as naturezas</SelectItem>
-              <SelectItem value="emergencial">Emergencial</SelectItem>
-              <SelectItem value="pontual">Pontual</SelectItem>
-              <SelectItem value="agendado">Agendado</SelectItem>
-              <SelectItem value="preventivo">Preventivo</SelectItem>
+              {NATURE_FILTER_OPTIONS.map((o) => (
+                <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
 

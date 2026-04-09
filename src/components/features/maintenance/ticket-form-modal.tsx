@@ -15,7 +15,6 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from '@/components/ui/select'
 import { useCreateTicket, type TicketInsert } from '@/hooks/use-tickets'
 import { useSectors } from '@/hooks/use-sectors'
@@ -184,7 +183,9 @@ export function TicketFormModal({ open, onClose, onCreated }: TicketFormModalPro
                 onValueChange={(v) => set('nature', (v ?? '') as TicketNature)}
               >
                 <SelectTrigger className={errors.nature ? 'border-destructive' : ''}>
-                  <SelectValue placeholder="Selecionar..." />
+                  <span data-slot="select-value">
+                    {NATURE_OPTIONS.find((o) => o.value === form.nature)?.label ?? 'Selecionar...'}
+                  </span>
                 </SelectTrigger>
                 <SelectContent>
                   {NATURE_OPTIONS.map((o) => (
@@ -206,7 +207,9 @@ export function TicketFormModal({ open, onClose, onCreated }: TicketFormModalPro
                 onValueChange={(v) => set('urgency', (v ?? '') as TicketUrgency)}
               >
                 <SelectTrigger className={errors.urgency ? 'border-destructive' : ''}>
-                  <SelectValue placeholder="Selecionar..." />
+                  <span data-slot="select-value">
+                    {URGENCY_OPTIONS.find((o) => o.value === form.urgency)?.label ?? 'Selecionar...'}
+                  </span>
                 </SelectTrigger>
                 <SelectContent>
                   {URGENCY_OPTIONS.map((o) => (
@@ -247,7 +250,11 @@ export function TicketFormModal({ open, onClose, onCreated }: TicketFormModalPro
               }}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Selecionar setor..." />
+                <span data-slot="select-value">
+                  {form.sector_id
+                    ? (sectors.find((s) => s.id === form.sector_id)?.name ?? 'Nenhum')
+                    : 'Nenhum'}
+                </span>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">Nenhum</SelectItem>
@@ -266,7 +273,11 @@ export function TicketFormModal({ open, onClose, onCreated }: TicketFormModalPro
               onValueChange={(v) => set('category_id', v === 'none' ? '' : (v ?? ''))}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Selecionar categoria..." />
+                <span data-slot="select-value">
+                  {form.category_id
+                    ? (categories.find((c) => c.id === form.category_id)?.name ?? 'Nenhuma')
+                    : 'Nenhuma'}
+                </span>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">Nenhuma</SelectItem>
@@ -295,7 +306,11 @@ export function TicketFormModal({ open, onClose, onCreated }: TicketFormModalPro
               onValueChange={(v) => set('item_id', v === 'none' ? '' : (v ?? ''))}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Selecionar item..." />
+                <span data-slot="select-value">
+                  {form.item_id
+                    ? (items.find((i) => i.id === form.item_id)?.name ?? 'Nenhum')
+                    : 'Nenhum'}
+                </span>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">Nenhum</SelectItem>
