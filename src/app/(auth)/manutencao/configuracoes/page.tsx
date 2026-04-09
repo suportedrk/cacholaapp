@@ -104,7 +104,7 @@ function SetoresTab() {
         items={items}
         isLoading={isLoading}
         onCreate={async (d) => { await create.mutateAsync({ name: d.name }) }}
-        onUpdate={async (id, d) => { await update.mutateAsync({ id, name: d.name, is_active: d.is_active }) }}
+        onUpdate={async (id, d) => { await update.mutateAsync({ id, data: { name: d.name, is_active: d.is_active } }) }}
         onDelete={async (id) => { await del.mutateAsync(id) }}
       />
     </div>
