@@ -244,7 +244,7 @@ function ChamadosContent() {
           {/* Sector */}
           <Select value={sectorId || 'all'} onValueChange={(v) => setSectorId(v === 'all' ? '' : (v ?? ''))}>
             <SelectTrigger className="h-8 text-xs w-[140px]">
-              <SelectValue placeholder="Setor" />
+              <SelectValue placeholder="Todos os setores" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos os setores</SelectItem>
@@ -257,10 +257,10 @@ function ChamadosContent() {
           {/* Urgency */}
           <Select value={urgency || 'all'} onValueChange={(v) => setUrgency(v === 'all' ? '' : (v ?? '') as TicketUrgency)}>
             <SelectTrigger className="h-8 text-xs w-[130px]">
-              <SelectValue placeholder="Urgência" />
+              <SelectValue placeholder="Todas as urgências" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Toda urgência</SelectItem>
+              <SelectItem value="all">Todas as urgências</SelectItem>
               <SelectItem value="critical">Crítico</SelectItem>
               <SelectItem value="high">Alto</SelectItem>
               <SelectItem value="medium">Médio</SelectItem>
@@ -271,10 +271,10 @@ function ChamadosContent() {
           {/* Nature */}
           <Select value={nature || 'all'} onValueChange={(v) => setNature(v === 'all' ? '' : (v ?? '') as TicketNature)}>
             <SelectTrigger className="h-8 text-xs w-[130px]">
-              <SelectValue placeholder="Natureza" />
+              <SelectValue placeholder="Todas as naturezas" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Toda natureza</SelectItem>
+              <SelectItem value="all">Todas as naturezas</SelectItem>
               <SelectItem value="emergencial">Emergencial</SelectItem>
               <SelectItem value="pontual">Pontual</SelectItem>
               <SelectItem value="agendado">Agendado</SelectItem>
