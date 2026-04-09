@@ -3,7 +3,8 @@
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { X, ChevronLeft, ChevronRight } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { X, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react'
 import { NAV_GROUPS } from './nav-items'
 import {
   Tooltip,
@@ -40,9 +41,23 @@ export function Sidebar({ isOpen, isCollapsed, onClose, onToggleCollapse }: Side
   // Role efetivo: quando impersonando, profile já é o do impersonado (P2)
   const effectiveRole = (profile?.role ?? 'freelancer') as Role
 
+  // Items expandidos (accordion). Inicializa vazio — useEffect abre ao carregar.
+  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set())
+
+  const toggleExpanded = (href: string) => {
+    setExpandedItems((prev) => {
+      const next = new Set(prev)
+      if (next.has(href)) next.delete(href)
+      else next.add(href)
+      return next
+    })
+  }
+
   // O item ativo é o mais específico que faz match com o pathname atual.
-  // Sem isso, "/checklists" ficaria ativo junto com "/checklists/minhas-tarefas".
-  const allNavItems = NAV_GROUPS.flatMap((g) => g.items)
+  // Inclui children na busca para que subitens também sejam considerados.
+  const allNavItems = NAV_GROUPS.flatMap((g) =>
+    g.items.flatMap((item) => [item, ...(item.children ?? [])])
+  )
   const activeHref = allNavItems
     .filter((item) =>
       item.href === '/'
@@ -51,14 +66,35 @@ export function Sidebar({ isOpen, isCollapsed, onClose, onToggleCollapse }: Side
     )
     .sort((a, b) => b.href.length - a.href.length)[0]?.href ?? null
 
+  // Auto-expande parents que tenham um filho ativo quando o pathname muda.
+  useEffect(() => {
+    NAV_GROUPS.forEach((g) => {
+      g.items.forEach((item) => {
+        if (item.children?.some((child) =>
+          child.href === activeHref || pathname.startsWith(child.href + '/')
+        )) {
+          setExpandedItems((prev) => new Set([...prev, item.href]))
+        }
+      })
+    })
+  }, [pathname, activeHref])
+
   // Filtra grupos removendo itens que o role atual não pode ver.
   // Grupos que ficarem completamente vazios são omitidos.
   const visibleGroups = NAV_GROUPS.map((group) => ({
     ...group,
-    items: group.items.filter((item) => {
-      if (!item.allowedRoles || item.allowedRoles.length === 0) return true
-      return item.allowedRoles.includes(effectiveRole)
-    }),
+    items: group.items
+      .filter((item) => {
+        if (!item.allowedRoles || item.allowedRoles.length === 0) return true
+        return item.allowedRoles.includes(effectiveRole)
+      })
+      .map((item) => ({
+        ...item,
+        children: item.children?.filter((child) => {
+          if (!child.allowedRoles || child.allowedRoles.length === 0) return true
+          return child.allowedRoles.includes(effectiveRole)
+        }),
+      })),
   })).filter((group) => group.items.length > 0)
 
   return (
@@ -170,33 +206,127 @@ export function Sidebar({ isOpen, isCollapsed, onClose, onToggleCollapse }: Side
               {/* Items */}
               <div className="px-2 space-y-0.5">
                 {group.items.map((item) => {
-                  const isActive = item.href === activeHref
+                  const hasChildren = item.children && item.children.length > 0
+                  const hasActiveChild = item.children?.some((c) => c.href === activeHref) ?? false
+                  const isActive = !hasChildren && item.href === activeHref
+                  const isExpanded = expandedItems.has(item.href)
 
                   const linkClassName = cn(
                     'flex items-center rounded-lg min-h-[44px]',
                     'transition-all duration-150',
                     'gap-3 px-3 py-2',
                     isCollapsed && 'lg:justify-center lg:px-0 lg:gap-0',
-                    isActive
+                    isActive || hasActiveChild
                       ? 'bg-primary/10 text-primary dark:bg-primary/20'
                       : 'text-muted-foreground hover:bg-muted hover:text-foreground',
                   )
 
+                  const iconEl = (
+                    <item.icon
+                      className={cn(
+                        'w-5 h-5 shrink-0',
+                        isActive || hasActiveChild ? 'text-primary' : 'text-muted-foreground',
+                      )}
+                    />
+                  )
+
+                  const labelEl = (
+                    <span className={cn(
+                      'text-sm font-medium truncate',
+                      'transition-[opacity,width] duration-150 overflow-hidden',
+                      isCollapsed ? 'lg:opacity-0 lg:w-0' : 'opacity-100 w-auto',
+                    )}>
+                      {item.label}
+                    </span>
+                  )
+
+                  // ── Item com subitens (accordion) ──────────────────────
+                  if (hasChildren) {
+                    // Collapsed: mostra ícone com tooltip → navega para primeiro filho
+                    if (isCollapsed) {
+                      const firstChild = item.children![0]
+                      return (
+                        <Tooltip key={item.href}>
+                          <TooltipTrigger
+                            render={
+                              <Link
+                                href={firstChild.href}
+                                onClick={onClose}
+                                aria-current={hasActiveChild ? 'page' : undefined}
+                                className={linkClassName}
+                              />
+                            }
+                          >
+                            {iconEl}
+                            {labelEl}
+                          </TooltipTrigger>
+                          <TooltipContent side="right" sideOffset={8}>
+                            {item.label}
+                          </TooltipContent>
+                        </Tooltip>
+                      )
+                    }
+
+                    // Expandido: botão accordion + subitens
+                    return (
+                      <div key={item.href}>
+                        <button
+                          type="button"
+                          onClick={() => toggleExpanded(item.href)}
+                          aria-expanded={isExpanded}
+                          className={cn(
+                            'w-full flex items-center rounded-lg min-h-[44px]',
+                            'gap-3 px-3 py-2 transition-all duration-150',
+                            hasActiveChild
+                              ? 'bg-primary/10 text-primary dark:bg-primary/20'
+                              : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                          )}
+                        >
+                          {iconEl}
+                          <span className="text-sm font-medium truncate flex-1 text-left">
+                            {item.label}
+                          </span>
+                          <ChevronDown className={cn(
+                            'w-4 h-4 shrink-0 transition-transform duration-200',
+                            isExpanded && 'rotate-180',
+                          )} />
+                        </button>
+
+                        {/* Subitens */}
+                        {isExpanded && (
+                          <div className="ml-3 mt-0.5 pl-3 border-l border-border space-y-0.5">
+                            {item.children!.map((child) => {
+                              const childActive = child.href === activeHref
+                              return (
+                                <Link
+                                  key={child.href}
+                                  href={child.href}
+                                  onClick={onClose}
+                                  aria-current={childActive ? 'page' : undefined}
+                                  className={cn(
+                                    'flex items-center gap-2.5 rounded-lg px-3 py-2 min-h-[40px]',
+                                    'text-sm transition-all duration-150',
+                                    childActive
+                                      ? 'text-primary font-medium bg-primary/5 dark:bg-primary/10'
+                                      : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                                  )}
+                                >
+                                  <child.icon className="w-4 h-4 shrink-0" />
+                                  <span className="truncate">{child.label}</span>
+                                </Link>
+                              )
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  }
+
+                  // ── Item simples (sem subitens) ────────────────────────
                   const linkChildren = (
                     <>
-                      <item.icon
-                        className={cn(
-                          'w-5 h-5 shrink-0',
-                          isActive ? 'text-primary' : 'text-muted-foreground',
-                        )}
-                      />
-                      <span className={cn(
-                        'text-sm font-medium truncate',
-                        'transition-[opacity,width] duration-150 overflow-hidden',
-                        isCollapsed ? 'lg:opacity-0 lg:w-0' : 'opacity-100 w-auto',
-                      )}>
-                        {item.label}
-                      </span>
+                      {iconEl}
+                      {labelEl}
                       {item.badge != null && item.badge > 0 && (
                         <span className={cn(
                           'ml-auto text-xs font-medium rounded-full px-1.5 py-0.5',
