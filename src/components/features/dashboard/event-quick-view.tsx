@@ -50,16 +50,10 @@ export function EventQuickView({ event, onClose }: EventQuickViewProps) {
                 <Clock className="w-4 h-4 shrink-0" />
                 <span>{formatTime(event.start_time)} – {formatTime(event.end_time)}</span>
               </div>
-              {event.venue && (
-                <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
-                  <MapPin className="w-4 h-4 shrink-0" />
-                  <span>{event.venue.name}</span>
-                </div>
-              )}
-              {event.event_type && (
+              {event.birthday_person && (
                 <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
                   <Tag className="w-4 h-4 shrink-0" />
-                  <span>{event.event_type.name}</span>
+                  <span>{event.birthday_person}</span>
                 </div>
               )}
               {event.birthday_person && (
