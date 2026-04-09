@@ -132,7 +132,7 @@ export function TicketFormModal({ open, onClose, onCreated }: TicketFormModalPro
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <ClipboardList className="w-5 h-5 text-primary" />
@@ -140,7 +140,8 @@ export function TicketFormModal({ open, onClose, onCreated }: TicketFormModalPro
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4 py-2">
+        <form onSubmit={handleSubmit}>
+          <div className="overflow-y-auto flex-1 px-6 pb-4 space-y-4 pt-2">
           {/* Título */}
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-text-primary">
@@ -303,6 +304,7 @@ export function TicketFormModal({ open, onClose, onCreated }: TicketFormModalPro
                 ))}
               </SelectContent>
             </Select>
+          </div>
           </div>
         </form>
 
