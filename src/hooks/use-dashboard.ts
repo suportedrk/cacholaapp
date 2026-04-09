@@ -203,6 +203,15 @@ export function useCalendarEvents(dateFrom: string, dateTo: string) {
 // ─────────────────────────────────────────────────────────────
 // MANUTENÇÕES DO CALENDÁRIO (por due_date)
 // ─────────────────────────────────────────────────────────────
+
+/** Maps new Portuguese nature values (maintenance_tickets.nature) to legacy MaintenanceType */
+const NATURE_TO_TYPE: Record<string, MaintenanceType> = {
+  emergencial: 'emergency',
+  pontual:     'punctual',
+  agendado:    'recurring',
+  preventivo:  'preventive',
+}
+
 export function useCalendarMaintenance(dateFrom: string, dateTo: string, enabled: boolean) {
   const { activeUnitId } = useUnitStore()
   const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
@@ -225,7 +234,7 @@ export function useCalendarMaintenance(dateFrom: string, dateTo: string, enabled
         id: o.id,
         title: o.title,
         date: o.due_at ? o.due_at.split('T')[0] : '',
-        type: o.nature,
+        type: (NATURE_TO_TYPE[o.nature] ?? 'punctual') as MaintenanceType,
         status: o.status,
         sector: o.sector as unknown as { id: string; name: string } | null,
         entityType: 'maintenance' as const,
