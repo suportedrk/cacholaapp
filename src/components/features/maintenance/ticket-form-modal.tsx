@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { cn } from '@/lib/utils'
 import { ClipboardList } from 'lucide-react'
 import {
   Dialog,
@@ -139,7 +140,7 @@ export function TicketFormModal({ open, onClose, onCreated }: TicketFormModalPro
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
           <div className="overflow-y-auto flex-1 px-6 pb-4 space-y-4 pt-2">
           {/* Título */}
           <div className="space-y-1.5">
@@ -182,7 +183,7 @@ export function TicketFormModal({ open, onClose, onCreated }: TicketFormModalPro
                 value={form.nature}
                 onValueChange={(v) => set('nature', (v ?? '') as TicketNature)}
               >
-                <SelectTrigger className={errors.nature ? 'border-destructive' : ''}>
+                <SelectTrigger className={cn('w-full', errors.nature ? 'border-destructive' : '')}>
                   <span data-slot="select-value">
                     {NATURE_OPTIONS.find((o) => o.value === form.nature)?.label ?? 'Selecionar...'}
                   </span>
@@ -206,7 +207,7 @@ export function TicketFormModal({ open, onClose, onCreated }: TicketFormModalPro
                 value={form.urgency}
                 onValueChange={(v) => set('urgency', (v ?? '') as TicketUrgency)}
               >
-                <SelectTrigger className={errors.urgency ? 'border-destructive' : ''}>
+                <SelectTrigger className={cn('w-full', errors.urgency ? 'border-destructive' : '')}>
                   <span data-slot="select-value">
                     {URGENCY_OPTIONS.find((o) => o.value === form.urgency)?.label ?? 'Selecionar...'}
                   </span>
@@ -249,7 +250,7 @@ export function TicketFormModal({ open, onClose, onCreated }: TicketFormModalPro
                 set('item_id', '') // reset item when sector changes
               }}
             >
-              <SelectTrigger>
+              <SelectTrigger className="w-full">
                 <span data-slot="select-value">
                   {form.sector_id
                     ? (sectors.find((s) => s.id === form.sector_id)?.name ?? 'Nenhum')
@@ -272,7 +273,7 @@ export function TicketFormModal({ open, onClose, onCreated }: TicketFormModalPro
               value={form.category_id || 'none'}
               onValueChange={(v) => set('category_id', v === 'none' ? '' : (v ?? ''))}
             >
-              <SelectTrigger>
+              <SelectTrigger className="w-full">
                 <span data-slot="select-value">
                   {form.category_id
                     ? (categories.find((c) => c.id === form.category_id)?.name ?? 'Nenhuma')
@@ -305,7 +306,7 @@ export function TicketFormModal({ open, onClose, onCreated }: TicketFormModalPro
               value={form.item_id || 'none'}
               onValueChange={(v) => set('item_id', v === 'none' ? '' : (v ?? ''))}
             >
-              <SelectTrigger>
+              <SelectTrigger className="w-full">
                 <span data-slot="select-value">
                   {form.item_id
                     ? (items.find((i) => i.id === form.item_id)?.name ?? 'Nenhum')

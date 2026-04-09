@@ -261,7 +261,7 @@ function ChamadosContent() {
         <div className="flex items-center gap-2 flex-wrap">
           {/* Sector */}
           <Select value={sectorId || 'all'} onValueChange={(v) => setSectorId(v === 'all' ? '' : (v ?? ''))}>
-            <SelectTrigger className="h-8 text-xs w-[140px]">
+            <SelectTrigger className="h-8 text-xs min-w-[140px] w-auto">
               <span data-slot="select-value">
                 {sectorId
                   ? (sectors.find((s) => s.id === sectorId)?.name ?? 'Todos os setores')
@@ -278,7 +278,7 @@ function ChamadosContent() {
 
           {/* Urgency */}
           <Select value={urgency || 'all'} onValueChange={(v) => setUrgency(v === 'all' ? '' : (v ?? '') as TicketUrgency)}>
-            <SelectTrigger className="h-8 text-xs w-[130px]">
+            <SelectTrigger className="h-8 text-xs min-w-[140px] w-auto">
               <span data-slot="select-value">
                 {URGENCY_FILTER_OPTIONS.find((o) => o.value === (urgency || 'all'))?.label ?? 'Todas as urgências'}
               </span>
@@ -292,7 +292,7 @@ function ChamadosContent() {
 
           {/* Nature */}
           <Select value={nature || 'all'} onValueChange={(v) => setNature(v === 'all' ? '' : (v ?? '') as TicketNature)}>
-            <SelectTrigger className="h-8 text-xs w-[130px]">
+            <SelectTrigger className="h-8 text-xs min-w-[140px] w-auto">
               <span data-slot="select-value">
                 {NATURE_FILTER_OPTIONS.find((o) => o.value === (nature || 'all'))?.label ?? 'Todas as naturezas'}
               </span>
