@@ -138,7 +138,7 @@ export async function GET(req: NextRequest) {
       // 10. Open orders by sector (with join)
       (supabase as any)
         .from('maintenance_orders')
-        .select('sector_id, sector:sectors(name)')
+        .select('sector_id, sector:maintenance_sectors(name)')
         .eq('unit_id', unitId)
         .not('status', 'in', '(completed,cancelled)'),
     ])

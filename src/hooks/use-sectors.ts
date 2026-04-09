@@ -18,7 +18,7 @@ export function useSectors(onlyActive = true) {
     enabled: isSessionReady,
     queryFn: async () => {
       const supabase = createClient()
-      let q = supabase.from('sectors').select('*').order('sort_order')
+      let q = supabase.from('maintenance_sectors').select('*').order('sort_order')
       if (activeUnitId) q = q.eq('unit_id', activeUnitId)
       if (onlyActive) q = q.eq('is_active', true)
       const { data, error } = await q
@@ -38,11 +38,11 @@ export function useCreateSector() {
   return useMutation({
     mutationFn: async (data: { name: string }) => {
       const supabase = createClient()
-      let q = supabase.from('sectors').select('sort_order').order('sort_order', { ascending: false }).limit(1)
+      let q = supabase.from('maintenance_sectors').select('sort_order').order('sort_order', { ascending: false }).limit(1)
       if (activeUnitId) q = q.eq('unit_id', activeUnitId)
       const { data: existing } = await q
       const nextOrder = ((existing?.[0]?.sort_order ?? 0) as number) + 1
-      const { error } = await supabase.from('sectors').insert({ ...data, sort_order: nextOrder, unit_id: activeUnitId! })
+      const { error } = await supabase.from('maintenance_sectors').insert({ ...data, sort_order: nextOrder, unit_id: activeUnitId! })
       if (error) throw error
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['sectors'] }); toast.success('Setor criado.') },
@@ -58,7 +58,7 @@ export function useUpdateSector() {
   return useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<Sector> }) => {
       const supabase = createClient()
-      const { error } = await supabase.from('sectors').update(data).eq('id', id)
+      const { error } = await supabase.from('maintenance_sectors').update(data).eq('id', id)
       if (error) throw error
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['sectors'] }); toast.success('Setor atualizado.') },
@@ -74,7 +74,7 @@ export function useDeleteSector() {
   return useMutation({
     mutationFn: async (id: string) => {
       const supabase = createClient()
-      const { error } = await supabase.from('sectors').update({ is_active: false }).eq('id', id)
+      const { error } = await supabase.from('maintenance_sectors').update({ is_active: false }).eq('id', id)
       if (error) throw error
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['sectors'] }); toast.success('Setor desativado.') },

@@ -179,7 +179,7 @@ export function useMaintenanceReport(filters: ReportFilters) {
         .from('maintenance_orders')
         .select(`
           id, title, type, priority, status, created_at, updated_at,
-          sector:sectors(name),
+          sector:maintenance_sectors(name),
           assigned_user:users!maintenance_orders_assigned_to_fkey(name)
         `)
         .gte('created_at', filters.from)
