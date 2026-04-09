@@ -36,7 +36,10 @@ export interface Database {
       maintenance_categories: { Row: MaintenanceCategory;   Insert: Partial<MaintenanceCategory>;   Update: Partial<MaintenanceCategory>;   Relationships: [] }
       maintenance_items:      { Row: MaintenanceItem;       Insert: Partial<MaintenanceItem>;       Update: Partial<MaintenanceItem>;       Relationships: [] }
       maintenance_sla:        { Row: MaintenanceSla;        Insert: Partial<MaintenanceSla>;        Update: Partial<MaintenanceSla>;        Relationships: [] }
-      maintenance_tickets:    { Row: MaintenanceTicket;     Insert: Partial<MaintenanceTicket>;     Update: Partial<MaintenanceTicket>;     Relationships: [] }
+      maintenance_tickets:          { Row: MaintenanceTicket;          Insert: Partial<MaintenanceTicket>;          Update: Partial<MaintenanceTicket>;          Relationships: [] }
+      maintenance_executions:       { Row: MaintenanceExecution;       Insert: Partial<MaintenanceExecution>;       Update: Partial<MaintenanceExecution>;       Relationships: [] }
+      maintenance_ticket_photos:    { Row: MaintenanceTicketPhoto;     Insert: Partial<MaintenanceTicketPhoto>;     Update: Partial<MaintenanceTicketPhoto>;     Relationships: [] }
+      maintenance_status_history:   { Row: MaintenanceStatusHistory;   Insert: Partial<MaintenanceStatusHistory>;   Update: Partial<MaintenanceStatusHistory>;   Relationships: [] }
       equipment:            { Row: Equipment;           Insert: Partial<Equipment>;        Update: Partial<Equipment>;        Relationships: [] }
       // Manutenção — ghost types (tabelas dropadas em 032, UI refatorada nos Prompts 4-7)
       maintenance_orders:   { Row: MaintenanceOrder;    Insert: Partial<MaintenanceOrder>; Update: Partial<MaintenanceOrder>; Relationships: [] }
@@ -309,6 +312,74 @@ export type MaintenanceSla = {
   resolution_hours: number
   created_at: string
   updated_at: string
+}
+
+// ─────────────────────────────────────────────────────────────
+// MANUTENÇÃO — CHAMADOS (Migration 031)
+// ─────────────────────────────────────────────────────────────
+export type TicketNature  = 'emergencial' | 'pontual' | 'agendado' | 'preventivo'
+export type TicketUrgency = 'critical' | 'high' | 'medium' | 'low'
+export type TicketStatus  = 'open' | 'in_progress' | 'waiting_part' | 'concluded' | 'cancelled'
+export type ExecutorType  = 'internal' | 'external'
+export type ExecutionStatus = 'assigned' | 'in_progress' | 'concluded'
+
+export type MaintenanceExecution = {
+  id: string
+  ticket_id: string
+  executor_type: ExecutorType
+  internal_user_id: string | null
+  provider_id: string | null
+  description: string | null
+  cost: number
+  cost_approved: boolean
+  cost_approved_by: string | null
+  cost_approved_at: string | null
+  status: ExecutionStatus
+  started_at: string | null
+  concluded_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type MaintenanceTicketPhoto = {
+  id: string
+  ticket_id: string
+  url: string
+  caption: string | null
+  uploaded_by: string | null
+  created_at: string
+}
+
+export type MaintenanceStatusHistory = {
+  id: string
+  ticket_id: string
+  from_status: string | null
+  to_status: string
+  changed_by: string | null
+  note: string | null
+  created_at: string
+}
+
+// Ticket com joins para listagem
+export type MaintenanceTicketForList = MaintenanceTicket & {
+  sector:   Pick<Sector, 'id' | 'name'> | null
+  category: Pick<MaintenanceCategory, 'id' | 'name' | 'color' | 'icon'> | null
+  executions_count?: number
+}
+
+// Ticket com joins completos para detalhe
+export type MaintenanceTicketWithDetails = MaintenanceTicket & {
+  sector:   Pick<Sector, 'id' | 'name'> | null
+  category: Pick<MaintenanceCategory, 'id' | 'name' | 'color' | 'icon'> | null
+  item:     Pick<MaintenanceItem, 'id' | 'name'> | null
+  executions: (MaintenanceExecution & {
+    internal_user: Pick<User, 'id' | 'name' | 'avatar_url'> | null
+    provider:      { id: string; name: string } | null
+  })[]
+  photos:  MaintenanceTicketPhoto[]
+  history: (MaintenanceStatusHistory & {
+    changed_by_user: { name: string } | null
+  })[]
 }
 
 // ─────────────────────────────────────────────────────────────

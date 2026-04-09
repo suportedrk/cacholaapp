@@ -1,9 +1,11 @@
 // GET /api/maintenance/history-summary
-// Returns KPIs + 12-month trend for completed maintenance orders
+// Returns KPIs + 12-month trend for concluded maintenance tickets
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+
+type TicketNature = 'emergencial' | 'pontual' | 'agendado' | 'preventivo'
 
 export interface HistorySummaryResponse {
   kpis: {
@@ -22,18 +24,17 @@ export async function GET(req: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 })
 
     const { searchParams } = new URL(req.url)
-    const unitId     = searchParams.get('unit_id')
-    const dateFrom   = searchParams.get('date_from')
-    const dateTo     = searchParams.get('date_to')
-    const typeParam  = searchParams.get('type')      // comma-separated values
-    const sectorId   = searchParams.get('sector_id')
-    const supplierId = searchParams.get('supplier_id')
+    const unitId    = searchParams.get('unit_id')
+    const dateFrom  = searchParams.get('date_from')
+    const dateTo    = searchParams.get('date_to')
+    const typeParam = searchParams.get('type')     // comma-separated nature values
+    const sectorId  = searchParams.get('sector_id')
 
     if (!unitId) return NextResponse.json({ error: 'unit_id é obrigatório.' }, { status: 400 })
 
     const now = new Date()
 
-    // 12-month buckets for trend chart (always last 12 months regardless of date filter)
+    // 12-month buckets for trend chart
     const months = Array.from({ length: 12 }, (_, i) => {
       const d = subMonths(now, 11 - i)
       return {
@@ -44,90 +45,100 @@ export async function GET(req: NextRequest) {
       }
     })
 
+    // ── Pre-fetch ticket IDs for this unit (needed for executions join) ───
+    // We build the base ticket filter and reuse it
+    const buildTicketQuery = () => {
+      let q = supabase
+        .from('maintenance_tickets')
+        .select('id, created_at, concluded_at')
+        .eq('unit_id', unitId)
+        .eq('status', 'concluded')
+      if (dateFrom)  q = q.gte('concluded_at', dateFrom)
+      if (dateTo)    q = q.lte('concluded_at', dateTo)
+      if (typeParam) q = q.in('nature', typeParam.split(',') as TicketNature[])
+      if (sectorId)  q = q.eq('sector_id', sectorId)
+      return q
+    }
+
+    const buildTicketIdsQuery = () => {
+      let q = supabase
+        .from('maintenance_tickets')
+        .select('id')
+        .eq('unit_id', unitId)
+        .eq('status', 'concluded')
+      if (dateFrom)  q = q.gte('concluded_at', dateFrom)
+      if (dateTo)    q = q.lte('concluded_at', dateTo)
+      if (typeParam) q = q.in('nature', typeParam.split(',') as TicketNature[])
+      if (sectorId)  q = q.eq('sector_id', sectorId)
+      return q
+    }
+
+    // Monthly bucket ticket IDs (last 12m, with nature/sector filters, no date range filter)
+    const buildMonthlyTicketsQuery = () => {
+      let q = supabase
+        .from('maintenance_tickets')
+        .select('id, concluded_at')
+        .eq('unit_id', unitId)
+        .eq('status', 'concluded')
+        .gte('concluded_at', months[0].from)
+        .lte('concluded_at', months[11].to)
+      if (typeParam) q = q.in('nature', typeParam.split(',') as TicketNature[])
+      if (sectorId)  q = q.eq('sector_id', sectorId)
+      return q
+    }
+
     // ── Parallel queries ────────────────────────────────────────
     const [
-      completedResult,
       resolutionResult,
-      costsResult,
-      monthlyOrdersResult,
-      monthlyCostsResult,
+      filteredTicketIdsResult,
+      monthlyTicketsResult,
     ] = await Promise.all([
-      // 1. Total completed (with all filters)
-      (() => {
-        let q = supabase
-          .from('maintenance_orders')
-          .select('id', { count: 'exact', head: true })
-          .eq('unit_id', unitId)
-          .eq('status', 'completed')
-        if (dateFrom)   q = q.gte('completed_at', dateFrom)
-        if (dateTo)     q = q.lte('completed_at', dateTo)
-        if (typeParam)  q = q.in('type', typeParam.split(',') as import('@/types/database.types').MaintenanceType[])
-        if (sectorId)   q = q.eq('sector_id', sectorId)
-        if (supplierId) q = q.eq('supplier_id', supplierId)
-        return q
-      })(),
+      // 1. Resolution time data (full ticket data for avg calculation)
+      buildTicketQuery(),
 
-      // 2. Resolution time data (with all filters)
-      (() => {
-        let q = supabase
-          .from('maintenance_orders')
-          .select('created_at, completed_at')
-          .eq('unit_id', unitId)
-          .eq('status', 'completed')
-        if (dateFrom)   q = q.gte('completed_at', dateFrom)
-        if (dateTo)     q = q.lte('completed_at', dateTo)
-        if (typeParam)  q = q.in('type', typeParam.split(',') as import('@/types/database.types').MaintenanceType[])
-        if (sectorId)   q = q.eq('sector_id', sectorId)
-        if (supplierId) q = q.eq('supplier_id', supplierId)
-        return q
-      })(),
+      // 2. Filtered ticket IDs (for costs join)
+      buildTicketIdsQuery(),
 
-      // 3. Approved costs (with date filter)
-      (() => {
-        let q = (supabase as unknown as { from: (t: string) => ReturnType<typeof supabase['from']> })
-          .from('maintenance_costs')
-          .select('amount')
-          .eq('unit_id', unitId)
-          .eq('status', 'approved')
-        if (dateFrom) q = (q as any).gte('submitted_at', dateFrom)
-        if (dateTo)   q = (q as any).lte('submitted_at', dateTo)
-        return q
-      })(),
+      // 3. Monthly tickets for trend chart
+      buildMonthlyTicketsQuery(),
+    ])
 
-      // 4. Monthly completed (last 12m, with type/sector/supplier filters)
-      (() => {
-        let q = supabase
-          .from('maintenance_orders')
-          .select('completed_at')
-          .eq('unit_id', unitId)
-          .eq('status', 'completed')
-          .gte('completed_at', months[0].from)
-          .lte('completed_at', months[11].to)
-        if (typeParam)  q = q.in('type', typeParam.split(',') as import('@/types/database.types').MaintenanceType[])
-        if (sectorId)   q = q.eq('sector_id', sectorId)
-        if (supplierId) q = q.eq('supplier_id', supplierId)
-        return q
-      })(),
+    const filteredTicketIds = (filteredTicketIdsResult.data ?? []).map((t) => t.id)
+    const monthlyTicketData = monthlyTicketsResult.data ?? []
 
-      // 5. Monthly approved costs (last 12m)
-      (supabase as any)
-        .from('maintenance_costs')
-        .select('submitted_at, amount')
-        .eq('unit_id', unitId)
-        .eq('status', 'approved')
-        .gte('submitted_at', months[0].from)
-        .lte('submitted_at', months[11].to),
+    // Monthly ticket IDs for cost join
+    const monthlyTicketIds = monthlyTicketData.map((t) => t.id)
+
+    // ── Costs queries (need ticket IDs) ────────────────────────
+    const [costsResult, monthlyCostsResult] = await Promise.all([
+      // Approved costs for filtered tickets
+      filteredTicketIds.length > 0
+        ? supabase
+            .from('maintenance_executions')
+            .select('cost')
+            .in('ticket_id', filteredTicketIds)
+            .eq('cost_approved', true)
+        : Promise.resolve({ data: [] as { cost: number }[], error: null }),
+
+      // Monthly approved costs (last 12m)
+      monthlyTicketIds.length > 0
+        ? supabase
+            .from('maintenance_executions')
+            .select('cost, ticket_id, created_at')
+            .in('ticket_id', monthlyTicketIds)
+            .eq('cost_approved', true)
+        : Promise.resolve({ data: [] as { cost: number; ticket_id: string; created_at: string }[], error: null }),
     ])
 
     // ── KPIs ───────────────────────────────────────────────────
-    const total_completed = completedResult.count ?? 0
+    const total_completed = filteredTicketIds.length
 
     // Avg resolution hours
     let avg_resolution_hours: number | null = null
     const durations = (resolutionResult.data ?? [])
-      .map((o: { created_at: string | null; completed_at: string | null }) => {
-        if (!o.created_at || !o.completed_at) return null
-        const h = (new Date(o.completed_at).getTime() - new Date(o.created_at).getTime()) / 3_600_000
+      .map((t) => {
+        if (!t.created_at || !t.concluded_at) return null
+        const h = (new Date(t.concluded_at).getTime() - new Date(t.created_at).getTime()) / 3_600_000
         return h >= 0 ? h : null
       })
       .filter((h): h is number => h !== null)
@@ -138,7 +149,7 @@ export async function GET(req: NextRequest) {
 
     // Total approved cost
     const total_cost_approved = (costsResult.data ?? []).reduce(
-      (sum: number, c: { amount?: number | null }) => sum + Number(c.amount ?? 0),
+      (sum: number, e) => sum + Number((e as { cost?: number | null }).cost ?? 0),
       0
     )
 
@@ -151,18 +162,28 @@ export async function GET(req: NextRequest) {
     const costBucket:  Record<string, number> = {}
     months.forEach((m) => { countBucket[m.key] = 0; costBucket[m.key] = 0 })
 
-    for (const o of (monthlyOrdersResult.data ?? [])) {
-      const at = (o as { completed_at?: string | null }).completed_at
+    // Build a map from ticket_id → concluded_at for monthly tickets
+    const ticketConcludedMap: Record<string, string> = {}
+    for (const t of monthlyTicketData) {
+      if (t.id && t.concluded_at) ticketConcludedMap[t.id] = t.concluded_at
+    }
+
+    // Count by concluded_at month
+    for (const t of monthlyTicketData) {
+      const at = t.concluded_at
       if (!at) continue
       const key = format(new Date(at), 'yyyy-MM')
       if (key in countBucket) countBucket[key]++
     }
 
-    for (const c of (monthlyCostsResult.data ?? [])) {
-      const at = (c as { submitted_at?: string | null }).submitted_at
+    // Costs bucketed by the ticket's concluded_at month (not execution created_at)
+    for (const e of (monthlyCostsResult.data ?? [])) {
+      const ex = e as unknown as { cost?: number | null; ticket_id?: string; created_at?: string }
+      const ticketAt = ex.ticket_id ? ticketConcludedMap[ex.ticket_id] : null
+      const at = ticketAt ?? ex.created_at
       if (!at) continue
       const key = format(new Date(at), 'yyyy-MM')
-      if (key in costBucket) costBucket[key] += Number((c as { amount?: number | null }).amount ?? 0)
+      if (key in costBucket) costBucket[key] += Number(ex.cost ?? 0)
     }
 
     const by_month = months.map((m) => ({
