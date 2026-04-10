@@ -7,9 +7,11 @@ import { ClipboardList, LayoutTemplate, Plus, RefreshCw, Copy, ListTodo } from '
 import { Button, buttonVariants } from '@/components/ui/button'
 import { PageHeader } from '@/components/shared/page-header'
 import { EmptyState } from '@/components/shared/empty-state'
+import { SelectUnitModal } from '@/components/shared/select-unit-modal'
 import { cn } from '@/lib/utils'
 import { useChecklists } from '@/hooks/use-checklists'
 import { useLoadingTimeout } from '@/hooks/use-loading-timeout'
+import { useUnitStore } from '@/stores/unit-store'
 import { ChecklistKPIs } from './components/checklist-kpis'
 import {
   ChecklistFiltersBar,
@@ -66,7 +68,6 @@ function ChecklistsContent() {
       )
     }
 
-    // Empty sem filtros: sugere criar template ou checklist
     return (
       <EmptyState
         icon={ClipboardList}
@@ -162,8 +163,37 @@ function LoadMoreButton({ currentPage }: { currentPage: number }) {
 // ─────────────────────────────────────────────────────────────
 export default function ChecklistsPage() {
   const router = useRouter()
-  const [createOpen,    setCreateOpen]    = useState(false)
-  const [dupEventOpen,  setDupEventOpen]  = useState(false)
+  const { activeUnitId } = useUnitStore()
+
+  const [createOpen,     setCreateOpen]    = useState(false)
+  const [dupEventOpen,   setDupEventOpen]  = useState(false)
+  const [selectUnitOpen, setSelectUnitOpen] = useState(false)
+  const [pendingAction,  setPendingAction] = useState<'create' | 'duplicate' | null>(null)
+
+  function guardedCreate() {
+    if (activeUnitId === null) {
+      setPendingAction('create')
+      setSelectUnitOpen(true)
+    } else {
+      setCreateOpen(true)
+    }
+  }
+
+  function guardedDuplicate() {
+    if (activeUnitId === null) {
+      setPendingAction('duplicate')
+      setSelectUnitOpen(true)
+    } else {
+      setDupEventOpen(true)
+    }
+  }
+
+  function handleUnitConfirmed() {
+    setSelectUnitOpen(false)
+    if (pendingAction === 'create') setCreateOpen(true)
+    else if (pendingAction === 'duplicate') setDupEventOpen(true)
+    setPendingAction(null)
+  }
 
   return (
     <div className="space-y-6">
@@ -186,7 +216,7 @@ export default function ChecklistsPage() {
               <RefreshCw className="w-4 h-4 mr-1.5" />
               Recorrências
             </Link>
-            <Button variant="outline" size="sm" onClick={() => setDupEventOpen(true)}>
+            <Button variant="outline" size="sm" onClick={guardedDuplicate}>
               <Copy className="w-4 h-4 mr-1.5" />
               Duplicar de evento
             </Button>
@@ -197,7 +227,7 @@ export default function ChecklistsPage() {
               <LayoutTemplate className="w-4 h-4 mr-1.5" />
               Templates
             </Link>
-            <Button size="sm" onClick={() => setCreateOpen(true)}>
+            <Button size="sm" onClick={guardedCreate}>
               <Plus className="w-4 h-4 mr-1.5" />
               Novo
             </Button>
@@ -221,6 +251,12 @@ export default function ChecklistsPage() {
       >
         <ChecklistsContent />
       </Suspense>
+
+      <SelectUnitModal
+        open={selectUnitOpen}
+        onClose={() => { setSelectUnitOpen(false); setPendingAction(null) }}
+        onConfirm={handleUnitConfirmed}
+      />
 
       <CreateChecklistModal
         open={createOpen}
