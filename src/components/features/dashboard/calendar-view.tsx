@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   format,
   addMonths, addWeeks, addDays,
@@ -12,7 +12,7 @@ import {
   isSameMonth, isToday,
 } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { ChevronLeft, ChevronRight, CalendarX, Wrench, LayoutList, CalendarDays, ClipboardList } from 'lucide-react'
+import { ChevronLeft, ChevronRight, CalendarX, Wrench, LayoutList, CalendarDays, ClipboardList, CheckSquare } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
@@ -112,35 +112,82 @@ export function CalendarView({
   const router = useRouter()
   const [navDir, setNavDir] = useState<1 | -1 | 0>(0)
   const [mobileTab, setMobileTab] = useState<'cal' | 'list'>('cal')
+  const [showEvents, setShowEvents] = useState(true)
+  const [showMaintenanceInternal, setShowMaintenanceInternal] = useState(true)
+  const [showChecklists, setShowChecklists] = useState(true)
+
+  // Persistir filtros de tipo no localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('calendar-type-filters')
+      if (saved) {
+        const parsed = JSON.parse(saved) as { showEvents?: boolean; showMaintenance?: boolean; showChecklists?: boolean }
+        if (typeof parsed.showEvents === 'boolean') setShowEvents(parsed.showEvents)
+        if (typeof parsed.showMaintenance === 'boolean') setShowMaintenanceInternal(parsed.showMaintenance)
+        if (typeof parsed.showChecklists === 'boolean') setShowChecklists(parsed.showChecklists)
+      }
+    } catch { /* ignorar erro de parse */ }
+  }, [])
+
+  function saveFilters(ev: boolean, maint: boolean, chkl: boolean) {
+    try {
+      localStorage.setItem('calendar-type-filters', JSON.stringify({ showEvents: ev, showMaintenance: maint, showChecklists: chkl }))
+    } catch { /* ignorar */ }
+  }
+
+  function toggleShowEvents() {
+    const next = !showEvents
+    setShowEvents(next)
+    saveFilters(next, showMaintenanceInternal, showChecklists)
+  }
+
+  function toggleShowMaintenanceInternal() {
+    const next = !showMaintenanceInternal
+    setShowMaintenanceInternal(next)
+    saveFilters(showEvents, next, showChecklists)
+  }
+
+  function toggleShowChecklists() {
+    const next = !showChecklists
+    setShowChecklists(next)
+    saveFilters(showEvents, showMaintenanceInternal, next)
+  }
+
+  const filteredEvents = showEvents ? events : []
+  const filteredMaintenance = (showMaintenanceInternal && showMaintenance) ? (maintenanceItems ?? []) : []
+  const filteredChecklists = showChecklists ? (checklistItems ?? []) : []
 
   const eventsByDate = useMemo(() => {
     const map: Record<string, CalendarEvent[]> = {}
-    for (const ev of events) {
+    for (const ev of filteredEvents) {
       if (!map[ev.date]) map[ev.date] = []
       map[ev.date].push(ev)
     }
     return map
-  }, [events])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredEvents])
 
   const maintenanceByDate = useMemo(() => {
     const map: Record<string, CalendarMaintenance[]> = {}
-    for (const m of maintenanceItems) {
+    for (const m of filteredMaintenance) {
       if (!m.date) continue
       if (!map[m.date]) map[m.date] = []
       map[m.date].push(m)
     }
     return map
-  }, [maintenanceItems])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredMaintenance])
 
   const checklistByDate = useMemo(() => {
     const map: Record<string, CalendarChecklist[]> = {}
-    for (const c of checklistItems) {
+    for (const c of filteredChecklists) {
       if (!c.date) continue
       if (!map[c.date]) map[c.date] = []
       map[c.date].push(c)
     }
     return map
-  }, [checklistItems])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredChecklists])
 
   function navigate(dir: 1 | -1) {
     setNavDir(dir)
@@ -177,7 +224,7 @@ export function CalendarView({
     return format(currentDate, "EEEE, d 'de' MMMM", { locale: ptBR })
   }
 
-  const visibleEventCount = events.filter((e) => e.status !== 'lost').length
+  const visibleEventCount = filteredEvents.filter((e) => e.status !== 'lost').length
 
   return (
     <div className="bg-card border border-border rounded-xl overflow-hidden">
@@ -286,6 +333,48 @@ export function CalendarView({
         </div>
       </div>
 
+      {/* ── Filtros de tipo ── */}
+      <div className="flex items-center gap-2 px-4 py-2 border-b border-border flex-wrap">
+        <button
+          onClick={toggleShowEvents}
+          className={cn(
+            'flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border transition-all',
+            showEvents
+              ? 'bg-blue-500/20 border-blue-500 text-blue-600 dark:text-blue-400'
+              : 'bg-muted/50 border-border text-text-tertiary opacity-60'
+          )}
+        >
+          <CalendarDays className="w-3 h-3" />
+          Eventos
+        </button>
+        <button
+          onClick={toggleShowMaintenanceInternal}
+          className={cn(
+            'flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border transition-all',
+            showMaintenanceInternal
+              ? 'bg-amber-500/20 border-amber-500 text-amber-600 dark:text-amber-400'
+              : 'bg-muted/50 border-border text-text-tertiary opacity-60'
+          )}
+        >
+          <Wrench className="w-3 h-3" />
+          Manutenção
+        </button>
+        {checklistItems !== undefined && (
+          <button
+            onClick={toggleShowChecklists}
+            className={cn(
+              'flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border transition-all',
+              showChecklists
+                ? 'bg-purple-500/20 border-purple-500 text-purple-600 dark:text-purple-400'
+                : 'bg-muted/50 border-border text-text-tertiary opacity-60'
+            )}
+          >
+            <CheckSquare className="w-3 h-3" />
+            Checklists
+          </button>
+        )}
+      </div>
+
       {/* ── Body ── */}
       {isLoading ? (
         <CalendarSkeleton />
@@ -294,9 +383,9 @@ export function CalendarView({
           {/* Mobile lista */}
           <div className={cn('sm:hidden', mobileTab !== 'list' && 'hidden')}>
             <ListView
-              events={events}
-              maintenanceItems={showMaintenance ? maintenanceItems : []}
-              checklistItems={checklistItems}
+              events={filteredEvents}
+              maintenanceItems={filteredMaintenance}
+              checklistItems={filteredChecklists}
               onEventClick={onEventClick}
               onMaintenanceClick={onMaintenanceClick}
               onChecklistClick={(url) => router.push(url)}
@@ -311,7 +400,7 @@ export function CalendarView({
                 navDir={navDir}
                 currentDate={currentDate}
                 eventsByDate={eventsByDate}
-                maintenanceByDate={showMaintenance ? maintenanceByDate : {}}
+                maintenanceByDate={maintenanceByDate}
                 checklistByDate={checklistByDate}
                 onEventClick={onEventClick}
                 onMaintenanceClick={onMaintenanceClick}
@@ -323,7 +412,7 @@ export function CalendarView({
                 key={format(startOfWeek(currentDate, { weekStartsOn: 1 }), 'yyyy-MM-dd')}
                 currentDate={currentDate}
                 eventsByDate={eventsByDate}
-                maintenanceByDate={showMaintenance ? maintenanceByDate : {}}
+                maintenanceByDate={maintenanceByDate}
                 checklistByDate={checklistByDate}
                 onEventClick={onEventClick}
                 onMaintenanceClick={onMaintenanceClick}
@@ -334,7 +423,7 @@ export function CalendarView({
               <DayView
                 currentDate={currentDate}
                 eventsByDate={eventsByDate}
-                maintenanceByDate={showMaintenance ? maintenanceByDate : {}}
+                maintenanceByDate={maintenanceByDate}
                 checklistByDate={checklistByDate}
                 onEventClick={onEventClick}
                 onMaintenanceClick={onMaintenanceClick}
