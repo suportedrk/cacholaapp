@@ -298,22 +298,6 @@ export function CalendarView({
           </button>
         </div>
 
-        {/* Toggle manutenções — desktop */}
-        {onToggleMaintenance && (
-          <button
-            onClick={onToggleMaintenance}
-            title={showMaintenance ? 'Ocultar manutenções' : 'Mostrar manutenções'}
-            className={cn(
-              'hidden sm:flex items-center justify-center w-7 h-7 rounded-md transition-colors shrink-0',
-              showMaintenance
-                ? 'bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-950/50 dark:text-amber-400 dark:hover:bg-amber-950'
-                : 'text-muted-foreground hover:bg-muted'
-            )}
-          >
-            <Wrench className="w-3.5 h-3.5" />
-          </button>
-        )}
-
         {/* View toggle — desktop */}
         <div className="hidden sm:flex items-center rounded-lg border border-border overflow-hidden shrink-0">
           {(['month', 'week', 'day'] as CalendarViewType[]).map((v) => (
