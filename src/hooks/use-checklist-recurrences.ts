@@ -157,13 +157,24 @@ export function useUpdateRecurrence() {
       if (isActive !== undefined) {
         patch.is_active = isActive
         // Recalcular próxima geração ao reativar
-        if (isActive && frequency) {
-          patch.next_generation_at = calcNextGenerationAt(
-            frequency,
-            dayOfWeek ?? undefined,
-            dayOfMonth ?? undefined,
-            timeOfDay ?? '08:00'
-          )
+        if (isActive) {
+          // Se frequency foi passado, usa; senão, busca do banco
+          const effectiveFrequency = frequency ?? (await (async () => {
+            const { data } = await supabase
+              .from('checklist_recurrence')
+              .select('frequency, day_of_week, day_of_month, time_of_day')
+              .eq('id', id)
+              .single()
+            return data
+          })())
+
+          if (effectiveFrequency) {
+            const freq = frequency ?? (effectiveFrequency as { frequency: import('@/types/database.types').ChecklistRecurrence['frequency'] }).frequency
+            const dow  = dayOfWeek  !== undefined ? dayOfWeek  : (effectiveFrequency as { day_of_week?: number[] | null }).day_of_week ?? undefined
+            const dom  = dayOfMonth !== undefined ? dayOfMonth : (effectiveFrequency as { day_of_month?: number | null }).day_of_month ?? undefined
+            const tod  = timeOfDay  !== undefined ? timeOfDay  : ((effectiveFrequency as { time_of_day?: string }).time_of_day ?? '08:00').substring(0, 5)
+            patch.next_generation_at = calcNextGenerationAt(freq, dow, dom, tod)
+          }
         }
       }
 

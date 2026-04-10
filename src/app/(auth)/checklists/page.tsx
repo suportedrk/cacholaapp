@@ -143,13 +143,21 @@ function ChecklistsContent() {
 // LOAD MORE BUTTON
 // ─────────────────────────────────────────────────────────────
 function LoadMoreButton({ currentPage }: { currentPage: number }) {
-  const router = useRouter()
+  const router   = useRouter()
+  const pathname = usePathname()
+  const { q, statuses, type, priority, categoryId, overdue } = useChecklistUrlFilters()
   const nextPage = currentPage + 1
 
   function handleLoadMore() {
-    const params = new URLSearchParams(window.location.search)
+    const params = new URLSearchParams()
+    if (q)          params.set('q', q)
+    if (statuses.length) params.set('status', statuses.join(','))
+    if (type)       params.set('type', type)
+    if (priority)   params.set('priority', priority)
+    if (categoryId) params.set('category', categoryId)
+    if (overdue)    params.set('overdue', '1')
     params.set('page', String(nextPage))
-    router.push(`${window.location.pathname}?${params.toString()}`, { scroll: false })
+    router.push(`${pathname}?${params.toString()}`, { scroll: false })
   }
 
   return (

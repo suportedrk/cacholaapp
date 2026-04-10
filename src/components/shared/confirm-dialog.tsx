@@ -19,6 +19,7 @@ interface ConfirmDialogProps {
   destructive?: boolean
   loading?: boolean
   onConfirm: () => void | Promise<void>
+  hideCancelButton?: boolean
   // Controlled pattern
   open?: boolean
   onOpenChange?: (open: boolean) => void
@@ -33,6 +34,7 @@ export function ConfirmDialog({
   cancelLabel = 'Cancelar',
   destructive = false,
   loading = false,
+  hideCancelButton = false,
   onConfirm,
   open: controlledOpen,
   onOpenChange: controlledOnOpenChange,
@@ -66,13 +68,15 @@ export function ConfirmDialog({
             <DialogDescription>{description}</DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2">
-            <Button
-              variant="outline"
-              onClick={() => handleOpenChange(false)}
-              disabled={loading}
-            >
-              {cancelLabel}
-            </Button>
+            {!hideCancelButton && (
+              <Button
+                variant="outline"
+                onClick={() => handleOpenChange(false)}
+                disabled={loading}
+              >
+                {cancelLabel}
+              </Button>
+            )}
             <Button
               variant={destructive ? 'destructive' : 'default'}
               onClick={onConfirm}
