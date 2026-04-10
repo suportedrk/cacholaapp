@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
   MoreVertical, Copy, FileText, Trash2, CalendarDays,
-  ChevronDown, ChevronUp, CheckCircle2, ClipboardCopy,
+  ChevronDown, ChevronUp, CheckCircle2, ClipboardCopy, Pencil,
 } from 'lucide-react'
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
@@ -241,6 +241,18 @@ export function ChecklistDetailHeader({
               }
             />
             <DropdownMenuContent align="end" className="w-48">
+              {!isCompleted && (
+                <>
+                  <DropdownMenuItem
+                    onClick={() => router.push(`/checklists/${checklist.id}/editar`)}
+                    className="gap-2"
+                  >
+                    <Pencil className="w-4 h-4" />
+                    Editar checklist
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                </>
+              )}
               <DropdownMenuItem
                 onClick={() => setDuplicateOpen(true)}
                 className="gap-2"

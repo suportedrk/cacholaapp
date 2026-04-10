@@ -23,7 +23,7 @@ export function useChecklistRecurrences(onlyActive = true) {
 
   return useQuery({
     queryKey: ['checklist-recurrences', activeUnitId, onlyActive],
-    enabled: !!activeUnitId && isSessionReady,
+    enabled: isSessionReady,
     retry: RETRY,
     staleTime: 2 * 60 * 1000,
     queryFn: async () => {
@@ -35,9 +35,9 @@ export function useChecklistRecurrences(onlyActive = true) {
           template:checklist_templates!checklist_recurrence_template_id_fkey(id, title, category_id),
           assigned_user:users!checklist_recurrence_assigned_to_fkey(id, name, avatar_url)
         `)
-        .eq('unit_id', activeUnitId!)
         .order('next_generation_at', { ascending: true, nullsFirst: false })
 
+      if (activeUnitId) query = query.eq('unit_id', activeUnitId)
       if (onlyActive) query = query.eq('is_active', true)
 
       const { data, error } = await query
