@@ -12,7 +12,6 @@ const supabase = createClient()
 // ── Query keys ────────────────────────────────────────────────
 
 const KEYS = {
-  syncLogs:    (unitId: string | null) => ['ploomes-sync-logs', unitId] as const,
   webhookLogs: () => ['ploomes-webhook-logs'] as const,
   config:      (unitId: string | null) => ['ploomes-config', unitId] as const,
 }
@@ -21,22 +20,17 @@ const KEYS = {
 
 export function useSyncLogs() {
   const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
-  const activeUnitId = useUnitStore((s) => s.activeUnitId)
 
   return useQuery({
-    queryKey: KEYS.syncLogs(activeUnitId),
+    // Logs de sync são globais (unit_id=null no cron) — sem filtro de unidade
+    queryKey: ['ploomes-sync-logs'] as const,
     queryFn: async (): Promise<PloomesSyncLog[]> => {
-      let query = supabase
+      const { data, error } = await supabase
         .from('ploomes_sync_log')
         .select('*')
         .order('started_at', { ascending: false })
         .limit(10)
 
-      if (activeUnitId) {
-        query = query.eq('unit_id', activeUnitId)
-      }
-
-      const { data, error } = await query
       if (error) throw error
       return data ?? []
     },
@@ -159,10 +153,11 @@ export function useTriggerSync() {
     },
     onSuccess: () => {
       toast.success('Sync iniciado com sucesso')
-      // Aguarda 3s para o sync terminar, depois revalida
+      // Aguarda 5s para o sync terminar, depois revalida
       setTimeout(() => {
         void queryClient.invalidateQueries({ queryKey: ['ploomes-sync-logs'] })
-      }, 3_000)
+        void queryClient.invalidateQueries({ queryKey: KEYS.webhookLogs() })
+      }, 5_000)
     },
     onError: (err: Error) => {
       toast.error(`Falha ao sincronizar: ${err.message}`)
