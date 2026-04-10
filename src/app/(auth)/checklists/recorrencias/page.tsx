@@ -29,6 +29,8 @@ import {
   CreateRecurrenceModal,
   type RecurrenceWithJoins,
 } from './components/create-recurrence-modal'
+import { SelectUnitModal } from '@/components/shared/select-unit-modal'
+import { useUnitStore } from '@/stores/unit-store'
 
 // ─────────────────────────────────────────────────────────────
 // HELPERS
@@ -226,8 +228,18 @@ function RecurrenceSkeleton() {
 // PAGE
 // ─────────────────────────────────────────────────────────────
 export default function RecorrenciasPage() {
-  const [createOpen, setCreateOpen]   = useState(false)
-  const [editTarget, setEditTarget]   = useState<RecurrenceWithJoins | null>(null)
+  const [createOpen, setCreateOpen]       = useState(false)
+  const [editTarget, setEditTarget]       = useState<RecurrenceWithJoins | null>(null)
+  const [selectUnitOpen, setSelectUnitOpen] = useState(false)
+  const { activeUnitId } = useUnitStore()
+
+  function guardedCreate() {
+    if (activeUnitId === null) {
+      setSelectUnitOpen(true)
+    } else {
+      setCreateOpen(true)
+    }
+  }
 
   const { data: recurrences = [], isLoading, isError } = useChecklistRecurrences(false)
 
@@ -248,7 +260,7 @@ export default function RecorrenciasPage() {
               <ArrowLeft className="w-4 h-4" />
               Checklists
             </Link>
-            <Button size="sm" onClick={() => setCreateOpen(true)}>
+            <Button size="sm" onClick={guardedCreate}>
               <Plus className="w-4 h-4 mr-1.5" />
               Nova regra
             </Button>
@@ -296,7 +308,7 @@ export default function RecorrenciasPage() {
           icon={RefreshCw}
           title="Nenhuma regra de recorrência"
           description="Crie regras para gerar checklists automaticamente a partir de templates."
-          action={{ label: 'Nova regra', onClick: () => setCreateOpen(true) }}
+          action={{ label: 'Nova regra', onClick: guardedCreate }}
         />
       )}
 
@@ -320,6 +332,13 @@ export default function RecorrenciasPage() {
           ))}
         </div>
       )}
+
+      {/* SelectUnit guard */}
+      <SelectUnitModal
+        open={selectUnitOpen}
+        onClose={() => setSelectUnitOpen(false)}
+        onConfirm={() => { setSelectUnitOpen(false); setCreateOpen(true) }}
+      />
 
       {/* Create modal */}
       <CreateRecurrenceModal

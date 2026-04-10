@@ -14,6 +14,16 @@ import { BRAND_GREEN } from '@/lib/constants/brand-colors'
 import type { Priority } from '@/types/database.types'
 
 // ─────────────────────────────────────────────────────────────
+// PRIORITY → labels PT-BR (Recharts tooltip)
+// ─────────────────────────────────────────────────────────────
+const PRIORITY_LABELS_PT: Record<string, string> = {
+  urgent: 'Urgente',
+  high:   'Alta',
+  medium: 'Média',
+  low:    'Baixa',
+}
+
+// ─────────────────────────────────────────────────────────────
 // PRIORITY → cor Hex (Recharts)
 // ─────────────────────────────────────────────────────────────
 const PRIORITY_HEX: Record<Priority, string> = {
@@ -120,6 +130,7 @@ function KpiCard({
               contentStyle={{ fontSize: 11, padding: '2px 6px' }}
               itemStyle={{ color: '#374151' }}
               cursor={{ fill: 'rgba(0,0,0,0.05)' }}
+              formatter={(value, name) => [value, PRIORITY_LABELS_PT[String(name)] ?? String(name)]}
             />
           </BarChart>
         )}

@@ -422,19 +422,28 @@ export default function ChecklistFillPage() {
       )}
 
       {/* ── Confirm finish ── */}
-      <ConfirmDialog
-        open={confirmFinish}
-        onOpenChange={setConfirmFinish}
-        title="Finalizar checklist?"
-        description={
-          requiredPending.length > 0
-            ? `Atenção: ${requiredPending.length} ite${requiredPending.length !== 1 ? 'ns' : 'm'} obrigatório${requiredPending.length !== 1 ? 's' : ''} ainda não concluído${requiredPending.length !== 1 ? 's' : ''}. Finalize-os antes de concluir.`
-            : `${done} de ${total} itens concluídos (${pct}%). Esta ação não pode ser desfeita.`
-        }
-        confirmLabel="Finalizar"
-        loading={isCompleting || isFinishing}
-        onConfirm={requiredPending.length > 0 ? () => setConfirmFinish(false) : onFinish}
-      />
+      {requiredPending.length > 0 ? (
+        <ConfirmDialog
+          open={confirmFinish}
+          onOpenChange={setConfirmFinish}
+          title="Itens obrigatórios pendentes"
+          description={`Atenção: ${requiredPending.length} ite${requiredPending.length !== 1 ? 'ns' : 'm'} obrigatório${requiredPending.length !== 1 ? 's' : ''} ainda não concluído${requiredPending.length !== 1 ? 's' : ''}. Finalize-os antes de concluir.`}
+          confirmLabel="Entendido"
+          hideCancelButton
+          loading={false}
+          onConfirm={() => setConfirmFinish(false)}
+        />
+      ) : (
+        <ConfirmDialog
+          open={confirmFinish}
+          onOpenChange={setConfirmFinish}
+          title="Finalizar checklist?"
+          description={`${done} de ${total} itens concluídos (${pct}%). Esta ação não pode ser desfeita.`}
+          confirmLabel="Finalizar"
+          loading={isCompleting || isFinishing}
+          onConfirm={onFinish}
+        />
+      )}
     </div>
   )
 }

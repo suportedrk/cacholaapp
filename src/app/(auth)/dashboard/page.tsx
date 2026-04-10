@@ -17,6 +17,7 @@ import {
   useCalendarMaintenance,
   type CalendarEvent,
 } from '@/hooks/use-dashboard'
+import { useCalendarChecklists } from '@/hooks/use-calendar-checklists'
 import { useLoadingTimeout } from '@/hooks/use-loading-timeout'
 import { BRAND_GREEN } from '@/lib/constants/brand-colors'
 
@@ -62,6 +63,7 @@ export default function DashboardPage() {
     cachedAt: calCachedAt,
   } = useCalendarEvents(dateFrom, dateTo)
   const { data: calMaintenance = [] } = useCalendarMaintenance(dateFrom, dateTo, showMaintenance)
+  const { data: calChecklists = [] } = useCalendarChecklists()
 
   const { isTimedOut, retry } = useLoadingTimeout(loadingKpis || loadingCal)
 
@@ -184,6 +186,7 @@ export default function DashboardPage() {
         <CalendarView
           events={calEvents}
           maintenanceItems={calMaintenance}
+          checklistItems={calChecklists}
           showMaintenance={showMaintenance}
           onToggleMaintenance={() => setShowMaintenance((v) => !v)}
           currentDate={currentDate}

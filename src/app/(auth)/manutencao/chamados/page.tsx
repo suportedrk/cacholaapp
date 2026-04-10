@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Plus, Search, LayoutList, LayoutGrid, Wrench,
-  Clock, AlertTriangle, CheckCircle2, ClipboardList,
+  AlertTriangle, CheckCircle2, ClipboardList,
 } from 'lucide-react'
 import { startOfMonth } from 'date-fns'
 import { Button } from '@/components/ui/button'
@@ -147,8 +147,10 @@ function ChamadosContent() {
   const { isTimedOut, retry } = useLoadingTimeout(isLoading)
 
   // ── KPIs (client-side) ────────────────────────────────────
+  // eslint-disable-next-line react-hooks/purity
+  const nowTs = Date.now()
   const kpis = useMemo(() => {
-    const now      = Date.now()
+    const now      = nowTs
     const monthStart = startOfMonth(new Date()).getTime()
 
     let open       = 0

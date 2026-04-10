@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
   MoreVertical, Copy, FileText, Trash2, CalendarDays,
-  ChevronDown, ChevronUp, CheckCircle2, ClipboardCopy, RefreshCw,
+  ChevronDown, ChevronUp, CheckCircle2, ClipboardCopy, Pencil, RefreshCw,
 } from 'lucide-react'
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
@@ -101,10 +101,10 @@ function humanizeRecurrence(rec: { frequency: string; day_of_week?: number[] | n
 // PRIORITY PILL
 // ─────────────────────────────────────────────────────────────
 const PRIORITY_PILL: Record<Priority, string> = {
-  low:    'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400',
-  medium: 'bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400',
-  high:   'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-900/20 dark:text-orange-400',
-  urgent: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 animate-pulse',
+  low:    'badge-green border',
+  medium: 'badge-amber border',
+  high:   'badge-orange border',
+  urgent: 'badge-red border animate-pulse',
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -269,6 +269,18 @@ export function ChecklistDetailHeader({
               }
             />
             <DropdownMenuContent align="end" className="w-48">
+              {!isCompleted && (
+                <>
+                  <DropdownMenuItem
+                    onClick={() => router.push(`/checklists/${checklist.id}/editar`)}
+                    className="gap-2"
+                  >
+                    <Pencil className="w-4 h-4" />
+                    Editar checklist
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                </>
+              )}
               <DropdownMenuItem
                 onClick={() => setDuplicateOpen(true)}
                 className="gap-2"
