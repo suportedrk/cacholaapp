@@ -188,7 +188,7 @@ export function useUpdateTicketStatus() {
   const qc = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: TicketStatus }) => {
+    mutationFn: async ({ id, status, note }: { id: string; status: TicketStatus; note?: string }) => {
       const supabase = createClient()
       const patch: Partial<MaintenanceTicket> = { status }
       if (status === 'concluded') {
@@ -203,6 +203,18 @@ export function useUpdateTicketStatus() {
         .single()
 
       if (error) throw error
+
+      // Se há nota, atualizar o último registro de histórico inserido pelo trigger
+      if (note?.trim()) {
+        await supabase
+          .from('maintenance_status_history')
+          .update({ note: note.trim() })
+          .eq('ticket_id', id)
+          .eq('to_status', status)
+          .order('created_at', { ascending: false })
+          .limit(1)
+      }
+
       return data as MaintenanceTicket
     },
     onSuccess: (ticket) => {
@@ -223,6 +235,7 @@ export type ExecutionInsert = {
   provider_id?:     string | null
   description?:     string | null
   cost?:            number
+  status?:          ExecutionStatus
 }
 
 export function useAddExecution(onSuccess?: () => void) {
@@ -277,5 +290,83 @@ export function useUpdateExecution(ticketId: string) {
       qc.invalidateQueries({ queryKey: ['tickets'] })
     },
     onError: () => toast.error('Erro ao atualizar execução'),
+  })
+}
+
+// ─────────────────────────────────────────────────────────────
+// UPLOAD DE FOTO DO TICKET
+// ─────────────────────────────────────────────────────────────
+export function useUploadTicketPhoto() {
+  const qc = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({
+      file,
+      ticketId,
+      unitId,
+      caption,
+    }: {
+      file: File
+      ticketId: string
+      unitId: string
+      caption?: string
+    }) => {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Não autenticado')
+
+      // Importar compressImage dinamicamente (evita SSR)
+      const { compressImage } = await import('@/components/shared/photo-upload')
+      const compressed = await compressImage(file, 1200, 0.8)
+
+      const path = `${unitId}/${ticketId}/${Date.now()}.jpg`
+
+      const { error: uploadError } = await supabase.storage
+        .from('maintenance-photos')
+        .upload(path, compressed, { contentType: 'image/jpeg', upsert: false })
+      if (uploadError) throw uploadError
+
+      const { error: insertError } = await supabase
+        .from('maintenance_ticket_photos')
+        .insert({ ticket_id: ticketId, url: path, caption: caption ?? null, uploaded_by: user.id })
+      if (insertError) throw insertError
+
+      return path
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['ticket', vars.ticketId] })
+      toast.success('Foto adicionada')
+    },
+    onError: () => toast.error('Erro ao adicionar foto'),
+  })
+}
+
+// ─────────────────────────────────────────────────────────────
+// APROVAR CUSTO DE EXECUÇÃO
+// ─────────────────────────────────────────────────────────────
+export function useApproveCost(ticketId: string) {
+  const qc = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (executionId: string) => {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Não autenticado')
+
+      const { error } = await supabase
+        .from('maintenance_executions')
+        .update({
+          cost_approved: true,
+          cost_approved_by: user.id,
+          cost_approved_at: new Date().toISOString(),
+        })
+        .eq('id', executionId)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['ticket', ticketId] })
+      toast.success('Custo aprovado')
+    },
+    onError: () => toast.error('Erro ao aprovar custo'),
   })
 }
