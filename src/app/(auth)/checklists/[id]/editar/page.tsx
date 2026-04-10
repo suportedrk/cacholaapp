@@ -14,7 +14,6 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from '@/components/ui/select'
 import {
   useChecklist,
@@ -176,7 +175,7 @@ export default function EditarChecklistPage() {
             onValueChange={(v) => setPriority(v as Priority)}
           >
             <SelectTrigger>
-              <SelectValue />
+              <span data-slot="select-value">{PRIORITY_LABELS[priority]}</span>
             </SelectTrigger>
             <SelectContent>
               {PRIORITIES.map((p) => (
@@ -196,7 +195,9 @@ export default function EditarChecklistPage() {
             onValueChange={(v) => setAssignedTo(v === 'none' ? null : v)}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Sem responsável" />
+              <span data-slot="select-value">
+                {assignedTo ? (users.find((u: User) => u.id === assignedTo)?.name ?? assignedTo) : 'Sem responsável'}
+              </span>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="none">Sem responsável</SelectItem>
