@@ -9,11 +9,9 @@ import { notifyEventCreated, notifyStatusChanged } from '@/lib/notifications'
 import { useUnitStore } from '@/stores/unit-store'
 import { useAuthReadyStore } from '@/stores/auth-store'
 
+// event_types, packages e venues foram dropadas na migration 030
 const EVENT_WITH_DETAILS_SELECT = `
   *,
-  event_type:event_types(id, name),
-  package:packages(id, name),
-  venue:venues(id, name, capacity),
   staff:event_staff(
     id,
     role_in_event,
@@ -23,9 +21,6 @@ const EVENT_WITH_DETAILS_SELECT = `
 
 const EVENT_FOR_LIST_SELECT = `
   *,
-  event_type:event_types(id, name),
-  package:packages(id, name),
-  venue:venues(id, name, capacity),
   staff:event_staff(
     id,
     role_in_event,
@@ -86,8 +81,8 @@ export function useEventsTabCounts() {
     staleTime: 2 * 60 * 1000,
     retry: (failureCount, error: unknown) => {
       const status = (error as { status?: number })?.status
-      if (status === 401 || status === 403) return false
-      return failureCount < 3
+      if (status === 400 || status === 401 || status === 403) return false
+      return failureCount < 2
     },
     queryFn: async () => {
       // Uma única query retorna todos os eventos (id + date).
@@ -134,7 +129,7 @@ export function useEventsByIds(ids: string[]) {
     staleTime: 30 * 1000,
     retry: (count, error: unknown) => {
       const st = (error as { status?: number })?.status
-      if (st === 401 || st === 403) return false
+      if (st === 400 || st === 401 || st === 403) return false
       return count < 2
     },
     queryFn: async () => {
@@ -174,8 +169,8 @@ export function useEventsInfinite(filters: EventFiltersInfinite) {
     initialPageParam: 0 as number,
     retry: (failureCount, error: unknown) => {
       const st = (error as { status?: number })?.status
-      if (st === 401 || st === 403) return false
-      return failureCount < 3
+      if (st === 400 || st === 401 || st === 403) return false
+      return failureCount < 2
     },
     getNextPageParam: (lastPage: { events: EventForList[]; total: number; offset: number }) => {
       const next = lastPage.offset + EVENTS_PAGE_SIZE
@@ -241,8 +236,8 @@ export function useEventsKpis() {
     staleTime: 2 * 60 * 1000,
     retry: (failureCount, error: unknown) => {
       const st = (error as { status?: number })?.status
-      if (st === 401 || st === 403) return false
-      return failureCount < 3
+      if (st === 400 || st === 401 || st === 403) return false
+      return failureCount < 2
     },
     queryFn: async () => {
       const supabase = createClient()
