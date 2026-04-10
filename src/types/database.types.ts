@@ -55,6 +55,7 @@ export interface Database {
       ploomes_config:        { Row: PloomesConfigRow;      Insert: Partial<PloomesConfigRow>;      Update: Partial<PloomesConfigRow>;      Relationships: [] }
       ploomes_sync_log:      { Row: PloomesSyncLog;        Insert: Partial<PloomesSyncLog>;        Update: Partial<PloomesSyncLog>;        Relationships: [] }
       ploomes_unit_mapping:  { Row: PloomesUnitMapping;    Insert: Partial<PloomesUnitMapping>;    Update: Partial<PloomesUnitMapping>;    Relationships: [] }
+      ploomes_webhook_log:   { Row: PloomesWebhookLog;     Insert: Partial<PloomesWebhookLog>;     Update: Partial<PloomesWebhookLog>;     Relationships: [] }
       // Prestadores de Serviços (Migration 021)
       service_categories:   { Row: ServiceCategory;     Insert: Partial<ServiceCategory>;    Update: Partial<ServiceCategory>;    Relationships: [] }
       service_providers:    { Row: ServiceProvider;     Insert: Partial<ServiceProvider>;    Update: Partial<ServiceProvider>;    Relationships: [] }
@@ -888,6 +889,20 @@ export type PloomesUnitMapping = {
   is_active: boolean
   created_at: string
   updated_at: string
+}
+
+export type PloomesWebhookLog = {
+  id: string
+  received_at: string
+  deal_id: number | null
+  action: string | null
+  entity: string | null
+  status: 'received' | 'processing' | 'success' | 'error' | 'skipped'
+  error_message: string | null
+  processing_ms: number | null
+  raw_payload: Record<string, unknown> | null
+  sync_log_id: string | null
+  created_at: string
 }
 
 // ─────────────────────────────────────────────────────────────
