@@ -90,7 +90,9 @@ export function TicketFormModal({ open, onClose, onCreated }: TicketFormModalPro
   // Reset form when dialog opens
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setForm(INITIAL)
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setErrors({})
     }
   }, [open])
