@@ -230,8 +230,10 @@ export default function ManutencaoDashboardPage() {
   void stats
 
   // ── KPI calculations from period tickets ─────────────────
+  // eslint-disable-next-line react-hooks/purity
+  const nowTs = Date.now()
   const kpis = useMemo(() => {
-    const now   = Date.now()
+    const now   = nowTs
     const total = periodTickets.length
     const concluded = periodTickets.filter((t) => t.status === 'concluded').length
     const resolutionRate = total > 0 ? Math.round((concluded / total) * 100) : 0

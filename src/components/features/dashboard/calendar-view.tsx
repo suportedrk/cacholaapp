@@ -99,7 +99,7 @@ export function CalendarView({
   events,
   maintenanceItems = [],
   showMaintenance = true,
-  onToggleMaintenance,
+  onToggleMaintenance: _onToggleMaintenance,
   currentDate,
   view,
   onDateChange,
