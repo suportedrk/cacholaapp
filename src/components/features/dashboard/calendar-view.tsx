@@ -1,5 +1,7 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
+
 import { useMemo, useState } from 'react'
 import {
   format,
@@ -10,11 +12,12 @@ import {
   isSameMonth, isToday,
 } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { ChevronLeft, ChevronRight, CalendarX, Wrench, LayoutList, CalendarDays } from 'lucide-react'
+import { ChevronLeft, ChevronRight, CalendarX, Wrench, LayoutList, CalendarDays, ClipboardList } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
 import type { CalendarEvent, CalendarMaintenance } from '@/hooks/use-dashboard'
+import type { CalendarChecklist } from '@/hooks/use-calendar-checklists'
 import type { EventStatus, MaintenanceType } from '@/types/database.types'
 
 // ─────────────────────────────────────────────────────────────
@@ -33,6 +36,7 @@ interface CalendarViewProps {
   onViewChange: (view: CalendarViewType) => void
   onEventClick: (event: CalendarEvent) => void
   onMaintenanceClick?: (id: string) => void
+  checklistItems?: CalendarChecklist[]
   isLoading?: boolean
 }
 
@@ -85,6 +89,9 @@ const MAINTENANCE_DOT: Record<MaintenanceType, string> = {
   recurring:  'bg-green-500',
 }
 
+const CHECKLIST_PILL = 'bg-purple-100 text-purple-800 border-l-2 border-l-purple-500 dark:bg-purple-900/40 dark:text-purple-300 dark:border-l-purple-600'
+const CHECKLIST_DOT  = 'bg-purple-500'
+
 // ─────────────────────────────────────────────────────────────
 // COMPONENTE PRINCIPAL
 // ─────────────────────────────────────────────────────────────
@@ -99,8 +106,10 @@ export function CalendarView({
   onViewChange,
   onEventClick,
   onMaintenanceClick,
+  checklistItems = [],
   isLoading,
 }: CalendarViewProps) {
+  const router = useRouter()
   const [navDir, setNavDir] = useState<1 | -1 | 0>(0)
   const [mobileTab, setMobileTab] = useState<'cal' | 'list'>('cal')
 
@@ -122,6 +131,16 @@ export function CalendarView({
     }
     return map
   }, [maintenanceItems])
+
+  const checklistByDate = useMemo(() => {
+    const map: Record<string, CalendarChecklist[]> = {}
+    for (const c of checklistItems) {
+      if (!c.date) continue
+      if (!map[c.date]) map[c.date] = []
+      map[c.date].push(c)
+    }
+    return map
+  }, [checklistItems])
 
   function navigate(dir: 1 | -1) {
     setNavDir(dir)
@@ -277,8 +296,10 @@ export function CalendarView({
             <ListView
               events={events}
               maintenanceItems={showMaintenance ? maintenanceItems : []}
+              checklistItems={checklistItems}
               onEventClick={onEventClick}
               onMaintenanceClick={onMaintenanceClick}
+              onChecklistClick={(url) => router.push(url)}
             />
           </div>
 
@@ -291,8 +312,10 @@ export function CalendarView({
                 currentDate={currentDate}
                 eventsByDate={eventsByDate}
                 maintenanceByDate={showMaintenance ? maintenanceByDate : {}}
+                checklistByDate={checklistByDate}
                 onEventClick={onEventClick}
                 onMaintenanceClick={onMaintenanceClick}
+                onChecklistClick={(url) => router.push(url)}
                 onDayClick={(day) => { onDateChange(day); onViewChange('day') }}
               />
             ) : view === 'week' ? (
@@ -301,8 +324,10 @@ export function CalendarView({
                 currentDate={currentDate}
                 eventsByDate={eventsByDate}
                 maintenanceByDate={showMaintenance ? maintenanceByDate : {}}
+                checklistByDate={checklistByDate}
                 onEventClick={onEventClick}
                 onMaintenanceClick={onMaintenanceClick}
+                onChecklistClick={(url) => router.push(url)}
                 onDayClick={(day) => { onDateChange(day); onViewChange('day') }}
               />
             ) : (
@@ -310,8 +335,10 @@ export function CalendarView({
                 currentDate={currentDate}
                 eventsByDate={eventsByDate}
                 maintenanceByDate={showMaintenance ? maintenanceByDate : {}}
+                checklistByDate={checklistByDate}
                 onEventClick={onEventClick}
                 onMaintenanceClick={onMaintenanceClick}
+                onChecklistClick={(url) => router.push(url)}
               />
             )}
           </div>
@@ -352,15 +379,19 @@ function DayPopoverContent({
   day,
   dayEvents,
   dayMaintenance,
+  dayChecklists = [],
   onEventClick,
   onMaintenanceClick,
+  onChecklistClick,
   onDayClick,
 }: {
   day: Date
   dayEvents: CalendarEvent[]
   dayMaintenance: CalendarMaintenance[]
+  dayChecklists?: CalendarChecklist[]
   onEventClick: (e: CalendarEvent) => void
   onMaintenanceClick?: (id: string) => void
+  onChecklistClick?: (url: string) => void
   onDayClick: (day: Date) => void
 }) {
   const activeEvents = dayEvents.filter((e) => e.status !== 'lost')
@@ -397,13 +428,6 @@ function DayPopoverContent({
               <span className="shrink-0 opacity-70 font-normal">{ev.start_time.slice(0, 5)}</span>
             )}
           </div>
-          {(ev.event_type || ev.venue) && (
-            <div className="flex items-center gap-1 mt-0.5 text-[10px] opacity-60">
-              {ev.event_type && <span>{ev.event_type.name}</span>}
-              {ev.event_type && ev.venue && <span>·</span>}
-              {ev.venue && <span>{ev.venue.name}</span>}
-            </div>
-          )}
         </button>
       ))}
 
@@ -423,6 +447,21 @@ function DayPopoverContent({
         </button>
       ))}
 
+      {/* Checklists */}
+      {dayChecklists.map((c) => (
+        <button
+          key={c.id}
+          onClick={() => onChecklistClick?.(c.url)}
+          className={cn(
+            'w-full text-left text-xs rounded-md px-2 py-1.5 transition-opacity hover:opacity-80 flex items-center gap-1.5',
+            CHECKLIST_PILL
+          )}
+        >
+          <ClipboardList className="w-3 h-3 shrink-0 opacity-70" />
+          <span className="truncate font-medium">{c.title}</span>
+        </button>
+      ))}
+
       {/* Perdidos */}
       {lostEvents.length > 0 && (
         <p className="text-[10px] text-muted-foreground pt-0.5">
@@ -434,7 +473,7 @@ function DayPopoverContent({
 }
 
 // ─────────────────────────────────────────────────────────────
-// NÚMERO DO DIA (com ou sem popover)
+// NUMERO DO DIA (com ou sem popover)
 // ─────────────────────────────────────────────────────────────
 function DayNumber({
   day,
@@ -443,8 +482,10 @@ function DayNumber({
   hasEvents,
   dayEvents,
   dayMaintenance,
+  dayChecklists = [],
   onEventClick,
   onMaintenanceClick,
+  onChecklistClick,
   onDayClick,
 }: {
   day: Date
@@ -453,8 +494,10 @@ function DayNumber({
   hasEvents: boolean
   dayEvents: CalendarEvent[]
   dayMaintenance: CalendarMaintenance[]
+  dayChecklists?: CalendarChecklist[]
   onEventClick: (e: CalendarEvent) => void
   onMaintenanceClick?: (id: string) => void
+  onChecklistClick?: (url: string) => void
   onDayClick: (day: Date) => void
 }) {
   const dayNumberClass = cn(
@@ -486,8 +529,10 @@ function DayNumber({
           day={day}
           dayEvents={dayEvents}
           dayMaintenance={dayMaintenance}
+          dayChecklists={dayChecklists}
           onEventClick={onEventClick}
           onMaintenanceClick={onMaintenanceClick}
+          onChecklistClick={onChecklistClick}
           onDayClick={onDayClick}
         />
       </PopoverContent>
@@ -502,8 +547,10 @@ interface ViewProps {
   currentDate: Date
   eventsByDate: Record<string, CalendarEvent[]>
   maintenanceByDate: Record<string, CalendarMaintenance[]>
+  checklistByDate?: Record<string, CalendarChecklist[]>
   onEventClick: (e: CalendarEvent) => void
   onMaintenanceClick?: (id: string) => void
+  onChecklistClick?: (url: string) => void
   onDayClick: (day: Date) => void
 }
 
@@ -512,8 +559,10 @@ function MonthView({
   currentDate,
   eventsByDate,
   maintenanceByDate,
+  checklistByDate = {},
   onEventClick,
   onMaintenanceClick,
+  onChecklistClick,
   onDayClick,
 }: ViewProps & { navDir: 1 | -1 | 0 }) {
   const monthStart = startOfMonth(currentDate)
@@ -544,11 +593,12 @@ function MonthView({
           const key          = format(day, 'yyyy-MM-dd')
           const dayEvents    = eventsByDate[key] ?? []
           const dayMaint     = maintenanceByDate[key] ?? []
+          const dayChklists  = checklistByDate[key] ?? []
           const inMonth      = isSameMonth(day, currentDate)
           const todayFlag    = isToday(day)
           const activeEvents = dayEvents.filter((e) => e.status !== 'lost')
           const isBusy       = activeEvents.length >= 3
-          const hasEvents    = dayEvents.length > 0 || dayMaint.length > 0
+          const hasEvents    = dayEvents.length > 0 || dayMaint.length > 0 || dayChklists.length > 0
 
           return (
             <div
@@ -569,8 +619,10 @@ function MonthView({
                 hasEvents={hasEvents}
                 dayEvents={dayEvents}
                 dayMaintenance={dayMaint}
+                dayChecklists={dayChklists}
                 onEventClick={onEventClick}
                 onMaintenanceClick={onMaintenanceClick}
+                onChecklistClick={onChecklistClick}
                 onDayClick={onDayClick}
               />
 
@@ -598,9 +650,17 @@ function MonthView({
                     aria-label={m.title}
                   />
                 ))}
-                {dayEvents.length + dayMaint.length > 6 && (
+                {dayChklists.slice(0, 2).map((c) => (
+                  <button
+                    key={c.id}
+                    onClick={() => onChecklistClick?.(c.url)}
+                    className={cn('w-1.5 h-1.5 rounded-full min-w-[6px] min-h-[6px]', CHECKLIST_DOT)}
+                    aria-label={c.title}
+                  />
+                ))}
+                {dayEvents.length + dayMaint.length + dayChklists.length > 6 && (
                   <span className="text-[9px] text-muted-foreground leading-none self-center">
-                    +{dayEvents.length + dayMaint.length - 6}
+                    +{dayEvents.length + dayMaint.length + dayChklists.length - 6}
                   </span>
                 )}
               </div>
@@ -649,13 +709,28 @@ function MonthView({
                     <span className="truncate">{m.title}</span>
                   </button>
                 ))}
+                {/* Checklists */}
+                {dayChklists.slice(0, 1).map((c) => (
+                  <button
+                    key={c.id}
+                    onClick={() => onChecklistClick?.(c.url)}
+                    className={cn(
+                      'w-full text-left text-[10px] leading-tight px-1 py-0.5 rounded-sm truncate font-medium transition-opacity hover:opacity-80 flex items-center gap-0.5',
+                      CHECKLIST_PILL
+                    )}
+                    title={c.title}
+                  >
+                    <ClipboardList className="w-2.5 h-2.5 shrink-0" />
+                    <span className="truncate">{c.title}</span>
+                  </button>
+                ))}
                 {/* Overflow counter */}
-                {(activeEvents.length > 2 || dayMaint.length > 1) && (
+                {(activeEvents.length > 2 || dayMaint.length > 1 || dayChklists.length > 1) && (
                   <button
                     onClick={() => onDayClick(day)}
                     className="text-[10px] text-muted-foreground hover:text-foreground transition-colors text-left px-1"
                   >
-                    +{Math.max(0, activeEvents.length - 2) + Math.max(0, dayMaint.length - 1)} mais
+                    +{Math.max(0, activeEvents.length - 2) + Math.max(0, dayMaint.length - 1) + Math.max(0, dayChklists.length - 1)} mais
                   </button>
                 )}
               </div>
@@ -670,7 +745,7 @@ function MonthView({
 // ─────────────────────────────────────────────────────────────
 // VISÃO SEMANAL
 // ─────────────────────────────────────────────────────────────
-function WeekView({ currentDate, eventsByDate, maintenanceByDate, onEventClick, onMaintenanceClick, onDayClick }: ViewProps) {
+function WeekView({ currentDate, eventsByDate, maintenanceByDate, checklistByDate = {}, onEventClick, onMaintenanceClick, onChecklistClick, onDayClick }: ViewProps) {
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 })
   const weekEnd   = endOfWeek(currentDate, { weekStartsOn: 1 })
   const days      = eachDayOfInterval({ start: weekStart, end: weekEnd })
@@ -709,6 +784,7 @@ function WeekView({ currentDate, eventsByDate, maintenanceByDate, onEventClick, 
             const key        = format(day, 'yyyy-MM-dd')
             const dayEvents  = eventsByDate[key] ?? []
             const dayMaint   = maintenanceByDate[key] ?? []
+            const dayChklists = checklistByDate[key] ?? []
             const todayFlag  = isToday(day)
 
             return (
@@ -742,6 +818,20 @@ function WeekView({ currentDate, eventsByDate, maintenanceByDate, onEventClick, 
                     <span className="truncate">{m.title}</span>
                   </button>
                 ))}
+                {dayChklists.map((c) => (
+                  <button
+                    key={c.id}
+                    onClick={() => onChecklistClick?.(c.url)}
+                    className={cn(
+                      'w-full text-left text-[10px] leading-tight px-1 py-0.5 rounded-sm font-medium transition-opacity hover:opacity-80 flex items-center gap-0.5',
+                      CHECKLIST_PILL
+                    )}
+                    title={c.title}
+                  >
+                    <ClipboardList className="w-2.5 h-2.5 shrink-0" />
+                    <span className="truncate">{c.title}</span>
+                  </button>
+                ))}
               </div>
             )
           })}
@@ -754,12 +844,13 @@ function WeekView({ currentDate, eventsByDate, maintenanceByDate, onEventClick, 
 // ─────────────────────────────────────────────────────────────
 // VISÃO DIÁRIA
 // ─────────────────────────────────────────────────────────────
-function DayView({ currentDate, eventsByDate, maintenanceByDate, onEventClick, onMaintenanceClick }: Omit<ViewProps, 'onDayClick'>) {
+function DayView({ currentDate, eventsByDate, maintenanceByDate, checklistByDate = {}, onEventClick, onMaintenanceClick, onChecklistClick }: Omit<ViewProps, 'onDayClick'>) {
   const key        = format(currentDate, 'yyyy-MM-dd')
   const dayEvents  = eventsByDate[key] ?? []
   const dayMaint   = maintenanceByDate[key] ?? []
+  const dayChklists = checklistByDate[key] ?? []
 
-  if (dayEvents.length === 0 && dayMaint.length === 0) {
+  if (dayEvents.length === 0 && dayMaint.length === 0 && dayChklists.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 gap-3 text-muted-foreground">
         <CalendarX className="w-8 h-8 opacity-40" />
@@ -789,13 +880,6 @@ function DayView({ currentDate, eventsByDate, maintenanceByDate, onEventClick, o
             </span>
           </div>
           <p className="text-xs opacity-70 mt-0.5">{ev.client_name}</p>
-          {(ev.event_type || ev.venue) && (
-            <div className="flex items-center gap-2 mt-1 text-xs opacity-60">
-              {ev.event_type && <span>{ev.event_type.name}</span>}
-              {ev.event_type && ev.venue && <span>·</span>}
-              {ev.venue && <span>{ev.venue.name}</span>}
-            </div>
-          )}
           {ev.status === 'lost' && (
             <span className="inline-block mt-1 text-[10px] opacity-60">{STATUS_LABEL.lost}</span>
           )}
@@ -819,33 +903,57 @@ function DayView({ currentDate, eventsByDate, maintenanceByDate, onEventClick, o
           )}
         </button>
       ))}
+      {dayChklists.map((c) => (
+        <button
+          key={c.id}
+          onClick={() => onChecklistClick?.(c.url)}
+          className={cn(
+            'w-full text-left rounded-lg px-3 py-2.5 transition-opacity hover:opacity-80 min-h-[44px]',
+            CHECKLIST_PILL
+          )}
+        >
+          <div className="flex items-center gap-2">
+            <ClipboardList className="w-4 h-4 shrink-0 opacity-70" />
+            <p className="text-sm font-semibold truncate">{c.title}</p>
+          </div>
+          {c.eventTitle && (
+            <p className="text-xs opacity-70 mt-0.5 ml-6">{c.eventTitle}</p>
+          )}
+        </button>
+      ))}
     </div>
   )
 }
 
 // ─────────────────────────────────────────────────────────────
-// VISÃO LISTA (mobile)
+// VISAO LISTA (mobile)
 // ─────────────────────────────────────────────────────────────
 function ListView({
   events,
   maintenanceItems = [],
+  checklistItems = [],
   onEventClick,
   onMaintenanceClick,
+  onChecklistClick,
 }: {
   events: CalendarEvent[]
   maintenanceItems: CalendarMaintenance[]
+  checklistItems?: CalendarChecklist[]
   onEventClick: (e: CalendarEvent) => void
   onMaintenanceClick?: (id: string) => void
+  onChecklistClick?: (url: string) => void
 }) {
   // Junta eventos + manutenções e ordena por data
   type ListItem =
     | { kind: 'event'; date: string; data: CalendarEvent }
     | { kind: 'maintenance'; date: string; data: CalendarMaintenance }
+    | { kind: 'checklist'; date: string; data: CalendarChecklist }
 
   const sorted = useMemo((): ListItem[] => {
     const items: ListItem[] = [
-      ...events.map((e) => ({ kind: 'event' as const, date: e.date, data: e })),
-      ...maintenanceItems.filter((m) => !!m.date).map((m) => ({ kind: 'maintenance' as const, date: m.date!, data: m })),
+      ...events.map((e): ListItem => ({ kind: 'event', date: e.date, data: e })),
+      ...maintenanceItems.filter((m) => !!m.date).map((m): ListItem => ({ kind: 'maintenance', date: m.date!, data: m })),
+      ...checklistItems.map((c): ListItem => ({ kind: 'checklist', date: c.date, data: c })),
     ]
     return items.sort((a, b) => {
       if (a.date !== b.date) return a.date.localeCompare(b.date)
@@ -854,7 +962,7 @@ function ListView({
       }
       return 0
     })
-  }, [events, maintenanceItems])
+  }, [events, maintenanceItems, checklistItems])
 
   if (sorted.length === 0) {
     return (
@@ -926,30 +1034,48 @@ function ListView({
                           </span>
                         )}
                       </div>
-                      {ev.event_type && (
-                        <p className="text-[10px] opacity-60 mt-0.5">{ev.event_type.name}</p>
+                    </button>
+                  )
+                } else if (item.kind === 'maintenance') {
+                  const m = item.data
+                  return (
+                    <button
+                      key={m.id}
+                      onClick={() => onMaintenanceClick?.(m.id)}
+                      className={cn(
+                        'w-full text-left rounded-lg px-2.5 py-2 min-h-[44px] transition-opacity hover:opacity-80 flex items-center gap-2',
+                        MAINTENANCE_PILL[m.type]
+                      )}
+                    >
+                      <Wrench className="w-3.5 h-3.5 shrink-0 opacity-70" />
+                      <p className="text-xs font-semibold truncate">{m.title}</p>
+                      {m.sector && (
+                        <span className="ml-auto text-[10px] opacity-60 shrink-0">{m.sector.name}</span>
                       )}
                     </button>
                   )
+                } else if (item.kind === 'checklist') {
+                  const c = item.data
+                  return (
+                    <button
+                      key={c.id}
+                      onClick={() => onChecklistClick?.(c.url)}
+                      className={cn(
+                        'w-full text-left rounded-lg px-2.5 py-2 min-h-[44px] transition-opacity hover:opacity-80 flex items-center gap-2',
+                        CHECKLIST_PILL
+                      )}
+                    >
+                      <ClipboardList className="w-3.5 h-3.5 shrink-0 opacity-70" />
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold truncate">{c.title}</p>
+                        {c.eventTitle && (
+                          <p className="text-[10px] opacity-60 truncate">{c.eventTitle}</p>
+                        )}
+                      </div>
+                    </button>
+                  )
                 }
-
-                const m = item.data
-                return (
-                  <button
-                    key={m.id}
-                    onClick={() => onMaintenanceClick?.(m.id)}
-                    className={cn(
-                      'w-full text-left rounded-lg px-2.5 py-2 min-h-[44px] transition-opacity hover:opacity-80 flex items-center gap-2',
-                      MAINTENANCE_PILL[m.type]
-                    )}
-                  >
-                    <Wrench className="w-3.5 h-3.5 shrink-0 opacity-70" />
-                    <p className="text-xs font-semibold truncate">{m.title}</p>
-                    {m.sector && (
-                      <span className="ml-auto text-[10px] opacity-60 shrink-0">{m.sector.name}</span>
-                    )}
-                  </button>
-                )
+                return null
               })}
             </div>
           </div>

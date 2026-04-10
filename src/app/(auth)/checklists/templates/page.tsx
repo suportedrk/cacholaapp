@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/select'
 import { ConfirmDialog } from '@/components/shared/confirm-dialog'
 import { Skeleton } from '@/components/ui/skeleton'
+import { SelectUnitModal } from '@/components/shared/select-unit-modal'
 import { createClient } from '@/lib/supabase/client'
 import {
   useChecklistTemplates,
@@ -111,7 +112,7 @@ function TemplateCard({
           </span>
         )}
 
-        {/* Menu ⋮ */}
+        {/* Menu */}
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
@@ -197,6 +198,7 @@ export default function TemplatesPage() {
   const [search,       setSearch]       = useState('')
   const [categoryId,   setCategoryId]   = useState('')
   const [showInactive, setShowInactive] = useState(false)
+  const [selectUnitOpen, setSelectUnitOpen] = useState(false)
 
   const { data: templates = [], isLoading } = useChecklistTemplates(false)
   const { data: categories = [] }           = useChecklistCategories()
@@ -234,13 +236,21 @@ export default function TemplatesPage() {
   const activeCount   = templates.filter((t) => t.is_active).length
   const inactiveCount = templates.filter((t) => !t.is_active).length
 
+  function handleNewTemplate() {
+    if (activeUnitId === null) {
+      setSelectUnitOpen(true)
+    } else {
+      router.push('/checklists/templates/novo')
+    }
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Templates de Checklist"
         description="Crie modelos reutilizáveis para seus checklists"
         actions={
-          <Button size="sm" onClick={() => router.push('/checklists/templates/novo')}>
+          <Button size="sm" onClick={handleNewTemplate}>
             <Plus className="w-3.5 h-3.5 mr-1" />
             Novo Template
           </Button>
@@ -305,7 +315,7 @@ export default function TemplatesPage() {
           description="Crie templates reutilizáveis para agilizar a criação de checklists."
           action={{
             label: 'Criar Template',
-            onClick: () => router.push('/checklists/templates/novo'),
+            onClick: handleNewTemplate,
           }}
         />
       )}
@@ -347,6 +357,16 @@ export default function TemplatesPage() {
           </p>
         </>
       )}
+
+      {/* Select unit modal */}
+      <SelectUnitModal
+        open={selectUnitOpen}
+        onClose={() => setSelectUnitOpen(false)}
+        onConfirm={() => {
+          setSelectUnitOpen(false)
+          router.push('/checklists/templates/novo')
+        }}
+      />
 
       {/* Deactivate confirm */}
       <ConfirmDialog

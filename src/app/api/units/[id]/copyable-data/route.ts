@@ -43,7 +43,7 @@ export async function GET(_req: Request, { params }: Params) {
       { data: rawServiceCats },
     ] = await Promise.all([
       supabase.from('checklist_categories').select('id, name').eq('unit_id', unitId).eq('is_active', true).order('name'),
-      supabase.from('sectors').select('id, name').eq('unit_id', unitId).eq('is_active', true).order('name'),
+      supabase.from('maintenance_sectors').select('id, name').eq('unit_id', unitId).eq('is_active', true).order('name'),
       supabase.from('equipment_categories').select('id, name').eq('unit_id', unitId).eq('is_active', true).order('name'),
       supabase.from('service_categories').select('id, name').eq('unit_id', unitId).eq('is_active', true).order('name'),
     ])

@@ -23,10 +23,10 @@ export interface MaintenanceStatsResponse {
 }
 
 const TYPE_LABELS: Record<string, string> = {
-  emergency: 'Emergencial',
-  punctual: 'Pontual',
-  recurring: 'Recorrente',
-  preventive: 'Preventiva',
+  emergencial: 'Emergencial',
+  pontual:     'Pontual',
+  agendado:    'Agendado',
+  preventivo:  'Preventiva',
 }
 
 export async function GET(req: NextRequest) {
@@ -46,112 +46,122 @@ export async function GET(req: NextRequest) {
     }
 
     const now = new Date()
-    const monthStart = startOfMonth(now).toISOString()
-    const monthEnd = endOfMonth(now).toISOString()
+    const monthStart    = startOfMonth(now).toISOString()
+    const monthEnd      = endOfMonth(now).toISOString()
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString()
+
+    // ── Pre-fetch ticket IDs for this unit (needed for executions join) ───
+    const { data: unitTickets } = await supabase
+      .from('maintenance_tickets')
+      .select('id')
+      .eq('unit_id', unitId)
+    const ticketIds = (unitTickets ?? []).map((t) => t.id)
 
     // ── Run all queries in parallel ────────────────────────────────
     const [
       openResult,
       overdueResult,
-      completedMonthResult,
+      concludedMonthResult,
       avgResolutionResult,
       emergencyResult,
       costsMonthResult,
       pendingCostsResult,
       weeklyResult,
-      byTypeResult,
+      byNatureResult,
       bySectorResult,
     ] = await Promise.all([
-      // 1. Open orders (status != completed)
+      // 1. Open tickets (status != concluded/cancelled)
       supabase
-        .from('maintenance_orders')
+        .from('maintenance_tickets')
         .select('id', { count: 'exact', head: true })
         .eq('unit_id', unitId)
-        .not('status', 'in', '(completed,cancelled)'),
+        .not('status', 'in', '(concluded,cancelled)'),
 
-      // 2. Overdue (open + past due_date)
+      // 2. Overdue (open + past due_at)
       supabase
-        .from('maintenance_orders')
+        .from('maintenance_tickets')
         .select('id', { count: 'exact', head: true })
         .eq('unit_id', unitId)
-        .not('status', 'in', '(completed,cancelled)')
-        .lt('due_date', now.toISOString())
-        .not('due_date', 'is', null),
+        .not('status', 'in', '(concluded,cancelled)')
+        .lt('due_at', now.toISOString())
+        .not('due_at', 'is', null),
 
-      // 3. Completed this month
+      // 3. Concluded this month
       supabase
-        .from('maintenance_orders')
+        .from('maintenance_tickets')
         .select('id', { count: 'exact', head: true })
         .eq('unit_id', unitId)
-        .eq('status', 'completed')
-        .gte('updated_at', monthStart)
-        .lte('updated_at', monthEnd),
+        .eq('status', 'concluded')
+        .gte('concluded_at', monthStart)
+        .lte('concluded_at', monthEnd),
 
-      // 4. Avg resolution hours (last 30 days) - raw select for calculation
+      // 4. Avg resolution hours (last 30 days)
       supabase
-        .from('maintenance_orders')
-        .select('created_at, completed_at, updated_at')
+        .from('maintenance_tickets')
+        .select('created_at, concluded_at')
         .eq('unit_id', unitId)
-        .eq('status', 'completed')
-        .gte('updated_at', thirtyDaysAgo),
+        .eq('status', 'concluded')
+        .gte('concluded_at', thirtyDaysAgo),
 
-      // 5. Emergency open
+      // 5. Emergencial open tickets
       supabase
-        .from('maintenance_orders')
+        .from('maintenance_tickets')
         .select('id', { count: 'exact', head: true })
         .eq('unit_id', unitId)
-        .eq('type', 'emergency')
-        .not('status', 'in', '(completed,cancelled)'),
+        .eq('nature', 'emergencial')
+        .not('status', 'in', '(concluded,cancelled)'),
 
-      // 6. Total approved costs this month
-      (supabase as any)
-        .from('maintenance_costs')
-        .select('amount')
-        .eq('unit_id', unitId)
-        .eq('status', 'approved')
-        .gte('submitted_at', monthStart)
-        .lte('submitted_at', monthEnd),
+      // 6. Total approved costs this month (via executions)
+      ticketIds.length > 0
+        ? supabase
+            .from('maintenance_executions')
+            .select('cost')
+            .in('ticket_id', ticketIds)
+            .eq('cost_approved', true)
+            .gte('created_at', monthStart)
+            .lte('created_at', monthEnd)
+        : Promise.resolve({ data: [] as { cost: number }[], error: null }),
 
-      // 7. Pending approvals count
+      // 7. Pending approvals (unapproved executions with cost > 0)
+      ticketIds.length > 0
+        ? supabase
+            .from('maintenance_executions')
+            .select('id', { count: 'exact', head: true })
+            .in('ticket_id', ticketIds)
+            .eq('cost_approved', false)
+            .gt('cost', 0)
+        : Promise.resolve({ count: 0, data: null, error: null }),
+
+      // 8. Weekly concluded (last 4 weeks)
       supabase
-        .from('maintenance_costs')
-        .select('id', { count: 'exact', head: true })
+        .from('maintenance_tickets')
+        .select('concluded_at')
         .eq('unit_id', unitId)
-        .eq('status', 'pending'),
+        .eq('status', 'concluded')
+        .gte('concluded_at', subWeeks(now, 4).toISOString()),
 
-      // 8. Weekly completed (last 4 weeks) - raw for gap fill
+      // 9. Open tickets by nature
       supabase
-        .from('maintenance_orders')
-        .select('updated_at, completed_at')
+        .from('maintenance_tickets')
+        .select('nature')
         .eq('unit_id', unitId)
-        .eq('status', 'completed')
-        .gte('updated_at', subWeeks(now, 4).toISOString()),
+        .not('status', 'in', '(concluded,cancelled)'),
 
-      // 9. Open orders by type
+      // 10. Open tickets by sector (with join)
       supabase
-        .from('maintenance_orders')
-        .select('type')
+        .from('maintenance_tickets')
+        .select('sector_id, sector:maintenance_sectors!sector_id(name)')
         .eq('unit_id', unitId)
-        .not('status', 'in', '(completed,cancelled)'),
-
-      // 10. Open orders by sector (with join)
-      (supabase as any)
-        .from('maintenance_orders')
-        .select('sector_id, sector:sectors(name)')
-        .eq('unit_id', unitId)
-        .not('status', 'in', '(completed,cancelled)'),
+        .not('status', 'in', '(concluded,cancelled)'),
     ])
 
     // ── Process avg resolution ─────────────────────────────────────
     let avg_resolution_hours: number | null = null
     if (avgResolutionResult.data && avgResolutionResult.data.length > 0) {
       const durations = avgResolutionResult.data
-        .map((o) => {
-          const resolved = o.completed_at ?? o.updated_at
-          const created = o.created_at
-          if (!resolved || !created) return null
-          return (new Date(resolved).getTime() - new Date(created).getTime()) / 3_600_000
+        .map((t) => {
+          if (!t.created_at || !t.concluded_at) return null
+          return (new Date(t.concluded_at).getTime() - new Date(t.created_at).getTime()) / 3_600_000
         })
         .filter((d): d is number => d !== null && d >= 0)
 
@@ -162,57 +172,53 @@ export async function GET(req: NextRequest) {
 
     // ── Process total costs ────────────────────────────────────────
     const total_costs_month = (costsMonthResult.data ?? []).reduce(
-      (sum: number, c: { amount?: number | null }) => sum + Number(c.amount ?? 0),
+      (sum: number, e) => sum + Number((e as { cost?: number | null }).cost ?? 0),
       0
     )
 
-    // ── Process weekly completed (with gap fill) ───────────────────
+    // ── Process weekly concluded (with gap fill) ───────────────────
     const weekBuckets: Record<string, number> = {}
 
-    // Initialize 4 week buckets (week start dates)
     for (let i = 3; i >= 0; i--) {
       const weekStart = startOfWeek(subWeeks(now, i), { weekStartsOn: 1 })
       const key = format(weekStart, 'dd/MM', { locale: ptBR })
       weekBuckets[key] = 0
     }
 
-    // Fill with actual data
-    for (const order of weeklyResult.data ?? []) {
-      const resolvedAt = order.completed_at ?? order.updated_at
-      if (!resolvedAt) continue
-      const d = new Date(resolvedAt)
-      const weekStart = startOfWeek(d, { weekStartsOn: 1 })
-      // Only count if within our 4-week window
+    for (const ticket of weeklyResult.data ?? []) {
+      const concludedAt = ticket.concluded_at
+      if (!concludedAt) continue
+      const d = new Date(concludedAt)
       if (d >= subWeeks(now, 4)) {
+        const weekStart = startOfWeek(d, { weekStartsOn: 1 })
         const key = format(weekStart, 'dd/MM', { locale: ptBR })
-        if (key in weekBuckets) {
-          weekBuckets[key]++
-        }
+        if (key in weekBuckets) weekBuckets[key]++
       }
     }
 
     const weekly_completed = Object.entries(weekBuckets).map(([week, count]) => ({ week, count }))
 
-    // ── Process by_type ────────────────────────────────────────────
-    const typeCounts: Record<string, number> = {
-      emergency: 0,
-      punctual: 0,
-      recurring: 0,
-      preventive: 0,
+    // ── Process by_nature ──────────────────────────────────────────
+    const natureCounts: Record<string, number> = {
+      emergencial: 0,
+      pontual:     0,
+      agendado:    0,
+      preventivo:  0,
     }
-    for (const o of byTypeResult.data ?? []) {
-      if (o.type && o.type in typeCounts) typeCounts[o.type]++
+    for (const t of byNatureResult.data ?? []) {
+      if (t.nature && t.nature in natureCounts) natureCounts[t.nature]++
     }
 
-    const by_type = Object.entries(typeCounts).map(([type, count]) => ({
-      type: TYPE_LABELS[type] ?? type,
+    const by_type = Object.entries(natureCounts).map(([nature, count]) => ({
+      type: TYPE_LABELS[nature] ?? nature,
       count,
     }))
 
     // ── Process by_sector (top 5) ──────────────────────────────────
     const sectorCounts: Record<string, number> = {}
-    for (const o of bySectorResult.data ?? []) {
-      const name = (o.sector as { name: string } | null)?.name ?? 'Sem setor'
+    for (const t of bySectorResult.data ?? []) {
+      const sectorRaw = t.sector as unknown
+      const name = (sectorRaw as { name: string } | null)?.name ?? 'Sem setor'
       sectorCounts[name] = (sectorCounts[name] ?? 0) + 1
     }
 
@@ -224,13 +230,13 @@ export async function GET(req: NextRequest) {
     // ── Build response ─────────────────────────────────────────────
     const response: MaintenanceStatsResponse = {
       kpis: {
-        open_count: openResult.count ?? 0,
-        overdue_count: overdueResult.count ?? 0,
-        completed_this_month: completedMonthResult.count ?? 0,
+        open_count:           openResult.count ?? 0,
+        overdue_count:        overdueResult.count ?? 0,
+        completed_this_month: concludedMonthResult.count ?? 0,
         avg_resolution_hours,
-        emergency_open: emergencyResult.count ?? 0,
+        emergency_open:       emergencyResult.count ?? 0,
         total_costs_month,
-        pending_approvals: pendingCostsResult.count ?? 0,
+        pending_approvals:    pendingCostsResult.count ?? 0,
       },
       charts: {
         weekly_completed,

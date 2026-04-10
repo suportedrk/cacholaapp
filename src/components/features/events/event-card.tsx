@@ -3,7 +3,7 @@
 import { memo } from 'react'
 import Link from 'next/link'
 import { parseISO, isToday, isFuture, startOfDay } from 'date-fns'
-import { Clock, MapPin, Users, Package as PackageIcon, Phone, Mail, Tag, Handshake, AlertTriangle } from 'lucide-react'
+import { Clock, Users, Phone, Mail, Tag, Handshake, AlertTriangle } from 'lucide-react'
 
 export type ConflictType = 'overlap' | 'short_gap' | null
 import { EventStatusBadge } from '@/components/shared/event-status-badge'

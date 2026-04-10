@@ -120,6 +120,12 @@ export type SyncOptions = {
   triggeredBy: 'cron' | 'manual' | 'webhook'
   /** ID do usuário que disparou manualmente (null para cron) */
   triggeredByUserId?: string | null
+  /**
+   * Se informado, sincroniza APENAS este deal específico (sync cirúrgico).
+   * Usado pelo receptor de webhook para evitar re-processar todos os 687 deals.
+   * Sem este parâmetro: comportamento padrão — sync completo com paginação.
+   */
+  dealId?: number | null
 }
 
 export async function syncDeals(
@@ -190,28 +196,45 @@ export async function syncDeals(
     // ── 2. Buscar createdBy ──────────────────────────────────────
     const createdBy = options.triggeredByUserId ?? (await getSystemUserId(supabase))
 
-    // ── 3. Buscar deals do Ploomes com paginação ─────────────────
-    // O Ploomes limita resultados por página (100). Faz loop com $skip até esgotar.
+    // ── 3. Buscar deals do Ploomes ────────────────────────────────
     const allDeals: PloomesDeal[] = []
-    const pageSize = 100
-    let skip = 0
+    const EXPAND = `$expand=OtherProperties,Contact($select=Id,Name,Email,Phones)`
+    const SELECT = `$select=Id,Title,ContactId,OwnerId,Amount,StageId,StatusId,CreateDate,LastUpdateDate,OtherProperties`
 
-    while (true) {
+    if (options.dealId) {
+      // ── Sync cirúrgico: apenas um deal específico (ex: disparado por webhook) ──
+      // Mantém o filtro de pipeline para garantir que só importamos deals do funil correto.
       const queryParts = [
-        `$filter=PipelineId eq ${pipelineId} and StageId eq ${stageId}`,
-        `$expand=OtherProperties,Contact($select=Id,Name,Email,Phones)`,
-        `$select=Id,Title,ContactId,OwnerId,Amount,StageId,StatusId,CreateDate,LastUpdateDate,OtherProperties`,
-        `$top=${pageSize}`,
-        `$skip=${skip}`,
-        `$orderby=CreateDate desc`,
+        `$filter=PipelineId eq ${pipelineId} and StageId eq ${stageId} and Id eq ${options.dealId}`,
+        EXPAND,
+        SELECT,
       ].join('&')
 
       const response = await ploomesGet<PloomesDeal>(`Deals?${queryParts}`, userKey)
-      const page = response.value ?? []
-      allDeals.push(...page)
+      allDeals.push(...(response.value ?? []))
+    } else {
+      // ── Sync completo: paginação com $skip até esgotar todos os deals ──
+      // O Ploomes limita resultados por página (100).
+      const pageSize = 100
+      let skip = 0
 
-      if (page.length < pageSize) break
-      skip += pageSize
+      while (true) {
+        const queryParts = [
+          `$filter=PipelineId eq ${pipelineId} and StageId eq ${stageId}`,
+          EXPAND,
+          SELECT,
+          `$top=${pageSize}`,
+          `$skip=${skip}`,
+          `$orderby=CreateDate desc`,
+        ].join('&')
+
+        const response = await ploomesGet<PloomesDeal>(`Deals?${queryParts}`, userKey)
+        const page = response.value ?? []
+        allDeals.push(...page)
+
+        if (page.length < pageSize) break
+        skip += pageSize
+      }
     }
 
     result.dealsFound = allDeals.length

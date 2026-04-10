@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import {
-  ArrowLeft, Calendar, Clock, MapPin, Users, Package,
+  ArrowLeft, Calendar, Clock, MapPin, Users,
   Plus, ExternalLink, Wrench, PartyPopper, Truck, User2,
   CheckSquare, MessageCircle, Phone, Mail,
   ClipboardList, History, Tag, Star, Camera, Music2, CakeSlice,

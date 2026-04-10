@@ -31,12 +31,19 @@ export interface Database {
       // Checklists Premium (Migration 018)
       checklist_recurrence:     { Row: ChecklistRecurrence;    Insert: Partial<ChecklistRecurrence>;    Update: Partial<ChecklistRecurrence>;    Relationships: [] }
       checklist_item_comments:  { Row: ChecklistItemComment;   Insert: Partial<ChecklistItemComment>;   Update: Partial<ChecklistItemComment>;   Relationships: [] }
-      // Manutenção
-      sectors:              { Row: Sector;              Insert: Partial<Sector>;           Update: Partial<Sector>;           Relationships: [] }
-      maintenance_orders:   { Row: MaintenanceOrder;    Insert: Partial<MaintenanceOrder>; Update: Partial<MaintenanceOrder>; Relationships: [] }
+      // Manutenção — Schema 031/032 (tabelas novas)
+      maintenance_sectors:    { Row: Sector;                Insert: Partial<Sector>;                Update: Partial<Sector>;                Relationships: [] }
+      maintenance_categories: { Row: MaintenanceCategory;   Insert: Partial<MaintenanceCategory>;   Update: Partial<MaintenanceCategory>;   Relationships: [] }
+      maintenance_items:      { Row: MaintenanceItem;       Insert: Partial<MaintenanceItem>;       Update: Partial<MaintenanceItem>;       Relationships: [] }
+      maintenance_sla:        { Row: MaintenanceSla;        Insert: Partial<MaintenanceSla>;        Update: Partial<MaintenanceSla>;        Relationships: [] }
+      maintenance_tickets:          { Row: MaintenanceTicket;          Insert: Partial<MaintenanceTicket>;          Update: Partial<MaintenanceTicket>;          Relationships: [] }
+      maintenance_executions:       { Row: MaintenanceExecution;       Insert: Partial<MaintenanceExecution>;       Update: Partial<MaintenanceExecution>;       Relationships: [] }
+      maintenance_ticket_photos:    { Row: MaintenanceTicketPhoto;     Insert: Partial<MaintenanceTicketPhoto>;     Update: Partial<MaintenanceTicketPhoto>;     Relationships: [] }
+      maintenance_status_history:   { Row: MaintenanceStatusHistory;   Insert: Partial<MaintenanceStatusHistory>;   Update: Partial<MaintenanceStatusHistory>;   Relationships: [] }
       equipment:            { Row: Equipment;           Insert: Partial<Equipment>;        Update: Partial<Equipment>;        Relationships: [] }
+      // Manutenção — ghost types (tabelas dropadas em 032, UI refatorada nos Prompts 4-7)
+      maintenance_orders:   { Row: MaintenanceOrder;    Insert: Partial<MaintenanceOrder>; Update: Partial<MaintenanceOrder>; Relationships: [] }
       maintenance_photos:   { Row: MaintenancePhoto;    Insert: Partial<MaintenancePhoto>; Update: Partial<MaintenancePhoto>; Relationships: [] }
-      // Manutenção — Schema Expandido (Migration 017)
       maintenance_suppliers: { Row: MaintenanceSupplier; Insert: Partial<MaintenanceSupplier>; Update: Partial<MaintenanceSupplier>; Relationships: [] }
       supplier_contacts:     { Row: SupplierContact;     Insert: Partial<SupplierContact>;     Update: Partial<SupplierContact>;     Relationships: [] }
       supplier_documents:    { Row: SupplierDocument;    Insert: Partial<SupplierDocument>;    Update: Partial<SupplierDocument>;    Relationships: [] }
@@ -48,6 +55,7 @@ export interface Database {
       ploomes_config:        { Row: PloomesConfigRow;      Insert: Partial<PloomesConfigRow>;      Update: Partial<PloomesConfigRow>;      Relationships: [] }
       ploomes_sync_log:      { Row: PloomesSyncLog;        Insert: Partial<PloomesSyncLog>;        Update: Partial<PloomesSyncLog>;        Relationships: [] }
       ploomes_unit_mapping:  { Row: PloomesUnitMapping;    Insert: Partial<PloomesUnitMapping>;    Update: Partial<PloomesUnitMapping>;    Relationships: [] }
+      ploomes_webhook_log:   { Row: PloomesWebhookLog;     Insert: Partial<PloomesWebhookLog>;     Update: Partial<PloomesWebhookLog>;     Relationships: [] }
       // Prestadores de Serviços (Migration 021)
       service_categories:   { Row: ServiceCategory;     Insert: Partial<ServiceCategory>;    Update: Partial<ServiceCategory>;    Relationships: [] }
       service_providers:    { Row: ServiceProvider;     Insert: Partial<ServiceProvider>;    Update: Partial<ServiceProvider>;    Relationships: [] }
@@ -234,15 +242,145 @@ export type ChecklistCategory = {
 }
 
 // ─────────────────────────────────────────────────────────────
+// MANUTENÇÃO — SCHEMA 031 (novo)
+// ─────────────────────────────────────────────────────────────
+export type MaintenanceTicket = {
+  id: string
+  unit_id: string
+  title: string
+  description?: string | null
+  sector_id?: string | null
+  category_id?: string | null
+  item_id?: string | null
+  nature: 'emergencial' | 'pontual' | 'agendado' | 'preventivo'
+  urgency: 'critical' | 'high' | 'medium' | 'low'
+  status: 'open' | 'in_progress' | 'waiting_part' | 'concluded' | 'cancelled'
+  scheduled_date?: string | null
+  concluded_at?: string | null
+  due_at?: string | null
+  opened_by: string
+  total_cost: number
+  created_at: string
+  updated_at: string
+}
+
 // MANUTENÇÃO — CONFIGURAÇÃO
 // ─────────────────────────────────────────────────────────────
 export type Sector = {
   id: string
   name: string
+  description?: string | null
   unit_id: string
   is_active: boolean
   sort_order: number
   created_at: string
+  updated_at: string
+}
+
+export type MaintenanceCategory = {
+  id: string
+  unit_id: string
+  name: string
+  color: string        // hex, ex: '#F59E0B'
+  icon: string         // nome do ícone Lucide, ex: 'zap'
+  is_active: boolean
+  sort_order: number
+  created_at: string
+  updated_at: string
+}
+
+export type MaintenanceItem = {
+  id: string
+  unit_id: string
+  sector_id: string | null
+  name: string
+  description: string | null
+  is_active: boolean
+  sort_order: number
+  created_at: string
+  updated_at: string
+}
+
+export type MaintenanceItemWithSector = MaintenanceItem & {
+  sector: Pick<Sector, 'id' | 'name'> | null
+}
+
+export type MaintenanceSla = {
+  id: string
+  unit_id: string
+  urgency_level: 'critical' | 'high' | 'medium' | 'low'
+  response_hours: number
+  resolution_hours: number
+  created_at: string
+  updated_at: string
+}
+
+// ─────────────────────────────────────────────────────────────
+// MANUTENÇÃO — CHAMADOS (Migration 031)
+// ─────────────────────────────────────────────────────────────
+export type TicketNature  = 'emergencial' | 'pontual' | 'agendado' | 'preventivo'
+export type TicketUrgency = 'critical' | 'high' | 'medium' | 'low'
+export type TicketStatus  = 'open' | 'in_progress' | 'waiting_part' | 'concluded' | 'cancelled'
+export type ExecutorType  = 'internal' | 'external'
+export type ExecutionStatus = 'assigned' | 'in_progress' | 'concluded'
+
+export type MaintenanceExecution = {
+  id: string
+  ticket_id: string
+  executor_type: ExecutorType
+  internal_user_id: string | null
+  provider_id: string | null
+  description: string | null
+  cost: number
+  cost_approved: boolean
+  cost_approved_by: string | null
+  cost_approved_at: string | null
+  status: ExecutionStatus
+  started_at: string | null
+  concluded_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type MaintenanceTicketPhoto = {
+  id: string
+  ticket_id: string
+  url: string
+  caption: string | null
+  uploaded_by: string | null
+  created_at: string
+}
+
+export type MaintenanceStatusHistory = {
+  id: string
+  ticket_id: string
+  from_status: string | null
+  to_status: string
+  changed_by: string | null
+  note: string | null
+  created_at: string
+}
+
+// Ticket com joins para listagem
+export type MaintenanceTicketForList = MaintenanceTicket & {
+  sector:   Pick<Sector, 'id' | 'name'> | null
+  category: Pick<MaintenanceCategory, 'id' | 'name' | 'color' | 'icon'> | null
+  executions_count?: number
+}
+
+// Ticket com joins completos para detalhe
+export type MaintenanceTicketWithDetails = MaintenanceTicket & {
+  sector:   Pick<Sector, 'id' | 'name'> | null
+  category: Pick<MaintenanceCategory, 'id' | 'name' | 'color' | 'icon'> | null
+  item:     Pick<MaintenanceItem, 'id' | 'name'> | null
+  executions: (MaintenanceExecution & {
+    internal_user: Pick<User, 'id' | 'name' | 'avatar_url'> | null
+    provider:      { id: string; name: string } | null
+  })[]
+  photos:  MaintenanceTicketPhoto[]
+  history: (MaintenanceStatusHistory & {
+    changed_by_user: { name: string } | null
+  })[]
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -751,6 +889,20 @@ export type PloomesUnitMapping = {
   is_active: boolean
   created_at: string
   updated_at: string
+}
+
+export type PloomesWebhookLog = {
+  id: string
+  received_at: string
+  deal_id: number | null
+  action: string | null
+  entity: string | null
+  status: 'received' | 'processing' | 'success' | 'error' | 'skipped'
+  error_message: string | null
+  processing_ms: number | null
+  raw_payload: Record<string, unknown> | null
+  sync_log_id: string | null
+  created_at: string
 }
 
 // ─────────────────────────────────────────────────────────────

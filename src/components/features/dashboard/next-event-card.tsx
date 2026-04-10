@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { ArrowRight, Calendar, Clock, MapPin, Users } from 'lucide-react'
+import { ArrowRight, Calendar, Clock, Users } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EventStatusBadge } from '@/components/shared/event-status-badge'
 import { UserAvatar } from '@/components/shared/user-avatar'
@@ -76,12 +76,6 @@ export function NextEventCard({ event, isLoading }: NextEventCardProps) {
           <Clock className="w-3.5 h-3.5 shrink-0" />
           <span>{formatTime(event.start_time)} – {formatTime(event.end_time)}</span>
         </div>
-        {event.venue && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <MapPin className="w-3.5 h-3.5 shrink-0" />
-            <span className="truncate">{event.venue.name}</span>
-          </div>
-        )}
         {event.guest_count && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Users className="w-3.5 h-3.5 shrink-0" />
