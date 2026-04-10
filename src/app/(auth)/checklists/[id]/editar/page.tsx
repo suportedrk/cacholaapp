@@ -66,14 +66,19 @@ export default function EditarChecklistPage() {
   // ── Populate form when data loads ─────────────────────────
   useEffect(() => {
     if (!checklist) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setTitle(checklist.title ?? '')
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setDescription(checklist.description ?? '')
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setDueDate(
       checklist.due_date
         ? new Date(checklist.due_date).toISOString().slice(0, 10)
         : ''
     )
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setAssignedTo(checklist.assigned_to ?? null)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPriority((checklist.priority as Priority) ?? 'medium')
   }, [checklist])
 
