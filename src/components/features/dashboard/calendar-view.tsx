@@ -397,13 +397,6 @@ function DayPopoverContent({
               <span className="shrink-0 opacity-70 font-normal">{ev.start_time.slice(0, 5)}</span>
             )}
           </div>
-          {(ev.event_type || ev.venue) && (
-            <div className="flex items-center gap-1 mt-0.5 text-[10px] opacity-60">
-              {ev.event_type && <span>{ev.event_type.name}</span>}
-              {ev.event_type && ev.venue && <span>·</span>}
-              {ev.venue && <span>{ev.venue.name}</span>}
-            </div>
-          )}
         </button>
       ))}
 
@@ -789,13 +782,6 @@ function DayView({ currentDate, eventsByDate, maintenanceByDate, onEventClick, o
             </span>
           </div>
           <p className="text-xs opacity-70 mt-0.5">{ev.client_name}</p>
-          {(ev.event_type || ev.venue) && (
-            <div className="flex items-center gap-2 mt-1 text-xs opacity-60">
-              {ev.event_type && <span>{ev.event_type.name}</span>}
-              {ev.event_type && ev.venue && <span>·</span>}
-              {ev.venue && <span>{ev.venue.name}</span>}
-            </div>
-          )}
           {ev.status === 'lost' && (
             <span className="inline-block mt-1 text-[10px] opacity-60">{STATUS_LABEL.lost}</span>
           )}
@@ -926,9 +912,6 @@ function ListView({
                           </span>
                         )}
                       </div>
-                      {ev.event_type && (
-                        <p className="text-[10px] opacity-60 mt-0.5">{ev.event_type.name}</p>
-                      )}
                     </button>
                   )
                 }
