@@ -218,7 +218,7 @@ export function ChecklistKPIs() {
         value={stats.total}
         icon={<ClipboardList className="w-4 h-4" />}
         iconClass="icon-brand"
-        sparkData={prioritySpark.length ? prioritySpark : undefined}
+        sparkData={prioritySpark.some((p) => p.value > 0) ? prioritySpark : undefined}
         subText={
           stats.byCategory.length > 0
             ? `${stats.byCategory.length} categoria${stats.byCategory.length !== 1 ? 's' : ''}`
