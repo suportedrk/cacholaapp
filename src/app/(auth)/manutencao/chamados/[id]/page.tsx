@@ -7,7 +7,6 @@ import {
   ArrowLeft,
   AlertTriangle,
   Wrench,
-  User,
   Calendar,
   MapPin,
   Tag,
