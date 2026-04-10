@@ -1,36 +1,50 @@
-// POST /api/ploomes/webhook-register — Registra o webhook no Ploomes CRM
+// POST /api/ploomes/webhook-register — Registra os webhooks no Ploomes CRM
 //
-// Chama a API do Ploomes para registrar a URL do webhook neste app.
+// A API do Ploomes requer um registro separado por ação (ActionId).
+// Registramos 2 webhooks: Win (ActionId=4) + Update (ActionId=2).
+//
+// Campos corretos da API (descobertos via GET /Webhooks):
+//   CallbackUrl  (não "Url")
+//   EntityId: 2  (Deal — não "EntityName")
+//   ActionId: N  (não "Actions": [...])
+//   Active: true (não "IsActive")
+//   ValidationKey (opcional — enviado no header X-Ploomes-Validation-Key)
+//
 // Apenas super_admin pode executar.
-//
 // Body: { unit_id: string }
-// Após registro: salva webhook_url e webhook_registered_at em ploomes_config.
+
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { createClient } from '@/lib/supabase/server'
 import { loadPloomesConfig } from '@/lib/ploomes/sync'
 
-const APP_URL     = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
-const PLOOMES_API = 'https://api2.ploomes.com'
+const APP_URL      = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+const PLOOMES_API  = 'https://api2.ploomes.com'
+
+// EntityId e ActionId confirmados via GET /Webhooks
+const DEAL_ENTITY_ID   = 2   // Deal
+const ACTION_UPDATE_ID = 2   // Update
+const ACTION_WIN_ID    = 4   // Win (ganhou negócio)
 
 // ── Tipos da API Ploomes ──────────────────────────────────────
 
 type PloomesWebhook = {
   Id: number
-  Url: string
-  EntityName: string
-  Actions?: string[]
-  IsActive?: boolean
+  EntityId: number
+  ActionId: number
+  CallbackUrl: string
+  Active: boolean
+  ValidationKey: string | null
 }
 
 type PloomesODataResponse<T> = {
   value: T[]
 }
 
-// ── Helpers Ploomes API ───────────────────────────────────────
+// ── Helper HTTP ───────────────────────────────────────────────
 
 async function ploomesFetch<T>(path: string, userKey: string, options: RequestInit = {}): Promise<T> {
-  if (!userKey) throw new Error('Chave de API do Ploomes não configurada. Configure em Integrações → Ploomes → Mapeamento.')
+  if (!userKey) throw new Error('Chave de API do Ploomes não configurada.')
 
   const res = await fetch(`${PLOOMES_API}/${path}`, {
     ...options,
@@ -47,6 +61,41 @@ async function ploomesFetch<T>(path: string, userKey: string, options: RequestIn
   }
 
   return res.json() as Promise<T>
+}
+
+/** Garante que um webhook com EntityId+ActionId+CallbackUrl esteja registrado e ativo. */
+async function ensureWebhook(
+  userKey: string,
+  webhookUrl: string,
+  actionId: number,
+  validationKey: string | null,
+): Promise<{ id: number; created: boolean }> {
+  // Verificar se já existe para essa URL + ação
+  const existing = await ploomesFetch<PloomesODataResponse<PloomesWebhook>>(
+    `Webhooks?$filter=CallbackUrl eq '${encodeURIComponent(webhookUrl)}' and ActionId eq ${actionId} and EntityId eq ${DEAL_ENTITY_ID}`,
+    userKey,
+  )
+
+  const found = existing.value.find((w) => w.Active)
+  if (found) {
+    console.info(`[webhook-register] Webhook já ativo: Id=${found.Id}, ActionId=${actionId}`)
+    return { id: found.Id, created: false }
+  }
+
+  // Criar novo webhook
+  const created = await ploomesFetch<PloomesWebhook>('Webhooks', userKey, {
+    method: 'POST',
+    body: JSON.stringify({
+      CallbackUrl: webhookUrl,
+      EntityId: DEAL_ENTITY_ID,
+      ActionId: actionId,
+      Active: true,
+      ...(validationKey ? { ValidationKey: validationKey } : {}),
+    }),
+  })
+
+  console.info(`[webhook-register] Webhook criado: Id=${created.Id}, ActionId=${actionId}`)
+  return { id: created.Id, created: true }
 }
 
 // ── Handler ───────────────────────────────────────────────────
@@ -75,43 +124,20 @@ export async function POST(req: NextRequest) {
   }
 
   const webhookUrl = `${APP_URL}/api/webhooks/ploomes`
+  const validationKey = process.env.PLOOMES_VALIDATION_KEY || null
 
   try {
-    // Carregar chave do banco (com fallback para env var)
     const supabase = await createAdminClient()
     const dbConfig = await loadPloomesConfig(supabase, unitId)
     const userKey = dbConfig?.user_key || process.env.PLOOMES_USER_KEY || ''
 
-    // ── 1. Verificar se já existe webhook para esta URL ───────
-    const existing = await ploomesFetch<PloomesODataResponse<PloomesWebhook>>(
-      `Webhooks?$filter=Url eq '${encodeURIComponent(webhookUrl)}'`,
-      userKey,
-    )
+    // Registrar um webhook para cada ação (API exige um por ActionId)
+    const [winResult, updateResult] = await Promise.all([
+      ensureWebhook(userKey, webhookUrl, ACTION_WIN_ID, validationKey),
+      ensureWebhook(userKey, webhookUrl, ACTION_UPDATE_ID, validationKey),
+    ])
 
-    let webhookId: number | null = null
-
-    if (existing.value.length > 0) {
-      // Já registrado — apenas atualizar o registro no banco
-      webhookId = existing.value[0].Id
-      console.info(`[webhook-register] Webhook já registrado no Ploomes (Id=${webhookId})`)
-    } else {
-      // ── 2. Registrar webhook novo no Ploomes ─────────────────
-      const created = await ploomesFetch<PloomesWebhook>('Webhooks', userKey, {
-        method: 'POST',
-        body: JSON.stringify({
-          Url: webhookUrl,
-          EntityName: 'Deal',
-          // Ações que disparam o webhook
-          Actions: ['Win', 'Update'],
-          IsActive: true,
-        }),
-      })
-
-      webhookId = created.Id
-      console.info(`[webhook-register] Webhook registrado no Ploomes (Id=${webhookId})`)
-    }
-
-    // ── 3. Persistir em ploomes_config ────────────────────────
+    // Persistir em ploomes_config
     const { error: updateError } = await supabase
       .from('ploomes_config')
       .update({
@@ -123,16 +149,17 @@ export async function POST(req: NextRequest) {
     if (updateError) {
       console.error('[webhook-register] Erro ao salvar no banco:', updateError)
       return NextResponse.json(
-        { error: 'Webhook registrado no Ploomes, mas falha ao salvar no banco.' },
+        { error: 'Webhooks registrados no Ploomes, mas falha ao salvar no banco.' },
         { status: 500 },
       )
     }
 
     return NextResponse.json({
       success: true,
-      webhookId,
       webhookUrl,
-      message: 'Webhook registrado com sucesso no Ploomes.',
+      win: winResult,
+      update: updateResult,
+      message: `Webhooks registrados com sucesso. Win: #${winResult.id} · Update: #${updateResult.id}`,
     })
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
