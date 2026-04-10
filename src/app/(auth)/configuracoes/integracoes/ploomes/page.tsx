@@ -114,8 +114,10 @@ function WebhookStatusCard() {
 
   const isRegistered = !!config?.webhook_registered_at
   const lastWebhook = webhookLogs?.[0]
+  // eslint-disable-next-line react-hooks/purity
+  const nowTs = Date.now()
   const hasRecentActivity = !!lastWebhook &&
-    (Date.now() - parseISO(lastWebhook.received_at).getTime()) < 24 * 60 * 60 * 1000
+    (nowTs - parseISO(lastWebhook.received_at).getTime()) < 24 * 60 * 60 * 1000
   const hasErrors = stats.error > 0
 
   // Determinar status visual do webhook
@@ -240,8 +242,10 @@ function SyncStatusSection() {
   const nextSyncAt = lastSync?.started_at
     ? addMinutes(parseISO(lastSync.started_at), 15)
     : null
+  // eslint-disable-next-line react-hooks/purity
+  const syncNowTs = Date.now()
   const minutesUntilNext = nextSyncAt
-    ? Math.max(0, Math.round((nextSyncAt.getTime() - Date.now()) / 60_000))
+    ? Math.max(0, Math.round((nextSyncAt.getTime() - syncNowTs) / 60_000))
     : null
 
   return (

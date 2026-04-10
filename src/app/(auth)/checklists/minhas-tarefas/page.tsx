@@ -363,12 +363,15 @@ export default function MinhasTarefasPage() {
 
     try {
       const supabase = createClient()
+      const now = new Date().toISOString()
       await supabase
         .from('checklist_items')
         .update({
-          status:   'done',
-          done_by:  userId,
-          updated_at: new Date().toISOString(),
+          status:     'done',
+          is_done:    true,
+          done_by:    userId,
+          done_at:    now,
+          updated_at: now,
         })
         .eq('id', taskId)
 
@@ -604,6 +607,13 @@ export default function MinhasTarefasPage() {
             onComplete={handleComplete}
             defaultOpen={false}
           />
+
+          {/* Aviso de limite */}
+          {tasks.length === 100 && (
+            <p className="text-xs text-muted-foreground text-center pt-2">
+              Exibindo os 100 primeiros itens pendentes. Conclua alguns para ver os demais.
+            </p>
+          )}
         </div>
       )}
     </div>

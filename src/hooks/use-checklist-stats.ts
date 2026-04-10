@@ -35,7 +35,7 @@ export function useChecklistStats() {
 
   return useQuery({
     queryKey: ['checklist-stats', activeUnitId],
-    enabled: !!activeUnitId && isSessionReady,
+    enabled: isSessionReady,
     retry: RETRY,
     staleTime: 5 * 60 * 1000,
     queryFn: async (): Promise<ChecklistStats> => {
@@ -48,39 +48,49 @@ export function useChecklistStats() {
       weekStart.setHours(0, 0, 0, 0)
 
       // Query base
-      const base = supabase
+      let base = supabase
         .from('checklists')
         .select('id, status, priority, due_date, completed_at, created_at, template_id', { count: 'exact' })
+      if (activeUnitId) base = base.eq('unit_id', activeUnitId)
 
       // 4 queries paralelas
       const [allRes, overdueRes, todayRes, weekRes] = await Promise.all([
         // Todos (para contadores por status e priority)
-        base.eq('unit_id', activeUnitId!),
+        base,
 
         // Atrasados: pending/in_progress com due_date < now
-        supabase
-          .from('checklists')
-          .select('id', { count: 'exact' })
-          .eq('unit_id', activeUnitId!)
-          .in('status', ['pending', 'in_progress'])
-          .lt('due_date', now.toISOString())
-          .not('due_date', 'is', null),
+        (() => {
+          let q = supabase
+            .from('checklists')
+            .select('id', { count: 'exact' })
+            .in('status', ['pending', 'in_progress'])
+            .lt('due_date', now.toISOString())
+            .not('due_date', 'is', null)
+          if (activeUnitId) q = q.eq('unit_id', activeUnitId)
+          return q
+        })(),
 
         // Concluídos hoje
-        supabase
-          .from('checklists')
-          .select('id', { count: 'exact' })
-          .eq('unit_id', activeUnitId!)
-          .eq('status', 'completed')
-          .gte('completed_at', todayStart.toISOString()),
+        (() => {
+          let q = supabase
+            .from('checklists')
+            .select('id', { count: 'exact' })
+            .eq('status', 'completed')
+            .gte('completed_at', todayStart.toISOString())
+          if (activeUnitId) q = q.eq('unit_id', activeUnitId)
+          return q
+        })(),
 
         // Concluídos esta semana
-        supabase
-          .from('checklists')
-          .select('id', { count: 'exact' })
-          .eq('unit_id', activeUnitId!)
-          .eq('status', 'completed')
-          .gte('completed_at', weekStart.toISOString()),
+        (() => {
+          let q = supabase
+            .from('checklists')
+            .select('id', { count: 'exact' })
+            .eq('status', 'completed')
+            .gte('completed_at', weekStart.toISOString())
+          if (activeUnitId) q = q.eq('unit_id', activeUnitId)
+          return q
+        })(),
       ])
 
       if (allRes.error) throw allRes.error

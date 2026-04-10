@@ -23,7 +23,7 @@ export function useChecklistRecurrences(onlyActive = true) {
 
   return useQuery({
     queryKey: ['checklist-recurrences', activeUnitId, onlyActive],
-    enabled: !!activeUnitId && isSessionReady,
+    enabled: isSessionReady,
     retry: RETRY,
     staleTime: 2 * 60 * 1000,
     queryFn: async () => {
@@ -35,9 +35,9 @@ export function useChecklistRecurrences(onlyActive = true) {
           template:checklist_templates!checklist_recurrence_template_id_fkey(id, title, category_id),
           assigned_user:users!checklist_recurrence_assigned_to_fkey(id, name, avatar_url)
         `)
-        .eq('unit_id', activeUnitId!)
         .order('next_generation_at', { ascending: true, nullsFirst: false })
 
+      if (activeUnitId) query = query.eq('unit_id', activeUnitId)
       if (onlyActive) query = query.eq('is_active', true)
 
       const { data, error } = await query
@@ -157,13 +157,24 @@ export function useUpdateRecurrence() {
       if (isActive !== undefined) {
         patch.is_active = isActive
         // Recalcular próxima geração ao reativar
-        if (isActive && frequency) {
-          patch.next_generation_at = calcNextGenerationAt(
-            frequency,
-            dayOfWeek ?? undefined,
-            dayOfMonth ?? undefined,
-            timeOfDay ?? '08:00'
-          )
+        if (isActive) {
+          // Se frequency foi passado, usa; senão, busca do banco
+          const effectiveFrequency = frequency ?? (await (async () => {
+            const { data } = await supabase
+              .from('checklist_recurrence')
+              .select('frequency, day_of_week, day_of_month, time_of_day')
+              .eq('id', id)
+              .single()
+            return data
+          })())
+
+          if (effectiveFrequency) {
+            const freq = frequency ?? (effectiveFrequency as { frequency: import('@/types/database.types').ChecklistRecurrence['frequency'] }).frequency
+            const dow  = dayOfWeek  !== undefined ? dayOfWeek  : (effectiveFrequency as { day_of_week?: number[] | null }).day_of_week ?? undefined
+            const dom  = dayOfMonth !== undefined ? dayOfMonth : (effectiveFrequency as { day_of_month?: number | null }).day_of_month ?? undefined
+            const tod  = timeOfDay  !== undefined ? timeOfDay  : ((effectiveFrequency as { time_of_day?: string }).time_of_day ?? '08:00').substring(0, 5)
+            patch.next_generation_at = calcNextGenerationAt(freq, dow, dom, tod)
+          }
         }
       }
 

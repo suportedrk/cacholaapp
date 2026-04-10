@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
   MoreVertical, Copy, FileText, Trash2, CalendarDays,
-  ChevronDown, ChevronUp, CheckCircle2, ClipboardCopy,
+  ChevronDown, ChevronUp, CheckCircle2, ClipboardCopy, Pencil, RefreshCw,
 } from 'lucide-react'
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
@@ -70,13 +70,41 @@ function ProgressRing({ pct, size = 48, strokeWidth = 4, label = false }: Progre
 }
 
 // ─────────────────────────────────────────────────────────────
+// RECURRENCE HELPERS
+// ─────────────────────────────────────────────────────────────
+const RECURRENCE_FREQ_LABELS: Record<string, string> = {
+  daily:    'Diário',
+  weekly:   'Semanal',
+  biweekly: 'Quinzenal',
+  monthly:  'Mensal',
+}
+
+const RECURRENCE_DAY_LABELS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+
+function humanizeRecurrence(rec: { frequency: string; day_of_week?: number[] | null; day_of_month?: number | null }): string {
+  const base = RECURRENCE_FREQ_LABELS[rec.frequency] ?? rec.frequency
+  if (rec.frequency === 'weekly' && rec.day_of_week?.length) {
+    const days = rec.day_of_week.slice(0, 3).map((d) => RECURRENCE_DAY_LABELS[d]).join(', ')
+    return `${base} · ${days}`
+  }
+  if (rec.frequency === 'biweekly' && rec.day_of_week?.length) {
+    const days = rec.day_of_week.slice(0, 2).map((d) => RECURRENCE_DAY_LABELS[d]).join(', ')
+    return `${base} · ${days}`
+  }
+  if (rec.frequency === 'monthly' && rec.day_of_month) {
+    return `${base} · dia ${rec.day_of_month}`
+  }
+  return base
+}
+
+// ─────────────────────────────────────────────────────────────
 // PRIORITY PILL
 // ─────────────────────────────────────────────────────────────
 const PRIORITY_PILL: Record<Priority, string> = {
-  low:    'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400',
-  medium: 'bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400',
-  high:   'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-900/20 dark:text-orange-400',
-  urgent: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 animate-pulse',
+  low:    'badge-green border',
+  medium: 'badge-amber border',
+  high:   'badge-orange border',
+  urgent: 'badge-red border animate-pulse',
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -241,6 +269,18 @@ export function ChecklistDetailHeader({
               }
             />
             <DropdownMenuContent align="end" className="w-48">
+              {!isCompleted && (
+                <>
+                  <DropdownMenuItem
+                    onClick={() => router.push(`/checklists/${checklist.id}/editar`)}
+                    className="gap-2"
+                  >
+                    <Pencil className="w-4 h-4" />
+                    Editar checklist
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                </>
+              )}
               <DropdownMenuItem
                 onClick={() => setDuplicateOpen(true)}
                 className="gap-2"
@@ -294,6 +334,22 @@ export function ChecklistDetailHeader({
             {done}/{total} itens
           </span>
         </div>
+
+        {/* Recurrence banner */}
+        {checklist.recurrence && (
+          <div className="flex items-center gap-2 mt-2 rounded-lg bg-status-info-bg border border-status-info-border px-3 py-2 text-xs text-status-info-text">
+            <RefreshCw className="w-3.5 h-3.5 shrink-0" />
+            <span className="flex-1 leading-snug">
+              Gerado automaticamente · {humanizeRecurrence(checklist.recurrence)}
+            </span>
+            <Link
+              href="/checklists/recorrencias"
+              className="shrink-0 font-medium hover:underline whitespace-nowrap"
+            >
+              Ver regra →
+            </Link>
+          </div>
+        )}
 
         {/* Duplicado de... indicator */}
         {checklist.duplicated_from && (

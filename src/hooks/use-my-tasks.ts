@@ -70,6 +70,9 @@ export function useMyTasks(userId: string | null, filters: MyTaskFilters = {}) {
         // Supabase não suporta filtro em FK diretamente — aplicamos client-side
       }
 
+      // Limite de segurança — evita payload excessivo para usuários com muitas tarefas
+      query = query.limit(100)
+
       const { data, error } = await query
       if (error) throw error
 
