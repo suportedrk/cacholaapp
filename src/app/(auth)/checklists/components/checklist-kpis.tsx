@@ -206,13 +206,6 @@ export function ChecklistKPIs() {
 
   if (!stats) return null
 
-  // Spark data: distribuição por prioridade (4 pontos)
-  const prioritySpark = stats.byPriority.map((p) => ({
-    name: p.priority,
-    value: p.count,
-    color: PRIORITY_HEX[p.priority],
-  }))
-
   // Texto do tempo médio de conclusão
   const avgText = stats.avgCompletionHours !== null
     ? stats.avgCompletionHours < 1
@@ -230,7 +223,6 @@ export function ChecklistKPIs() {
         value={stats.total}
         icon={<ClipboardList className="w-4 h-4" />}
         iconClass="icon-brand"
-        sparkData={prioritySpark.some((p) => p.value > 0) ? prioritySpark : undefined}
         subText={
           stats.byCategory.length > 0
             ? `${stats.byCategory.length} categoria${stats.byCategory.length !== 1 ? 's' : ''}`
