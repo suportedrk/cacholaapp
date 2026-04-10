@@ -604,6 +604,13 @@ export default function MinhasTarefasPage() {
             onComplete={handleComplete}
             defaultOpen={false}
           />
+
+          {/* Aviso de limite */}
+          {tasks.length === 100 && (
+            <p className="text-xs text-muted-foreground text-center pt-2">
+              Exibindo os 100 primeiros itens pendentes. Conclua alguns para ver os demais.
+            </p>
+          )}
         </div>
       )}
     </div>
