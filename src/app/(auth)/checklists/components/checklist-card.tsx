@@ -85,6 +85,8 @@ export const ChecklistCard = memo(function ChecklistCard({ checklist }: Checklis
   const isOverdue = isActive && !!checklist.due_date && isPast(parseISO(checklist.due_date))
   const hasRecurrence = checklist.type === 'recurring'
 
+  const isCancelledCard = checklist.status === 'cancelled'
+
   return (
     <Link
       href={`/checklists/${checklist.id}`}
@@ -93,6 +95,7 @@ export const ChecklistCard = memo(function ChecklistCard({ checklist }: Checklis
         isOverdue
           ? 'border-red-200 dark:border-red-900/40'
           : 'border-border',
+        isCancelledCard && 'opacity-60',
       )}
     >
       {/* ── Top row: ring + title + status ── */}
@@ -166,7 +169,7 @@ export const ChecklistCard = memo(function ChecklistCard({ checklist }: Checklis
         <span
           className={cn(
             'inline-flex items-center px-2 py-0.5 text-xs rounded-full',
-            TYPE_BADGE[checklist.type],
+            isCancelledCard ? 'badge-gray border' : TYPE_BADGE[checklist.type],
           )}
         >
           {TYPE_LABEL[checklist.type]}
@@ -177,7 +180,7 @@ export const ChecklistCard = memo(function ChecklistCard({ checklist }: Checklis
           <span
             className={cn(
               'inline-flex items-center px-2 py-0.5 text-xs rounded-full',
-              PRIORITY_BADGE[checklist.priority],
+              isCancelledCard ? 'badge-gray border' : PRIORITY_BADGE[checklist.priority],
             )}
           >
             {PRIORITY_LABEL[checklist.priority]}
@@ -224,26 +227,26 @@ export function ChecklistCardSkeleton() {
   return (
     <div className="bg-card border border-border rounded-xl p-4 space-y-3">
       <div className="flex items-start gap-3">
-        <Skeleton className="w-10 h-10 rounded-full shrink-0" />
+        <Skeleton className="w-10 h-10 rounded-full shrink-0 skeleton-shimmer" />
         <div className="flex-1 space-y-1.5">
-          <Skeleton className="h-4 w-3/4" />
-          <Skeleton className="h-3 w-1/2" />
+          <Skeleton className="h-4 w-3/4 skeleton-shimmer" />
+          <Skeleton className="h-3 w-1/2 skeleton-shimmer" />
         </div>
-        <Skeleton className="h-5 w-20 rounded-full shrink-0" />
+        <Skeleton className="h-5 w-20 rounded-full shrink-0 skeleton-shimmer" />
       </div>
       <div className="space-y-1">
         <div className="flex justify-between">
-          <Skeleton className="h-3 w-16" />
-          <Skeleton className="h-3 w-8" />
+          <Skeleton className="h-3 w-16 skeleton-shimmer" />
+          <Skeleton className="h-3 w-8 skeleton-shimmer" />
         </div>
-        <Skeleton className="h-1.5 w-full rounded-full" />
+        <Skeleton className="h-1.5 w-full rounded-full skeleton-shimmer" />
       </div>
       <div className="flex gap-2 items-center">
-        <Skeleton className="h-5 w-16 rounded-full" />
-        <Skeleton className="h-5 w-12 rounded-full" />
+        <Skeleton className="h-5 w-16 rounded-full skeleton-shimmer" />
+        <Skeleton className="h-5 w-12 rounded-full skeleton-shimmer" />
         <div className="flex-1" />
-        <Skeleton className="w-7 h-7 rounded-full" />
-        <Skeleton className="h-3 w-14" />
+        <Skeleton className="w-7 h-7 rounded-full skeleton-shimmer" />
+        <Skeleton className="h-3 w-14 skeleton-shimmer" />
       </div>
     </div>
   )
