@@ -2,7 +2,7 @@
 
 import { Suspense, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { ClipboardList, LayoutTemplate, Plus, RefreshCw, Copy, ListTodo } from 'lucide-react'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { PageHeader } from '@/components/shared/page-header'
@@ -29,7 +29,8 @@ import type { ChecklistFilters } from '@/hooks/use-checklists'
 // CONTENT — usa useSearchParams (dentro do Suspense)
 // ─────────────────────────────────────────────────────────────
 function ChecklistsContent() {
-  const router = useRouter()
+  const router   = useRouter()
+  const pathname = usePathname()
   const { q, statuses, type, priority, categoryId, overdue, page } =
     useChecklistUrlFilters()
 
@@ -62,7 +63,7 @@ function ChecklistsContent() {
           description="Tente ajustar ou remover os filtros para ver mais resultados."
           action={{
             label: 'Limpar filtros',
-            onClick: () => window.history.pushState({}, '', window.location.pathname),
+            onClick: () => router.push(pathname),
           }}
         />
       )
