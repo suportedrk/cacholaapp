@@ -7,9 +7,9 @@ import {
 import {
   ClipboardList, Clock, AlertTriangle, CheckCircle2,
 } from 'lucide-react'
-import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import { useChecklistStats } from '@/hooks/use-checklist-stats'
+import { useLoadingTimeout } from '@/hooks/use-loading-timeout'
 import { BRAND_GREEN } from '@/lib/constants/brand-colors'
 import type { Priority } from '@/types/database.types'
 
@@ -163,14 +163,15 @@ function KpiCard({
 
 function KpiCardSkeleton() {
   return (
-    <div className="bg-card border border-border rounded-xl p-4 space-y-2">
+    <div className="bg-card border border-border rounded-xl p-4 space-y-2 animate-pulse">
       <div className="flex items-center justify-between">
-        <Skeleton className="w-8 h-8 rounded-lg" />
-        <Skeleton className="w-20 h-7 rounded" />
+        <div className="w-8 h-8 rounded-lg bg-muted" />
+        {/* espaço reservado sem tarja visível */}
+        <div className="w-20 h-7" />
       </div>
       <div>
-        <Skeleton className="h-8 w-14 rounded" />
-        <Skeleton className="h-3 w-24 rounded mt-1" />
+        <div className="h-8 w-14 rounded bg-muted" />
+        <div className="h-3 w-24 rounded bg-muted mt-1" />
       </div>
     </div>
   )
@@ -181,8 +182,9 @@ function KpiCardSkeleton() {
 // ─────────────────────────────────────────────────────────────
 export function ChecklistKPIs() {
   const { data: stats, isLoading } = useChecklistStats()
+  const { isTimedOut } = useLoadingTimeout(isLoading)
 
-  if (isLoading) {
+  if (isLoading && !isTimedOut) {
     return (
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {Array.from({ length: 4 }).map((_, i) => <KpiCardSkeleton key={i} />)}
