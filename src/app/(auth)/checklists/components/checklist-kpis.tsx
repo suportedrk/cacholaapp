@@ -2,9 +2,6 @@
 
 import { useEffect, useRef } from 'react'
 import {
-  BarChart, Bar, Cell, Tooltip,
-} from 'recharts'
-import {
   ClipboardList, Clock, AlertTriangle, CheckCircle2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -31,6 +28,42 @@ const PRIORITY_HEX: Record<Priority, string> = {
   medium: BRAND_GREEN[500],
   high:   '#F59E0B',
   urgent: '#EF4444',
+}
+
+// ─────────────────────────────────────────────────────────────
+// Mini bar chart — CSS puro, sem Recharts, sem problemas de hydration
+// ─────────────────────────────────────────────────────────────
+interface MiniBarDatum {
+  name: string
+  value: number
+  color?: string
+}
+
+function MiniBarChart({ data }: { data: MiniBarDatum[] }) {
+  const max = Math.max(...data.map((d) => d.value), 1)
+  return (
+    <div
+      className="flex items-end gap-px"
+      style={{ width: 80, height: 28 }}
+      aria-hidden="true"
+    >
+      {data.map((d, i) => (
+        <div
+          key={i}
+          className="flex-1 rounded-sm"
+          style={{
+            height: d.value > 0
+              ? `${Math.max(Math.round((d.value / max) * 100), 15)}%`
+              : '0%',
+            backgroundColor: d.color ?? BRAND_GREEN[500],
+            opacity: 0.75,
+            transition: 'height 400ms ease-out',
+          }}
+          title={`${PRIORITY_LABELS_PT[d.name] ?? d.name}: ${d.value}`}
+        />
+      ))}
+    </div>
+  )
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -111,28 +144,7 @@ function KpiCard({
       <div className="flex items-center justify-between">
         <div className={cn('p-1.5 rounded-lg', iconClass)}>{icon}</div>
         {sparkData && sparkData.length > 0 && (
-          <BarChart
-            width={80}
-            height={28}
-            data={sparkData}
-            margin={{ top: 2, right: 2, bottom: 2, left: 2 }}
-          >
-            <Bar dataKey="value" radius={[2, 2, 0, 0]}>
-              {sparkData.map((entry, i) => (
-                <Cell
-                  key={i}
-                  fill={entry.color ?? BRAND_GREEN[500]}
-                  fillOpacity={0.8}
-                />
-              ))}
-            </Bar>
-            <Tooltip
-              contentStyle={{ fontSize: 11, padding: '2px 6px' }}
-              itemStyle={{ color: '#374151' }}
-              cursor={{ fill: 'rgba(0,0,0,0.05)' }}
-              formatter={(value, name) => [value, PRIORITY_LABELS_PT[String(name)] ?? String(name)]}
-            />
-          </BarChart>
+          <MiniBarChart data={sparkData} />
         )}
       </div>
 
