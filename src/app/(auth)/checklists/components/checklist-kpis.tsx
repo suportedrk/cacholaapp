@@ -8,26 +8,15 @@ import { cn } from '@/lib/utils'
 import { useChecklistStats } from '@/hooks/use-checklist-stats'
 import { useLoadingTimeout } from '@/hooks/use-loading-timeout'
 import { BRAND_GREEN } from '@/lib/constants/brand-colors'
-import type { Priority } from '@/types/database.types'
 
 // ─────────────────────────────────────────────────────────────
-// PRIORITY → labels PT-BR (Recharts tooltip)
+// PRIORITY → labels PT-BR (tooltip do mini gráfico)
 // ─────────────────────────────────────────────────────────────
 const PRIORITY_LABELS_PT: Record<string, string> = {
   urgent: 'Urgente',
   high:   'Alta',
   medium: 'Média',
   low:    'Baixa',
-}
-
-// ─────────────────────────────────────────────────────────────
-// PRIORITY → cor Hex (Recharts)
-// ─────────────────────────────────────────────────────────────
-const PRIORITY_HEX: Record<Priority, string> = {
-  low:    '#22C55E',
-  medium: BRAND_GREEN[500],
-  high:   '#F59E0B',
-  urgent: '#EF4444',
 }
 
 // ─────────────────────────────────────────────────────────────
