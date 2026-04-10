@@ -30,7 +30,9 @@ export const SEGMENT_LABELS: Record<string, string> = {
   novo:           'Novo',
   nova:           'Nova',
   editar:         'Editar',
-  setup:          'Setup',
+  setup:             'Setup',
+  'tarefas-equipe':  'Tarefas da Equipe',
+  'minhas-tarefas':  'Minhas Tarefas',
 }
 
 // ─────────────────────────────────────────────────────────────
