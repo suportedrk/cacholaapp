@@ -65,6 +65,7 @@ export const ROUTES = {
   auditLogs: '/admin/logs',
   equipment: '/equipamentos',
   myTasks: '/checklists/minhas-tarefas',
+  teamTasks: '/checklists/tarefas-equipe',
   providers: '/prestadores',
   businessRules: '/configuracoes/regras',
   unitSetup: '/admin/unidades/setup',

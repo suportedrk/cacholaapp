@@ -14,6 +14,7 @@ import {
   Package,
   Handshake,
   BookOpen,
+  UsersRound,
 } from 'lucide-react'
 import { ROUTES } from '@/lib/constants'
 import type { Module, Role } from '@/types/permissions'
@@ -49,6 +50,9 @@ const REPORT_ROLES: Role[] = ['super_admin', 'diretor', 'gerente', 'financeiro']
 /** Roles com acesso a Prestadores (gestão de terceiros) */
 const PROVIDER_ROLES: Role[] = ['super_admin', 'diretor', 'gerente']
 
+/** Roles com acesso à visão de Tarefas da Equipe */
+const TEAM_TASKS_ROLES: Role[] = ['super_admin', 'diretor', 'gerente']
+
 /** Roles com acesso a gestão de usuários e unidades (RH incluso para usuários) */
 const USER_ADMIN_ROLES: Role[] = ['super_admin', 'diretor', 'rh']
 
@@ -67,7 +71,8 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: 'Dashboard',      href: ROUTES.dashboard,  icon: LayoutDashboard },
       { label: 'Eventos',        href: ROUTES.events,     icon: CalendarDays,  module: 'events'    },
       { label: 'Checklists',     href: ROUTES.checklists, icon: ClipboardList, module: 'checklists' },
-      { label: 'Minhas Tarefas', href: ROUTES.myTasks,    icon: ListTodo,      module: 'checklists' },
+      { label: 'Minhas Tarefas',   href: ROUTES.myTasks,    icon: ListTodo,     module: 'checklists' },
+      { label: 'Tarefas da Equipe', href: ROUTES.teamTasks,  icon: UsersRound,   module: 'checklists', allowedRoles: TEAM_TASKS_ROLES },
     ],
   },
   {
