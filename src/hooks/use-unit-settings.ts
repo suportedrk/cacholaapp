@@ -44,7 +44,7 @@ export function useUnitSettings() {
 
   return useQuery({
     queryKey: ['unit-settings', activeUnitId],
-    enabled: !!activeUnitId && isSessionReady,
+    enabled: isSessionReady,
     queryFn: async () => {
       if (!activeUnitId) return null
       const { data, error } = await createClient()

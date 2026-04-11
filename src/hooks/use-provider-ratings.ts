@@ -175,7 +175,7 @@ export function useEventRatings(eventId: string | null) {
 
   return useQuery({
     queryKey: ['event-ratings', eventId, activeUnitId],
-    enabled: !!eventId && !!activeUnitId && isSessionReady,
+    enabled: !!eventId && isSessionReady,
     staleTime: 30 * 1000,
     retry: (count, error: unknown) => {
       const status = (error as { status?: number; code?: number })?.status
@@ -185,11 +185,12 @@ export function useEventRatings(eventId: string | null) {
     },
     queryFn: async (): Promise<Record<string, ProviderRating>> => {
       const supabase = createClient()
-      const { data, error } = await supabase
+      let q = supabase
         .from('provider_ratings')
         .select(RATING_SELECT)
         .eq('event_id', eventId!)
-        .eq('unit_id', activeUnitId!)
+      if (activeUnitId) q = q.eq('unit_id', activeUnitId)
+      const { data, error } = await q
       if (error) throw error
       const map: Record<string, ProviderRating> = {}
       for (const r of (data ?? []) as unknown as ProviderRating[]) {

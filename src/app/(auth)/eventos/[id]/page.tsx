@@ -29,7 +29,7 @@ import type { ChecklistForList } from '@/types/database.types'
 
 // ── Avatar helpers ──────────────────────────────────────────────
 const AVATAR_COLORS = [
-  'bg-[#7C8D78] text-white',
+  'bg-primary text-white',
   'bg-blue-500 text-white',
   'bg-violet-500 text-white',
   'bg-amber-600 text-white',

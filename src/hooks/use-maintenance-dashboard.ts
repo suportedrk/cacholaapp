@@ -20,9 +20,8 @@ export function useMaintenanceDashboardStats() {
   return useQuery<MaintenanceStatsResponse>({
     queryKey: ['maintenance-stats', activeUnitId],
     queryFn: async () => {
-      if (!activeUnitId) throw Object.assign(new Error('unit_id required'), { status: 400 })
       const params = new URLSearchParams()
-      params.set('unit_id', activeUnitId)
+      if (activeUnitId) params.set('unit_id', activeUnitId)
       const res = await fetch(`/api/maintenance/stats?${params}`)
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
@@ -30,7 +29,7 @@ export function useMaintenanceDashboardStats() {
       }
       return res.json()
     },
-    enabled: !!activeUnitId && isSessionReady,
+    enabled: isSessionReady,
     staleTime: 5 * 60 * 1000,
     networkMode: 'always',
     retry: (count, err: unknown) => {

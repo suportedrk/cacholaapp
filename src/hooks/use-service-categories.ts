@@ -16,7 +16,7 @@ export function useServiceCategories(includeInactive = false) {
 
   return useQuery({
     queryKey: ['service-categories', activeUnitId, includeInactive],
-    enabled: !!activeUnitId && isSessionReady,
+    enabled: isSessionReady,
     staleTime: 5 * 60 * 1000,
     retry: (count, error: unknown) => {
       const status = (error as { status?: number; code?: number })?.status
@@ -29,8 +29,8 @@ export function useServiceCategories(includeInactive = false) {
       let query = supabase
         .from('service_categories')
         .select('*')
-        .eq('unit_id', activeUnitId!)
         .order('sort_order', { ascending: true })
+      if (activeUnitId) query = query.eq('unit_id', activeUnitId)
 
       if (!includeInactive) {
         query = query.eq('is_active', true)
