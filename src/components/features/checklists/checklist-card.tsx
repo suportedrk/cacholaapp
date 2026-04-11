@@ -1,8 +1,8 @@
-import { memo } from 'react'
+import { memo, useMemo } from 'react'
 import Link from 'next/link'
 import { format, isPast, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { Calendar, Clock, User, AlertTriangle } from 'lucide-react'
+import { Calendar, Clock, User, AlertTriangle, MessageCircle } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import { ChecklistProgress, calcProgress } from './checklist-progress'
@@ -31,7 +31,13 @@ export const ChecklistCard = memo(function ChecklistCard({ checklist }: Checklis
   const isOverdue = checklist.due_date
     && checklist.status !== 'completed'
     && checklist.status !== 'cancelled'
-    && isPast(parseISO(checklist.due_date))
+    && isPast(parseISO(checklist.due_date!))
+
+  const totalComments = useMemo<number>(() =>
+    (checklist.checklist_items ?? []).reduce(
+      (acc, item) => acc + (item.checklist_item_comments?.length ?? 0), 0
+    )
+  , [checklist.checklist_items])
 
   return (
     <Link
@@ -95,6 +101,12 @@ export const ChecklistCard = memo(function ChecklistCard({ checklist }: Checklis
         <span className="ml-auto text-foreground font-medium">
           {done}/{total}
         </span>
+        {totalComments > 0 && (
+          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+            <MessageCircle className="w-3.5 h-3.5" />
+            {totalComments}
+          </span>
+        )}
       </div>
     </Link>
   )

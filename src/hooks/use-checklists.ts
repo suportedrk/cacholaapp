@@ -28,7 +28,7 @@ const CHECKLIST_LIST_SELECT = `
   completed_by_user:users!checklists_completed_by_fkey(id, name, avatar_url),
   event:events!checklists_event_id_fkey(id, title, date),
   template:checklist_templates!checklists_template_id_fkey(id, title, category_id),
-  checklist_items(id, status, priority)
+  checklist_items(id, status, priority, checklist_item_comments(id))
 ` as const
 
 const CHECKLIST_DETAIL_SELECT = `
