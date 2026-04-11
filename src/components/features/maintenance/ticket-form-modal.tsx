@@ -21,6 +21,7 @@ import { useCreateTicket, type TicketInsert } from '@/hooks/use-tickets'
 import { useSectors } from '@/hooks/use-sectors'
 import { useMaintenanceCategories } from '@/hooks/use-maintenance-categories'
 import { useMaintenanceItems } from '@/hooks/use-maintenance-items'
+import { useEquipment } from '@/hooks/use-equipment'
 import type { TicketNature, TicketUrgency } from '@/types/database.types'
 
 // ─────────────────────────────────────────────────────────────
@@ -49,6 +50,7 @@ type FormState = {
   sector_id:      string
   category_id:    string
   item_id:        string
+  equipment_id:   string
   nature:         TicketNature
   urgency:        TicketUrgency
   scheduled_date: string
@@ -60,6 +62,7 @@ const INITIAL: FormState = {
   sector_id:      '',
   category_id:    '',
   item_id:        '',
+  equipment_id:   '',
   nature:         'pontual',
   urgency:        'medium',
   scheduled_date: '',
@@ -81,6 +84,7 @@ export function TicketFormModal({ open, onClose, onCreated }: TicketFormModalPro
   const { data: sectors    = [] } = useSectors(true)
   const { data: categories = [] } = useMaintenanceCategories(true)
   const { data: items      = [] } = useMaintenanceItems(true, form.sector_id || null)
+  const { data: equipments = [] } = useEquipment({ status: ['active', 'in_repair'] })
 
   const createTicket = useCreateTicket((ticket) => {
     onClose()
@@ -116,13 +120,14 @@ export function TicketFormModal({ open, onClose, onCreated }: TicketFormModalPro
     if (!validate() || createTicket.isPending) return
 
     const payload: TicketInsert = {
-      title:       form.title.trim(),
-      nature:      form.nature,
-      urgency:     form.urgency,
-      description: form.description.trim() || null,
-      sector_id:   form.sector_id   || null,
-      category_id: form.category_id || null,
-      item_id:     form.item_id     || null,
+      title:        form.title.trim(),
+      nature:       form.nature,
+      urgency:      form.urgency,
+      description:  form.description.trim() || null,
+      sector_id:    form.sector_id    || null,
+      category_id:  form.category_id  || null,
+      item_id:      form.item_id      || null,
+      equipment_id: form.equipment_id || null,
       scheduled_date:
         form.nature === 'agendado' && form.scheduled_date
           ? new Date(form.scheduled_date).toISOString()
@@ -319,6 +324,36 @@ export function TicketFormModal({ open, onClose, onCreated }: TicketFormModalPro
                 <SelectItem value="none">Nenhum</SelectItem>
                 {items.map((i) => (
                   <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Equipamento */}
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-text-primary">Equipamento</label>
+            <Select
+              value={form.equipment_id || 'none'}
+              onValueChange={(v) => set('equipment_id', v === 'none' ? '' : (v ?? ''))}
+            >
+              <SelectTrigger className="w-full">
+                <span data-slot="select-value">
+                  {form.equipment_id
+                    ? (equipments.find((e) => e.id === form.equipment_id)?.name ?? 'Nenhum equipamento')
+                    : 'Nenhum equipamento'}
+                </span>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Nenhum equipamento</SelectItem>
+                {equipments.map((e) => (
+                  <SelectItem key={e.id} value={e.id}>
+                    <span className="flex items-center gap-2">
+                      {e.name}
+                      {e.category && (
+                        <span className="text-xs text-text-tertiary">· {e.category}</span>
+                      )}
+                    </span>
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
