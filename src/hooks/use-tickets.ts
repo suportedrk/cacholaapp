@@ -145,6 +145,7 @@ export type TicketInsert = Pick<
   sector_id?:      string | null
   category_id?:    string | null
   item_id?:        string | null
+  equipment_id?:   string | null
   scheduled_date?: string | null
   due_at?:         string | null
 }
