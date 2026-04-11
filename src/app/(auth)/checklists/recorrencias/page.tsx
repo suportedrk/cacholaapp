@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import {
   RefreshCw, Plus, ArrowLeft, MoreVertical,
-  Zap, Trash2, CalendarDays, Clock,
+  Zap, Trash2, CalendarDays, Clock, Play,
 } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -24,6 +24,7 @@ import {
   useChecklistRecurrences,
   useUpdateRecurrence,
   useDeleteRecurrence,
+  useGenerateRecurrenceNow,
 } from '@/hooks/use-checklist-recurrences'
 import {
   CreateRecurrenceModal,
@@ -75,9 +76,10 @@ function RecurrenceCard({
   rec: RecurrenceWithJoins
   onEdit: (r: RecurrenceWithJoins) => void
 }) {
-  const { mutate: update, isPending: isUpdating } = useUpdateRecurrence()
-  const { mutate: del }                            = useDeleteRecurrence()
-  const [deleteOpen, setDeleteOpen]                = useState(false)
+  const { mutate: update, isPending: isUpdating }  = useUpdateRecurrence()
+  const { mutate: del }                             = useDeleteRecurrence()
+  const { mutate: generate, isPending: isGenerating } = useGenerateRecurrenceNow()
+  const [deleteOpen, setDeleteOpen]                 = useState(false)
 
   return (
     <div className={cn(
@@ -127,6 +129,19 @@ function RecurrenceCard({
               }
             />
             <DropdownMenuContent align="end" className="w-48">
+              {rec.is_active && (
+                <>
+                  <DropdownMenuItem
+                    onClick={() => generate(rec.id)}
+                    disabled={isGenerating}
+                    className="gap-2"
+                  >
+                    <Play className="w-4 h-4" />
+                    {isGenerating ? 'Gerando…' : 'Gerar agora'}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                </>
+              )}
               <DropdownMenuItem onClick={() => onEdit(rec)} className="gap-2">
                 <RefreshCw className="w-4 h-4" />
                 Editar regra

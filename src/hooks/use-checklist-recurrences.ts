@@ -7,6 +7,7 @@ import type { ChecklistRecurrence } from '@/types/database.types'
 import { useUnitStore } from '@/stores/unit-store'
 import { useAuthReadyStore } from '@/stores/auth-store'
 import { calcNextGenerationAt } from '@/lib/utils/checklist-recurrence'
+import { useRouter } from 'next/navigation'
 
 const RETRY = (failureCount: number, error: unknown) => {
   const status = (error as { status?: number })?.status
@@ -192,6 +193,38 @@ export function useUpdateRecurrence() {
       else toast.success('Recorrência atualizada.')
     },
     onError: () => toast.error('Erro ao atualizar recorrência.'),
+  })
+}
+
+// ─────────────────────────────────────────────────────────────
+// GERAR CHECKLIST AGORA (geração forçada, ignora agendamento)
+// ─────────────────────────────────────────────────────────────
+export function useGenerateRecurrenceNow() {
+  const qc     = useQueryClient()
+  const router = useRouter()
+
+  return useMutation({
+    mutationFn: async (recurrenceId: string) => {
+      const res = await fetch(`/api/checklists/recurrences/${recurrenceId}/generate`, {
+        method: 'POST',
+      })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error((body as { error?: string }).error ?? `Erro ${res.status}`)
+      }
+      return res.json() as Promise<{ checklist_id: string; title: string }>
+    },
+    onSuccess: ({ checklist_id, title }) => {
+      qc.invalidateQueries({ queryKey: ['checklist-recurrences'] })
+      qc.invalidateQueries({ queryKey: ['checklists'] })
+      toast.success(`Checklist "${title}" criado com sucesso!`, {
+        action: {
+          label: 'Abrir',
+          onClick: () => router.push(`/checklists/${checklist_id}`),
+        },
+      })
+    },
+    onError: (err: Error) => toast.error(`Erro ao gerar checklist: ${err.message}`),
   })
 }
 
