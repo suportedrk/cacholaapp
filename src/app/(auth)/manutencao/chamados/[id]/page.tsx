@@ -18,15 +18,18 @@ import {
   XCircle,
   Package,
   ArrowRightLeft,
+  Pencil,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   useTicket,
   useUpdateTicketStatus,
+  useUpdateTicketEquipment,
   useAddExecution,
   useUploadTicketPhoto,
   useApproveCost,
 } from '@/hooks/use-tickets'
+import { useEquipment } from '@/hooks/use-equipment'
 import { useSignedUrls } from '@/hooks/use-signed-urls'
 import { useProviders } from '@/hooks/use-providers'
 import { useUnitUsers } from '@/hooks/use-units'
@@ -104,6 +107,110 @@ function InfoRow({ icon: Icon, label, value }: { icon: React.ElementType; label:
       <div className="min-w-0">
         <p className="text-xs text-muted-foreground">{label}</p>
         <p className="text-sm font-medium text-foreground mt-0.5">{value}</p>
+      </div>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────
+// EquipmentRow — edição inline do equipamento vinculado
+// ─────────────────────────────────────────────────────────────
+function EquipmentRow({
+  ticketId,
+  currentEquipment,
+  canEdit,
+}: {
+  ticketId: string
+  currentEquipment: { id: string; name: string; category: string | null } | null
+  canEdit: boolean
+}) {
+  const [editing, setEditing] = useState(false)
+  const [selected, setSelected] = useState(currentEquipment?.id ?? '')
+
+  const { data: equipments = [] } = useEquipment({ status: ['active', 'in_repair'] })
+  const { mutate: updateEquipment, isPending } = useUpdateTicketEquipment()
+
+  function handleConfirm() {
+    updateEquipment(
+      { id: ticketId, equipmentId: selected || null },
+      { onSuccess: () => setEditing(false) }
+    )
+  }
+
+  function handleCancel() {
+    setSelected(currentEquipment?.id ?? '')
+    setEditing(false)
+  }
+
+  const displayName = currentEquipment?.name ?? null
+  const displayCategory = currentEquipment?.category ?? null
+
+  if (editing) {
+    return (
+      <div className="flex items-start gap-3 py-2.5 border-b border-border last:border-0">
+        <Package className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0" />
+        <div className="flex-1 min-w-0 space-y-2">
+          <p className="text-xs text-muted-foreground">Equipamento</p>
+          <select
+            value={selected}
+            onChange={(e) => setSelected(e.target.value)}
+            className="w-full h-9 rounded-lg border border-border bg-background px-3 text-sm focus:outline-none focus:border-border-focus transition-colors"
+            autoFocus
+          >
+            <option value="">Nenhum equipamento</option>
+            {equipments.map((e) => (
+              <option key={e.id} value={e.id}>
+                {e.name}{e.category ? ` · ${e.category}` : ''}
+              </option>
+            ))}
+          </select>
+          <div className="flex gap-2">
+            <button
+              onClick={handleConfirm}
+              disabled={isPending}
+              className="h-7 px-3 rounded-md bg-primary text-primary-foreground text-xs font-medium disabled:opacity-50 hover:bg-interactive-primary-hover transition-colors"
+            >
+              {isPending ? 'Salvando...' : 'Confirmar'}
+            </button>
+            <button
+              onClick={handleCancel}
+              disabled={isPending}
+              className="h-7 px-3 rounded-md border border-border text-xs text-muted-foreground hover:bg-muted transition-colors"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex items-start gap-3 py-2.5 border-b border-border last:border-0">
+      <Package className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0" />
+      <div className="min-w-0 flex-1">
+        <p className="text-xs text-muted-foreground">Equipamento</p>
+        <div className="flex items-center gap-2 mt-0.5">
+          {displayName ? (
+            <p className="text-sm font-medium text-foreground">
+              {displayName}
+              {displayCategory && (
+                <span className="ml-1.5 text-xs text-muted-foreground font-normal">· {displayCategory}</span>
+              )}
+            </p>
+          ) : (
+            <p className="text-sm text-muted-foreground">Nenhum</p>
+          )}
+          {canEdit && (
+            <button
+              onClick={() => setEditing(true)}
+              className="text-muted-foreground hover:text-foreground transition-colors ml-auto shrink-0"
+              aria-label="Editar equipamento"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
       </div>
     </div>
   )
@@ -586,7 +693,11 @@ export default function ChamadoDetailPage() {
         <InfoRow icon={MapPin}   label="Setor"       value={typedTicket.sector?.name} />
         <InfoRow icon={Tag}      label="Categoria"   value={typedTicket.category?.name} />
         <InfoRow icon={Wrench}   label="Item/Local"  value={typedTicket.item?.name} />
-
+        <EquipmentRow
+          ticketId={typedTicket.id}
+          currentEquipment={typedTicket.equipment ?? null}
+          canEdit={canEdit}
+        />
         <InfoRow icon={Calendar} label="Prazo"       value={formatDate(typedTicket.due_at) ?? undefined} />
         <InfoRow icon={Clock}    label="Aberto em"   value={formatDate(typedTicket.created_at) ?? undefined} />
         {typedTicket.concluded_at && (
