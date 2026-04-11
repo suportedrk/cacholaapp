@@ -283,7 +283,7 @@ export function CreateChecklistModal({
           // Base
           'p-0 gap-0 overflow-hidden flex flex-col',
           // Desktop
-          'sm:max-w-xl',
+          'sm:max-w-xl sm:max-h-[90svh]',
           // Mobile — bottom-sheet
           'max-sm:!top-auto max-sm:!bottom-0 max-sm:!left-0 max-sm:!right-0',
           'max-sm:!translate-x-0 max-sm:!translate-y-0',
