@@ -259,6 +259,7 @@ export type MaintenanceTicket = {
   concluded_at?: string | null
   due_at?: string | null
   opened_by: string
+  equipment_id?: string | null
   total_cost: number
   created_at: string
   updated_at: string

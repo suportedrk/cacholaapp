@@ -81,11 +81,11 @@ export function useEquipmentMaintenanceHistory(equipmentId: string) {
     queryKey: ['equipment-maintenance-history', equipmentId],
     queryFn: async () => {
       const { data, error } = await createClient()
-        .from('maintenance_orders')
+        .from('maintenance_tickets')
         .select(`
-          id, title, type, priority, status, created_at, due_date,
-          sector:sectors(name),
-          assigned_user:users!maintenance_orders_assigned_to_fkey(name)
+          id, title, nature, urgency, status, created_at, due_at,
+          sector:maintenance_sectors!sector_id(name),
+          opened_by_user:users!opened_by(name)
         `)
         .eq('equipment_id', equipmentId)
         .order('created_at', { ascending: false })

@@ -12,7 +12,6 @@ import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useEquipmentItem, useEquipmentMaintenanceHistory } from '@/hooks/use-equipment'
 import { useSignedUrls } from '@/hooks/use-signed-urls'
-import type { MaintenanceType, MaintenancePriority, MaintenanceStatus } from '@/types/database.types'
 
 // ── Labels ─────────────────────────────────────────────────
 
@@ -26,15 +25,16 @@ const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
 const MAINT_STATUS: Record<string, { label: string; className: string }> = {
   open:          { label: 'Aberta',          className: 'bg-blue-100 text-blue-700' },
   in_progress:   { label: 'Em Andamento',    className: 'bg-purple-100 text-purple-700' },
-  waiting_parts: { label: 'Aguard. Peças',   className: 'bg-amber-100 text-amber-700' },
-  completed:     { label: 'Concluída',        className: 'bg-green-100 text-green-700' },
-  cancelled:     { label: 'Cancelada',        className: 'bg-gray-100 text-gray-500' },
+  waiting_part:  { label: 'Aguard. Peça',    className: 'bg-amber-100 text-amber-700' },
+  concluded:     { label: 'Concluído',        className: 'bg-green-100 text-green-700' },
+  cancelled:     { label: 'Cancelado',        className: 'bg-gray-100 text-gray-500' },
 }
 
-const MAINT_TYPE: Record<string, string> = {
-  emergency: '🔴 Emergencial',
-  punctual:  '🟡 Pontual',
-  recurring: '🟢 Recorrente',
+const MAINT_NATURE: Record<string, string> = {
+  emergencial: '🔴 Emergencial',
+  pontual:     '🟡 Pontual',
+  agendado:    '📅 Agendado',
+  preventivo:  '🔧 Preventivo',
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -77,7 +77,7 @@ export default function EquipamentoDetailPage({ params }: { params: Promise<{ id
   const warrantyExpired = equipment.warranty_until && isPast(parseISO(equipment.warranty_until))
   const openMaint = history.filter((m) => {
     const s = (m as { status: string }).status
-    return s !== 'completed' && s !== 'cancelled'
+    return s !== 'concluded' && s !== 'cancelled'
   }).length
 
   return (
@@ -212,7 +212,7 @@ export default function EquipamentoDetailPage({ params }: { params: Promise<{ id
           <h2 className="text-sm font-semibold text-foreground">
             Histórico de Manutenções ({history.length})
           </h2>
-          <Link href={`/manutencao/nova?equipment_id=${id}`} className={cn(buttonVariants({ variant: 'outline', size: 'sm' }))}>
+          <Link href={`/manutencao/chamados?equipment_id=${id}`} className={cn(buttonVariants({ variant: 'outline', size: 'sm' }))}>
             <Plus className="w-3.5 h-3.5 mr-1.5" />
             Nova OS
           </Link>
@@ -232,30 +232,30 @@ export default function EquipamentoDetailPage({ params }: { params: Promise<{ id
           <div className="divide-y">
             {history.map((m) => {
               const mo = m as unknown as {
-                id: string; title: string; type: MaintenanceType;
-                priority: MaintenancePriority; status: MaintenanceStatus;
-                created_at: string; due_date: string | null;
+                id: string; title: string; nature: string;
+                urgency: string; status: string;
+                created_at: string; due_at: string | null;
                 sector: { name: string } | null;
-                assigned_user: { name: string } | null;
+                opened_by_user: { name: string } | null;
               }
               const mStatus = MAINT_STATUS[mo.status] ?? { label: mo.status, className: 'bg-muted' }
               return (
                 <Link
                   key={mo.id}
-                  href={`/manutencao/${mo.id}`}
+                  href={`/manutencao/chamados/${mo.id}`}
                   className="flex items-start gap-4 px-5 py-4 hover:bg-muted/30 transition-colors"
                 >
                   <div className="flex-1 min-w-0 space-y-1">
                     <p className="text-sm font-medium text-foreground truncate">{mo.title}</p>
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-xs text-muted-foreground">
-                        {MAINT_TYPE[mo.type] ?? mo.type}
+                        {MAINT_NATURE[mo.nature] ?? mo.nature}
                       </span>
                       {mo.sector?.name && (
                         <span className="text-xs text-muted-foreground">• {mo.sector.name}</span>
                       )}
-                      {mo.assigned_user?.name && (
-                        <span className="text-xs text-muted-foreground">• {mo.assigned_user.name}</span>
+                      {mo.opened_by_user?.name && (
+                        <span className="text-xs text-muted-foreground">• {mo.opened_by_user.name}</span>
                       )}
                     </div>
                   </div>
