@@ -21,22 +21,21 @@ import {
   useMaintenanceHistory, useHistorySummary,
   formatResolutionTime,
   type HistoryFilters,
+  type MaintenanceNature,
 } from '@/hooks/use-maintenance-history'
 import { useSectors } from '@/hooks/use-sectors'
-import { useSuppliers } from '@/hooks/use-suppliers'
 import { exportToExcel, exportReportPDF } from '@/lib/utils/export'
 import { formatBRL } from '@/hooks/use-maintenance-costs'
-import type { MaintenanceType } from '@/types/database.types'
 import { BRAND_GREEN } from '@/lib/constants/brand-colors'
 
 // ─────────────────────────────────────────────────────────────
-// TYPE FILTER CHIPS
+// NATURE FILTER CHIPS
 // ─────────────────────────────────────────────────────────────
-const TYPE_CHIPS: { value: MaintenanceType; label: string; color: 'red' | 'amber' | 'green' | 'blue' }[] = [
-  { value: 'emergency', label: 'Emergencial', color: 'red'   },
-  { value: 'punctual',  label: 'Pontual',     color: 'amber' },
-  { value: 'recurring', label: 'Recorrente',  color: 'green' },
-  { value: 'preventive',label: 'Preventiva',  color: 'blue'  },
+const NATURE_CHIPS: { value: MaintenanceNature; label: string; color: 'red' | 'amber' | 'green' | 'blue' }[] = [
+  { value: 'emergencial', label: 'Emergencial', color: 'red'   },
+  { value: 'pontual',     label: 'Pontual',     color: 'amber' },
+  { value: 'agendado',    label: 'Agendado',    color: 'green' },
+  { value: 'preventivo',  label: 'Preventivo',  color: 'blue'  },
 ]
 
 // ─────────────────────────────────────────────────────────────
@@ -74,7 +73,7 @@ function KpiCard({
   return (
     <div className={`rounded-xl border p-3 flex flex-col gap-2 ${colorMap[c]}`}>
       <div className="flex items-center gap-2">
-        <div className={`w-7 h-7 rounded-lg bg-white/60 dark:bg-black/20 flex items-center justify-center`}>
+        <div className="w-7 h-7 rounded-lg bg-white/60 dark:bg-black/20 flex items-center justify-center">
           <Icon className={`w-4 h-4 ${iconMap[c]}`} />
         </div>
         <p className="text-xs text-muted-foreground">{label}</p>
@@ -103,21 +102,17 @@ export function HistoryTab() {
   } = useMaintenanceHistory(filters)
 
   const { data: sectors = [] } = useSectors(true)
-  const { data: supplierData } = useSuppliers({ isActive: true })
-  const suppliers = supplierData ?? []
 
-  // Flatten pages
   const allItems = useMemo(
     () => listData?.pages.flat() ?? [],
     [listData]
   )
 
-  // Toggle type filter
-  const toggleType = useCallback((t: MaintenanceType) => {
+  const toggleNature = useCallback((n: MaintenanceNature) => {
     setFilters((f) => {
-      const prev = f.type ?? []
-      const next = prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]
-      return { ...f, type: next.length ? next : undefined }
+      const prev = f.nature ?? []
+      const next = prev.includes(n) ? prev.filter((x) => x !== n) : [...prev, n]
+      return { ...f, nature: next.length ? next : undefined }
     })
   }, [])
 
@@ -128,18 +123,20 @@ export function HistoryTab() {
     try {
       await exportToExcel(
         allItems.map((o) => ({
-          titulo:          o.title,
-          tipo:            o.type,
-          setor:           o.sector?.name ?? '',
-          fornecedor:      o.supplier?.company_name ?? '',
-          aberta_em:       o.created_at ? new Date(o.created_at).toLocaleDateString('pt-BR') : '',
-          concluida_em:    o.completed_at ? new Date(o.completed_at).toLocaleDateString('pt-BR') : '',
+          titulo:       o.title,
+          natureza:     o.nature ?? '',
+          urgencia:     o.urgency ?? '',
+          setor:        o.sector?.name ?? '',
+          aberto_por:   o.opener?.name ?? '',
+          aberta_em:    o.created_at ? new Date(o.created_at).toLocaleDateString('pt-BR') : '',
+          concluida_em: o.concluded_at ? new Date(o.concluded_at).toLocaleDateString('pt-BR') : '',
         })),
         [
           { key: 'titulo',       header: 'Título'        },
-          { key: 'tipo',         header: 'Tipo'          },
+          { key: 'natureza',     header: 'Natureza'      },
+          { key: 'urgencia',     header: 'Urgência'      },
           { key: 'setor',        header: 'Setor'         },
-          { key: 'fornecedor',   header: 'Fornecedor'    },
+          { key: 'aberto_por',   header: 'Aberto por'    },
           { key: 'aberta_em',    header: 'Aberta em'     },
           { key: 'concluida_em', header: 'Concluída em'  },
         ],
@@ -162,16 +159,16 @@ export function HistoryTab() {
         filename: 'historico-manutencao',
         columns: [
           { key: 'titulo',       header: 'Título',        width: 70 },
-          { key: 'tipo',         header: 'Tipo',          width: 25 },
+          { key: 'natureza',     header: 'Natureza',      width: 25 },
           { key: 'setor',        header: 'Setor',         width: 30 },
           { key: 'concluida_em', header: 'Concluída em',  width: 30, align: 'center' },
         ],
         rows: allItems.map((o) => ({
           titulo:       o.title,
-          tipo:         o.type,
+          natureza:     o.nature ?? '—',
           setor:        o.sector?.name ?? '—',
-          concluida_em: o.completed_at
-            ? new Date(o.completed_at).toLocaleDateString('pt-BR')
+          concluida_em: o.concluded_at
+            ? new Date(o.concluded_at).toLocaleDateString('pt-BR')
             : '—',
         })),
       })
@@ -182,7 +179,6 @@ export function HistoryTab() {
 
   const isLoading = summaryLoading || listLoading
 
-  // ── KPI values ────────────────────────────────────────────
   const kpis = summary?.kpis
   const avgResText = kpis?.avg_resolution_hours != null
     ? formatResolutionTime(kpis.avg_resolution_hours)
@@ -194,7 +190,7 @@ export function HistoryTab() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <KpiCard
           icon={CheckCircle2}
-          label="Concluídas"
+          label="Concluídos"
           value={summaryLoading ? '…' : (kpis?.total_completed ?? 0)}
           sub="no período filtrado"
           color="green"
@@ -208,7 +204,7 @@ export function HistoryTab() {
         />
         <KpiCard
           icon={DollarSign}
-          label="Custo aprovado"
+          label="Custo total"
           value={summaryLoading ? '…' : (kpis ? formatBRL(kpis.total_cost_approved) : '—')}
           sub="no período filtrado"
           color="amber"
@@ -262,14 +258,11 @@ export function HistoryTab() {
                   name === 'Custo' ? [formatBRL(Number(value)), name] : [value, name]
                 }
               />
-              <Legend
-                iconSize={8}
-                wrapperStyle={{ fontSize: '11px', paddingTop: '8px' }}
-              />
+              <Legend iconSize={8} wrapperStyle={{ fontSize: '11px', paddingTop: '8px' }} />
               <Bar
                 yAxisId="left"
                 dataKey="count"
-                name="Concluídas"
+                name="Concluídos"
                 fill={BRAND_GREEN[500]}
                 radius={[3, 3, 0, 0]}
                 maxBarSize={32}
@@ -317,21 +310,21 @@ export function HistoryTab() {
           )}
         </div>
 
-        {/* Type chips */}
+        {/* Nature chips */}
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs text-muted-foreground shrink-0">Tipo:</span>
-          {TYPE_CHIPS.map(({ value, label, color }) => (
+          <span className="text-xs text-muted-foreground shrink-0">Natureza:</span>
+          {NATURE_CHIPS.map(({ value, label, color }) => (
             <FilterChip
               key={value}
               label={label}
               color={color}
-              active={(filters.type ?? []).includes(value)}
-              onClick={() => toggleType(value)}
+              active={(filters.nature ?? []).includes(value)}
+              onClick={() => toggleNature(value)}
             />
           ))}
         </div>
 
-        {/* Sector + Supplier selects */}
+        {/* Sector select */}
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs text-muted-foreground shrink-0">Setor:</span>
           <Select
@@ -346,23 +339,6 @@ export function HistoryTab() {
             <SelectContent>
               {sectors.map((s) => (
                 <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <span className="text-xs text-muted-foreground">Fornecedor:</span>
-          <Select
-            value={filters.supplier_id ?? null}
-            onValueChange={(v) => setFilters((f) => ({ ...f, supplier_id: v || undefined }))}
-          >
-            <SelectTrigger className="h-8 text-xs w-44">
-              {filters.supplier_id
-                ? <span data-slot="select-value" className="flex flex-1 text-left">{suppliers.find((s) => s.id === filters.supplier_id)?.company_name ?? filters.supplier_id}</span>
-                : <SelectValue placeholder="Todos" />}
-            </SelectTrigger>
-            <SelectContent>
-              {suppliers.map((s) => (
-                <SelectItem key={s.id} value={s.id}>{s.company_name}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -411,14 +387,13 @@ export function HistoryTab() {
       ) : allItems.length === 0 ? (
         <EmptyState
           icon={History}
-          title="Nenhuma ordem concluída"
-          description="O histórico de manutenções concluídas aparecerá aqui. Ajuste os filtros ou aguarde a conclusão de ordens abertas."
+          title="Nenhum chamado concluído"
+          description="O histórico de chamados concluídos aparecerá aqui. Ajuste os filtros ou aguarde a conclusão de chamados abertos."
         />
       ) : (
         <>
           <HistoryTimeline items={allItems} />
 
-          {/* Load more */}
           {hasNextPage && (
             <div className="flex justify-center pt-2">
               <Button
@@ -428,7 +403,7 @@ export function HistoryTab() {
                 disabled={isFetchingNextPage}
               >
                 {isFetchingNextPage && <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />}
-                {isFetchingNextPage ? 'Carregando…' : `Carregar mais`}
+                {isFetchingNextPage ? 'Carregando…' : 'Carregar mais'}
               </Button>
             </div>
           )}

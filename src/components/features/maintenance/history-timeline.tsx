@@ -2,20 +2,24 @@
 
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { Zap, Wrench, RefreshCw, Shield } from 'lucide-react'
+import { Zap, Wrench, Clock, Shield } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { HistoryOrderItem } from '@/hooks/use-maintenance-history'
 import { calcResolutionHours, formatResolutionTime } from '@/hooks/use-maintenance-history'
 
 // ─────────────────────────────────────────────────────────────
-// TYPE CONFIG
+// NATURE CONFIG
 // ─────────────────────────────────────────────────────────────
-const TYPE_CONFIG = {
-  emergency: { icon: Zap,       label: 'Emergencial', dot: 'bg-red-500',    text: 'text-red-600 dark:text-red-400'   },
-  punctual:  { icon: Wrench,    label: 'Pontual',     dot: 'bg-amber-500',  text: 'text-amber-600 dark:text-amber-400' },
-  recurring: { icon: RefreshCw, label: 'Recorrente',  dot: 'bg-green-500',  text: 'text-green-600 dark:text-green-400' },
-  preventive:{ icon: Shield,    label: 'Preventiva',  dot: 'bg-blue-500',   text: 'text-blue-600 dark:text-blue-400'  },
-} as const
+const NATURE_CONFIG: Record<string, {
+  icon: React.ElementType; label: string; dot: string; text: string
+}> = {
+  emergencial: { icon: Zap,    label: 'Emergencial', dot: 'bg-red-500',   text: 'text-red-600 dark:text-red-400'    },
+  pontual:     { icon: Wrench, label: 'Pontual',     dot: 'bg-amber-500', text: 'text-amber-600 dark:text-amber-400' },
+  agendado:    { icon: Clock,  label: 'Agendado',    dot: 'bg-green-500', text: 'text-green-600 dark:text-green-400' },
+  preventivo:  { icon: Shield, label: 'Preventivo',  dot: 'bg-blue-500',  text: 'text-blue-600 dark:text-blue-400'  },
+}
+
+const DEFAULT_CFG = NATURE_CONFIG.pontual
 
 // ─────────────────────────────────────────────────────────────
 // GROUP BY MONTH
@@ -23,8 +27,8 @@ const TYPE_CONFIG = {
 function groupByMonth(items: HistoryOrderItem[]): Map<string, HistoryOrderItem[]> {
   const map = new Map<string, HistoryOrderItem[]>()
   for (const item of items) {
-    const key = item.completed_at
-      ? format(parseISO(item.completed_at), 'MMMM yyyy', { locale: ptBR })
+    const key = item.concluded_at
+      ? format(parseISO(item.concluded_at), 'MMMM yyyy', { locale: ptBR })
       : 'Sem data'
     const group = map.get(key) ?? []
     group.push(item)
@@ -57,11 +61,11 @@ export function HistoryTimelineSkeleton({ count = 5 }: { count?: number }) {
 // SINGLE ITEM
 // ─────────────────────────────────────────────────────────────
 function TimelineItem({ item, isLast }: { item: HistoryOrderItem; isLast: boolean }) {
-  const cfg        = TYPE_CONFIG[item.type] ?? TYPE_CONFIG.punctual
-  const Icon       = cfg.icon
-  const resHours   = calcResolutionHours(item.created_at, item.completed_at)
-  const completedDate = item.completed_at
-    ? format(parseISO(item.completed_at), "dd 'de' MMM 'às' HH:mm", { locale: ptBR })
+  const cfg          = (item.nature ? NATURE_CONFIG[item.nature] : null) ?? DEFAULT_CFG
+  const Icon         = cfg.icon
+  const resHours     = calcResolutionHours(item.created_at, item.concluded_at)
+  const concludedDate = item.concluded_at
+    ? format(parseISO(item.concluded_at), "dd 'de' MMM 'às' HH:mm", { locale: ptBR })
     : null
 
   return (
@@ -88,16 +92,16 @@ function TimelineItem({ item, isLast }: { item: HistoryOrderItem; isLast: boolea
 
         <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
           {item.sector && <span>{item.sector.name}</span>}
-          {item.supplier && (
+          {item.opener && (
             <span className="flex items-center gap-1">
               <span className="w-1 h-1 rounded-full bg-muted-foreground/40" />
-              {item.supplier.company_name}
+              {item.opener.name}
             </span>
           )}
-          {completedDate && (
+          {concludedDate && (
             <span className="flex items-center gap-1">
               <span className="w-1 h-1 rounded-full bg-muted-foreground/40" />
-              {completedDate}
+              {concludedDate}
             </span>
           )}
         </div>
@@ -120,12 +124,9 @@ export function HistoryTimeline({ items }: HistoryTimelineProps) {
     <div className="space-y-4">
       {Array.from(groups.entries()).map(([monthLabel, groupItems]) => (
         <div key={monthLabel}>
-          {/* Month header */}
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3 capitalize">
             {monthLabel}
           </p>
-
-          {/* Items */}
           {groupItems.map((item, idx) => (
             <TimelineItem
               key={item.id}
