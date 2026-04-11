@@ -951,7 +951,7 @@ export type ChecklistWithItems = Checklist & {
 export type ChecklistForList = Checklist & {
   event: Pick<Event, 'id' | 'title' | 'date'> | null
   assigned_user: Pick<User, 'id' | 'name' | 'avatar_url'> | null
-  checklist_items: Array<{ id: string; status: ChecklistItemStatus; priority: Priority }>
+  checklist_items: Array<{ id: string; status: ChecklistItemStatus; priority: Priority; checklist_item_comments: { id: string }[] }>
 }
 
 // Template com itens e categoria
