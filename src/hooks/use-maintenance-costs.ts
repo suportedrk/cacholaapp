@@ -68,7 +68,7 @@ export function useMaintCosts(filters: CostFilters = {}) {
 
   return useQuery({
     queryKey: ['maintenance-costs', activeUnitId, filters],
-    enabled:  !!activeUnitId && isSessionReady,
+    enabled:  isSessionReady,
     staleTime: 30 * 1000,
     retry: (failureCount, error: unknown) => {
       const status = (error as { status?: number })?.status
@@ -80,8 +80,8 @@ export function useMaintCosts(filters: CostFilters = {}) {
       let q = supabase
         .from('maintenance_costs')
         .select(COST_SELECT)
-        .eq('unit_id', activeUnitId!)
         .order('submitted_at', { ascending: false })
+      if (activeUnitId) q = q.eq('unit_id', activeUnitId)
 
       if (filters.status?.length)    q = q.in('status', filters.status)
       if (filters.cost_type?.length) q = q.in('cost_type', filters.cost_type)
@@ -129,7 +129,7 @@ export function useCostsSummary() {
 
   return useQuery({
     queryKey: ['maintenance-costs-summary', activeUnitId],
-    enabled:  !!activeUnitId && isSessionReady,
+    enabled:  isSessionReady,
     staleTime: 60 * 1000,
     queryFn: async () => {
       const supabase = createClient()
@@ -137,26 +137,19 @@ export function useCostsSummary() {
       const monthStart = startOfMonth(now).toISOString()
       const monthEnd   = endOfMonth(now).toISOString()
 
+      let pendingQ  = supabase.from('maintenance_costs').select('*', { count: 'exact', head: true }).eq('status', 'pending')
+      let approvedQ = supabase.from('maintenance_costs').select('amount').eq('status', 'approved').gte('submitted_at', monthStart).lte('submitted_at', monthEnd)
+      let totalQ    = supabase.from('maintenance_costs').select('amount').in('status', ['approved', 'pending']).gte('submitted_at', monthStart).lte('submitted_at', monthEnd)
+      if (activeUnitId) {
+        pendingQ  = pendingQ.eq('unit_id', activeUnitId)
+        approvedQ = approvedQ.eq('unit_id', activeUnitId)
+        totalQ    = totalQ.eq('unit_id', activeUnitId)
+      }
+
       const [pendingResult, approvedResult, totalResult] = await Promise.all([
-        supabase
-          .from('maintenance_costs')
-          .select('*', { count: 'exact', head: true })
-          .eq('unit_id', activeUnitId!)
-          .eq('status', 'pending'),
-        supabase
-          .from('maintenance_costs')
-          .select('amount')
-          .eq('unit_id', activeUnitId!)
-          .eq('status', 'approved')
-          .gte('submitted_at', monthStart)
-          .lte('submitted_at', monthEnd),
-        supabase
-          .from('maintenance_costs')
-          .select('amount')
-          .eq('unit_id', activeUnitId!)
-          .in('status', ['approved', 'pending'])
-          .gte('submitted_at', monthStart)
-          .lte('submitted_at', monthEnd),
+        pendingQ,
+        approvedQ,
+        totalQ,
       ])
 
       const approvedSum = (approvedResult.data ?? []).reduce((acc, r) => acc + Number(r.amount), 0)

@@ -34,7 +34,7 @@ function showNoChecklistWarning(event: EventCardEvent): boolean {
 
 // ── Avatar: cor baseada em hash do nome ──────────────────────
 const AVATAR_COLORS = [
-  'bg-[#7C8D78] text-white',   // brand
+  'bg-primary text-white',      // brand
   'bg-blue-500 text-white',
   'bg-violet-500 text-white',
   'bg-amber-600 text-white',

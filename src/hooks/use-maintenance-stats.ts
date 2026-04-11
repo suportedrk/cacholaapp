@@ -13,7 +13,7 @@ export function useMaintenanceStats() {
 
   return useQuery({
     queryKey: ['maintenance-stats', activeUnitId],
-    enabled: !!activeUnitId && isSessionReady,
+    enabled: isSessionReady,
     staleTime: 2 * 60 * 1000, // 2 min
     retry: (failureCount, error: unknown) => {
       const status = (error as { status?: number })?.status
@@ -21,7 +21,8 @@ export function useMaintenanceStats() {
       return failureCount < 2
     },
     queryFn: async () => {
-      const res = await fetch(`/api/maintenance/stats?unit_id=${activeUnitId}`)
+      const params = activeUnitId ? `?unit_id=${activeUnitId}` : ''
+      const res = await fetch(`/api/maintenance/stats${params}`)
       if (!res.ok) {
         const err = Object.assign(new Error('Failed to fetch stats'), { status: res.status })
         throw err

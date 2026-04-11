@@ -37,7 +37,7 @@ export function useEventProviders(eventId: string | null) {
 
   return useQuery({
     queryKey: ['event-providers', eventId, activeUnitId],
-    enabled: !!eventId && !!activeUnitId && isSessionReady,
+    enabled: !!eventId && isSessionReady,
     staleTime: 30 * 1000,
     retry: (count, error: unknown) => {
       const status = (error as { status?: number; code?: number })?.status
@@ -47,12 +47,13 @@ export function useEventProviders(eventId: string | null) {
     },
     queryFn: async (): Promise<EventProvider[]> => {
       const supabase = createClient()
-      const { data, error } = await supabase
+      let q = supabase
         .from('event_providers')
         .select(EVENT_PROVIDER_SELECT)
         .eq('event_id', eventId!)
-        .eq('unit_id', activeUnitId!)
         .order('created_at', { ascending: true })
+      if (activeUnitId) q = q.eq('unit_id', activeUnitId)
+      const { data, error } = await q
       if (error) throw error
       return data as unknown as EventProvider[]
     },
@@ -68,7 +69,7 @@ export function useProviderEvents(providerId: string | null) {
 
   return useQuery({
     queryKey: ['provider-events', providerId, activeUnitId],
-    enabled: !!providerId && !!activeUnitId && isSessionReady,
+    enabled: !!providerId && isSessionReady,
     staleTime: 60 * 1000,
     retry: (count, error: unknown) => {
       const status = (error as { status?: number; code?: number })?.status
@@ -78,12 +79,13 @@ export function useProviderEvents(providerId: string | null) {
     },
     queryFn: async (): Promise<EventProvider[]> => {
       const supabase = createClient()
-      const { data, error } = await supabase
+      let q = supabase
         .from('event_providers')
         .select(EVENT_PROVIDER_WITH_EVENT_SELECT)
         .eq('provider_id', providerId!)
-        .eq('unit_id', activeUnitId!)
         .order('created_at', { ascending: false })
+      if (activeUnitId) q = q.eq('unit_id', activeUnitId)
+      const { data, error } = await q
       if (error) throw error
       return data as unknown as EventProvider[]
     },
@@ -103,7 +105,7 @@ export function useProviderScheduleConflicts(
 
   return useQuery({
     queryKey: ['provider-conflicts', providerId, eventDate, excludeEventId, activeUnitId],
-    enabled: !!providerId && !!eventDate && !!activeUnitId && isSessionReady,
+    enabled: !!providerId && !!eventDate && isSessionReady,
     staleTime: 30 * 1000, // needs to be fresh
     retry: false,
     queryFn: async (): Promise<EventProvider[]> => {

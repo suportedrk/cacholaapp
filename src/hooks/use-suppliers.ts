@@ -46,7 +46,7 @@ export function useSuppliers(filters: SupplierFilters = {}) {
 
   return useQuery({
     queryKey: ['suppliers', activeUnitId, filters],
-    enabled:  !!activeUnitId && isSessionReady,
+    enabled:  isSessionReady,
     staleTime: 30 * 1000,
     retry: (failureCount, error: unknown) => {
       const status = (error as { status?: number })?.status
@@ -58,8 +58,8 @@ export function useSuppliers(filters: SupplierFilters = {}) {
       let q = supabase
         .from('maintenance_suppliers')
         .select('*, contacts:supplier_contacts(*), documents_count:supplier_documents(count)')
-        .eq('unit_id', activeUnitId!)
         .order('company_name', { ascending: true })
+      if (activeUnitId) q = q.eq('unit_id', activeUnitId)
 
       if (search?.trim()) {
         q = q.or(`company_name.ilike.%${search}%,trade_name.ilike.%${search}%`)
@@ -83,7 +83,7 @@ export function useSupplier(id: string | null) {
 
   return useQuery({
     queryKey: ['supplier', id],
-    enabled:  !!id && !!activeUnitId && isSessionReady,
+    enabled:  !!id && isSessionReady,
     staleTime: 30 * 1000,
     retry: (failureCount, error: unknown) => {
       const status = (error as { status?: number })?.status
