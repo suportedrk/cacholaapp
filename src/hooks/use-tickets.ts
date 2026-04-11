@@ -30,6 +30,7 @@ const TICKET_DETAIL_SELECT = `
   sector:maintenance_sectors!sector_id(id, name),
   category:maintenance_categories!category_id(id, name, color, icon),
   item:maintenance_items!item_id(id, name),
+  equipment:equipment!equipment_id(id, name, category),
   executions:maintenance_executions!ticket_id(
     *,
     internal_user:users!internal_user_id(id, name, avatar_url),
@@ -223,6 +224,29 @@ export function useUpdateTicketStatus() {
       qc.invalidateQueries({ queryKey: ['ticket', ticket.id] })
     },
     onError: () => toast.error('Erro ao atualizar status'),
+  })
+}
+
+// ─────────────────────────────────────────────────────────────
+// ATUALIZAR EQUIPAMENTO DO TICKET
+// ─────────────────────────────────────────────────────────────
+export function useUpdateTicketEquipment() {
+  const qc = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ id, equipmentId }: { id: string; equipmentId: string | null }) => {
+      const supabase = createClient()
+      const { error } = await supabase
+        .from('maintenance_tickets')
+        .update({ equipment_id: equipmentId })
+        .eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: (_, { id }) => {
+      qc.invalidateQueries({ queryKey: ['ticket', id] })
+      toast.success('Equipamento atualizado')
+    },
+    onError: () => toast.error('Erro ao atualizar equipamento'),
   })
 }
 

@@ -371,9 +371,10 @@ export type MaintenanceTicketForList = MaintenanceTicket & {
 
 // Ticket com joins completos para detalhe
 export type MaintenanceTicketWithDetails = MaintenanceTicket & {
-  sector:   Pick<Sector, 'id' | 'name'> | null
-  category: Pick<MaintenanceCategory, 'id' | 'name' | 'color' | 'icon'> | null
-  item:     Pick<MaintenanceItem, 'id' | 'name'> | null
+  sector:    Pick<Sector, 'id' | 'name'> | null
+  category:  Pick<MaintenanceCategory, 'id' | 'name' | 'color' | 'icon'> | null
+  item:      Pick<MaintenanceItem, 'id' | 'name'> | null
+  equipment: Pick<Equipment, 'id' | 'name' | 'category'> | null
   executions: (MaintenanceExecution & {
     internal_user: Pick<User, 'id' | 'name' | 'avatar_url'> | null
     provider:      { id: string; name: string } | null
