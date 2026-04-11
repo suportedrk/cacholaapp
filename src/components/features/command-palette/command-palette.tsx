@@ -45,7 +45,7 @@ const PAGES: FlatResult[] = [
 
 const ACTIONS: FlatResult[] = [
   { id: 'a-new-evento',   label: 'Novo Evento',                sublabel: 'Criar um novo evento',        href: '/eventos/novo',              group: 'action', iconEl: <Zap className="w-4 h-4" /> },
-  { id: 'a-new-manut',    label: 'Nova Ordem de Manutenção',   sublabel: 'Abrir ordem de serviço',      href: '/manutencao/nova',            group: 'action', iconEl: <Zap className="w-4 h-4" /> },
+  { id: 'a-new-manut',    label: 'Novo Chamado de Manutenção',  sublabel: 'Abrir chamado de manutenção', href: '/manutencao/chamados',        group: 'action', iconEl: <Zap className="w-4 h-4" /> },
   { id: 'a-new-template', label: 'Novo Template de Checklist', sublabel: 'Criar modelo de checklist',   href: '/checklists/templates/novo',  group: 'action', iconEl: <Zap className="w-4 h-4" /> },
   { id: 'a-new-equip',       label: 'Novo Equipamento',           sublabel: 'Cadastrar ativo',             href: '/equipamentos/novo',     group: 'action', iconEl: <Zap className="w-4 h-4" /> },
   { id: 'a-new-prestador',   label: 'Novo Prestador',             sublabel: 'Cadastrar prestador',         href: '/prestadores/novo',      group: 'action', iconEl: <Zap className="w-4 h-4" /> },

@@ -176,11 +176,11 @@ export function useMaintenanceReport(filters: ReportFilters) {
     enabled: isSessionReady,
     queryFn: async () => {
       let q = createClient()
-        .from('maintenance_orders')
+        .from('maintenance_tickets')
         .select(`
-          id, title, type, priority, status, created_at, updated_at,
+          id, title, nature, urgency, status, created_at, updated_at,
           sector:maintenance_sectors(name),
-          assigned_user:users!maintenance_orders_assigned_to_fkey(name)
+          opener:users!maintenance_tickets_opened_by_fkey(name)
         `)
         .gte('created_at', filters.from)
         .lte('created_at', filters.to + 'T23:59:59')
