@@ -69,7 +69,7 @@ export function Navbar({ onMenuClick, scrolled }: NavbarProps) {
               <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center shrink-0">
                 <span className="text-xs font-bold text-primary-foreground">C</span>
               </div>
-              <span className="font-semibold text-sm text-foreground">Cachola OS</span>
+              <span className="hidden sm:block font-semibold text-sm text-foreground whitespace-nowrap">Cachola OS</span>
             </div>
           }
         />

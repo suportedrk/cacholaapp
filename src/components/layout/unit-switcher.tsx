@@ -70,7 +70,7 @@ export function UnitSwitcher() {
           ? <Layers className="w-4 h-4 shrink-0 text-primary" />
           : <Building2 className="w-4 h-4 shrink-0 text-primary" />
         }
-        <span className="truncate font-medium text-foreground text-xs sm:text-sm">
+        <span className="hidden sm:inline truncate font-medium text-foreground text-xs sm:text-sm">
           {activeName}
         </span>
         <ChevronDown className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
