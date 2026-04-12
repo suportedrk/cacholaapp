@@ -163,7 +163,6 @@ export default function ChecklistFillPage() {
     isUpdating,
     isFinishing,
     handleItemStatus,
-    handleItemNotes,
     handleItemPhoto,
     handleFinish: _handleFinish,
   } = useOfflineChecklist(id)
@@ -242,8 +241,7 @@ export default function ChecklistFillPage() {
   const searchQuery = search.trim().toLowerCase()
   const visibleItems = searchQuery
     ? statusFilteredItems.filter((item) =>
-        item.description?.toLowerCase().includes(searchQuery) ||
-        item.notes?.toLowerCase().includes(searchQuery)
+        item.description?.toLowerCase().includes(searchQuery)
       )
     : statusFilteredItems
 
@@ -369,13 +367,11 @@ export default function ChecklistFillPage() {
                 key={item.id}
                 item={item}
                 checklistId={id}
+                initialCommentsCount={item.checklist_item_comments?.length ?? 0}
                 disabled={isReadOnly || isUpdating}
                 currentUserId={profile?.id}
                 onStatusChange={(status: ChecklistItemStatus) =>
                   handleItemStatus(item.id, status, profile?.id)
-                }
-                onNotesChange={(notes: string) =>
-                  handleItemNotes(item.id, notes, profile?.id)
                 }
                 onPhotoChange={isOffline
                   ? undefined
