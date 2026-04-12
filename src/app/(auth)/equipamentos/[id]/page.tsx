@@ -132,7 +132,7 @@ export default function EquipamentoDetailPage({ params }: { params: Promise<{ id
           {openMaint > 0 && (
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">
               <Wrench className="w-3.5 h-3.5" />
-              {openMaint} OS aberta{openMaint > 1 ? 's' : ''}
+              {openMaint} OS em aberto
             </span>
           )}
         </div>

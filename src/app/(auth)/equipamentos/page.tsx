@@ -80,7 +80,9 @@ export default function EquipamentosPage() {
 
         <Select value={status} onValueChange={(v: string | null) => setStatus(v ?? 'all')}>
           <SelectTrigger className="w-full sm:w-44">
-            <SelectValue />
+            <span data-slot="select-value">
+              {STATUS_OPTS.find((o) => o.value === status)?.label ?? 'Todos os status'}
+            </span>
           </SelectTrigger>
           <SelectContent>
             {STATUS_OPTS.map((o) => (
