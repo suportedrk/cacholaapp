@@ -16,6 +16,7 @@ import {
 } from '@/lib/notifications'
 import { useUnitStore } from '@/stores/unit-store'
 import { useAuthReadyStore } from '@/stores/auth-store'
+import { auditLog } from '@/lib/audit-client'
 
 // ─────────────────────────────────────────────────────────────
 // SELECT CONSTANTS
@@ -301,6 +302,7 @@ export function useCreateChecklist() {
     onSuccess: (checklistId) => {
       qc.invalidateQueries({ queryKey: ['checklists'] })
       toast.success('Checklist criado com sucesso!')
+      auditLog({ action: 'create', module: 'checklists', entityId: checklistId })
       ;(async () => {
         try {
           const sb = createClient()
@@ -352,6 +354,7 @@ export function useUpdateChecklist() {
       qc.invalidateQueries({ queryKey: ['checklists'] })
       qc.invalidateQueries({ queryKey: ['checklist', id] })
       toast.success('Checklist atualizado.')
+      auditLog({ action: 'update', module: 'checklists', entityId: id })
     },
     onError: () => toast.error('Erro ao atualizar checklist.'),
   })
@@ -373,6 +376,7 @@ export function useUpdateChecklistStatus() {
       qc.invalidateQueries({ queryKey: ['checklists'] })
       qc.invalidateQueries({ queryKey: ['checklist', id] })
       toast.success('Status atualizado.')
+      auditLog({ action: 'status_change', module: 'checklists', entityId: id, newData: { status } })
       if (status === 'completed') {
         ;(async () => {
           try {
@@ -577,9 +581,10 @@ export function useDeleteChecklist() {
       const { error } = await supabase.from('checklists').delete().eq('id', id)
       if (error) throw error
     },
-    onSuccess: () => {
+    onSuccess: (_, id) => {
       qc.invalidateQueries({ queryKey: ['checklists'] })
       toast.success('Checklist excluído.')
+      auditLog({ action: 'delete', module: 'checklists', entityId: id })
     },
     onError: () => toast.error('Erro ao excluir checklist.'),
   })

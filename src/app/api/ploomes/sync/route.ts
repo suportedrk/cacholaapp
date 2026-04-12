@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
 
     // Audit log
     await logAudit({
-      action: 'created',
+      action: 'create',
       module: 'events',
       entityType: 'ploomes_sync',
       newData: result as unknown as import('@/types/database.types').Json,

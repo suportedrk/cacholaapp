@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 import { notifyEventCreated, notifyStatusChanged } from '@/lib/notifications'
 import { useUnitStore } from '@/stores/unit-store'
 import { useAuthReadyStore } from '@/stores/auth-store'
+import { auditLog } from '@/lib/audit-client'
 
 // event_types, packages e venues foram dropadas na migration 030
 const EVENT_WITH_DETAILS_SELECT = `
@@ -416,6 +417,7 @@ export function useCreateEvent() {
     onSuccess: (eventId) => {
       qc.invalidateQueries({ queryKey: ['events'] })
       toast.success('Evento criado com sucesso!')
+      auditLog({ action: 'create', module: 'events', entityId: eventId })
       // Fire-and-forget: notifica equipe escalada
       ;(async () => {
         try {
@@ -469,6 +471,7 @@ export function useUpdateEvent() {
       qc.invalidateQueries({ queryKey: ['events'] })
       qc.invalidateQueries({ queryKey: ['events', id] })
       toast.success('Evento atualizado com sucesso!')
+      auditLog({ action: 'update', module: 'events', entityId: id })
     },
     onError: () => toast.error('Erro ao atualizar evento.'),
   })
@@ -490,6 +493,7 @@ export function useChangeEventStatus() {
       qc.invalidateQueries({ queryKey: ['events'] })
       qc.invalidateQueries({ queryKey: ['events', id] })
       toast.success('Status atualizado.')
+      auditLog({ action: 'status_change', module: 'events', entityId: id, newData: { status } })
       // Fire-and-forget: notifica equipe sobre novo status
       ;(async () => {
         try {
@@ -520,9 +524,10 @@ export function useDeleteEvent() {
         .eq('id', id)
       if (error) throw error
     },
-    onSuccess: () => {
+    onSuccess: (_, id) => {
       qc.invalidateQueries({ queryKey: ['events'] })
       toast.success('Evento excluído.')
+      auditLog({ action: 'delete', module: 'events', entityId: id })
     },
     onError: () => toast.error('Erro ao excluir evento.'),
   })

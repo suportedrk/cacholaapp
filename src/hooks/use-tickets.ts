@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { useUnitStore } from '@/stores/unit-store'
 import { useAuthReadyStore } from '@/stores/auth-store'
+import { auditLog } from '@/lib/audit-client'
 import type {
   MaintenanceTicket,
   MaintenanceTicketForList,
@@ -177,6 +178,7 @@ export function useCreateTicket(onSuccess?: (ticket: MaintenanceTicket) => void)
     onSuccess: (ticket) => {
       qc.invalidateQueries({ queryKey: ['tickets'] })
       toast.success('Chamado aberto com sucesso')
+      auditLog({ action: 'create', module: 'maintenance', entityId: ticket.id })
       onSuccess?.(ticket)
     },
     onError: () => toast.error('Erro ao abrir chamado'),
@@ -222,6 +224,7 @@ export function useUpdateTicketStatus() {
     onSuccess: (ticket) => {
       qc.invalidateQueries({ queryKey: ['tickets'] })
       qc.invalidateQueries({ queryKey: ['ticket', ticket.id] })
+      auditLog({ action: 'status_change', module: 'maintenance', entityId: ticket.id, newData: { status: ticket.status } })
     },
     onError: () => toast.error('Erro ao atualizar status'),
   })
