@@ -99,7 +99,7 @@ export const EventCard = memo(function EventCard({ event, conflictType = null }:
           <span>{formatTime(event.start_time)} – {formatTime(event.end_time)}</span>
         </div>
 
-        <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
+        <div className="flex items-center gap-1.5 flex-wrap justify-end min-w-0">
           {isEventToday && (
             <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-primary text-primary-foreground animate-pulse">
               Hoje
