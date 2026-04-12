@@ -80,7 +80,7 @@ function EventListSkeleton() {
       {/* Search skeleton */}
       <div className="h-10 rounded-lg skeleton-shimmer" />
       {/* Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {Array.from({ length: 6 }).map((_, i) => (
           <EventCardSkeleton key={i} />
         ))}
@@ -352,7 +352,7 @@ function EventosContent() {
 
       {/* Loading: skeletons */}
       {isLoading && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {Array.from({ length: 6 }).map((_, i) => (
             <EventCardSkeleton key={i} />
           ))}
@@ -413,7 +413,7 @@ function EventosContent() {
             {Array.from(grouped.entries()).map(([date, dayEvents]) => (
               <div key={date}>
                 <EventDayGroup date={date} count={dayEvents.length} />
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-3 mt-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-2">
                   {dayEvents.map((event, idx) => (
                     <div
                       key={event.id}
