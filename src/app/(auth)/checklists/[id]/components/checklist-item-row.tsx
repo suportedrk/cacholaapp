@@ -241,16 +241,6 @@ export function ChecklistItemRow({
                   {PRIORITY_LABELS[item.priority]}
                 </span>
               )}
-              {commentsCount > 0 && (
-                <button
-                  onClick={() => setCommentsOpen(true)}
-                  className="flex items-center gap-0.5 text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0"
-                  aria-label={`${commentsCount} comentário${commentsCount !== 1 ? 's' : ''}`}
-                >
-                  <MessageCircle className="w-3 h-3" />
-                  {commentsCount}
-                </button>
-              )}
             </div>
 
             {/* Row 2: metadata (assigned + due date + estimated) */}
