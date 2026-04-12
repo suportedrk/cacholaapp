@@ -30,8 +30,8 @@ const ACTION_CONFIG: Record<string, { label: string; className: string }> = {
   update:        { label: 'Atualização',        className: 'bg-blue-100 text-blue-800'  },
   delete:        { label: 'Exclusão',           className: 'bg-red-100 text-red-800'    },
   status_change: { label: 'Mudança de Status',  className: 'bg-amber-100 text-amber-800' },
-  login:         { label: 'Login',              className: 'bg-gray-100 text-gray-700'  },
-  logout:        { label: 'Logout',             className: 'bg-gray-100 text-gray-700'  },
+  login:         { label: 'Login',              className: 'badge-gray border'           },
+  logout:        { label: 'Logout',             className: 'badge-gray border'           },
   export:        { label: 'Exportação',         className: 'bg-purple-100 text-purple-800' },
 }
 

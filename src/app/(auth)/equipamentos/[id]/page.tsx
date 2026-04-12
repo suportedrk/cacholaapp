@@ -17,7 +17,7 @@ import { useSignedUrls } from '@/hooks/use-signed-urls'
 
 const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
   active:   { label: 'Ativo',      className: 'bg-green-100 text-green-700' },
-  inactive: { label: 'Inativo',    className: 'bg-gray-100 text-gray-600' },
+  inactive: { label: 'Inativo',    className: 'badge-gray border' },
   in_repair:{ label: 'Em Reparo',  className: 'bg-amber-100 text-amber-700' },
   retired:  { label: 'Aposentado', className: 'bg-red-100 text-red-700' },
 }
@@ -27,7 +27,7 @@ const MAINT_STATUS: Record<string, { label: string; className: string }> = {
   in_progress:   { label: 'Em Andamento',    className: 'bg-purple-100 text-purple-700' },
   waiting_part:  { label: 'Aguard. Peça',    className: 'bg-amber-100 text-amber-700' },
   concluded:     { label: 'Concluído',        className: 'bg-green-100 text-green-700' },
-  cancelled:     { label: 'Cancelado',        className: 'bg-gray-100 text-gray-500' },
+  cancelled:     { label: 'Cancelado',        className: 'badge-gray border' },
 }
 
 const MAINT_NATURE: Record<string, string> = {

@@ -23,7 +23,7 @@ const STATUS_CYCLE: Record<ChecklistItemStatus, ChecklistItemStatus> = {
 const STATUS_STYLE: Record<ChecklistItemStatus, string> = {
   pending: 'border-border bg-background text-muted-foreground',
   done:    'border-green-500 bg-green-500 text-white',
-  na:      'border-gray-300 bg-gray-100 text-gray-400 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-500',
+  na:      'border-border bg-muted text-muted-foreground',
 }
 
 export function ChecklistItemRow({

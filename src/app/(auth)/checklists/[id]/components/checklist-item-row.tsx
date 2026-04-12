@@ -49,7 +49,7 @@ const STATUS_CYCLE: Record<ChecklistItemStatus, ChecklistItemStatus> = {
 const STATUS_CIRCLE: Record<ChecklistItemStatus, string> = {
   pending: 'border-border bg-background',
   done:    'border-green-500 bg-green-500 text-white',
-  na:      'border-gray-300 bg-gray-100 text-gray-400 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-500',
+  na:      'border-border bg-muted text-muted-foreground',
 }
 
 const PRIORITY_BG: Record<Priority, string> = {
