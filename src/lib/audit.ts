@@ -1,10 +1,11 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import type { Json } from '@/types/database.types'
 
 export type AuditAction =
-  | 'created' | 'updated' | 'deleted'
+  | 'create' | 'update' | 'delete' | 'status_change'
+  | 'login' | 'logout' | 'export'
   | 'activated' | 'deactivated'
-  | 'permission_changed' | 'login' | 'logout'
+  | 'permission_changed'
   | 'password_reset_requested'
   | 'impersonate_start'
 
@@ -25,13 +26,15 @@ interface AuditParams {
 /**
  * Registra uma entrada no audit_log.
  * Usar em Route Handlers (Server Side) apenas.
+ * Usa createAdminClient (service_role) para contornar RLS.
  */
 export async function logAudit(params: AuditParams): Promise<void> {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
-    await supabase.from('audit_logs').insert({
+    const admin = await createAdminClient()
+    await admin.from('audit_logs').insert({
       user_id: user?.id ?? null,
       action: params.action,
       module: params.module,
