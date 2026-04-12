@@ -33,11 +33,18 @@ export const ChecklistCard = memo(function ChecklistCard({ checklist }: Checklis
     && checklist.status !== 'cancelled'
     && isPast(parseISO(checklist.due_date!))
 
-  const totalComments = useMemo<number>(() =>
-    (checklist.checklist_items ?? []).reduce(
+  const totalComments = useMemo<number>(() => {
+    const items = checklist.checklist_items ?? []
+    const count = items.reduce(
       (acc, item) => acc + (item.checklist_item_comments?.length ?? 0), 0
     )
-  , [checklist.checklist_items])
+    // DEBUG FALT-06 — remover após confirmar
+    if (checklist.id === 'd3c8b86c-47a7-4d67-81c0-04985a3753b1') {
+      console.log('[ChecklistCard] id:', checklist.id, 'items:', items.length, 'totalComments:', count,
+        'item[0].checklist_item_comments:', items[0]?.checklist_item_comments)
+    }
+    return count
+  }, [checklist.checklist_items, checklist.id])
 
   return (
     <Link
