@@ -177,7 +177,7 @@ export function KpiCard({
           )}>
             <Icon className="w-4 h-4" />
           </div>
-          <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider leading-none truncate">
+          <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider leading-tight break-words">
             {label}
           </span>
         </div>

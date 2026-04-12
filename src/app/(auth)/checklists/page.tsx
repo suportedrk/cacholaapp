@@ -213,25 +213,25 @@ export default function ChecklistsPage() {
           <div className="flex items-center gap-2">
             <Link
               href="/checklists/minhas-tarefas"
-              className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }))}
+              className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }), 'hidden sm:inline-flex')}
             >
               <ListTodo className="w-4 h-4 mr-1.5" />
               Minhas Tarefas
             </Link>
             <Link
               href="/checklists/recorrencias"
-              className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }))}
+              className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }), 'hidden sm:inline-flex')}
             >
               <RefreshCw className="w-4 h-4 mr-1.5" />
               Recorrências
             </Link>
-            <Button variant="outline" size="sm" onClick={guardedDuplicate}>
+            <Button variant="outline" size="sm" onClick={guardedDuplicate} className="hidden sm:inline-flex">
               <Copy className="w-4 h-4 mr-1.5" />
               Duplicar de evento
             </Button>
             <Link
               href="/checklists/templates"
-              className={cn(buttonVariants({ variant: 'outline', size: 'sm' }))}
+              className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'hidden sm:inline-flex')}
             >
               <LayoutTemplate className="w-4 h-4 mr-1.5" />
               Templates
