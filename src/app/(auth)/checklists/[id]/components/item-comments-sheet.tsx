@@ -208,10 +208,10 @@ export function ItemCommentsSheet({
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Notify parent of count changes
+  // Notify parent of count changes — only while open to avoid reset on close
   useEffect(() => {
-    onCommentsCount?.(comments.length)
-  }, [comments.length, onCommentsCount])
+    if (open) onCommentsCount?.(comments.length)
+  }, [open, comments.length, onCommentsCount])
 
   // Auto-scroll to bottom when sheet opens or comments change
   function scrollToBottom() {
