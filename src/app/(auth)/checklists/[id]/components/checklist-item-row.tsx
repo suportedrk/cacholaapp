@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import {
   format, parseISO, isToday, isTomorrow, isPast, startOfDay,
 } from 'date-fns'
@@ -102,6 +102,12 @@ export function ChecklistItemRow({
   const [commentsCount, setCommentsCount] = useState(
     initialCommentsCount ?? item.checklist_item_comments?.length ?? 0,
   )
+
+  // Sync commentsCount when fresh data arrives (React Query stale-while-revalidate)
+  useEffect(() => {
+    const fresh = initialCommentsCount ?? item.checklist_item_comments?.length ?? 0
+    setCommentsCount((prev) => Math.max(prev, fresh))
+  }, [initialCommentsCount, item.checklist_item_comments?.length])
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
