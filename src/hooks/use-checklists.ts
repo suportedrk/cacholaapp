@@ -42,7 +42,8 @@ const CHECKLIST_DETAIL_SELECT = `
   checklist_items(
     *,
     assigned_user:users!checklist_items_assigned_to_fkey(id, name, avatar_url),
-    done_by_user:users!checklist_items_done_by_fkey(id, name, avatar_url)
+    done_by_user:users!checklist_items_done_by_fkey(id, name, avatar_url),
+    checklist_item_comments(id)
   )
 ` as const
 

@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef } from 'react'
 import {
   format, parseISO, isToday, isTomorrow, isPast, startOfDay,
 } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import {
-  Camera, MessageSquare, Minus, X,
+  Camera, Minus,
   User, Calendar, MoreVertical, Clock, MessageCircle,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -24,16 +24,17 @@ import { PRIORITY_LABELS } from '@/types/database.types'
 export type RichChecklistItem = ChecklistItem & {
   assigned_user?: Pick<UserType, 'id' | 'name' | 'avatar_url'> | null
   done_by_user?:  Pick<UserType, 'id' | 'name' | 'avatar_url'> | null
+  checklist_item_comments?: { id: string }[]
 }
 
 interface ChecklistItemRowProps {
-  item:           RichChecklistItem
-  checklistId:    string
-  onStatusChange: (status: ChecklistItemStatus) => void
-  onNotesChange:  (notes: string) => void
-  onPhotoChange?:  (file: File) => void
-  disabled?:       boolean
-  currentUserId?:  string
+  item:                  RichChecklistItem
+  checklistId:           string
+  initialCommentsCount?: number
+  onStatusChange:        (status: ChecklistItemStatus) => void
+  onPhotoChange?:        (file: File) => void
+  disabled?:             boolean
+  currentUserId?:        string
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -78,8 +79,8 @@ function dueDateInfo(dueAt: string | null): { label: string; cls: string } | nul
 export function ChecklistItemRow({
   item,
   checklistId,
+  initialCommentsCount,
   onStatusChange,
-  onNotesChange,
   onPhotoChange,
   disabled,
   currentUserId: _currentUserId,
@@ -93,17 +94,16 @@ export function ChecklistItemRow({
   const [localDueAt, setLocalDueAt] = useState<string | null>(item.due_at ?? null)
 
   // UI state
-  const [notesOpen,    setNotesOpen]    = useState(!!item.notes)
-  const [localNotes,   setLocalNotes]   = useState(item.notes ?? '')
-  const [justDone,     setJustDone]     = useState(false)
+  const [justDone,      setJustDone]      = useState(false)
   const [assignOpen,    setAssignOpen]    = useState(false)
   const [deadlineOpen,  setDeadlineOpen]  = useState(false)
   const [menuOpen,      setMenuOpen]      = useState(false)
   const [commentsOpen,  setCommentsOpen]  = useState(false)
-  const [commentsCount, setCommentsCount] = useState(0)
+  const [commentsCount, setCommentsCount] = useState(
+    initialCommentsCount ?? item.checklist_item_comments?.length ?? 0,
+  )
 
-  const fileInputRef  = useRef<HTMLInputElement>(null)
-  const notesTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const isDone    = item.status === 'done'
   const isNa      = item.status === 'na'
@@ -123,20 +123,6 @@ export function ChecklistItemRow({
       }
     }
     onStatusChange(next)
-  }
-
-  // ── Notes (1s debounce auto-save) ───────────────────────────
-  const handleNotesChange = useCallback((val: string) => {
-    setLocalNotes(val)
-    clearTimeout(notesTimerRef.current)
-    notesTimerRef.current = setTimeout(() => {
-      if (val !== (item.notes ?? '')) onNotesChange(val)
-    }, 1000)
-  }, [item.notes, onNotesChange])
-
-  function handleNotesBlur() {
-    clearTimeout(notesTimerRef.current)
-    if (localNotes !== (item.notes ?? '')) onNotesChange(localNotes)
   }
 
   // ── Photo ────────────────────────────────────────────────────
@@ -338,42 +324,6 @@ export function ChecklistItemRow({
               />
             )}
 
-            {/* Notes */}
-            {notesOpen ? (
-              <div className="mt-2 space-y-1">
-                <textarea
-                  value={localNotes}
-                  onChange={(e) => handleNotesChange(e.target.value)}
-                  onBlur={handleNotesBlur}
-                  placeholder="Observação sobre este item..."
-                  rows={2}
-                  disabled={disabled}
-                  autoFocus
-                  className="w-full text-sm text-foreground bg-background border border-border rounded-lg px-2.5 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-ring placeholder:text-muted-foreground/50"
-                />
-                <button
-                  onClick={() => { handleNotesBlur(); setNotesOpen(false) }}
-                  className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
-                >
-                  <X className="w-3 h-3" /> Fechar nota
-                </button>
-              </div>
-            ) : !disabled ? (
-              <button
-                onClick={() => setNotesOpen(true)}
-                className={cn(
-                  'mt-1.5 text-xs flex items-center gap-1 transition-colors',
-                  item.notes
-                    ? 'text-primary font-medium'
-                    : 'text-muted-foreground hover:text-foreground',
-                )}
-              >
-                <MessageSquare className="w-3 h-3" />
-                {item.notes ? 'Ver nota' : 'Adicionar nota'}
-              </button>
-            ) : item.notes ? (
-              <p className="mt-1.5 text-xs text-muted-foreground italic">{item.notes}</p>
-            ) : null}
           </div>
 
           {/* ── Right actions ── */}
