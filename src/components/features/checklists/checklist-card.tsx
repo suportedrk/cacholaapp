@@ -1,4 +1,4 @@
-import { memo, useMemo } from 'react'
+import { memo } from 'react'
 import Link from 'next/link'
 import { format, isPast, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -33,11 +33,9 @@ export const ChecklistCard = memo(function ChecklistCard({ checklist }: Checklis
     && checklist.status !== 'cancelled'
     && isPast(parseISO(checklist.due_date!))
 
-  const totalComments = useMemo<number>(() =>
-    (checklist.checklist_items ?? []).reduce(
-      (acc, item) => acc + (item.checklist_item_comments?.length ?? 0), 0
-    )
-  , [checklist.checklist_items])
+  const totalComments = (checklist.checklist_items ?? []).reduce(
+    (acc, item) => acc + (item.checklist_item_comments?.length ?? 0), 0
+  )
 
   return (
     <Link
@@ -64,14 +62,22 @@ export const ChecklistCard = memo(function ChecklistCard({ checklist }: Checklis
             </p>
           )}
         </div>
-        <span
-          className={cn(
-            'inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full border shrink-0',
-            STATUS_CLASS[checklist.status],
+        <div className="flex items-center gap-1.5 shrink-0">
+          {totalComments > 0 && (
+            <span className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
+              <MessageCircle className="w-3.5 h-3.5" />
+              {totalComments}
+            </span>
           )}
-        >
-          {STATUS_LABEL[checklist.status]}
-        </span>
+          <span
+            className={cn(
+              'inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full border shrink-0',
+              STATUS_CLASS[checklist.status],
+            )}
+          >
+            {STATUS_LABEL[checklist.status]}
+          </span>
+        </div>
       </div>
 
       {/* Progresso */}
@@ -101,12 +107,6 @@ export const ChecklistCard = memo(function ChecklistCard({ checklist }: Checklis
         <span className="ml-auto text-foreground font-medium">
           {done}/{total}
         </span>
-        {totalComments > 0 && (
-          <span className="flex items-center gap-1 text-xs text-muted-foreground">
-            <MessageCircle className="w-3.5 h-3.5" />
-            {totalComments}
-          </span>
-        )}
       </div>
     </Link>
   )
