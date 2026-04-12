@@ -7,7 +7,7 @@ import {
 } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import {
-  AlertTriangle, RefreshCw, CalendarDays,
+  AlertTriangle, RefreshCw, CalendarDays, MessageCircle,
 } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ProgressRing } from '@/components/ui/progress-ring'
@@ -84,8 +84,11 @@ export const ChecklistCard = memo(function ChecklistCard({ checklist }: Checklis
   const isActive = checklist.status !== 'completed' && checklist.status !== 'cancelled'
   const isOverdue = isActive && !!checklist.due_date && isPast(parseISO(checklist.due_date))
   const hasRecurrence = checklist.type === 'recurring'
-
   const isCancelledCard = checklist.status === 'cancelled'
+
+  const totalComments = (checklist.checklist_items ?? []).reduce(
+    (acc, item) => acc + (item.checklist_item_comments?.length ?? 0), 0,
+  )
 
   return (
     <Link
@@ -184,6 +187,14 @@ export const ChecklistCard = memo(function ChecklistCard({ checklist }: Checklis
             )}
           >
             {PRIORITY_LABEL[checklist.priority]}
+          </span>
+        )}
+
+        {/* Comment count */}
+        {totalComments > 0 && (
+          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+            <MessageCircle className="w-3.5 h-3.5" />
+            {totalComments}
           </span>
         )}
 
