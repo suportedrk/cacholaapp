@@ -72,7 +72,7 @@ export function SetupChecklistCard() {
       {/* Dismiss */}
       <button
         onClick={handleDismiss}
-        className="absolute top-3 right-3 rounded-lg p-1 text-gray-500 dark:text-gray-400 hover:bg-black/5 dark:hover:bg-white/10 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+        className="absolute top-3 right-3 rounded-lg p-1 text-muted-foreground hover:bg-black/5 dark:hover:bg-white/10 hover:text-foreground transition-colors"
         aria-label="Fechar"
       >
         <X className="w-4 h-4" />
@@ -80,10 +80,10 @@ export function SetupChecklistCard() {
 
       {/* Header */}
       <div className="pr-8 mb-2.5">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+        <h3 className="text-sm font-semibold text-foreground">
           Complete a configuração do Cachola OS
         </h3>
-        <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
+        <p className="text-xs text-muted-foreground mt-0.5">
           {doneCount} de {items.length} etapas concluídas
         </p>
       </div>
@@ -113,20 +113,20 @@ export function SetupChecklistCard() {
               {item.done ? (
                 <CheckCircle2 className="w-4 h-4 shrink-0 text-primary" />
               ) : (
-                <Circle className="w-4 h-4 shrink-0 text-gray-400 dark:text-gray-500" />
+                <Circle className="w-4 h-4 shrink-0 text-muted-foreground" />
               )}
               <span
                 className={cn(
                   'flex-1 font-medium',
                   item.done
-                    ? 'line-through text-gray-500 dark:text-gray-500'
-                    : 'text-gray-800 dark:text-gray-100',
+                    ? 'line-through text-muted-foreground'
+                    : 'text-foreground',
                 )}
               >
                 {item.label}
               </span>
               {!item.done && (
-                <ChevronRight className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 shrink-0" />
+                <ChevronRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
               )}
             </button>
           </li>
