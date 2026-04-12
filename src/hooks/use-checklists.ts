@@ -122,6 +122,13 @@ export function useChecklists(filters: ChecklistFilters = {}) {
       const { data, error, count } = await query
       if (error) throw error
 
+      // DEBUG FALT-06 — remover após confirmar
+      console.log('[useChecklists] items com comments:', (data ?? []).map(c => ({
+        id: c.id, title: (c as Record<string, unknown>).title,
+        items: ((c as Record<string, unknown>).checklist_items as { id: string; checklist_item_comments?: unknown[] }[] | null)
+          ?.map(i => ({ itemId: i.id, comments: i.checklist_item_comments?.length ?? 0 }))
+      })))
+
       return {
         checklists: (data ?? []) as unknown as ChecklistForList[],
         total: count ?? 0,
