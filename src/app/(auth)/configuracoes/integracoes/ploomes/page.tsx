@@ -160,7 +160,7 @@ function WebhookStatusCard() {
 
       {/* Métricas 24h */}
       {logsLoading ? (
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[0, 1, 2, 3].map((i) => (
             <div key={i} className="skeleton-shimmer h-14 rounded-lg" />
           ))}

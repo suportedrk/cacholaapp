@@ -102,7 +102,7 @@ export default function DashboardPage() {
       <SetupChecklistCard />
 
       {/* ── KPI Grid — 5 cards: 2 colunas mobile, 3 tablet, 5 desktop ── */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         <KpiCard
           label="Eventos do Mês"
           value={kpis?.events.value ?? 0}

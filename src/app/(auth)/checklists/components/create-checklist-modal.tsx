@@ -319,7 +319,7 @@ export function CreateChecklistModal({
             <Label className="text-sm font-medium">
               Tipo <span className="text-red-500">*</span>
             </Label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {TYPE_OPTIONS.map(({ value, label, icon }) => (
                 <button
                   key={value}
