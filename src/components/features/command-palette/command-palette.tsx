@@ -31,7 +31,7 @@ interface FlatResult {
 // ── Static data ───────────────────────────────────────────────
 
 const PAGES: FlatResult[] = [
-  { id: 'p-dashboard',    label: 'Dashboard',     sublabel: 'Visão geral das operações',     href: '/dashboard',       group: 'page', iconEl: <LayoutDashboard className="w-4 h-4" /> },
+  { id: 'p-dashboard',    label: 'Início',        sublabel: 'Visão geral das operações',     href: '/dashboard',       group: 'page', iconEl: <LayoutDashboard className="w-4 h-4" /> },
   { id: 'p-eventos',      label: 'Eventos',        sublabel: 'Lista e calendário de eventos', href: '/eventos',          group: 'page', iconEl: <Calendar        className="w-4 h-4" /> },
   { id: 'p-checklists',   label: 'Checklists',     sublabel: 'Checklists e templates',        href: '/checklists',       group: 'page', iconEl: <ClipboardList   className="w-4 h-4" /> },
   { id: 'p-manutencao',   label: 'Manutenção',     sublabel: 'Ordens de serviço',             href: '/manutencao',       group: 'page', iconEl: <Wrench          className="w-4 h-4" /> },

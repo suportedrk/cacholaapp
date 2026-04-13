@@ -296,7 +296,8 @@ docker compose exec supabase-db psql -U postgres -d postgres
 
 | Rota | Status |
 |------|--------|
-| `/dashboard` | ✅ |
+| `/dashboard` | ✅ label "Início" na sidebar (ícone Home) |
+| `/bi` | 🚧 Placeholder "Em breve" — item disabled na sidebar |
 | `/eventos` | ✅ |
 | `/eventos/[id]` | ✅ |
 | `/checklists` | ✅ |
@@ -351,7 +352,15 @@ docker compose exec supabase-db psql -U postgres -d postgres
 | Ploomes | `use-ploomes-sync.ts` | `lib/ploomes/` |
 | Multi-unidade | `use-units.ts` | `stores/unit-store.ts` |
 | Notificações | `use-notifications.ts` | `components/layout/notification-bell.tsx` |
-| Dashboard | `use-dashboard.ts` | `components/features/dashboard/` |
+| Início (ex-Dashboard) | `use-dashboard.ts` | `components/features/dashboard/` |
+
+**Módulo Início (ex-Dashboard) — Fase 1 BI:**
+- Rota: `/dashboard` (label "Início" na sidebar, ícone `Home`)
+- KPIs mantidos: Eventos do Mês, Leads do Mês, Checklists Pendentes
+- KPIs comentados (→ BI Fase 3): Taxa de Conversão, Manutenções Abertas
+- Grid: `grid-cols-1 sm:grid-cols-3` (era 5 colunas)
+- Módulo BI: rota `/bi` (placeholder), item disabled na sidebar com badge "Em breve"
+- `NavItem` ganhou `disabled?: boolean` e `badgeText?: string`
 
 ⚠️ **ChecklistCard da listagem:** `app/(auth)/checklists/components/checklist-card.tsx` (PREMIUM) — não confundir com `components/features/checklists/checklist-card.tsx` (legado, não usado na listagem).
 

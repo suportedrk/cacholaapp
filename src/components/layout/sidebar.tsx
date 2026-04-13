@@ -210,15 +210,18 @@ export function Sidebar({ isOpen, isCollapsed, onClose, onToggleCollapse }: Side
                   const hasActiveChild = item.children?.some((c) => c.href === activeHref) ?? false
                   const isActive = !hasChildren && item.href === activeHref
                   const isExpanded = expandedItems.has(item.href)
+                  const isDisabled = item.disabled === true
 
                   const linkClassName = cn(
                     'flex items-center rounded-lg min-h-[44px]',
                     'transition-all duration-150',
                     'gap-3 px-3 py-2',
                     isCollapsed && 'lg:justify-center lg:px-0 lg:gap-0',
-                    isActive || hasActiveChild
-                      ? 'bg-primary/10 text-primary dark:bg-primary/20'
-                      : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                    isDisabled
+                      ? 'opacity-50 cursor-not-allowed text-muted-foreground'
+                      : isActive || hasActiveChild
+                        ? 'bg-primary/10 text-primary dark:bg-primary/20'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground',
                   )
 
                   const iconEl = (
@@ -337,8 +340,31 @@ export function Sidebar({ isOpen, isCollapsed, onClose, onToggleCollapse }: Side
                           {item.badge > 99 ? '99+' : item.badge}
                         </span>
                       )}
+                      {item.badgeText && (
+                        <span className={cn(
+                          'ml-auto text-[10px] font-medium rounded-full px-1.5 py-0.5 whitespace-nowrap',
+                          'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400',
+                          'transition-[opacity,width] duration-150 overflow-hidden',
+                          isCollapsed ? 'lg:opacity-0 lg:w-0 lg:px-0' : 'opacity-100',
+                        )}>
+                          {item.badgeText}
+                        </span>
+                      )}
                     </>
                   )
+
+                  // Item desabilitado: div em vez de Link (não navega)
+                  if (isDisabled) {
+                    return (
+                      <div
+                        key={item.href}
+                        aria-disabled="true"
+                        className={linkClassName}
+                      >
+                        {linkChildren}
+                      </div>
+                    )
+                  }
 
                   // Tooltip só ativo quando collapsed (desktop)
                   return isCollapsed ? (

@@ -1,5 +1,6 @@
 import type { LucideIcon } from 'lucide-react'
 import {
+  Home,
   LayoutDashboard,
   CalendarDays,
   ClipboardList,
@@ -25,6 +26,10 @@ export interface NavItem {
   icon: LucideIcon
   module?: Module
   badge?: number
+  /** Badge de texto (ex: "Em breve") — exibido como pill ao lado do label */
+  badgeText?: string
+  /** Item desabilitado — exibe opacidade 50%, cursor not-allowed, não navega */
+  disabled?: boolean
   children?: NavItem[]
   /**
    * Roles que podem ver este item.
@@ -68,7 +73,8 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     // Sem label de grupo — itens principais (todos os roles veem)
     items: [
-      { label: 'Dashboard',      href: ROUTES.dashboard,  icon: LayoutDashboard },
+      { label: 'Início',         href: ROUTES.dashboard,  icon: Home },
+      { label: 'BI',             href: '/bi',             icon: BarChart3, disabled: true, badgeText: 'Em breve' },
       { label: 'Eventos',        href: ROUTES.events,     icon: CalendarDays,  module: 'events'    },
       { label: 'Checklists',     href: ROUTES.checklists, icon: ClipboardList, module: 'checklists' },
       { label: 'Minhas Tarefas',   href: ROUTES.myTasks,    icon: ListTodo,     module: 'checklists' },

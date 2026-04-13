@@ -8,7 +8,8 @@ import { ChevronRight, ArrowLeft } from 'lucide-react'
 // Label map — URL segments → display labels
 // ─────────────────────────────────────────────────────────────
 export const SEGMENT_LABELS: Record<string, string> = {
-  dashboard:      'Dashboard',
+  dashboard:      'Início',
+  bi:             'Business Intelligence',
   eventos:        'Eventos',
   checklists:     'Checklists',
   manutencao:     'Manutenção',
