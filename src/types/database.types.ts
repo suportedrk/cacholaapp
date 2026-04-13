@@ -98,6 +98,8 @@ export interface Database {
       // ── Conflito de horário entre eventos (Migration 027) ────────────
       get_event_conflicts:           { Args: { p_unit_id: string }; Returns: { event_id_a: string; event_id_b: string; conflict_date: string; gap_minutes: number }[] }
       get_conflicting_event_ids:     { Args: { p_unit_id: string }; Returns: { event_id: string }[] }
+      // ── BI — Conversão por mês (Migration 041) ──────────────────────────────
+      get_bi_conversion_data:        { Args: { p_unit_id?: string | null; p_months?: number }; Returns: { month: string; total_leads: number; won_leads: number; conversion_rate: number | null }[] }
     }
     Enums: Record<string, never>
   }
