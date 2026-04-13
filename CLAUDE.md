@@ -368,10 +368,23 @@ docker compose exec supabase-db psql -U postgres -d postgres
 **Módulo Início (ex-Dashboard) — Fase 1 BI:**
 - Rota: `/dashboard` (label "Início" na sidebar, ícone `Home`)
 - KPIs mantidos: Eventos do Mês, Leads do Mês, Checklists Pendentes
-- KPIs comentados (→ BI Fase 3): Taxa de Conversão, Manutenções Abertas
+- KPIs comentados (→ BI): Taxa de Conversão, Manutenções Abertas
 - Grid: `grid-cols-1 sm:grid-cols-3` (era 5 colunas)
-- Módulo BI: rota `/bi` (placeholder), item disabled na sidebar com badge "Em breve"
 - `NavItem` ganhou `disabled?: boolean` e `badgeText?: string`
+
+**Módulo BI — `/bi` (Migrations 041 + 042):**
+- Sidebar: item BI ativo, restrito a `REPORT_ROLES` (super_admin, diretor, gerente, financeiro)
+- 4 KPI cards (grid 2×2 desktop / 1-col mobile): Taxa de Conversão, Tempo de Fechamento, Ticket Médio, Receita do Mês
+- Card insight: Antecedência Média de Reserva (dias entre criação do lead e data da festa)
+- Banner compacto: manutenções abertas (link → /manutencao)
+- Tabela mensal expandida: Leads, Ganhos, Conversão, Receita, Ticket Médio, Fechamento, Antecedência
+- RPC `get_bi_conversion_data(p_unit_id, p_months)` — Migration 041
+- RPC `get_bi_sales_metrics(p_unit_id, p_months)` — Migration 042 (receita, ticket, fechamento, antecedência)
+- Hook `useBIConversionData` em `src/hooks/use-bi-conversion.ts`
+- Hook `useBISalesMetrics` em `src/hooks/use-bi-sales-metrics.ts`
+- Ganho = status_id=2 OU stage_id=60004787 (Festa Fechada) — consistente em todos os RPCs
+- avg_closing_days = ploomes_last_update − ploomes_create_date (proxy aproximado, não data exata do fechamento)
+- avg_booking_advance_days = event_date − ploomes_create_date (dias antes da festa)
 
 ⚠️ **ChecklistCard da listagem:** `app/(auth)/checklists/components/checklist-card.tsx` (PREMIUM) — não confundir com `components/features/checklists/checklist-card.tsx` (legado, não usado na listagem).
 
