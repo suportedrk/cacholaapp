@@ -10,6 +10,8 @@ import {
   CalendarClock,
   Wrench,
   ArrowRight,
+  Filter,
+  Building2,
 } from 'lucide-react'
 import Link from 'next/link'
 import { PageHeader } from '@/components/shared/page-header'
@@ -19,9 +21,13 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useBIConversionData } from '@/hooks/use-bi-conversion'
 import { useBISalesMetrics } from '@/hooks/use-bi-sales-metrics'
+import { useBIFunnelData } from '@/hooks/use-bi-funnel'
+import { useBIUnitComparison } from '@/hooks/use-bi-unit-comparison'
 import { useDashboardKpis } from '@/hooks/use-dashboard'
 import { useLoadingTimeout } from '@/hooks/use-loading-timeout'
 import { CHART_COLORS } from '@/lib/constants/brand-colors'
+import { BIFunnel } from '@/components/features/bi/bi-funnel'
+import { BIUnitComparison } from '@/components/features/bi/bi-unit-comparison'
 
 // ── Formatting helpers ────────────────────────────────────────
 
@@ -70,10 +76,14 @@ function KpiSkeleton() {
 
 // ── Main Page ─────────────────────────────────────────────────
 
+const MONTHS = 7
+
 export default function BIPage() {
-  const conversion   = useBIConversionData(7)
-  const salesMetrics = useBISalesMetrics(7)
-  const kpis         = useDashboardKpis()
+  const conversion    = useBIConversionData(MONTHS)
+  const salesMetrics  = useBISalesMetrics(MONTHS)
+  const funnel        = useBIFunnelData()
+  const unitComparison = useBIUnitComparison(MONTHS)
+  const kpis          = useDashboardKpis()
 
   const isLoading = conversion.isLoading || salesMetrics.isLoading || kpis.isLoading
   const isError   = conversion.isError   || salesMetrics.isError
@@ -121,6 +131,8 @@ export default function BIPage() {
             onClick={() => {
               conversion.refetch()
               salesMetrics.refetch()
+              funnel.refetch()
+              unitComparison.refetch()
               kpis.refetch()
             }}
           >
@@ -296,6 +308,86 @@ export default function BIPage() {
           </Link>
         </div>
       )}
+
+      {/* ── Funil do Pipeline ── */}
+      <div className="rounded-xl border border-border-default bg-card overflow-hidden">
+        <div className="px-4 py-3 border-b border-border-default flex items-center gap-2">
+          <Filter className="w-4 h-4 text-text-tertiary" />
+          <div>
+            <h2 className="text-sm font-semibold text-text-primary">Funil do Pipeline</h2>
+            <p className="text-xs text-text-secondary mt-0.5">
+              Distribuição acumulada de todos os deals por stage
+            </p>
+          </div>
+        </div>
+        <div className="p-4">
+          {funnel.isLoading ? (
+            <div className="space-y-4">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="space-y-1.5">
+                  <div className="flex justify-between">
+                    <Skeleton className="h-3 w-40 skeleton-shimmer" />
+                    <Skeleton className="h-3 w-8 skeleton-shimmer" />
+                  </div>
+                  <Skeleton className="h-5 w-full skeleton-shimmer" />
+                </div>
+              ))}
+            </div>
+          ) : funnel.isError ? (
+            <p className="text-sm text-text-secondary py-4 text-center">
+              Não foi possível carregar o funil.
+            </p>
+          ) : (funnel.data?.stages.length ?? 0) === 0 ? (
+            <p className="text-sm text-text-secondary py-4 text-center">
+              Nenhum deal encontrado.
+            </p>
+          ) : (
+            <BIFunnel
+              stages={funnel.data!.stages}
+              totalDeals={funnel.data!.totalDeals}
+            />
+          )}
+        </div>
+      </div>
+
+      {/* ── Comparativo entre Unidades ── */}
+      <div className="rounded-xl border border-border-default bg-card overflow-hidden">
+        <div className="px-4 py-3 border-b border-border-default flex items-center gap-2">
+          <Building2 className="w-4 h-4 text-text-tertiary" />
+          <div>
+            <h2 className="text-sm font-semibold text-text-primary">Comparativo entre Unidades</h2>
+            <p className="text-xs text-text-secondary mt-0.5">
+              Métricas dos últimos {MONTHS} meses por unidade
+            </p>
+          </div>
+        </div>
+        {unitComparison.isLoading ? (
+          <div className="p-4 space-y-3">
+            {Array.from({ length: 2 }).map((_, i) => (
+              <div key={i} className="flex items-center justify-between gap-3">
+                <Skeleton className="h-4 w-40 skeleton-shimmer" />
+                <Skeleton className="h-4 w-12 skeleton-shimmer" />
+                <Skeleton className="h-4 w-12 skeleton-shimmer" />
+                <Skeleton className="h-4 w-16 skeleton-shimmer" />
+                <Skeleton className="h-4 w-16 skeleton-shimmer" />
+              </div>
+            ))}
+          </div>
+        ) : unitComparison.isError ? (
+          <p className="text-sm text-text-secondary py-6 text-center px-4">
+            Não foi possível carregar o comparativo.
+          </p>
+        ) : (unitComparison.data?.length ?? 0) === 0 ? (
+          <p className="text-sm text-text-secondary py-6 text-center px-4">
+            Nenhuma unidade encontrada.
+          </p>
+        ) : (
+          <BIUnitComparison
+            rows={unitComparison.data!}
+            months={MONTHS}
+          />
+        )}
+      </div>
 
       {/* ── Monthly Table ── */}
       <div className="rounded-xl border border-border-default bg-card overflow-hidden">

@@ -102,6 +102,10 @@ export interface Database {
       get_bi_conversion_data:        { Args: { p_unit_id?: string | null; p_months?: number }; Returns: { month: string; total_leads: number; won_leads: number; conversion_rate: number | null }[] }
       // ── BI — Métricas de vendas por mês (Migration 042) ─────────────────────
       get_bi_sales_metrics:          { Args: { p_unit_id?: string | null; p_months?: number }; Returns: { month: string; won_deals: number; total_revenue: number; avg_ticket: number | null; avg_closing_days: number | null; avg_booking_advance_days: number | null }[] }
+      // ── BI — Funil por stage (Migration 043) ────────────────────────────────
+      get_bi_funnel_data:            { Args: { p_unit_id?: string | null }; Returns: { stage_id: number; stage_name: string; total: number; em_aberto: number; ganhos: number; perdidos: number }[] }
+      // ── BI — Comparativo entre unidades (Migration 043) ─────────────────────
+      get_bi_unit_comparison:        { Args: { p_months?: number }; Returns: { unit_id: string; unit_name: string; total_leads: number; won_leads: number; conversion_rate: number | null; total_revenue: number; avg_ticket: number | null; avg_closing_days: number | null; avg_booking_advance: number | null }[] }
     }
     Enums: Record<string, never>
   }
