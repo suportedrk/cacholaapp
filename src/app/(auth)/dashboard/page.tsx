@@ -4,7 +4,8 @@ import { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek } from 'date-fns'
 import {
-  Calendar, TrendingUp, UserPlus, AlertTriangle, ClipboardList, WifiOff,
+  Calendar, UserPlus, ClipboardList, WifiOff,
+  // TrendingUp, AlertTriangle — Movidos para módulo BI (Fase 3)
 } from 'lucide-react'
 import { PageHeader } from '@/components/shared/page-header'
 import { KpiCard } from '@/components/features/dashboard/kpi-card'
@@ -75,10 +76,10 @@ export default function DashboardPage() {
     setGreeting(h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite')
   }, [])
 
-  // Dynamic maintenance color: red if > 5 open orders
-  const mnValue = kpis?.maintenance.value ?? 0
-  const mnStroke    = mnValue > 5 ? STROKE.red   : STROKE.orange
-  const mnIconClass = mnValue > 5 ? 'icon-red'   : 'icon-orange'
+  // TODO: Mover para módulo BI — manutenção e conversão ficam lá
+  // const mnValue = kpis?.maintenance.value ?? 0
+  // const mnStroke    = mnValue > 5 ? STROKE.red   : STROKE.orange
+  // const mnIconClass = mnValue > 5 ? 'icon-red'   : 'icon-orange'
 
   if (isTimedOut) {
     return (
@@ -101,8 +102,9 @@ export default function DashboardPage() {
       {/* ── Setup checklist (admins) ── */}
       <SetupChecklistCard />
 
-      {/* ── KPI Grid — 5 cards: 2 colunas mobile, 3 tablet, 5 desktop ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+      {/* ── KPI Grid — 3 cards operacionais: 1 coluna mobile, 3 tablet/desktop ── */}
+      {/* KPIs estratégicos (Taxa de Conversão, Manutenções Abertas) movidos para módulo BI */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <KpiCard
           label="Eventos do Mês"
           value={kpis?.events.value ?? 0}
@@ -115,6 +117,7 @@ export default function DashboardPage() {
           isLoading={loadingKpis}
           className="animate-fade-up [animation-delay:0ms]"
         />
+        {/* Taxa de Conversão — Movido para módulo BI (Fase 3)
         <KpiCard
           label="Taxa de Conversão"
           value={`${kpis?.conversion.value ?? 0}%`}
@@ -126,7 +129,7 @@ export default function DashboardPage() {
           href="/eventos"
           isLoading={loadingKpis}
           className="animate-fade-up [animation-delay:50ms]"
-        />
+        /> */}
         <KpiCard
           label="Leads do Mês"
           value={kpis?.leads.value ?? 0}
@@ -139,6 +142,7 @@ export default function DashboardPage() {
           isLoading={loadingKpis}
           className="animate-fade-up [animation-delay:100ms]"
         />
+        {/* Manutenções Abertas — Movido para módulo BI (Fase 3)
         <KpiCard
           label="Manutenções Abertas"
           value={kpis?.maintenance.value ?? 0}
@@ -151,8 +155,7 @@ export default function DashboardPage() {
           href="/manutencao"
           isLoading={loadingKpis}
           className="animate-fade-up [animation-delay:150ms]"
-        />
-        {/* 5º card: col-span-2 no mobile para preencher a linha; normal no md/lg */}
+        /> */}
         <KpiCard
           label="Checklists Pendentes"
           value={kpis?.checklists.value ?? 0}
@@ -164,7 +167,7 @@ export default function DashboardPage() {
           invertTrend
           href="/checklists"
           isLoading={loadingKpis}
-          className="animate-fade-up [animation-delay:200ms] col-span-2 md:col-span-1"
+          className="animate-fade-up [animation-delay:200ms]"
         />
       </div>
 
