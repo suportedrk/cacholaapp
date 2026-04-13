@@ -32,6 +32,7 @@ import { useUnitStore } from '@/stores/unit-store'
 import { CHART_COLORS } from '@/lib/constants/brand-colors'
 import { BIFunnel } from '@/components/features/bi/bi-funnel'
 import { BIUnitComparison } from '@/components/features/bi/bi-unit-comparison'
+import { BITrendCharts } from '@/components/features/bi/bi-trend-charts'
 import { exportBIReport } from '@/lib/bi/export-bi-report'
 
 // ── Formatting helpers ────────────────────────────────────────
@@ -79,18 +80,30 @@ function KpiSkeleton() {
   )
 }
 
+// ── Period options ────────────────────────────────────────────
+
+const PERIOD_OPTIONS = [
+  { label: '3M',   value: 3  },
+  { label: '6M',   value: 6  },
+  { label: '12M',  value: 12 },
+  { label: 'Tudo', value: 24 },
+] as const
+
+type PeriodValue = typeof PERIOD_OPTIONS[number]['value']
+
 // ── Main Page ─────────────────────────────────────────────────
 
-const MONTHS = 7
-
 export default function BIPage() {
-  const conversion     = useBIConversionData(MONTHS)
-  const salesMetrics   = useBISalesMetrics(MONTHS)
+  const [selectedMonths, setSelectedMonths] = useState<PeriodValue>(6)
+
+  // +1 so we always have the previous month available for trend calculation
+  const conversion     = useBIConversionData(selectedMonths + 1)
+  const salesMetrics   = useBISalesMetrics(selectedMonths + 1)
   const funnel         = useBIFunnelData()
-  const unitComparison = useBIUnitComparison(MONTHS)
+  const unitComparison = useBIUnitComparison(selectedMonths)
   const { activeUnit } = useUnitStore()
   const [isExporting, setIsExporting] = useState(false)
-  const kpis          = useDashboardKpis()
+  const kpis           = useDashboardKpis()
 
   const isLoading = conversion.isLoading || salesMetrics.isLoading || kpis.isLoading
   const isError   = conversion.isError   || salesMetrics.isError
@@ -191,7 +204,7 @@ export default function BIPage() {
   // Union of months from both sources, sorted newest first
   const allMonths = Array.from(
     new Set([...conversionMap.keys(), ...salesMap.keys()]),
-  ).sort((a, b) => b.localeCompare(a)).slice(0, 6)
+  ).sort((a, b) => b.localeCompare(a)).slice(0, selectedMonths)
 
   const tableRows: MergedRow[] = allMonths.map((month) => {
     const c = conversionMap.get(month)
@@ -220,10 +233,30 @@ export default function BIPage() {
         title="Business Intelligence"
         description="Análise de conversão e operações"
         actions={
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExport}
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Period pills */}
+            <div className="flex items-center gap-1 bg-surface-secondary rounded-lg p-0.5 border border-border-default">
+              {PERIOD_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setSelectedMonths(opt.value)}
+                  className={cn(
+                    'px-2.5 py-1 rounded-md text-xs font-semibold transition-colors',
+                    selectedMonths === opt.value
+                      ? 'bg-primary text-primary-foreground shadow-xs'
+                      : 'text-text-secondary hover:text-text-primary hover:bg-surface-tertiary',
+                  )}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Export button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExport}
             disabled={!canExport || isExporting}
             className="gap-1.5"
           >
@@ -234,6 +267,7 @@ export default function BIPage() {
             )}
             {isExporting ? 'Gerando…' : 'Exportar Excel'}
           </Button>
+          </div>
         }
       />
 
@@ -352,6 +386,13 @@ export default function BIPage() {
         </div>
       )}
 
+      {/* ── Gráficos de Tendência ── */}
+      <BITrendCharts
+        conversionRows={conversion.data?.rows ?? []}
+        salesRows={salesMetrics.data?.rows ?? []}
+        isLoading={isLoading}
+      />
+
       {/* ── Funil do Pipeline ── */}
       <div className="rounded-xl border border-border-default bg-card overflow-hidden">
         <div className="px-4 py-3 border-b border-border-default flex items-center gap-2">
@@ -400,7 +441,7 @@ export default function BIPage() {
           <div>
             <h2 className="text-sm font-semibold text-text-primary">Comparativo entre Unidades</h2>
             <p className="text-xs text-text-secondary mt-0.5">
-              Métricas dos últimos {MONTHS} meses por unidade
+              Métricas dos últimos {selectedMonths} meses por unidade
             </p>
           </div>
         </div>
@@ -427,7 +468,7 @@ export default function BIPage() {
         ) : (
           <BIUnitComparison
             rows={unitComparison.data!}
-            months={MONTHS}
+            months={selectedMonths}
           />
         )}
       </div>
