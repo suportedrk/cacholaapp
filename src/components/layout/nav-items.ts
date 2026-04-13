@@ -74,7 +74,7 @@ export const NAV_GROUPS: NavGroup[] = [
     // Sem label de grupo — itens principais (todos os roles veem)
     items: [
       { label: 'Início',         href: ROUTES.dashboard,  icon: Home },
-      { label: 'BI',             href: '/bi',             icon: BarChart3, disabled: true, badgeText: 'Em breve' },
+      { label: 'BI',             href: '/bi',             icon: BarChart3, allowedRoles: REPORT_ROLES },
       { label: 'Eventos',        href: ROUTES.events,     icon: CalendarDays,  module: 'events'    },
       { label: 'Checklists',     href: ROUTES.checklists, icon: ClipboardList, module: 'checklists' },
       { label: 'Minhas Tarefas',   href: ROUTES.myTasks,    icon: ListTodo,     module: 'checklists' },
