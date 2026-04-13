@@ -100,6 +100,8 @@ export interface Database {
       get_conflicting_event_ids:     { Args: { p_unit_id: string }; Returns: { event_id: string }[] }
       // ── BI — Conversão por mês (Migration 041) ──────────────────────────────
       get_bi_conversion_data:        { Args: { p_unit_id?: string | null; p_months?: number }; Returns: { month: string; total_leads: number; won_leads: number; conversion_rate: number | null }[] }
+      // ── BI — Métricas de vendas por mês (Migration 042) ─────────────────────
+      get_bi_sales_metrics:          { Args: { p_unit_id?: string | null; p_months?: number }; Returns: { month: string; won_deals: number; total_revenue: number; avg_ticket: number | null; avg_closing_days: number | null; avg_booking_advance_days: number | null }[] }
     }
     Enums: Record<string, never>
   }
