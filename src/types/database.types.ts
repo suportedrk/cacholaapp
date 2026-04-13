@@ -56,6 +56,7 @@ export interface Database {
       ploomes_sync_log:      { Row: PloomesSyncLog;        Insert: Partial<PloomesSyncLog>;        Update: Partial<PloomesSyncLog>;        Relationships: [] }
       ploomes_unit_mapping:  { Row: PloomesUnitMapping;    Insert: Partial<PloomesUnitMapping>;    Update: Partial<PloomesUnitMapping>;    Relationships: [] }
       ploomes_webhook_log:   { Row: PloomesWebhookLog;     Insert: Partial<PloomesWebhookLog>;     Update: Partial<PloomesWebhookLog>;     Relationships: [] }
+      ploomes_deals:         { Row: PloomesDealsRow;        Insert: Partial<PloomesDealsRow>;       Update: Partial<PloomesDealsRow>;       Relationships: [] }
       // Prestadores de Serviços (Migration 021)
       service_categories:   { Row: ServiceCategory;     Insert: Partial<ServiceCategory>;    Update: Partial<ServiceCategory>;    Relationships: [] }
       service_providers:    { Row: ServiceProvider;     Insert: Partial<ServiceProvider>;    Update: Partial<ServiceProvider>;    Relationships: [] }
@@ -905,6 +906,27 @@ export type PloomesWebhookLog = {
   raw_payload: Record<string, unknown> | null
   sync_log_id: string | null
   created_at: string
+}
+
+export type PloomesDealsRow = {
+  id: string
+  ploomes_deal_id: number
+  title: string | null
+  contact_name: string | null
+  contact_email: string | null
+  contact_phone: string | null
+  deal_amount: number | null
+  stage_id: number
+  stage_name: string | null
+  status_id: number
+  status_name: string | null
+  unit_id: string | null
+  ploomes_create_date: string
+  ploomes_last_update: string | null
+  event_date: string | null
+  event_id: string | null
+  created_at: string
+  updated_at: string
 }
 
 // ─────────────────────────────────────────────────────────────

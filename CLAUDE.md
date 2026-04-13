@@ -354,6 +354,17 @@ docker compose exec supabase-db psql -U postgres -d postgres
 | Notificações | `use-notifications.ts` | `components/layout/notification-bell.tsx` |
 | Início (ex-Dashboard) | `use-dashboard.ts` | `components/features/dashboard/` |
 
+**Tabela ploomes_deals — Dados para BI (Migration 040):**
+- Tabela: `ploomes_deals` — todos os deals do pipeline (all stages, sem filtro StageId)
+- Campos-chave: `ploomes_deal_id`, `ploomes_create_date`, `stage_id`, `status_id`, `unit_id`, `event_date`, `event_id`
+- Status real Ploomes: 1=Em aberto, 2=Ganho, 3=Perdido
+- Sync paralelo: `syncDealsForBI()` em `src/lib/ploomes/sync-deals.ts`
+- Cron: executa após sync de eventos no mesmo `/api/cron/ploomes-sync`
+- Paginação OData: `$skip` loop, `$top=100`, sem filtro de StageId
+- RLS: `unit_id = ANY(get_user_unit_ids())` (retorna `uuid[]`, não `SETOF`)
+- FieldKey data da festa: `deal_7CE92372-4576-498E-B8F6-E7A863348288`
+- FieldKey unidade: `deal_A583075F-D19C-4034-A479-36625C621660`
+
 **Módulo Início (ex-Dashboard) — Fase 1 BI:**
 - Rota: `/dashboard` (label "Início" na sidebar, ícone `Home`)
 - KPIs mantidos: Eventos do Mês, Leads do Mês, Checklists Pendentes
