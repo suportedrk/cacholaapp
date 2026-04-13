@@ -386,6 +386,15 @@ docker compose exec supabase-db psql -U postgres -d postgres
 - avg_closing_days = ploomes_last_update − ploomes_create_date (proxy aproximado, não data exata do fechamento)
 - avg_booking_advance_days = event_date − ploomes_create_date (dias antes da festa)
 
+**Módulo BI — Drill-down no Funil:**
+- Clicar em qualquer stage do funil abre slide-over com lista de deals
+- Hook: `useStageDrilldownDeals` — query direta em `ploomes_deals`, paginação server-side (20/pág via `.range()`), busca ilike em title+contact_name, filtro por status_id, `placeholderData: keepPreviousData`
+- Componente: `StageDrilldown` (Sheet, lado direito, 512px) em `src/components/features/bi/stage-drilldown.tsx`
+- Componente: `DrilldownDealCard` com badge de status, valor, data criação, event_date, link externo Ploomes
+- Filtros: pills Todos/Em aberto/Ganhos/Perdidos + busca por nome (debounce 300ms)
+- Link externo: `https://app10.ploomes.com/deal/{ploomes_deal_id}`
+- Estado no `BIFunnel`: `selectedStage` controla qual stage está aberto no slide-over
+
 ⚠️ **ChecklistCard da listagem:** `app/(auth)/checklists/components/checklist-card.tsx` (PREMIUM) — não confundir com `components/features/checklists/checklist-card.tsx` (legado, não usado na listagem).
 
 ---
