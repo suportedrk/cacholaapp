@@ -11,6 +11,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { syncDeals } from '@/lib/ploomes/sync'
+import { syncDealsForBI } from '@/lib/ploomes/sync-deals'
 
 const CRON_SECRET = process.env.CRON_SECRET ?? ''
 const MAX_CONSECUTIVE_ERRORS = 3
@@ -51,7 +52,10 @@ export async function GET(req: NextRequest) {
       })
     }
 
-    return NextResponse.json({ success: true, result })
+    // ── NOVO: Sync de todos os deals para o módulo BI ──
+    const biResult = await syncDealsForBI(supabase, null)
+
+    return NextResponse.json({ success: true, result, bi: biResult })
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     console.error('[cron/ploomes-sync] Erro fatal:', message)

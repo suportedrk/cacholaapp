@@ -55,11 +55,21 @@ export type PloomesDeal = {
   OwnerId?: number
   Amount?: number
   StageId?: number
+  Stage?: { Id: number; Name: string }
   StatusId?: number
   CreateDate?: string
   LastUpdateDate?: string
   OtherProperties?: PloomesOtherProperty[]
   Attachments?: PloomesAttachment[]
+}
+
+/** Resultado de um sync de deals para BI */
+export type DealsBISyncResult = {
+  total: number
+  created: number
+  updated: number
+  errors: number
+  durationMs: number
 }
 
 /** Stage de um pipeline */

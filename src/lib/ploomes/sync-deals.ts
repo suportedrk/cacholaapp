@@ -1,0 +1,156 @@
+// ============================================================
+// Ploomes CRM — Sync expandido de TODOS os deals para BI
+// ============================================================
+// syncDealsForBI(): busca TODOS os deals do pipeline (sem filtro
+// de stage) e faz upsert em public.ploomes_deals.
+//
+// Sync PARALELO ao syncDeals (events). NÃO altera events.
+// O cron executa ambos em sequência.
+
+import type { SupabaseClient } from '@supabase/supabase-js'
+import type { Database } from '@/types/database.types'
+import { ploomesGet } from './client'
+import { loadPloomesConfig, resolveUnitId } from './sync'
+import type { PloomesDeal, DealsBISyncResult } from './types'
+
+type AdminClient = SupabaseClient<Database>
+
+// FieldKeys completos dos campos que usamos
+const FIELD_KEY_EVENT_DATE = 'deal_7CE92372-4576-498E-B8F6-E7A863348288'
+const FIELD_KEY_UNIT       = 'deal_A583075F-D19C-4034-A479-36625C621660'
+
+// Status IDs do Ploomes
+const STATUS_NAMES: Record<number, string> = {
+  1: 'Em aberto',
+  2: 'Ganho',
+  3: 'Perdido',
+}
+
+function getStatusName(statusId: number): string {
+  return STATUS_NAMES[statusId] ?? `Desconhecido (${statusId})`
+}
+
+function extractEventDate(deal: PloomesDeal): string | null {
+  const prop = deal.OtherProperties?.find((p) => p.FieldKey === FIELD_KEY_EVENT_DATE)
+  if (!prop?.DateTimeValue) return null
+  return prop.DateTimeValue.split('T')[0] // YYYY-MM-DD
+}
+
+function extractUnitName(deal: PloomesDeal): string | undefined {
+  const prop = deal.OtherProperties?.find((p) => p.FieldKey === FIELD_KEY_UNIT)
+  return prop?.ObjectValueName ?? undefined
+}
+
+export async function syncDealsForBI(
+  supabase: AdminClient,
+  unitId?: string | null,
+): Promise<DealsBISyncResult> {
+  const startedAt = Date.now()
+  const result: DealsBISyncResult = { total: 0, created: 0, updated: 0, errors: 0, durationMs: 0 }
+
+  try {
+    // 1. Carregar config do banco (mesma lógica do sync de eventos)
+    const dbConfig = await loadPloomesConfig(supabase, unitId ?? null)
+    const pipelineId = dbConfig?.pipeline_id ?? parseInt(process.env.PLOOMES_PIPELINE_ID ?? '60000636', 10)
+    const userKey    = dbConfig?.user_key || process.env.PLOOMES_USER_KEY || ''
+
+    if (!userKey) {
+      console.error('[BI Sync] User-Key do Ploomes não configurada.')
+      result.errors++
+      result.durationMs = Date.now() - startedAt
+      return result
+    }
+
+    // 2. Buscar TODOS os deals do pipeline com paginação OData
+    const allDeals: PloomesDeal[] = []
+    const pageSize = 100
+    let skip = 0
+
+    while (true) {
+      const queryParts = [
+        `$filter=PipelineId eq ${pipelineId}`,
+        `$select=Id,Title,ContactId,Amount,StageId,StatusId,CreateDate,LastUpdateDate`,
+        `$expand=OtherProperties,Contact($select=Id,Name,Email,Phones),Stage($select=Id,Name)`,
+        `$top=${pageSize}`,
+        `$skip=${skip}`,
+        `$orderby=CreateDate desc`,
+      ].join('&')
+
+      const response = await ploomesGet<PloomesDeal>(`Deals?${queryParts}`, userKey)
+      const page = response.value ?? []
+      allDeals.push(...page)
+
+      if (page.length < pageSize) break
+      skip += pageSize
+    }
+
+    result.total = allDeals.length
+    console.info(`[BI Sync] ${allDeals.length} deals encontrados no pipeline ${pipelineId}`)
+
+    // 3. Upsert em ploomes_deals
+    for (const deal of allDeals) {
+      try {
+        if (!deal.Id || !deal.StageId || !deal.StatusId || !deal.CreateDate) {
+          console.warn(`[BI Sync] Deal inválido (campos obrigatórios ausentes):`, deal.Id)
+          result.errors++
+          continue
+        }
+
+        const unitName  = extractUnitName(deal)
+        const dealUnitId = await resolveUnitId(supabase, unitName)
+
+        // Se sync scoped a uma unidade, pular deals de outras unidades
+        if (unitId && dealUnitId !== unitId) continue
+
+        const eventDate = extractEventDate(deal)
+
+        // Verificar se já existe evento vinculado
+        const { data: existingEvent } = await supabase
+          .from('events')
+          .select('id')
+          .eq('ploomes_deal_id', String(deal.Id))
+          .maybeSingle()
+
+        const { error } = await supabase
+          .from('ploomes_deals')
+          .upsert(
+            {
+              ploomes_deal_id:    deal.Id,
+              title:              deal.Title ?? null,
+              contact_name:       deal.Contact?.Name ?? null,
+              contact_email:      deal.Contact?.Email ?? null,
+              contact_phone:      deal.Contact?.Phones?.[0]?.PhoneNumber ?? null,
+              deal_amount:        deal.Amount ?? null,
+              stage_id:           deal.StageId,
+              stage_name:         deal.Stage?.Name ?? null,
+              status_id:          deal.StatusId,
+              status_name:        getStatusName(deal.StatusId),
+              unit_id:            dealUnitId,
+              ploomes_create_date: deal.CreateDate,
+              ploomes_last_update: deal.LastUpdateDate ?? null,
+              event_date:         eventDate,
+              event_id:           existingEvent?.id ?? null,
+            },
+            { onConflict: 'ploomes_deal_id' },
+          )
+
+        if (error) {
+          result.errors++
+          console.error(`[BI Sync] Erro ao upsert deal ${deal.Id}:`, error.message)
+        } else {
+          result.created++
+        }
+      } catch (err) {
+        result.errors++
+        console.error(`[BI Sync] Exception deal ${deal.Id}:`, err)
+      }
+    }
+  } catch (err) {
+    result.errors++
+    console.error('[BI Sync] Erro fatal:', err)
+  }
+
+  result.durationMs = Date.now() - startedAt
+  console.info(`[BI Sync] Concluído — total:${result.total} ok:${result.created} erros:${result.errors} (${result.durationMs}ms)`)
+  return result
+}

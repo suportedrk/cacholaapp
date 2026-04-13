@@ -70,7 +70,7 @@ async function getSystemUserId(supabase: AdminClient): Promise<string> {
  * 2. Fallback: ilike em `units.name` (compatibilidade)
  * 3. Fallback: primeira unidade ativa
  */
-async function resolveUnitId(
+export async function resolveUnitId(
   supabase: AdminClient,
   unitName?: string,
 ): Promise<string | null> {
