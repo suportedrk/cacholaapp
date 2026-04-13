@@ -395,6 +395,16 @@ docker compose exec supabase-db psql -U postgres -d postgres
 - Link externo: `https://app10.ploomes.com/deal/{ploomes_deal_id}`
 - Estado no `BIFunnel`: `selectedStage` controla qual stage está aberto no slide-over
 
+**Módulo BI — Filtro de Período + Gráficos de Tendência:**
+- Filtro de período: pills [3M] [6M] [12M] [Tudo] no header, `selectedMonths` state (default 6)
+- Hooks passam `selectedMonths + 1` para conversão/vendas (+1 para mês anterior calcular variação)
+- Funil NÃO é afetado (snapshot total) — apenas conversão, vendas, comparativo e tabela
+- `BITrendCharts` em `src/components/features/bi/bi-trend-charts.tsx`: AreaChart (conversão) + BarChart (receita)
+- Recharts: usa `useChartWidth` (ResizeObserver) + explicit `width=` (não `ResponsiveContainer`)
+- Cores: hex only (`#22c55e` conversão, `#f59e0b` receita, `#94A3B8` eixos)
+- Tooltip usa `var(--card)` e `var(--border)` para dark mode
+- Exportação Excel respeita o período selecionado (dados já filtrados nos hooks)
+
 **Módulo BI — Exportação Excel:**
 - Botão "Exportar Excel" no header da página `/bi` (PageHeader `actions`)
 - Gera `.xlsx` 100% client-side via SheetJS (`xlsx` já instalado) com dynamic import
