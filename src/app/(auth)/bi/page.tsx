@@ -12,8 +12,11 @@ import {
   ArrowRight,
   Filter,
   Building2,
+  Download,
+  Loader2,
 } from 'lucide-react'
 import Link from 'next/link'
+import { useState } from 'react'
 import { PageHeader } from '@/components/shared/page-header'
 import { KpiCard } from '@/components/features/dashboard/kpi-card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -25,9 +28,11 @@ import { useBIFunnelData } from '@/hooks/use-bi-funnel'
 import { useBIUnitComparison } from '@/hooks/use-bi-unit-comparison'
 import { useDashboardKpis } from '@/hooks/use-dashboard'
 import { useLoadingTimeout } from '@/hooks/use-loading-timeout'
+import { useUnitStore } from '@/stores/unit-store'
 import { CHART_COLORS } from '@/lib/constants/brand-colors'
 import { BIFunnel } from '@/components/features/bi/bi-funnel'
 import { BIUnitComparison } from '@/components/features/bi/bi-unit-comparison'
+import { exportBIReport } from '@/lib/bi/export-bi-report'
 
 // ── Formatting helpers ────────────────────────────────────────
 
@@ -79,10 +84,12 @@ function KpiSkeleton() {
 const MONTHS = 7
 
 export default function BIPage() {
-  const conversion    = useBIConversionData(MONTHS)
-  const salesMetrics  = useBISalesMetrics(MONTHS)
-  const funnel        = useBIFunnelData()
+  const conversion     = useBIConversionData(MONTHS)
+  const salesMetrics   = useBISalesMetrics(MONTHS)
+  const funnel         = useBIFunnelData()
   const unitComparison = useBIUnitComparison(MONTHS)
+  const { activeUnit } = useUnitStore()
+  const [isExporting, setIsExporting] = useState(false)
   const kpis          = useDashboardKpis()
 
   const isLoading = conversion.isLoading || salesMetrics.isLoading || kpis.isLoading
@@ -109,6 +116,24 @@ export default function BIPage() {
     : '—'
 
   const maintenance = kpis.data?.maintenance
+
+  // ── Export handler ────────────────────────────────────────
+  async function handleExport() {
+    if (!conversion.data || !salesMetrics.data) return
+    setIsExporting(true)
+    try {
+      await exportBIReport({
+        conversion:     conversion.data,
+        sales:          salesMetrics.data,
+        funnel:         funnel.data ?? { stages: [], totalDeals: 0 },
+        unitComparison: unitComparison.data ?? [],
+        unitName:       activeUnit?.name ?? 'Todas as unidades',
+        exportDate:     new Date(),
+      })
+    } finally {
+      setIsExporting(false)
+    }
+  }
 
   // ── Error / timeout state ─────────────────────────────────
   if ((isError || isTimeout) && !conversion.data && !salesMetrics.data) {
@@ -187,11 +212,29 @@ export default function BIPage() {
   const advanceCurrent  = salesMetrics.data?.currentMonth?.avg_booking_advance_days
   const advancePrevious = salesMetrics.data?.previousMonth?.avg_booking_advance_days
 
+  const canExport = !!conversion.data && !!salesMetrics.data
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Business Intelligence"
         description="Análise de conversão e operações"
+        actions={
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExport}
+            disabled={!canExport || isExporting}
+            className="gap-1.5"
+          >
+            {isExporting ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Download className="w-4 h-4" />
+            )}
+            {isExporting ? 'Gerando…' : 'Exportar Excel'}
+          </Button>
+        }
       />
 
       {/* ── 4 KPI Cards — 2×2 grid ── */}

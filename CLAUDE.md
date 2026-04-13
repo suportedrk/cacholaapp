@@ -395,6 +395,15 @@ docker compose exec supabase-db psql -U postgres -d postgres
 - Link externo: `https://app10.ploomes.com/deal/{ploomes_deal_id}`
 - Estado no `BIFunnel`: `selectedStage` controla qual stage está aberto no slide-over
 
+**Módulo BI — Exportação Excel:**
+- Botão "Exportar Excel" no header da página `/bi` (PageHeader `actions`)
+- Gera `.xlsx` 100% client-side via SheetJS (`xlsx` já instalado) com dynamic import
+- 4 abas: Resumo (KPIs do mês atual), Desempenho Mensal, Funil do Pipeline, Comparativo Unidades
+- Valores numéricos (não formatados) para cálculos no Excel; conversão como decimal com `z: '0.00%'`
+- Comparativo transposto: métricas = linhas, unidades = colunas
+- Nome do arquivo: `BI_Cachola_{unidade}_{YYYY-MM-DD}.xlsx`
+- Utility em `src/lib/bi/export-bi-report.ts`; estado `isExporting` com spinner no botão
+
 ⚠️ **ChecklistCard da listagem:** `app/(auth)/checklists/components/checklist-card.tsx` (PREMIUM) — não confundir com `components/features/checklists/checklist-card.tsx` (legado, não usado na listagem).
 
 ---
