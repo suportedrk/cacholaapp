@@ -57,7 +57,7 @@ export async function generateMeetingMinutePDF(minute: MeetingMinuteDetail): Pro
     pdf.setFont('helvetica', 'normal')
     pdf.setFontSize(7)
     pdf.setTextColor(255, 255, 255)
-    pdf.text('Cachola OS  -  Ata de Reuniao', mg, 6)
+    pdf.text('Cachola OS  -  Ata de Reuni\u00e3o', mg, 6)
     pdf.text(new Date().toLocaleDateString('pt-BR'), pageW - mg, 6, { align: 'right' })
     pdf.setTextColor(...DARK)
     return 14
@@ -72,7 +72,7 @@ export async function generateMeetingMinutePDF(minute: MeetingMinuteDetail): Pro
     pdf.setFontSize(7.5)
     pdf.setTextColor(...LIGHT)
     pdf.text('Gerado por Cachola OS', mg, pageH - 6)
-    pdf.text(`Pagina ${cur} de ${totalPages}`, pageW - mg, pageH - 6, { align: 'right' })
+    pdf.text(`P\u00e1gina ${cur} de ${totalPages}`, pageW - mg, pageH - 6, { align: 'right' })
     pdf.setTextColor(...DARK)
   }
 
@@ -106,16 +106,16 @@ export async function generateMeetingMinutePDF(minute: MeetingMinuteDetail): Pro
   pdf.setFont('helvetica', 'bold')
   pdf.setFontSize(15)
   pdf.setTextColor(...DARK)
-  pdf.text('Ata de Reuniao', mg, y + 7)
+  pdf.text('Ata de Reuni\u00e3o', mg, y + 7)
   pdf.setFont('helvetica', 'normal')
   pdf.setFontSize(10)
   pdf.setTextColor(...MID)
   pdf.text(minute.title, mg, y + 14)
   y += 22
 
-  // ── INFORMACOES GERAIS ────────────────────────────────────
+  // ── INFORMAÇÕES GERAIS ────────────────────────────────────
 
-  y = drawSection(y, 'INFORMACOES GERAIS')
+  y = drawSection(y, 'INFORMA\u00c7\u00d5ES GERAIS')
 
   const meetingDate = parseDateOnly(minute.meeting_date).toLocaleDateString('pt-BR', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
@@ -167,7 +167,7 @@ export async function generateMeetingMinutePDF(minute: MeetingMinuteDetail): Pro
   } else {
     for (const p of minute.participants) {
       y = checkSpace(y, 8)
-      const name     = p.user?.name ?? 'Usuario removido'
+      const name     = p.user?.name ?? 'Usu\u00e1rio removido'
       const roleLabel = PARTICIPANT_ROLE_LABELS[p.role] ?? p.role
       const isAbsent = p.role === 'absent'
 
@@ -205,7 +205,7 @@ export async function generateMeetingMinutePDF(minute: MeetingMinuteDetail): Pro
 
   if (minute.notes) {
     y = checkSpace(y, 20)
-    y = drawSection(y, 'REGISTRO DA REUNIAO')
+    y = drawSection(y, 'REGISTRO DA REUNI\u00c3O')
 
     const noteLines = pdf.splitTextToSize(minute.notes, cW)
     // If notes are very long, they'll naturally flow across pages via checkSpace per chunk
@@ -225,13 +225,13 @@ export async function generateMeetingMinutePDF(minute: MeetingMinuteDetail): Pro
   // ── ITENS DE ACAO ─────────────────────────────────────────
 
   y = checkSpace(y, 24)
-  y = drawSection(y, 'ITENS DE ACAO')
+  y = drawSection(y, 'ITENS DE A\u00c7\u00c3O')
 
   if (minute.action_items.length === 0) {
     pdf.setFont('helvetica', 'italic')
     pdf.setFontSize(9)
     pdf.setTextColor(...LIGHT)
-    pdf.text('Nenhum item de acao registrado.', mg, y)
+    pdf.text('Nenhum item de a\u00e7\u00e3o registrado.', mg, y)
     y += 8
   } else {
     // Column layout (mm)
@@ -248,8 +248,8 @@ export async function generateMeetingMinutePDF(minute: MeetingMinuteDetail): Pro
     pdf.setFont('helvetica', 'bold')
     pdf.setFontSize(7.5)
     pdf.setTextColor(60, 60, 60)
-    pdf.text('Descricao',    col.desc.x   + 2, y + 5)
-    pdf.text('Responsavel',  col.resp.x   + 2, y + 5)
+    pdf.text('Descri\u00e7\u00e3o',    col.desc.x   + 2, y + 5)
+    pdf.text('Respons\u00e1vel',  col.resp.x   + 2, y + 5)
     pdf.text('Prazo',        col.due.x    + 2, y + 5)
     pdf.text('Status',       col.status.x + 2, y + 5)
     y += 7.5
@@ -321,7 +321,7 @@ export async function generateMeetingMinutePDF(minute: MeetingMinuteDetail): Pro
     pdf.setFontSize(8)
     pdf.setTextColor(...LIGHT)
     pdf.text(
-      `${doneCount} de ${minute.action_items.length} ${minute.action_items.length === 1 ? 'item concluido' : 'itens concluidos'}`,
+      `${doneCount} de ${minute.action_items.length} ${minute.action_items.length === 1 ? 'item conclu\u00eddo' : 'itens conclu\u00eddos'}`,
       mg,
       y,
     )
