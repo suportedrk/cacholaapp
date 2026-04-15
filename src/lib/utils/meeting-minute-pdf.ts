@@ -27,6 +27,16 @@ const MEETING_STATUS_PT: Record<string, string> = {
 }
 
 // ─────────────────────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────────────────────
+
+/** Parse a date string safely. Uses noon (T12:00:00) for YYYY-MM-DD strings
+ *  to avoid timezone-rollback to the previous day on UTC-negative offsets. */
+function parseDateOnly(d: string): Date {
+  return new Date(/^\d{4}-\d{2}-\d{2}$/.test(d) ? `${d}T12:00:00` : d)
+}
+
+// ─────────────────────────────────────────────────────────────
 // MAIN
 // ─────────────────────────────────────────────────────────────
 
@@ -107,7 +117,7 @@ export async function generateMeetingMinutePDF(minute: MeetingMinuteDetail): Pro
 
   y = drawSection(y, 'INFORMACOES GERAIS')
 
-  const meetingDate = new Date(minute.meeting_date + 'T00:00:00').toLocaleDateString('pt-BR', {
+  const meetingDate = parseDateOnly(minute.meeting_date).toLocaleDateString('pt-BR', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   })
 
@@ -273,12 +283,12 @@ export async function generateMeetingMinutePDF(minute: MeetingMinuteDetail): Pro
 
       // Due date
       if (item.due_date) {
-        const overdue = !isDone && new Date(item.due_date + 'T00:00:00') < new Date(new Date().toDateString())
+        const overdue = !isDone && parseDateOnly(item.due_date) < new Date(new Date().toDateString())
         pdf.setFont('helvetica', 'normal')
         pdf.setFontSize(7.5)
         pdf.setTextColor(overdue ? 180 : MID[0], overdue ? 40 : MID[1], overdue ? 40 : MID[2])
         pdf.text(
-          new Date(item.due_date + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
+          parseDateOnly(item.due_date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
           col.due.x + 2,
           y + 4.8,
         )
