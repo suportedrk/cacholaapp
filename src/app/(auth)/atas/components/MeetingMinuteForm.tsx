@@ -379,7 +379,7 @@ export function MeetingMinuteForm({
               onValueChange={(v) => setField('status', v as MeetingStatus)}
             >
               <SelectTrigger className="w-48">
-                <SelectValue />
+                <SelectValue>{MEETING_STATUS_LABELS[form.status]}</SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {(Object.entries(MEETING_STATUS_LABELS) as [MeetingStatus, string][]).map(
