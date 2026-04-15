@@ -58,6 +58,7 @@ export default function EditarAtaPage() {
     await updateMinute.mutateAsync({
       id,
       form,
+      previousStatus:       minute.status,
       originalParticipants: participants,
       originalActionItems:  action_items,
     })

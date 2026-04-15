@@ -91,9 +91,18 @@ export function useCreateMeetingMinute() {
 
       return minuteId
     },
-    onSuccess: () => {
+    onSuccess: (minuteId, { form }) => {
       qc.invalidateQueries({ queryKey: ['meeting-minutes'] })
       toast.success('Ata criada com sucesso!')
+
+      // Fire-and-forget notification if published at creation
+      if (form.status === 'published') {
+        fetch('/api/minutes/notify', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ meetingMinuteId: minuteId, previousStatus: null }),
+        }).catch((err) => console.error('[minutes] Falha ao notificar participantes:', err))
+      }
     },
     onError: () => {
       toast.error('Erro ao criar ata. Tente novamente.')
@@ -108,6 +117,7 @@ export function useCreateMeetingMinute() {
 interface UpdatePayload {
   id:                   string
   form:                 MeetingMinuteFormData
+  previousStatus:       string
   originalParticipants: ParticipantDraft[]
   originalActionItems:  ActionItemDraft[]
 }
@@ -225,10 +235,19 @@ export function useUpdateMeetingMinute() {
 
       return id
     },
-    onSuccess: (id) => {
+    onSuccess: (id, { form, previousStatus }) => {
       qc.invalidateQueries({ queryKey: ['meeting-minutes'] })
       qc.invalidateQueries({ queryKey: ['meeting-minutes', 'detail', id] })
       toast.success('Ata atualizada com sucesso!')
+
+      // Fire-and-forget notification only on draft → published transition
+      if (form.status === 'published' && previousStatus !== 'published') {
+        fetch('/api/minutes/notify', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ meetingMinuteId: id, previousStatus }),
+        }).catch((err) => console.error('[minutes] Falha ao notificar participantes:', err))
+      }
     },
     onError: () => {
       toast.error('Erro ao atualizar ata. Tente novamente.')
