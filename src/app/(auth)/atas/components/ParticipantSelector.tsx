@@ -184,7 +184,7 @@ export function ParticipantSelector({ participants, unitUsers, onChange, disable
                   disabled={disabled}
                 >
                   <SelectTrigger size="sm" className="w-36 shrink-0">
-                    <SelectValue />
+                    <SelectValue>{PARTICIPANT_ROLE_LABELS[p.role]}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {(Object.entries(PARTICIPANT_ROLE_LABELS) as [ParticipantRole, string][]).map(
