@@ -3,7 +3,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
-import type { MeetingMinuteFormData, ParticipantDraft, ActionItemDraft } from '@/types/minutes'
+import type { MeetingMinuteFormData, ParticipantDraft, ActionItemDraft, ActionItemStatus, MeetingMinuteDetail } from '@/types/minutes'
 
 // ─────────────────────────────────────────────────────────────
 // Helpers — typed wrappers around untyped tables
@@ -259,6 +259,57 @@ export function useDeleteMeetingMinute() {
     },
     onError: () => {
       toast.error('Erro ao excluir ata.')
+    },
+  })
+}
+
+// ─────────────────────────────────────────────────────────────
+// TOGGLE ACTION ITEM STATUS (optimistic update)
+// ─────────────────────────────────────────────────────────────
+
+interface ToggleActionItemPayload {
+  actionItemId: string
+  meetingId:    string
+  newStatus:    ActionItemStatus
+}
+
+export function useToggleActionItemStatus() {
+  const qc = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ actionItemId, newStatus }: ToggleActionItemPayload) => {
+      const supabase = createClient()
+      const { error } = await db(supabase)
+        .from('meeting_action_items')
+        .update({ status: newStatus })
+        .eq('id', actionItemId)
+      if (error) throw error
+    },
+    onMutate: async ({ actionItemId, meetingId, newStatus }) => {
+      const queryKey = ['meeting-minutes', 'detail', meetingId]
+      await qc.cancelQueries({ queryKey })
+      const prev = qc.getQueryData<MeetingMinuteDetail>(queryKey)
+
+      if (prev) {
+        qc.setQueryData<MeetingMinuteDetail>(queryKey, {
+          ...prev,
+          action_items: prev.action_items.map((item) =>
+            item.id === actionItemId ? { ...item, status: newStatus } : item
+          ),
+        })
+      }
+
+      return { prev }
+    },
+    onError: (_err, { meetingId }, context) => {
+      if (context?.prev) {
+        qc.setQueryData(['meeting-minutes', 'detail', meetingId], context.prev)
+      }
+      toast.error('Erro ao atualizar item de ação.')
+    },
+    onSettled: (_data, _err, { meetingId }) => {
+      qc.invalidateQueries({ queryKey: ['meeting-minutes', 'detail', meetingId] })
+      qc.invalidateQueries({ queryKey: ['meeting-minutes'] })
     },
   })
 }
