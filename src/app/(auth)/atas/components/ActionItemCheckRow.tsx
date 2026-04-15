@@ -1,6 +1,5 @@
-import { Loader2 } from 'lucide-react'
+import { Loader2, User } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { UserAvatar } from '@/components/shared/user-avatar'
 import { useToggleActionItemStatus } from '@/hooks/use-meeting-minute-mutations'
 import type { MeetingMinuteActionItemDetail } from '@/types/minutes'
 
@@ -74,12 +73,7 @@ export function ActionItemCheckRow({ item, meetingId, canToggle }: ActionItemChe
 
           {item.assignee && (
             <span className="flex items-center gap-1 text-xs text-muted-foreground">
-              <UserAvatar
-                name={item.assignee.name}
-                avatarUrl={item.assignee.avatar_url}
-                size="sm"
-                className="w-4 h-4 text-[10px]"
-              />
+              <User className="w-3 h-3 shrink-0" aria-hidden="true" />
               {item.assignee.name}
             </span>
           )}
