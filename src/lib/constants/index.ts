@@ -33,6 +33,7 @@ export const MODULE_LABELS: Record<string, string> = {
   audit_logs: 'Logs de Auditoria',
   notifications: 'Notificações',
   settings: 'Configurações',
+  minutes: 'Atas de Reunião',
 }
 
 export const ACTION_LABELS: Record<string, string> = {
@@ -69,6 +70,7 @@ export const ROUTES = {
   providers: '/prestadores',
   businessRules: '/configuracoes/regras',
   unitSetup: '/admin/unidades/setup',
+  minutes: '/atas',
 } as const
 
 // ============================================================

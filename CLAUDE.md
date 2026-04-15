@@ -414,6 +414,18 @@ docker compose exec supabase-db psql -U postgres -d postgres
 - Nome do arquivo: `BI_Cachola_{unidade}_{YYYY-MM-DD}.xlsx`
 - Utility em `src/lib/bi/export-bi-report.ts`; estado `isExporting` com spinner no botão
 
+**Módulo Atas de Reunião — `/atas` (Migration 044):**
+- Tabelas: `meeting_minutes`, `meeting_participants`, `meeting_action_items`
+- RLS especial: visibilidade por criador + participantes + roles elevadas (super_admin, diretor, gerente)
+- `can_view_meeting(p_meeting_id UUID)` — função SECURITY DEFINER que evita dependência circular de RLS entre tabelas filhas e `meeting_minutes`
+- `is_global_viewer()` cobre super_admin + diretor; gerente verificado via `user_units.role = 'gerente'` explicitamente
+- Permissões: `minutes.view/create/edit/delete` — gestão completa para super_admin/diretor/gerente; somente `view` para demais roles
+- Status da ata: `draft` (rascunho) | `published` (publicada)
+- Roles dos participantes: `organizer` | `participant` | `absent`
+- Status dos itens de ação: `pending` | `in_progress` | `done`
+- Sidebar: grupo Operações, após Prestadores, ícone `FileText`, module `'minutes'`, sem `allowedRoles` (todos veem; RLS controla acesso real)
+- FTS: índice GIN em `title || notes` com `portuguese` dictionary
+
 ⚠️ **ChecklistCard da listagem:** `app/(auth)/checklists/components/checklist-card.tsx` (PREMIUM) — não confundir com `components/features/checklists/checklist-card.tsx` (legado, não usado na listagem).
 
 ---
