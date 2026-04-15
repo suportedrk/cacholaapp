@@ -92,10 +92,11 @@ export function ActionItemRow({ item, index, unitUsers, isEditMode, onChange, on
             disabled={isDisabled}
           >
             <SelectTrigger size="sm" className="w-full">
-              {item.assigned_to
-                ? <SelectValue>{unitUsers.find((u) => u.id === item.assigned_to)?.name ?? 'Responsável'}</SelectValue>
-                : <SelectValue placeholder="Nenhum" />
-              }
+              <SelectValue>
+                {item.assigned_to
+                  ? unitUsers.find((u) => u.id === item.assigned_to)?.name ?? 'Responsável'
+                  : 'Nenhum'}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="none">Nenhum</SelectItem>
