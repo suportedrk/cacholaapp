@@ -6,7 +6,7 @@ import { useAuthReadyStore } from '@/stores/auth-store'
 import { useUnitStore } from '@/stores/unit-store'
 import { useUnitUsers } from '@/hooks/use-units'
 import { useCreateMeetingMinute } from '@/hooks/use-meeting-minute-mutations'
-import { MeetingMinuteForm, buildOriginalLists } from '../components/MeetingMinuteForm'
+import { MeetingMinuteForm } from '../components/MeetingMinuteForm'
 import type { MeetingMinuteFormData } from '@/types/minutes'
 
 const CREATE_ROLES = ['super_admin', 'diretor', 'gerente']

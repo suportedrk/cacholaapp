@@ -3,17 +3,20 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, MoreHorizontal, Pencil, Trash2, Calendar, MapPin, User } from 'lucide-react'
+import {
+  ArrowLeft, MoreHorizontal, Pencil, Trash2,
+  Calendar, MapPin, User, FileDown, Copy, Loader2,
+} from 'lucide-react'
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
   DropdownMenuItem, DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/shared/confirm-dialog'
-import { UserAvatar } from '@/components/shared/user-avatar'
 import { ParticipantsList } from './ParticipantsList'
 import { ActionItemsChecklist } from './ActionItemsChecklist'
-import { useDeleteMeetingMinute } from '@/hooks/use-meeting-minute-mutations'
+import { useDeleteMeetingMinute, useDuplicateMeetingMinute } from '@/hooks/use-meeting-minute-mutations'
+import { generateMeetingMinutePDF } from '@/lib/utils/meeting-minute-pdf'
 import { MEETING_STATUS_LABELS } from '@/types/minutes'
 import type { MeetingMinuteDetail } from '@/types/minutes'
 import { cn } from '@/lib/utils'
@@ -23,6 +26,7 @@ interface MeetingMinuteDetailViewProps {
   currentUserId: string
   canEdit:       boolean
   canDelete:     boolean
+  canCreate:     boolean
   isElevated:    boolean
 }
 
@@ -36,11 +40,16 @@ export function MeetingMinuteDetailView({
   currentUserId,
   canEdit,
   canDelete,
+  canCreate,
   isElevated,
 }: MeetingMinuteDetailViewProps) {
-  const router      = useRouter()
-  const deleteMinute = useDeleteMeetingMinute()
-  const [deleteOpen, setDeleteOpen] = useState(false)
+  const router         = useRouter()
+  const deleteMinute   = useDeleteMeetingMinute()
+  const duplicateMinute = useDuplicateMeetingMinute()
+
+  const [deleteOpen,   setDeleteOpen]   = useState(false)
+  const [isExporting,  setIsExporting]  = useState(false)
+  const [isDuplicating, setIsDuplicating] = useState(false)
 
   const meetingDate = new Date(minute.meeting_date + 'T00:00:00').toLocaleDateString('pt-BR', {
     weekday: 'long',
@@ -60,6 +69,36 @@ export function MeetingMinuteDetailView({
     await deleteMinute.mutateAsync(minute.id)
     router.push('/atas')
   }
+
+  async function handleExportPDF() {
+    setIsExporting(true)
+    try {
+      await generateMeetingMinutePDF(minute)
+    } catch (err) {
+      console.error('Erro ao gerar PDF:', err)
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
+  async function handleDuplicate() {
+    setIsDuplicating(true)
+    try {
+      const newId = await duplicateMinute.mutateAsync({
+        unitId:        minute.unit_id,
+        title:         minute.title,
+        location:      minute.location,
+        participants:  minute.participants.map((p) => ({ user_id: p.user_id, role: p.role })),
+        currentUserId,
+      })
+      router.push(`/atas/${newId}/editar`)
+    } catch {
+      // toast already shown by mutation onError
+      setIsDuplicating(false)
+    }
+  }
+
+  const isMenuBusy = isExporting || isDuplicating
 
   return (
     <div className="space-y-6">
@@ -93,31 +132,58 @@ export function MeetingMinuteDetailView({
           </div>
         </div>
 
-        {/* Actions menu */}
-        {(canEdit || canDelete) && (
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <Button variant="ghost" size="icon" className="w-9 h-9 shrink-0">
-                  <MoreHorizontal className="w-5 h-5" />
-                  <span className="sr-only">Opções</span>
-                </Button>
-              }
-            />
-            <DropdownMenuContent align="end" className="w-44">
-              {canEdit && (
-                <>
-                  <DropdownMenuItem
-                    onClick={() => router.push(`/atas/${minute.id}/editar`)}
-                    className="gap-2"
-                  >
-                    <Pencil className="w-4 h-4" />
-                    Editar ata
-                  </DropdownMenuItem>
-                  {canDelete && <DropdownMenuSeparator />}
-                </>
-              )}
-              {canDelete && (
+        {/* Actions menu — always visible (Export PDF is always available) */}
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon"
+                className="w-9 h-9 shrink-0"
+                disabled={isMenuBusy}
+              >
+                {isMenuBusy
+                  ? <Loader2 className="w-5 h-5 animate-spin" />
+                  : <MoreHorizontal className="w-5 h-5" />
+                }
+                <span className="sr-only">Opções</span>
+              </Button>
+            }
+          />
+          <DropdownMenuContent align="end" className="w-52">
+            {canEdit && (
+              <DropdownMenuItem
+                onClick={() => router.push(`/atas/${minute.id}/editar`)}
+                className="gap-2"
+              >
+                <Pencil className="w-4 h-4" />
+                Editar ata
+              </DropdownMenuItem>
+            )}
+
+            <DropdownMenuItem
+              onClick={handleExportPDF}
+              disabled={isExporting}
+              className="gap-2"
+            >
+              <FileDown className="w-4 h-4" />
+              {isExporting ? 'Gerando PDF…' : 'Exportar PDF'}
+            </DropdownMenuItem>
+
+            {canCreate && (
+              <DropdownMenuItem
+                onClick={handleDuplicate}
+                disabled={isDuplicating}
+                className="gap-2"
+              >
+                <Copy className="w-4 h-4" />
+                {isDuplicating ? 'Duplicando…' : 'Duplicar como rascunho'}
+              </DropdownMenuItem>
+            )}
+
+            {canDelete && (
+              <>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={() => setDeleteOpen(true)}
                   className="gap-2 text-destructive focus:text-destructive"
@@ -125,10 +191,10 @@ export function MeetingMinuteDetailView({
                   <Trash2 className="w-4 h-4" />
                   Excluir ata
                 </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Participants */}
@@ -172,7 +238,7 @@ export function MeetingMinuteDetailView({
         />
       </section>
 
-      {/* Footer — created by + timestamps */}
+      {/* Footer */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground border-t pt-4">
         {minute.creator && (
           <span className="flex items-center gap-1.5">

@@ -414,7 +414,7 @@ docker compose exec supabase-db psql -U postgres -d postgres
 - Nome do arquivo: `BI_Cachola_{unidade}_{YYYY-MM-DD}.xlsx`
 - Utility em `src/lib/bi/export-bi-report.ts`; estado `isExporting` com spinner no botão
 
-**Módulo Atas de Reunião — `/atas` (Migration 044):**
+**Módulo Atas de Reunião — `/atas` (Migration 044) — COMPLETO:**
 - Tabelas: `meeting_minutes`, `meeting_participants`, `meeting_action_items`
 - RLS especial: visibilidade por criador + participantes + roles elevadas (super_admin, diretor, gerente)
 - `can_view_meeting(p_meeting_id UUID)` — função SECURITY DEFINER que evita dependência circular de RLS entre tabelas filhas e `meeting_minutes`
@@ -425,6 +425,12 @@ docker compose exec supabase-db psql -U postgres -d postgres
 - Status dos itens de ação: `pending` | `in_progress` | `done`
 - Sidebar: grupo Operações, após Prestadores, ícone `FileText`, module `'minutes'`, sem `allowedRoles` (todos veem; RLS controla acesso real)
 - FTS: índice GIN em `title || notes` com `portuguese` dictionary
+- Notificação: e-mail ao publicar via `POST /api/minutes/notify` (fire-and-forget, só em `draft → published`)
+- Export: PDF download via jsPDF client-side — `src/lib/utils/meeting-minute-pdf.ts`
+- Duplicar: cria cópia como rascunho (mesmos participantes, data=hoje, sem resumo/notas/action items)
+- Rotas: `/atas` (listagem), `/atas/nova`, `/atas/[id]` (detalhe), `/atas/[id]/editar`
+- Hooks: `useMeetingMinutes`, `useMeetingMinuteDetail`, `useCreateMeetingMinute`, `useUpdateMeetingMinute`, `useDeleteMeetingMinute`, `useToggleActionItemStatus`, `useDuplicateMeetingMinute`
+- Menu de ações (detalhe): Editar (canEdit) | Exportar PDF (sempre) | Duplicar (canCreate=isElevated) | Excluir (canDelete)
 
 ⚠️ **ChecklistCard da listagem:** `app/(auth)/checklists/components/checklist-card.tsx` (PREMIUM) — não confundir com `components/features/checklists/checklist-card.tsx` (legado, não usado na listagem).
 

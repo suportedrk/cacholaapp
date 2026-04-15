@@ -3,7 +3,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
-import type { MeetingMinuteFormData, ParticipantDraft, ActionItemDraft, ActionItemStatus, MeetingMinuteDetail } from '@/types/minutes'
+import type { MeetingMinuteFormData, ParticipantDraft, ActionItemDraft, ActionItemStatus, MeetingMinuteDetail, ParticipantRole } from '@/types/minutes'
 
 // ─────────────────────────────────────────────────────────────
 // Helpers — typed wrappers around untyped tables
@@ -329,6 +329,75 @@ export function useToggleActionItemStatus() {
     onSettled: (_data, _err, { meetingId }) => {
       qc.invalidateQueries({ queryKey: ['meeting-minutes', 'detail', meetingId] })
       qc.invalidateQueries({ queryKey: ['meeting-minutes'] })
+    },
+  })
+}
+
+// ─────────────────────────────────────────────────────────────
+// DUPLICATE — copy metadata + participants as a new draft
+// ─────────────────────────────────────────────────────────────
+
+interface DuplicatePayload {
+  unitId:        string
+  title:         string
+  location:      string | null
+  participants:  Array<{ user_id: string; role: ParticipantRole }>
+  currentUserId: string
+}
+
+export function useDuplicateMeetingMinute() {
+  const qc = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ unitId, title, location, participants, currentUserId }: DuplicatePayload) => {
+      const supabase = createClient()
+      const d = db(supabase)
+
+      const today = new Date().toISOString().slice(0, 10)
+
+      // 1. Insert new meeting_minutes as draft
+      const { data: newMinute, error: minuteErr } = await d
+        .from('meeting_minutes')
+        .insert({
+          unit_id:      unitId,
+          title,
+          meeting_date: today,
+          location,
+          summary:      null,
+          notes:        null,
+          status:       'draft',
+          created_by:   currentUserId,
+        })
+        .select('id')
+        .single()
+
+      if (minuteErr) throw minuteErr
+
+      const newId = (newMinute as { id: string }).id
+
+      // 2. Copy participants (reset notified_at)
+      if (participants.length > 0) {
+        const rows = participants.map((p) => ({
+          meeting_id:   newId,
+          user_id:      p.user_id,
+          role:         p.role,
+          notified_at:  null,
+        }))
+        const { error: partErr } = await d.from('meeting_participants').insert(rows)
+        if (partErr) {
+          console.error('Duplicate participants insert error:', partErr)
+          toast.warning('Alguns participantes não foram copiados.')
+        }
+      }
+
+      return newId
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['meeting-minutes'] })
+      toast.success('Ata duplicada como rascunho.')
+    },
+    onError: () => {
+      toast.error('Erro ao duplicar ata. Tente novamente.')
     },
   })
 }

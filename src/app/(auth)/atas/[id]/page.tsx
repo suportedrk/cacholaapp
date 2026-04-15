@@ -51,6 +51,7 @@ export default function AtaDetailPage() {
   const isCreator  = minute.created_by === user.id
   const canEdit    = isElevated || isCreator
   const canDelete  = isElevated || isCreator
+  const canCreate  = isElevated
 
   return (
     <MeetingMinuteDetailView
@@ -58,6 +59,7 @@ export default function AtaDetailPage() {
       currentUserId={user.id}
       canEdit={canEdit}
       canDelete={canDelete}
+      canCreate={canCreate}
       isElevated={isElevated}
     />
   )
