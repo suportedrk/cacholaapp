@@ -16,6 +16,7 @@ import {
   Handshake,
   BookOpen,
   UsersRound,
+  FileText,
 } from 'lucide-react'
 import { ROUTES } from '@/lib/constants'
 import type { Module, Role } from '@/types/permissions'
@@ -94,6 +95,7 @@ export const NAV_GROUPS: NavGroup[] = [
       },
       { label: 'Equipamentos', href: ROUTES.equipment,   icon: Package,   module: 'maintenance', allowedRoles: OPS_ROLES       },
       { label: 'Prestadores',  href: ROUTES.providers,   icon: Handshake, module: 'providers',   allowedRoles: PROVIDER_ROLES  },
+      { label: 'Atas',         href: ROUTES.minutes,     icon: FileText,  module: 'minutes'                                    },
       { label: 'Relatórios',   href: ROUTES.reports,     icon: BarChart3, module: 'reports',     allowedRoles: REPORT_ROLES    },
     ],
   },

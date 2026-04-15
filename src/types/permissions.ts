@@ -25,6 +25,7 @@ export type Module =
   | 'notifications'
   | 'settings'
   | 'providers'
+  | 'minutes'
 
 export type Action = 'view' | 'create' | 'edit' | 'delete' | 'export'
 
