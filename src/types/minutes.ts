@@ -74,3 +74,66 @@ export interface MeetingMinutesFilters {
   period:   '1' | '3' | '6' | '12' | 'all'
   onlyMine: boolean
 }
+
+// ── Detail types (form + view) ─────────────────────────────────
+
+export interface MeetingMinuteParticipantDetail {
+  user_id:      string
+  role:         ParticipantRole
+  notified_at:  string | null
+  user:         MinuteUser | null
+}
+
+export interface MeetingMinuteActionItemDetail {
+  id:          string
+  description: string
+  assigned_to: string | null
+  due_date:    string | null
+  status:      ActionItemStatus
+  assignee:    MinuteUser | null
+}
+
+export interface MeetingMinuteDetail {
+  id:           string
+  unit_id:      string
+  title:        string
+  meeting_date: string
+  location:     string | null
+  summary:      string | null
+  notes:        string | null
+  status:       MeetingStatus
+  created_by:   string
+  created_at:   string
+  updated_at:   string
+  creator:      MinuteUser | null
+  participants: MeetingMinuteParticipantDetail[]
+  action_items: MeetingMinuteActionItemDetail[]
+}
+
+// ── Form draft types ───────────────────────────────────────────
+
+export interface ParticipantDraft {
+  _key:    string
+  user_id: string
+  role:    ParticipantRole
+}
+
+export interface ActionItemDraft {
+  _key:        string
+  id?:         string           // present when editing an existing item
+  description: string
+  assigned_to: string | null
+  due_date:    string | null
+  status:      ActionItemStatus
+}
+
+export interface MeetingMinuteFormData {
+  title:        string
+  meeting_date: string           // YYYY-MM-DD
+  location:     string
+  summary:      string
+  notes:        string
+  status:       MeetingStatus
+  participants: ParticipantDraft[]
+  action_items: ActionItemDraft[]
+}
