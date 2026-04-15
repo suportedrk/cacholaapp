@@ -12,12 +12,13 @@ import {
   isSameMonth, isToday,
 } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { ChevronLeft, ChevronRight, CalendarX, Wrench, LayoutList, CalendarDays, ClipboardList, CheckSquare } from 'lucide-react'
+import { ChevronLeft, ChevronRight, CalendarX, Wrench, LayoutList, CalendarDays, ClipboardList, CheckSquare, Shield, Plus } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
 import type { CalendarEvent, CalendarMaintenance } from '@/hooks/use-dashboard'
 import type { CalendarChecklist } from '@/hooks/use-calendar-checklists'
+import type { CalendarPreReserva } from '@/types/pre-reservas'
 import type { EventStatus, MaintenanceType } from '@/types/database.types'
 
 // ─────────────────────────────────────────────────────────────
@@ -37,6 +38,10 @@ interface CalendarViewProps {
   onEventClick: (event: CalendarEvent) => void
   onMaintenanceClick?: (id: string) => void
   checklistItems?: CalendarChecklist[]
+  preReservaItems?: CalendarPreReserva[]
+  onPreReservaClick?: (item: CalendarPreReserva) => void
+  onNewPreReserva?: () => void
+  canManagePreReservas?: boolean
   isLoading?: boolean
 }
 
@@ -92,6 +97,9 @@ const MAINTENANCE_DOT: Record<MaintenanceType, string> = {
 const CHECKLIST_PILL = 'bg-purple-100 text-purple-800 border-l-2 border-l-purple-500 dark:bg-purple-900/40 dark:text-purple-300 dark:border-l-purple-600'
 const CHECKLIST_DOT  = 'bg-purple-500'
 
+const PRE_RESERVA_PILL = 'bg-emerald-100 text-emerald-800 border-l-2 border-l-emerald-500 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-l-emerald-600'
+const PRE_RESERVA_DOT  = 'bg-emerald-500'
+
 // ─────────────────────────────────────────────────────────────
 // COMPONENTE PRINCIPAL
 // ─────────────────────────────────────────────────────────────
@@ -107,6 +115,10 @@ export function CalendarView({
   onEventClick,
   onMaintenanceClick,
   checklistItems = [],
+  preReservaItems = [],
+  onPreReservaClick,
+  onNewPreReserva,
+  canManagePreReservas = false,
   isLoading,
 }: CalendarViewProps) {
   const router = useRouter()
@@ -115,47 +127,66 @@ export function CalendarView({
   const [showEvents, setShowEvents] = useState(true)
   const [showMaintenanceInternal, setShowMaintenanceInternal] = useState(true)
   const [showChecklists, setShowChecklists] = useState(true)
+  const [showPreReservas, setShowPreReservas] = useState(true)
 
   // Persistir filtros de tipo no localStorage
   useEffect(() => {
     try {
       const saved = localStorage.getItem('calendar-type-filters')
       if (saved) {
-        const parsed = JSON.parse(saved) as { showEvents?: boolean; showMaintenance?: boolean; showChecklists?: boolean }
+        const parsed = JSON.parse(saved) as {
+          showEvents?: boolean
+          showMaintenance?: boolean
+          showChecklists?: boolean
+          showPreReservas?: boolean
+        }
         if (typeof parsed.showEvents === 'boolean') setShowEvents(parsed.showEvents)
         if (typeof parsed.showMaintenance === 'boolean') setShowMaintenanceInternal(parsed.showMaintenance)
         if (typeof parsed.showChecklists === 'boolean') setShowChecklists(parsed.showChecklists)
+        if (typeof parsed.showPreReservas === 'boolean') setShowPreReservas(parsed.showPreReservas)
       }
     } catch { /* ignorar erro de parse */ }
   }, [])
 
-  function saveFilters(ev: boolean, maint: boolean, chkl: boolean) {
+  function saveFilters(ev: boolean, maint: boolean, chkl: boolean, pr: boolean) {
     try {
-      localStorage.setItem('calendar-type-filters', JSON.stringify({ showEvents: ev, showMaintenance: maint, showChecklists: chkl }))
+      localStorage.setItem('calendar-type-filters', JSON.stringify({
+        showEvents: ev,
+        showMaintenance: maint,
+        showChecklists: chkl,
+        showPreReservas: pr,
+      }))
     } catch { /* ignorar */ }
   }
 
   function toggleShowEvents() {
     const next = !showEvents
     setShowEvents(next)
-    saveFilters(next, showMaintenanceInternal, showChecklists)
+    saveFilters(next, showMaintenanceInternal, showChecklists, showPreReservas)
   }
 
   function toggleShowMaintenanceInternal() {
     const next = !showMaintenanceInternal
     setShowMaintenanceInternal(next)
-    saveFilters(showEvents, next, showChecklists)
+    saveFilters(showEvents, next, showChecklists, showPreReservas)
   }
 
   function toggleShowChecklists() {
     const next = !showChecklists
     setShowChecklists(next)
-    saveFilters(showEvents, showMaintenanceInternal, next)
+    saveFilters(showEvents, showMaintenanceInternal, next, showPreReservas)
   }
 
-  const filteredEvents = showEvents ? events : []
+  function toggleShowPreReservas() {
+    const next = !showPreReservas
+    setShowPreReservas(next)
+    saveFilters(showEvents, showMaintenanceInternal, showChecklists, next)
+  }
+
+  const filteredEvents      = showEvents ? events : []
   const filteredMaintenance = (showMaintenanceInternal && showMaintenance) ? (maintenanceItems ?? []) : []
-  const filteredChecklists = showChecklists ? (checklistItems ?? []) : []
+  const filteredChecklists  = showChecklists ? (checklistItems ?? []) : []
+  const filteredPreReservas = showPreReservas ? (preReservaItems ?? []) : []
 
   const eventsByDate = useMemo(() => {
     const map: Record<string, CalendarEvent[]> = {}
@@ -188,6 +219,17 @@ export function CalendarView({
     return map
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filteredChecklists])
+
+  const preReservaByDate = useMemo(() => {
+    const map: Record<string, CalendarPreReserva[]> = {}
+    for (const p of filteredPreReservas) {
+      if (!p.date) continue
+      if (!map[p.date]) map[p.date] = []
+      map[p.date].push(p)
+    }
+    return map
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredPreReservas])
 
   function navigate(dir: 1 | -1) {
     setNavDir(dir)
@@ -224,7 +266,9 @@ export function CalendarView({
     return format(currentDate, "EEEE, d 'de' MMMM", { locale: ptBR })
   }
 
-  const visibleEventCount = filteredEvents.filter((e) => e.status !== 'lost').length
+  const visibleEventCount =
+    filteredEvents.filter((e) => e.status !== 'lost').length +
+    filteredPreReservas.length
 
   return (
     <div className="bg-card border border-border rounded-xl overflow-hidden">
@@ -357,6 +401,32 @@ export function CalendarView({
             Checklists
           </button>
         )}
+        {preReservaItems !== undefined && (
+          <button
+            onClick={toggleShowPreReservas}
+            className={cn(
+              'flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border transition-all',
+              showPreReservas
+                ? 'bg-emerald-500/20 border-emerald-500 text-emerald-600 dark:text-emerald-400'
+                : 'bg-muted/50 border-border text-text-tertiary opacity-60'
+            )}
+          >
+            <Shield className="w-3 h-3" />
+            Pré-venda
+          </button>
+        )}
+
+        {/* Botão "Nova Pré-reserva" — só para super_admin/diretor */}
+        {canManagePreReservas && onNewPreReserva && (
+          <button
+            onClick={onNewPreReserva}
+            className="ml-auto flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border transition-all bg-emerald-500 border-emerald-600 text-white hover:bg-emerald-600"
+          >
+            <Plus className="w-3 h-3" />
+            <span className="hidden sm:inline">Nova Pré-reserva</span>
+            <span className="sm:hidden">Pré-reserva</span>
+          </button>
+        )}
       </div>
 
       {/* ── Body ── */}
@@ -370,9 +440,11 @@ export function CalendarView({
               events={filteredEvents}
               maintenanceItems={filteredMaintenance}
               checklistItems={filteredChecklists}
+              preReservaItems={filteredPreReservas}
               onEventClick={onEventClick}
               onMaintenanceClick={onMaintenanceClick}
               onChecklistClick={(url) => router.push(url)}
+              onPreReservaClick={onPreReservaClick}
             />
           </div>
 
@@ -386,9 +458,11 @@ export function CalendarView({
                 eventsByDate={eventsByDate}
                 maintenanceByDate={maintenanceByDate}
                 checklistByDate={checklistByDate}
+                preReservaByDate={preReservaByDate}
                 onEventClick={onEventClick}
                 onMaintenanceClick={onMaintenanceClick}
                 onChecklistClick={(url) => router.push(url)}
+                onPreReservaClick={onPreReservaClick}
                 onDayClick={(day) => { onDateChange(day); onViewChange('day') }}
               />
             ) : view === 'week' ? (
@@ -398,9 +472,11 @@ export function CalendarView({
                 eventsByDate={eventsByDate}
                 maintenanceByDate={maintenanceByDate}
                 checklistByDate={checklistByDate}
+                preReservaByDate={preReservaByDate}
                 onEventClick={onEventClick}
                 onMaintenanceClick={onMaintenanceClick}
                 onChecklistClick={(url) => router.push(url)}
+                onPreReservaClick={onPreReservaClick}
                 onDayClick={(day) => { onDateChange(day); onViewChange('day') }}
               />
             ) : (
@@ -409,9 +485,11 @@ export function CalendarView({
                 eventsByDate={eventsByDate}
                 maintenanceByDate={maintenanceByDate}
                 checklistByDate={checklistByDate}
+                preReservaByDate={preReservaByDate}
                 onEventClick={onEventClick}
                 onMaintenanceClick={onMaintenanceClick}
                 onChecklistClick={(url) => router.push(url)}
+                onPreReservaClick={onPreReservaClick}
               />
             )}
           </div>
@@ -453,18 +531,22 @@ function DayPopoverContent({
   dayEvents,
   dayMaintenance,
   dayChecklists = [],
+  dayPreReservas = [],
   onEventClick,
   onMaintenanceClick,
   onChecklistClick,
+  onPreReservaClick,
   onDayClick,
 }: {
   day: Date
   dayEvents: CalendarEvent[]
   dayMaintenance: CalendarMaintenance[]
   dayChecklists?: CalendarChecklist[]
+  dayPreReservas?: CalendarPreReserva[]
   onEventClick: (e: CalendarEvent) => void
   onMaintenanceClick?: (id: string) => void
   onChecklistClick?: (url: string) => void
+  onPreReservaClick?: (item: CalendarPreReserva) => void
   onDayClick: (day: Date) => void
 }) {
   const activeEvents = dayEvents.filter((e) => e.status !== 'lost')
@@ -535,6 +617,22 @@ function DayPopoverContent({
         </button>
       ))}
 
+      {/* Pré-reservas */}
+      {dayPreReservas.map((p) => (
+        <button
+          key={p.id}
+          onClick={() => onPreReservaClick?.(p)}
+          className={cn(
+            'w-full text-left text-xs rounded-md px-2 py-1.5 transition-opacity hover:opacity-80 flex items-center gap-1.5',
+            PRE_RESERVA_PILL
+          )}
+        >
+          <Shield className="w-3 h-3 shrink-0 opacity-70" />
+          <span className="truncate font-medium">{p.title}</span>
+          {p.time && <span className="ml-auto shrink-0 opacity-60">{p.time}</span>}
+        </button>
+      ))}
+
       {/* Perdidos */}
       {lostEvents.length > 0 && (
         <p className="text-[10px] text-muted-foreground pt-0.5">
@@ -556,9 +654,11 @@ function DayNumber({
   dayEvents,
   dayMaintenance,
   dayChecklists = [],
+  dayPreReservas = [],
   onEventClick,
   onMaintenanceClick,
   onChecklistClick,
+  onPreReservaClick,
   onDayClick,
 }: {
   day: Date
@@ -568,9 +668,11 @@ function DayNumber({
   dayEvents: CalendarEvent[]
   dayMaintenance: CalendarMaintenance[]
   dayChecklists?: CalendarChecklist[]
+  dayPreReservas?: CalendarPreReserva[]
   onEventClick: (e: CalendarEvent) => void
   onMaintenanceClick?: (id: string) => void
   onChecklistClick?: (url: string) => void
+  onPreReservaClick?: (item: CalendarPreReserva) => void
   onDayClick: (day: Date) => void
 }) {
   const dayNumberClass = cn(
@@ -603,9 +705,11 @@ function DayNumber({
           dayEvents={dayEvents}
           dayMaintenance={dayMaintenance}
           dayChecklists={dayChecklists}
+          dayPreReservas={dayPreReservas}
           onEventClick={onEventClick}
           onMaintenanceClick={onMaintenanceClick}
           onChecklistClick={onChecklistClick}
+          onPreReservaClick={onPreReservaClick}
           onDayClick={onDayClick}
         />
       </PopoverContent>
@@ -621,9 +725,11 @@ interface ViewProps {
   eventsByDate: Record<string, CalendarEvent[]>
   maintenanceByDate: Record<string, CalendarMaintenance[]>
   checklistByDate?: Record<string, CalendarChecklist[]>
+  preReservaByDate?: Record<string, CalendarPreReserva[]>
   onEventClick: (e: CalendarEvent) => void
   onMaintenanceClick?: (id: string) => void
   onChecklistClick?: (url: string) => void
+  onPreReservaClick?: (item: CalendarPreReserva) => void
   onDayClick: (day: Date) => void
 }
 
@@ -633,9 +739,11 @@ function MonthView({
   eventsByDate,
   maintenanceByDate,
   checklistByDate = {},
+  preReservaByDate = {},
   onEventClick,
   onMaintenanceClick,
   onChecklistClick,
+  onPreReservaClick,
   onDayClick,
 }: ViewProps & { navDir: 1 | -1 | 0 }) {
   const monthStart = startOfMonth(currentDate)
@@ -667,11 +775,12 @@ function MonthView({
           const dayEvents    = eventsByDate[key] ?? []
           const dayMaint     = maintenanceByDate[key] ?? []
           const dayChklists  = checklistByDate[key] ?? []
+          const dayPreRes    = preReservaByDate[key] ?? []
           const inMonth      = isSameMonth(day, currentDate)
           const todayFlag    = isToday(day)
           const activeEvents = dayEvents.filter((e) => e.status !== 'lost')
           const isBusy       = activeEvents.length >= 3
-          const hasEvents    = dayEvents.length > 0 || dayMaint.length > 0 || dayChklists.length > 0
+          const hasEvents    = dayEvents.length > 0 || dayMaint.length > 0 || dayChklists.length > 0 || dayPreRes.length > 0
 
           return (
             <div
@@ -693,15 +802,17 @@ function MonthView({
                 dayEvents={dayEvents}
                 dayMaintenance={dayMaint}
                 dayChecklists={dayChklists}
+                dayPreReservas={dayPreRes}
                 onEventClick={onEventClick}
                 onMaintenanceClick={onMaintenanceClick}
                 onChecklistClick={onChecklistClick}
+                onPreReservaClick={onPreReservaClick}
                 onDayClick={onDayClick}
               />
 
               {/* Mobile: dots */}
               <div className="flex flex-wrap gap-[3px] sm:hidden mt-0.5">
-                {dayEvents.slice(0, 4).map((ev) => (
+                {dayEvents.slice(0, 3).map((ev) => (
                   <button
                     key={ev.id}
                     onClick={() => onEventClick(ev)}
@@ -723,7 +834,7 @@ function MonthView({
                     aria-label={m.title}
                   />
                 ))}
-                {dayChklists.slice(0, 2).map((c) => (
+                {dayChklists.slice(0, 1).map((c) => (
                   <button
                     key={c.id}
                     onClick={() => onChecklistClick?.(c.url)}
@@ -731,9 +842,17 @@ function MonthView({
                     aria-label={c.title}
                   />
                 ))}
-                {dayEvents.length + dayMaint.length + dayChklists.length > 6 && (
+                {dayPreRes.slice(0, 1).map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => onPreReservaClick?.(p)}
+                    className={cn('w-1.5 h-1.5 rounded-full min-w-[6px] min-h-[6px]', PRE_RESERVA_DOT)}
+                    aria-label={p.title}
+                  />
+                ))}
+                {dayEvents.length + dayMaint.length + dayChklists.length + dayPreRes.length > 6 && (
                   <span className="text-[9px] text-muted-foreground leading-none self-center">
-                    +{dayEvents.length + dayMaint.length + dayChklists.length - 6}
+                    +{dayEvents.length + dayMaint.length + dayChklists.length + dayPreRes.length - 6}
                   </span>
                 )}
               </div>
@@ -797,13 +916,28 @@ function MonthView({
                     <span className="truncate">{c.title}</span>
                   </button>
                 ))}
+                {/* Pré-reservas */}
+                {dayPreRes.slice(0, 1).map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => onPreReservaClick?.(p)}
+                    className={cn(
+                      'w-full text-left text-[10px] leading-tight px-1 py-0.5 rounded-sm truncate font-medium transition-opacity hover:opacity-80 flex items-center gap-0.5',
+                      PRE_RESERVA_PILL
+                    )}
+                    title={p.title}
+                  >
+                    <Shield className="w-2.5 h-2.5 shrink-0" />
+                    <span className="truncate">{p.title}</span>
+                  </button>
+                ))}
                 {/* Overflow counter */}
-                {(activeEvents.length > 2 || dayMaint.length > 1 || dayChklists.length > 1) && (
+                {(activeEvents.length > 2 || dayMaint.length > 1 || dayChklists.length > 1 || dayPreRes.length > 1) && (
                   <button
                     onClick={() => onDayClick(day)}
                     className="text-[10px] text-muted-foreground hover:text-foreground transition-colors text-left px-1"
                   >
-                    +{Math.max(0, activeEvents.length - 2) + Math.max(0, dayMaint.length - 1) + Math.max(0, dayChklists.length - 1)} mais
+                    +{Math.max(0, activeEvents.length - 2) + Math.max(0, dayMaint.length - 1) + Math.max(0, dayChklists.length - 1) + Math.max(0, dayPreRes.length - 1)} mais
                   </button>
                 )}
               </div>
@@ -818,7 +952,7 @@ function MonthView({
 // ─────────────────────────────────────────────────────────────
 // VISÃO SEMANAL
 // ─────────────────────────────────────────────────────────────
-function WeekView({ currentDate, eventsByDate, maintenanceByDate, checklistByDate = {}, onEventClick, onMaintenanceClick, onChecklistClick, onDayClick }: ViewProps) {
+function WeekView({ currentDate, eventsByDate, maintenanceByDate, checklistByDate = {}, preReservaByDate = {}, onEventClick, onMaintenanceClick, onChecklistClick, onPreReservaClick, onDayClick }: ViewProps) {
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 })
   const weekEnd   = endOfWeek(currentDate, { weekStartsOn: 1 })
   const days      = eachDayOfInterval({ start: weekStart, end: weekEnd })
@@ -858,6 +992,7 @@ function WeekView({ currentDate, eventsByDate, maintenanceByDate, checklistByDat
             const dayEvents  = eventsByDate[key] ?? []
             const dayMaint   = maintenanceByDate[key] ?? []
             const dayChklists = checklistByDate[key] ?? []
+            const dayPreRes  = preReservaByDate[key] ?? []
             const todayFlag  = isToday(day)
 
             return (
@@ -905,6 +1040,20 @@ function WeekView({ currentDate, eventsByDate, maintenanceByDate, checklistByDat
                     <span className="truncate">{c.title}</span>
                   </button>
                 ))}
+                {dayPreRes.map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => onPreReservaClick?.(p)}
+                    className={cn(
+                      'w-full text-left text-[10px] leading-tight px-1 py-0.5 rounded-sm font-medium transition-opacity hover:opacity-80 flex items-center gap-0.5',
+                      PRE_RESERVA_PILL
+                    )}
+                    title={p.title}
+                  >
+                    <Shield className="w-2.5 h-2.5 shrink-0" />
+                    <span className="truncate">{p.title}</span>
+                  </button>
+                ))}
               </div>
             )
           })}
@@ -917,13 +1066,14 @@ function WeekView({ currentDate, eventsByDate, maintenanceByDate, checklistByDat
 // ─────────────────────────────────────────────────────────────
 // VISÃO DIÁRIA
 // ─────────────────────────────────────────────────────────────
-function DayView({ currentDate, eventsByDate, maintenanceByDate, checklistByDate = {}, onEventClick, onMaintenanceClick, onChecklistClick }: Omit<ViewProps, 'onDayClick'>) {
+function DayView({ currentDate, eventsByDate, maintenanceByDate, checklistByDate = {}, preReservaByDate = {}, onEventClick, onMaintenanceClick, onChecklistClick, onPreReservaClick }: Omit<ViewProps, 'onDayClick'>) {
   const key        = format(currentDate, 'yyyy-MM-dd')
   const dayEvents  = eventsByDate[key] ?? []
   const dayMaint   = maintenanceByDate[key] ?? []
   const dayChklists = checklistByDate[key] ?? []
+  const dayPreRes  = preReservaByDate[key] ?? []
 
-  if (dayEvents.length === 0 && dayMaint.length === 0 && dayChklists.length === 0) {
+  if (dayEvents.length === 0 && dayMaint.length === 0 && dayChklists.length === 0 && dayPreRes.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 gap-3 text-muted-foreground">
         <CalendarX className="w-8 h-8 opacity-40" />
@@ -994,6 +1144,24 @@ function DayView({ currentDate, eventsByDate, maintenanceByDate, checklistByDate
           )}
         </button>
       ))}
+      {dayPreRes.map((p) => (
+        <button
+          key={p.id}
+          onClick={() => onPreReservaClick?.(p)}
+          className={cn(
+            'w-full text-left rounded-lg px-3 py-2.5 transition-opacity hover:opacity-80 min-h-[44px]',
+            PRE_RESERVA_PILL
+          )}
+        >
+          <div className="flex items-center gap-2">
+            <Shield className="w-4 h-4 shrink-0 opacity-70" />
+            <p className="text-sm font-semibold truncate">{p.title}</p>
+          </div>
+          {p.time && (
+            <p className="text-xs opacity-70 mt-0.5 ml-6">{p.time}</p>
+          )}
+        </button>
+      ))}
     </div>
   )
 }
@@ -1005,28 +1173,33 @@ function ListView({
   events,
   maintenanceItems = [],
   checklistItems = [],
+  preReservaItems = [],
   onEventClick,
   onMaintenanceClick,
   onChecklistClick,
+  onPreReservaClick,
 }: {
   events: CalendarEvent[]
   maintenanceItems: CalendarMaintenance[]
   checklistItems?: CalendarChecklist[]
+  preReservaItems?: CalendarPreReserva[]
   onEventClick: (e: CalendarEvent) => void
   onMaintenanceClick?: (id: string) => void
   onChecklistClick?: (url: string) => void
+  onPreReservaClick?: (item: CalendarPreReserva) => void
 }) {
-  // Junta eventos + manutenções e ordena por data
   type ListItem =
-    | { kind: 'event'; date: string; data: CalendarEvent }
+    | { kind: 'event';       date: string; data: CalendarEvent }
     | { kind: 'maintenance'; date: string; data: CalendarMaintenance }
-    | { kind: 'checklist'; date: string; data: CalendarChecklist }
+    | { kind: 'checklist';   date: string; data: CalendarChecklist }
+    | { kind: 'pre-reserva'; date: string; data: CalendarPreReserva }
 
   const sorted = useMemo((): ListItem[] => {
     const items: ListItem[] = [
       ...events.map((e): ListItem => ({ kind: 'event', date: e.date, data: e })),
       ...maintenanceItems.filter((m) => !!m.date).map((m): ListItem => ({ kind: 'maintenance', date: m.date!, data: m })),
       ...checklistItems.map((c): ListItem => ({ kind: 'checklist', date: c.date, data: c })),
+      ...preReservaItems.map((p): ListItem => ({ kind: 'pre-reserva', date: p.date, data: p })),
     ]
     return items.sort((a, b) => {
       if (a.date !== b.date) return a.date.localeCompare(b.date)
@@ -1035,7 +1208,7 @@ function ListView({
       }
       return 0
     })
-  }, [events, maintenanceItems, checklistItems])
+  }, [events, maintenanceItems, checklistItems, preReservaItems])
 
   if (sorted.length === 0) {
     return (
@@ -1145,6 +1318,29 @@ function ListView({
                           <p className="text-[10px] opacity-60 truncate">{c.eventTitle}</p>
                         )}
                       </div>
+                    </button>
+                  )
+                } else if (item.kind === 'pre-reserva') {
+                  const p = item.data
+                  return (
+                    <button
+                      key={p.id}
+                      onClick={() => onPreReservaClick?.(p)}
+                      className={cn(
+                        'w-full text-left rounded-lg px-2.5 py-2 min-h-[44px] transition-opacity hover:opacity-80 flex items-center gap-2',
+                        PRE_RESERVA_PILL
+                      )}
+                    >
+                      <Shield className="w-3.5 h-3.5 shrink-0 opacity-70" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-semibold truncate">{p.title}</p>
+                        {p.time && (
+                          <p className="text-[10px] opacity-60 truncate">{p.time}</p>
+                        )}
+                      </div>
+                      <span className="shrink-0 text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
+                        Pré-venda
+                      </span>
                     </button>
                   )
                 }

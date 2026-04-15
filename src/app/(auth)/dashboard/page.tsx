@@ -11,6 +11,9 @@ import { PageHeader } from '@/components/shared/page-header'
 import { KpiCard } from '@/components/features/dashboard/kpi-card'
 import { CalendarView, type CalendarViewType } from '@/components/features/dashboard/calendar-view'
 import { EventQuickView } from '@/components/features/dashboard/event-quick-view'
+import { PreReservaDetailModal } from '@/components/features/dashboard/pre-reserva-detail-modal'
+import { PreReservaModal } from '@/components/features/dashboard/pre-reserva-modal'
+import { SelectUnitModal } from '@/components/shared/select-unit-modal'
 import { SetupChecklistCard } from '@/components/features/onboarding/setup-checklist-card'
 import {
   useDashboardKpis,
@@ -19,8 +22,11 @@ import {
   type CalendarEvent,
 } from '@/hooks/use-dashboard'
 import { useCalendarChecklists } from '@/hooks/use-calendar-checklists'
+import { useCalendarPreReservas } from '@/hooks/use-calendar-pre-reservas'
 import { useLoadingTimeout } from '@/hooks/use-loading-timeout'
+import { useAuth } from '@/hooks/use-auth'
 import { BRAND_GREEN } from '@/lib/constants/brand-colors'
+import type { CalendarPreReserva } from '@/types/pre-reservas'
 
 // ── Stroke colors for sparklines (Recharts requires hex, not CSS vars) ──
 const STROKE = {
@@ -33,10 +39,21 @@ const STROKE = {
 
 export default function DashboardPage() {
   const router = useRouter()
+  const { profile, activeUnitId } = useAuth()
+
   const [currentDate, setCurrentDate] = useState(() => new Date())
   const [calView, setCalView]         = useState<CalendarViewType>('month')
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
   const [showMaintenance, setShowMaintenance] = useState(true)
+
+  // Pré-reservas — estado de modais
+  const [selectedPreReserva, setSelectedPreReserva] = useState<CalendarPreReserva | null>(null)
+  const [showPreReservaModal, setShowPreReservaModal]   = useState(false)
+  const [showSelectUnit, setShowSelectUnit]             = useState(false)
+  const [pendingPreReservaUnitId, setPendingPreReservaUnitId] = useState<string | null>(null)
+
+  const canManagePreReservas =
+    profile?.role === 'super_admin' || profile?.role === 'diretor'
 
   // Calendar date range
   const { dateFrom, dateTo } = useMemo(() => {
@@ -65,6 +82,7 @@ export default function DashboardPage() {
   } = useCalendarEvents(dateFrom, dateTo)
   const { data: calMaintenance = [] } = useCalendarMaintenance(dateFrom, dateTo, showMaintenance)
   const { data: calChecklists = [] } = useCalendarChecklists()
+  const { data: calPreReservas = [] } = useCalendarPreReservas(dateFrom, dateTo)
 
   const { isTimedOut, retry } = useLoadingTimeout(loadingKpis || loadingCal)
 
@@ -75,6 +93,16 @@ export default function DashboardPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setGreeting(h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite')
   }, [])
+
+  // Handler: abrir modal de nova pré-reserva com guard de unidade
+  function handleNewPreReserva() {
+    if (!activeUnitId) {
+      setShowSelectUnit(true)
+    } else {
+      setPendingPreReservaUnitId(activeUnitId)
+      setShowPreReservaModal(true)
+    }
+  }
 
   // TODO: Mover para módulo BI — manutenção e conversão ficam lá
   // const mnValue = kpis?.maintenance.value ?? 0
@@ -190,6 +218,7 @@ export default function DashboardPage() {
           events={calEvents}
           maintenanceItems={calMaintenance}
           checklistItems={calChecklists}
+          preReservaItems={calPreReservas}
           showMaintenance={showMaintenance}
           onToggleMaintenance={() => setShowMaintenance((v) => !v)}
           currentDate={currentDate}
@@ -198,14 +227,44 @@ export default function DashboardPage() {
           onViewChange={setCalView}
           onEventClick={setSelectedEvent}
           onMaintenanceClick={(id) => router.push(`/manutencao/${id}`)}
+          onPreReservaClick={setSelectedPreReserva}
+          onNewPreReserva={canManagePreReservas ? handleNewPreReserva : undefined}
+          canManagePreReservas={canManagePreReservas}
           isLoading={loadingCal}
         />
       </div>
 
-      {/* ── Quick view drawer ── */}
+      {/* ── Quick view drawer — Evento ── */}
       <EventQuickView
         event={selectedEvent}
         onClose={() => setSelectedEvent(null)}
+      />
+
+      {/* ── Quick view drawer — Pré-reserva ── */}
+      <PreReservaDetailModal
+        item={selectedPreReserva}
+        onClose={() => setSelectedPreReserva(null)}
+        canManage={canManagePreReservas}
+      />
+
+      {/* ── Modal criar pré-reserva ── */}
+      {pendingPreReservaUnitId && (
+        <PreReservaModal
+          open={showPreReservaModal}
+          onClose={() => { setShowPreReservaModal(false); setPendingPreReservaUnitId(null) }}
+          unitId={pendingPreReservaUnitId}
+        />
+      )}
+
+      {/* ── Guard de unidade para pré-reserva ── */}
+      <SelectUnitModal
+        open={showSelectUnit}
+        onClose={() => setShowSelectUnit(false)}
+        onConfirm={(unitId) => {
+          setShowSelectUnit(false)
+          setPendingPreReservaUnitId(unitId)
+          setShowPreReservaModal(true)
+        }}
       />
     </div>
   )
