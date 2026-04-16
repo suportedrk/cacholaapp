@@ -1,7 +1,7 @@
 // POST /api/ploomes/webhook-register — Registra os webhooks no Ploomes CRM
 //
 // A API do Ploomes requer um registro separado por ação (ActionId).
-// Registramos 2 webhooks: Win (ActionId=4) + Update (ActionId=2).
+// Registramos 3 webhooks: Win (ActionId=4) + Update (ActionId=2) + Lose (ActionId=5).
 //
 // Campos corretos da API (descobertos via GET /Webhooks):
 //   CallbackUrl  (não "Url")
@@ -21,10 +21,11 @@ import { loadPloomesConfig } from '@/lib/ploomes/sync'
 const APP_URL      = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
 const PLOOMES_API  = 'https://api2.ploomes.com'
 
-// EntityId e ActionId confirmados via GET /Webhooks
+// EntityId e ActionId confirmados via GET /Webhooks + GET /Webhooks@Actions
 const DEAL_ENTITY_ID   = 2   // Deal
 const ACTION_UPDATE_ID = 2   // Update
-const ACTION_WIN_ID    = 4   // Win (ganhou negócio)
+const ACTION_WIN_ID    = 4   // Win  (ganhou negócio)
+const ACTION_LOSE_ID   = 5   // Lose (perdeu negócio)
 
 // ── Tipos da API Ploomes ──────────────────────────────────────
 
@@ -132,9 +133,10 @@ export async function POST(req: NextRequest) {
     const userKey = dbConfig?.user_key || process.env.PLOOMES_USER_KEY || ''
 
     // Registrar um webhook para cada ação (API exige um por ActionId)
-    const [winResult, updateResult] = await Promise.all([
-      ensureWebhook(userKey, webhookUrl, ACTION_WIN_ID, validationKey),
+    const [winResult, updateResult, loseResult] = await Promise.all([
+      ensureWebhook(userKey, webhookUrl, ACTION_WIN_ID,    validationKey),
       ensureWebhook(userKey, webhookUrl, ACTION_UPDATE_ID, validationKey),
+      ensureWebhook(userKey, webhookUrl, ACTION_LOSE_ID,   validationKey),
     ])
 
     // Persistir em ploomes_config
@@ -157,9 +159,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       webhookUrl,
-      win: winResult,
+      win:    winResult,
       update: updateResult,
-      message: `Webhooks registrados com sucesso. Win: #${winResult.id} · Update: #${updateResult.id}`,
+      lose:   loseResult,
+      message: `Webhooks registrados com sucesso. Win: #${winResult.id} · Update: #${updateResult.id} · Lose: #${loseResult.id}`,
     })
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)

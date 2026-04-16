@@ -2,13 +2,14 @@
 //
 // Validação: header X-Ploomes-Validation-Key (env PLOOMES_VALIDATION_KEY)
 // Payload Ploomes: { Action, Entity, Old, New, ... }
-//   Action: "Win" | "Update" | "Create" | "Delete" | "Lose"
-//   Entity: "Deal"
+//   Action: "Win" | "Update" | "Lose" | "Create" | "Delete"
+//   Entity: "Deal" ou "Deals" (o Ploomes envia no plural — normalizado internamente)
 //   New.Id: número do deal afetado
 //
 // Comportamento por action:
 //   Win    → sync do deal específico (fechou como ganho)
 //   Update → sync do deal específico (dados atualizados)
+//   Lose   → sync do deal específico (marcado como perdido)
 //   outros → skipped (registrado mas não processado)
 //
 // Idempotência: mesmo dealId processado com sucesso nos últimos 30s → skipped
@@ -76,14 +77,16 @@ export async function POST(req: NextRequest) {
     const payload = await req.json().catch(() => null) as PloomesWebhookPayload | null
 
     const action = payload?.Action?.trim() ?? ''
-    const entity = payload?.Entity?.trim() ?? ''
+    // O Ploomes envia "Deals" (plural) — normalizar para "deal" singular lowercase
+    const rawEntity = payload?.Entity?.trim() ?? ''
+    const entity    = rawEntity.toLowerCase().replace(/s$/, '') // "Deals" → "deal", "Deal" → "deal"
     const dealId: number | undefined =
       payload?.New?.Id ??
       payload?.Old?.Id ??
       payload?.Id ??
       payload?.DealId
 
-    console.info('[Ploomes webhook] Recebido:', JSON.stringify({ action, entity, dealId }))
+    console.info('[Ploomes webhook] Recebido:', JSON.stringify({ action, entity, rawEntity, dealId }))
 
     // ── 3. Registrar no log (status: received) ────────────────
     const { data: logEntry } = await supabase
@@ -91,7 +94,7 @@ export async function POST(req: NextRequest) {
       .insert({
         deal_id: dealId ?? null,
         action: action || null,
-        entity: entity || null,
+        entity: rawEntity || null,   // gravar o valor original do payload
         status: 'received' as WebhookStatus,
         raw_payload: payload as Record<string, unknown>,
       })
@@ -100,13 +103,14 @@ export async function POST(req: NextRequest) {
 
     webhookLogId = logEntry?.id ?? null
 
-    // ── 4. Filtrar: só processar Deal Win/Update ──────────────
-    const SYNC_ACTIONS = ['Win', 'Update']
+    // ── 4. Filtrar: só processar Deal Win/Update/Lose ─────────
+    // entity já normalizado: "deal" (singular lowercase)
+    const SYNC_ACTIONS = ['Win', 'Update', 'Lose']
 
-    if ((entity && entity !== 'Deal') || (action && !SYNC_ACTIONS.includes(action))) {
-      console.info(`[Ploomes webhook] Ignorado: entity=${entity}, action=${action}`)
+    if ((entity && entity !== 'deal') || (action && !SYNC_ACTIONS.includes(action))) {
+      console.info(`[Ploomes webhook] Ignorado: entity=${rawEntity}(→${entity}), action=${action}`)
       await updateWebhookLog(supabase, webhookLogId, 'skipped', null, startTime)
-      return NextResponse.json({ received: true, status: 'skipped', action, entity })
+      return NextResponse.json({ received: true, status: 'skipped', action, entity: rawEntity })
     }
 
     // ── 5. Idempotência: dealId processado nos últimos 30s ────
