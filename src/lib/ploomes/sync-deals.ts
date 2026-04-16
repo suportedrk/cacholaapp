@@ -80,8 +80,8 @@ export async function syncDealsForBI(
     while (true) {
       const queryParts = [
         `$filter=PipelineId eq ${pipelineId}`,
-        `$select=Id,Title,ContactId,Amount,StageId,StatusId,CreateDate,LastUpdateDate`,
-        `$expand=OtherProperties,Contact($select=Id,Name,Email,Phones),Stage($select=Id,Name)`,
+        `$select=Id,Title,ContactId,OwnerId,Amount,StageId,StatusId,CreateDate,LastUpdateDate`,
+        `$expand=OtherProperties,Contact($select=Id,Name,Email,Phones),Stage($select=Id,Name),Owner($select=Id,Name,Email)`,
         `$top=${pageSize}`,
         `$skip=${skip}`,
         `$orderby=CreateDate desc`,
@@ -142,6 +142,8 @@ export async function syncDealsForBI(
               event_date,
               start_time,
               end_time,
+              owner_id:           deal.OwnerId ?? null,
+              owner_name:         deal.Owner?.Name ?? null,
               event_id:           existingEvent?.id ?? null,
             },
             { onConflict: 'ploomes_deal_id' },
@@ -193,8 +195,8 @@ export async function syncSingleDealToBI(
     // 2. Buscar o deal específico
     const queryParts = [
       `$filter=PipelineId eq ${pipelineId} and Id eq ${dealId}`,
-      `$select=Id,Title,ContactId,Amount,StageId,StatusId,CreateDate,LastUpdateDate`,
-      `$expand=OtherProperties,Contact($select=Id,Name,Email,Phones),Stage($select=Id,Name)`,
+      `$select=Id,Title,ContactId,OwnerId,Amount,StageId,StatusId,CreateDate,LastUpdateDate`,
+      `$expand=OtherProperties,Contact($select=Id,Name,Email,Phones),Stage($select=Id,Name),Owner($select=Id,Name,Email)`,
     ].join('&')
 
     const response = await ploomesGet<PloomesDeal>(`Deals?${queryParts}`, userKey)
@@ -245,6 +247,8 @@ export async function syncSingleDealToBI(
           event_date,
           start_time,
           end_time,
+          owner_id:            deal.OwnerId ?? null,
+          owner_name:          deal.Owner?.Name ?? null,
           event_id:            existingEvent?.id ?? null,
         },
         { onConflict: 'ploomes_deal_id' },

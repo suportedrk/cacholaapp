@@ -55,4 +55,6 @@ export interface CalendarPreReserva {
   deal_amount?:    number | null
   /** Nome do estágio Ploomes — preenchido quando source === 'ploomes' */
   stage_name?:     string | null
+  /** Nome da vendedora responsável — preenchido quando source === 'ploomes' */
+  owner_name?:     string | null
 }

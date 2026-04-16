@@ -198,7 +198,7 @@ export async function syncDeals(
 
     // ── 3. Buscar deals do Ploomes ────────────────────────────────
     const allDeals: PloomesDeal[] = []
-    const EXPAND = `$expand=OtherProperties,Contact($select=Id,Name,Email,Phones)`
+    const EXPAND = `$expand=OtherProperties,Contact($select=Id,Name,Email,Phones),Owner($select=Id,Name,Email)`
     const SELECT = `$select=Id,Title,ContactId,OwnerId,Amount,StageId,StatusId,CreateDate,LastUpdateDate,OtherProperties`
 
     if (options.dealId) {
@@ -315,6 +315,8 @@ export async function syncDeals(
           kids_under4: parsed.kidsUnder4 ?? null,
           kids_over5: parsed.kidsOver5 ?? null,
           deal_amount: parsed.amount ?? null,
+          owner_id:   deal.OwnerId ?? null,
+          owner_name: deal.Owner?.Name ?? null,
         }
 
         // Verificar se já existe (para contar created vs updated vs lost)

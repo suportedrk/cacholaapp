@@ -528,6 +528,8 @@ export type Event = {
   kids_under4: number | null
   kids_over5: number | null
   deal_amount: number | null
+  owner_id: number | null
+  owner_name: string | null
 }
 
 export type EventInsert = {

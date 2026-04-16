@@ -9,6 +9,9 @@ import {
 import { SearchX, PartyPopper, CalendarX, Loader2, AlertTriangle, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import {
+  Select, SelectContent, SelectItem, SelectTrigger,
+} from '@/components/ui/select'
 import { PageHeader } from '@/components/shared/page-header'
 import { EmptyState } from '@/components/shared/empty-state'
 import { FilterChip } from '@/components/shared/filter-chip'
@@ -137,6 +140,17 @@ function EventosContent() {
   const [searchInput, setSearchInput]   = useState('')
   const debouncedSearch = useDebounce(searchInput, 300)
 
+  // Filtro por vendedora — persiste em localStorage
+  const [selectedOwner, setSelectedOwner] = useState<string | null>(
+    () => (typeof window !== 'undefined' ? localStorage.getItem('eventos-owner-filter') : null)
+  )
+  const handleOwnerChange = useCallback((v: string | null) => {
+    const val = !v || v === '__all__' ? null : v
+    setSelectedOwner(val)
+    if (val) localStorage.setItem('eventos-owner-filter', val)
+    else localStorage.removeItem('eventos-owner-filter')
+  }, [])
+
   // Modal de detalhe de pré-reserva
   const [selectedPreReserva, setSelectedPreReserva] = useState<CalendarPreReserva | null>(null)
 
@@ -236,11 +250,12 @@ function EventosContent() {
 
   const { isTimedOut, retry } = useLoadingTimeout(isLoading)
 
-  // Eventos a exibir (vazio quando filtro Ploomes ou Diretoria ativo)
-  const displayEvents = useMemo(
-    () => (isPloomesFilter || isDiretoriaFilter) ? [] : isConflictFilter ? (conflictEventsData ?? []) : allEvents,
-    [isPloomesFilter, isDiretoriaFilter, isConflictFilter, conflictEventsData, allEvents]
-  )
+  // Eventos a exibir (vazio quando filtro Ploomes ou Diretoria ativo; filtrado por vendedora)
+  const displayEvents = useMemo(() => {
+    const base = (isPloomesFilter || isDiretoriaFilter) ? [] : isConflictFilter ? (conflictEventsData ?? []) : allEvents
+    if (!selectedOwner) return base
+    return base.filter((e) => e.owner_name === selectedOwner)
+  }, [isPloomesFilter, isDiretoriaFilter, isConflictFilter, conflictEventsData, allEvents, selectedOwner])
 
   // Pré-reservas a exibir
   const displayPreReservas = useMemo(() => {
@@ -248,6 +263,8 @@ function EventosContent() {
     // Filtro de conflito: só as pré-reservas que conflitam
     if (activeFilter === 'overlap')   prs = prs.filter((pr) => prConflicts.prOverlapIds.has(pr.id))
     if (activeFilter === 'short_gap') prs = prs.filter((pr) => prConflicts.prShortGapIds.has(pr.id))
+    // Filtro por vendedora
+    if (selectedOwner) prs = prs.filter((pr) => pr.owner_name === selectedOwner)
     // Busca: filtrar por nome do cliente ou descrição
     if (debouncedSearch.trim()) {
       const q = debouncedSearch.trim().toLowerCase()
@@ -259,7 +276,15 @@ function EventosContent() {
       )
     }
     return prs
-  }, [filteredPreReservas, activeFilter, prConflicts, debouncedSearch])
+  }, [filteredPreReservas, activeFilter, prConflicts, selectedOwner, debouncedSearch])
+
+  // Lista de vendedoras únicas (dos eventos carregados + pré-reservas)
+  const ownerOptions = useMemo(() => {
+    const names = new Set<string>()
+    allEvents.forEach((e) => { if (e.owner_name) names.add(e.owner_name) })
+    rawPreReservas.forEach((pr) => { if (pr.owner_name) names.add(pr.owner_name) })
+    return Array.from(names).sort()
+  }, [allEvents, rawPreReservas])
 
   // Agrupamento unificado por data (eventos + pré-reservas)
   const groupedEvents   = useMemo(() => groupByDate(displayEvents),   [displayEvents])
@@ -276,6 +301,8 @@ function EventosContent() {
     router.replace(`${pathname}?${params.toString()}`, { scroll: false })
     setActiveFilter(null)
   }, [searchParams, pathname, router])
+
+  const hasOwnerFilter = selectedOwner !== null
 
   // Toggle de filtro — exclusivo
   const toggleFilter = useCallback((value: ActiveFilter) => {
@@ -316,23 +343,43 @@ function EventosContent() {
         onTabChange={handleTabChange}
       />
 
-      {/* Busca */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-        <Input
-          placeholder="Buscar por aniversariante, contratante, tema..."
-          value={searchInput}
-          onChange={(e) => setSearchInput(e.target.value)}
-          className="pl-9 pr-9"
-        />
-        {searchInput && (
-          <button
-            aria-label="Limpar busca"
-            onClick={() => setSearchInput('')}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+      {/* Busca + filtro de vendedora */}
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+          <Input
+            placeholder="Buscar por aniversariante, contratante, tema..."
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            className="pl-9 pr-9"
+          />
+          {searchInput && (
+            <button
+              aria-label="Limpar busca"
+              onClick={() => setSearchInput('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+        {ownerOptions.length > 0 && (
+          <Select
+            value={selectedOwner ?? '__all__'}
+            onValueChange={handleOwnerChange}
           >
-            <X className="w-4 h-4" />
-          </button>
+            <SelectTrigger className="w-40 shrink-0 text-sm">
+              <span data-slot="select-value" className="flex flex-1 text-left truncate">
+                {selectedOwner ?? 'Vendedora'}
+              </span>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">Todas</SelectItem>
+              {ownerOptions.map((name) => (
+                <SelectItem key={name} value={name}>{name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         )}
       </div>
 

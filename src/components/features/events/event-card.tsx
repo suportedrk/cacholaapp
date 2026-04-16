@@ -3,7 +3,7 @@
 import { memo } from 'react'
 import Link from 'next/link'
 import { parseISO, isToday, isFuture, startOfDay } from 'date-fns'
-import { Clock, Users, Phone, Mail, Tag, Handshake, AlertTriangle } from 'lucide-react'
+import { Clock, Users, Phone, Mail, Tag, Handshake, AlertTriangle, User } from 'lucide-react'
 
 export type ConflictType = 'overlap' | 'short_gap' | null
 import { EventStatusBadge } from '@/components/shared/event-status-badge'
@@ -149,6 +149,14 @@ export const EventCard = memo(function EventCard({ event, conflictType = null }:
               : event.title}
           </h3>
           <p className="text-sm text-text-secondary mt-0.5 line-clamp-1">{event.client_name}</p>
+
+          {/* Vendedora responsável */}
+          {event.owner_name && (
+            <div className="flex items-center gap-1 mt-0.5">
+              <User className="w-3 h-3 text-text-tertiary shrink-0" />
+              <span className="text-xs text-text-tertiary line-clamp-1">{event.owner_name}</span>
+            </div>
+          )}
 
           {/* Tema da festa — Ploomes */}
           {event.theme && (
