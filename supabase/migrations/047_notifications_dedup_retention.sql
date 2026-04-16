@@ -35,7 +35,7 @@ WHERE created_at < now() - interval '30 days';
 -- Um (user_id, type, link) por dia — funciona como dedup diário.
 -- Somente para tipos 'overdue'; outros tipos sempre inserem normalmente.
 CREATE UNIQUE INDEX IF NOT EXISTS idx_notifications_no_daily_dup
-  ON public.notifications (user_id, type, link, (DATE(created_at)))
+  ON public.notifications (user_id, type, link, (timezone('UTC', created_at)::date))
   WHERE type IN ('maintenance_overdue', 'checklist_overdue');
 
 -- ── PASSO 4: Atualizar RPC create_notification ───────────────
@@ -63,7 +63,7 @@ BEGIN
   -- Para todos os outros tipos, INSERT ocorre normalmente.
   INSERT INTO public.notifications (user_id, type, title, body, link, is_read)
   VALUES (p_user_id, p_type, p_title, p_body, p_link, FALSE)
-  ON CONFLICT (user_id, type, link, (DATE(created_at)))
+  ON CONFLICT (user_id, type, link, (timezone('UTC', created_at)::date))
     WHERE type IN ('maintenance_overdue', 'checklist_overdue')
   DO NOTHING
   RETURNING id INTO v_id;
