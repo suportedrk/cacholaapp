@@ -78,7 +78,7 @@ export function useSuppliers(filters: SupplierFilters = {}) {
 // DETAIL
 // ─────────────────────────────────────────────────────────────
 export function useSupplier(id: string | null) {
-  const { activeUnitId } = useUnitStore()
+  const { activeUnitId: _activeUnitId } = useUnitStore()
   const isSessionReady   = useAuthReadyStore((s) => s.isSessionReady)
 
   return useQuery({
