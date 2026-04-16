@@ -21,11 +21,11 @@ import type { CalendarPreReserva } from '@/types/pre-reservas'
 // ─────────────────────────────────────────────────────────────
 
 interface PreReservaModalProps {
-  open:       boolean
-  onClose:    () => void
-  unitId:     string          // sempre definido ao abrir (guard no pai)
-  editItem?:  CalendarPreReserva | null
-  /** Data pré-selecionada ao criar (ex: clique num dia do calendário) */
+  open:        boolean
+  onClose:     () => void
+  unitId:      string           // sempre definido ao abrir (guard no pai)
+  editItem?:   CalendarPreReserva | null
+  /** Data pré-selecionada ao criar */
   defaultDate?: string
 }
 
@@ -43,11 +43,16 @@ export function PreReservaModal({
   const isEdit = !!editItem
 
   const [date,          setDate]          = useState('')
-  const [time,          setTime]          = useState('')
+  const [startTime,     setStartTime]     = useState('')
+  const [endTime,       setEndTime]       = useState('')
   const [clientName,    setClientName]    = useState('')
   const [clientContact, setClientContact] = useState('')
   const [description,   setDescription]  = useState('')
-  const [errors,        setErrors]        = useState<{ date?: string; clientName?: string }>({})
+  const [errors,        setErrors]        = useState<{
+    date?: string
+    clientName?: string
+    endTime?: string
+  }>({})
 
   const createMutation = useCreatePreReserva()
   const updateMutation = useUpdatePreReserva()
@@ -58,13 +63,15 @@ export function PreReservaModal({
     if (open) {
       if (editItem) {
         setDate(editItem.date)
-        setTime(editItem.time ?? '')
+        setStartTime(editItem.start_time ?? '')
+        setEndTime(editItem.end_time ?? '')
         setClientName(editItem.title)
         setClientContact(editItem.client_contact ?? '')
         setDescription(editItem.description ?? '')
       } else {
         setDate(defaultDate ?? '')
-        setTime('')
+        setStartTime('')
+        setEndTime('')
         setClientName('')
         setClientContact('')
         setDescription('')
@@ -75,8 +82,11 @@ export function PreReservaModal({
 
   function validate() {
     const next: typeof errors = {}
-    if (!date)       next.date       = 'Data é obrigatória'
+    if (!date)              next.date       = 'Data é obrigatória'
     if (!clientName.trim()) next.clientName = 'Nome do cliente é obrigatório'
+    if (endTime && startTime && endTime <= startTime) {
+      next.endTime = 'Horário de fim deve ser após o início'
+    }
     setErrors(next)
     return Object.keys(next).length === 0
   }
@@ -87,7 +97,8 @@ export function PreReservaModal({
     const payload = {
       unit_id:        unitId,
       date,
-      time:           time || null,
+      start_time:     startTime || null,
+      end_time:       endTime   || null,
       client_name:    clientName.trim(),
       client_contact: clientContact.trim() || null,
       description:    description.trim()   || null,
@@ -120,31 +131,46 @@ export function PreReservaModal({
         </DialogHeader>
 
         <div className="space-y-4 py-2">
-          {/* Data + Horário */}
+          {/* Data */}
+          <div className="space-y-1.5">
+            <Label htmlFor="pr-date">
+              Data <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="pr-date"
+              type="date"
+              value={date}
+              onChange={(e) => { setDate(e.target.value); setErrors((p) => ({ ...p, date: undefined })) }}
+              className={errors.date ? 'border-destructive' : ''}
+            />
+            {errors.date && (
+              <p className="text-xs text-destructive">{errors.date}</p>
+            )}
+          </div>
+
+          {/* Horário de início + fim */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label htmlFor="pr-date">
-                Data <span className="text-destructive">*</span>
-              </Label>
+              <Label htmlFor="pr-start-time">Horário de início</Label>
               <Input
-                id="pr-date"
-                type="date"
-                value={date}
-                onChange={(e) => { setDate(e.target.value); setErrors((p) => ({ ...p, date: undefined })) }}
-                className={errors.date ? 'border-destructive' : ''}
+                id="pr-start-time"
+                type="time"
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
               />
-              {errors.date && (
-                <p className="text-xs text-destructive">{errors.date}</p>
-              )}
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="pr-time">Horário</Label>
+              <Label htmlFor="pr-end-time">Horário de fim</Label>
               <Input
-                id="pr-time"
+                id="pr-end-time"
                 type="time"
-                value={time}
-                onChange={(e) => setTime(e.target.value)}
+                value={endTime}
+                onChange={(e) => { setEndTime(e.target.value); setErrors((p) => ({ ...p, endTime: undefined })) }}
+                className={errors.endTime ? 'border-destructive' : ''}
               />
+              {errors.endTime && (
+                <p className="text-xs text-destructive">{errors.endTime}</p>
+              )}
             </div>
           </div>
 

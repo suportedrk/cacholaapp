@@ -12,7 +12,7 @@ function db(supabase: ReturnType<typeof createClient>): any {
 }
 
 // ─────────────────────────────────────────────────────────────
-// CREATE
+// CREATE — inclui created_by automaticamente via auth.getUser()
 // ─────────────────────────────────────────────────────────────
 
 export function useCreatePreReserva() {
@@ -21,9 +21,14 @@ export function useCreatePreReserva() {
   return useMutation({
     mutationFn: async (payload: PreReservaDiretoriaInsert) => {
       const supabase = createClient()
+
+      // Obter usuário autenticado para preencher created_by (campo NOT NULL)
+      const { data: { user }, error: userErr } = await supabase.auth.getUser()
+      if (userErr || !user) throw new Error('Sessão expirada. Faça login novamente.')
+
       const { data, error } = await db(supabase)
         .from('pre_reservas_diretoria')
-        .insert(payload)
+        .insert({ ...payload, created_by: user.id })
         .select('id')
         .single()
       if (error) throw error
@@ -33,8 +38,13 @@ export function useCreatePreReserva() {
       toast.success('Pré-reserva criada com sucesso')
       void qc.invalidateQueries({ queryKey: ['pre-reservas-diretoria'] })
     },
-    onError: () => {
-      toast.error('Erro ao criar pré-reserva. Tente novamente.')
+    onError: (err: unknown) => {
+      const msg = (err as Error)?.message
+      if (msg?.includes('Sessão')) {
+        toast.error(msg)
+      } else {
+        toast.error('Erro ao criar pré-reserva. Tente novamente.')
+      }
     },
   })
 }
