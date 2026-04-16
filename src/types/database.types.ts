@@ -106,6 +106,10 @@ export interface Database {
       get_bi_funnel_data:            { Args: { p_unit_id?: string | null }; Returns: { stage_id: number; stage_name: string; total: number; em_aberto: number; ganhos: number; perdidos: number }[] }
       // ── BI — Comparativo entre unidades (Migration 043) ─────────────────────
       get_bi_unit_comparison:        { Args: { p_months?: number }; Returns: { unit_id: string; unit_name: string; total_leads: number; won_leads: number; conversion_rate: number | null; total_revenue: number; avg_ticket: number | null; avg_closing_days: number | null; avg_booking_advance: number | null }[] }
+      // ── BI — Vendedoras (Migration 051) ──────────────────────────────────────
+      get_bi_sellers_ranking:        { Args: { p_unit_id?: string | null; p_period_months?: number }; Returns: { owner_name: string; leads_count: number; won_count: number; lost_count: number; open_count: number; conversion_rate: number; avg_ticket: number; total_revenue: number }[] }
+      get_bi_seller_history:         { Args: { p_owner_name: string; p_unit_id?: string | null; p_period_months?: number }; Returns: { month_label: string; leads_count: number; won_count: number; revenue: number; avg_days_to_close: number | null }[] }
+      get_bi_seller_funnel:          { Args: { p_owner_name: string; p_unit_id?: string | null; p_period_months?: number }; Returns: { bucket: string; deals_count: number; total_value: number }[] }
     }
     Enums: Record<string, never>
   }
@@ -935,6 +939,10 @@ export type PloomesDealsRow = {
   ploomes_last_update: string | null
   event_date: string | null
   event_id: string | null
+  start_time: string | null
+  end_time: string | null
+  owner_id: number | null
+  owner_name: string | null
   created_at: string
   updated_at: string
 }

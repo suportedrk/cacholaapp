@@ -302,8 +302,6 @@ function EventosContent() {
     setActiveFilter(null)
   }, [searchParams, pathname, router])
 
-  const hasOwnerFilter = selectedOwner !== null
-
   // Toggle de filtro — exclusivo
   const toggleFilter = useCallback((value: ActiveFilter) => {
     setActiveFilter((prev) => prev === value ? null : value)
