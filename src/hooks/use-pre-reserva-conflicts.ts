@@ -73,7 +73,10 @@ export function usePreReservaConflictSets(): PRConflictResult & {
       return { prOverlapIds, prShortGapIds, eventOverlapFromPR, eventShortGapFromPR }
     }
 
+    const today = new Date().toISOString().split('T')[0]
+
     for (const row of data) {
+      if (row.conflict_date < today) continue
       const isOverlap   = row.gap_minutes <  0
       const isShortGap  = row.gap_minutes >= 0 && row.gap_minutes < 120
 

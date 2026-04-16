@@ -73,8 +73,10 @@ export function useOverlappingEventIds(): Set<string> {
 
   return useMemo(() => {
     if (!data || data.length === 0) return new Set<string>()
+    const today = new Date().toISOString().split('T')[0]
     const ids = new Set<string>()
     for (const c of data) {
+      if (c.conflict_date < today) continue
       if (c.gap_minutes <= 0) {
         ids.add(c.event_id_a)
         ids.add(c.event_id_b)
@@ -93,8 +95,10 @@ export function useShortGapEventIds(): Set<string> {
 
   return useMemo(() => {
     if (!data || data.length === 0) return new Set<string>()
+    const today = new Date().toISOString().split('T')[0]
     const ids = new Set<string>()
     for (const c of data) {
+      if (c.conflict_date < today) continue
       if (c.gap_minutes > 0 && c.gap_minutes < 120) {
         ids.add(c.event_id_a)
         ids.add(c.event_id_b)
