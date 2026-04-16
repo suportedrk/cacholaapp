@@ -171,10 +171,23 @@ export async function GET(request: Request) {
 
   // Seção 4 (manutenções recorrentes) movida para migration do novo módulo
 
+  // ─────────────────────────────────────────────────────────────
+  // 5. Retenção: remover notificações com mais de 30 dias
+  // ─────────────────────────────────────────────────────────────
+  let deletedCount = 0
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data } = await (supabase as any).rpc('cleanup_old_notifications', { p_days: 30 })
+    deletedCount = (data as number) ?? 0
+  } catch (e) {
+    errors.push(`cleanup_notifications: ${e}`)
+  }
+
   return Response.json({
-    ok:      errors.length === 0,
+    ok:           errors.length === 0,
     created,
-    errors:  errors.length > 0 ? errors : undefined,
-    date:    todayStr,
+    deleted:      deletedCount,
+    errors:       errors.length > 0 ? errors : undefined,
+    date:         todayStr,
   })
 }
