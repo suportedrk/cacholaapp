@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useUnitStore } from '@/stores/unit-store'
 import { useAuthReadyStore } from '@/stores/auth-store'
+import type { CalendarPreReserva } from '@/types/pre-reservas'
 
 export type EventConflict = {
   event_id_a:    string
@@ -101,4 +102,98 @@ export function useShortGapEventIds(): Set<string> {
     }
     return ids
   }, [data])
+}
+
+// ─────────────────────────────────────────────────────────────
+// computePreReservaConflicts
+// Computa client-side os conflitos entre pré-reservas e eventos
+// (e entre pré-reservas entre si) na mesma data.
+//
+// Requer start_time + end_time em ambos para detectar conflito.
+// Retorna Sets de IDs afetados (4 conjuntos separados).
+// ─────────────────────────────────────────────────────────────
+
+type IntervalItem = {
+  id:         string
+  date:       string
+  start_time: string | null
+  end_time:   string | null
+}
+
+export type PRConflictResult = {
+  /** IDs de pré-reservas com sobreposição direta */
+  prOverlapIds:        Set<string>
+  /** IDs de pré-reservas com intervalo < 2h (sem sobreposição) */
+  prShortGapIds:       Set<string>
+  /** IDs de eventos que colidem (sobreposição) com alguma pré-reserva */
+  eventOverlapFromPR:  Set<string>
+  /** IDs de eventos com intervalo < 2h com alguma pré-reserva */
+  eventShortGapFromPR: Set<string>
+}
+
+function timeToMinutes(time: string): number {
+  const [h, m] = time.split(':').map(Number)
+  return h * 60 + m
+}
+
+export function computePreReservaConflicts(
+  events:      IntervalItem[],
+  preReservas: CalendarPreReserva[],
+): PRConflictResult {
+  const result: PRConflictResult = {
+    prOverlapIds:        new Set(),
+    prShortGapIds:       new Set(),
+    eventOverlapFromPR:  new Set(),
+    eventShortGapFromPR: new Set(),
+  }
+
+  // Pré-reservas precisam ter start_time e end_time para checar conflito
+  const checkablePRs = preReservas.filter((pr) => pr.start_time && pr.end_time)
+  if (checkablePRs.length === 0) return result
+
+  // Eventos com tempo completo, indexados por data
+  const eventsByDate = new Map<string, IntervalItem[]>()
+  for (const ev of events) {
+    if (!ev.start_time || !ev.end_time) continue
+    const arr = eventsByDate.get(ev.date) ?? []
+    arr.push(ev)
+    eventsByDate.set(ev.date, arr)
+  }
+
+  for (const pr of checkablePRs) {
+    const prStart = timeToMinutes(pr.start_time!.substring(0, 5))
+    const prEnd   = timeToMinutes(pr.end_time!.substring(0, 5))
+
+    // Pré-reserva vs eventos na mesma data
+    for (const ev of (eventsByDate.get(pr.date) ?? [])) {
+      const evStart = timeToMinutes(ev.start_time!.substring(0, 5))
+      const evEnd   = timeToMinutes(ev.end_time!.substring(0, 5))
+      // gap positivo = espaço entre os intervalos; <= 0 = sobreposição
+      const gap = Math.max(evStart - prEnd, prStart - evEnd)
+      if (gap <= 0) {
+        result.prOverlapIds.add(pr.id)
+        result.eventOverlapFromPR.add(ev.id)
+      } else if (gap < 120) {
+        if (!result.prOverlapIds.has(pr.id))       result.prShortGapIds.add(pr.id)
+        if (!result.eventOverlapFromPR.has(ev.id)) result.eventShortGapFromPR.add(ev.id)
+      }
+    }
+
+    // Pré-reserva vs outras pré-reservas na mesma data
+    for (const other of checkablePRs) {
+      if (other.id === pr.id || other.date !== pr.date) continue
+      const otStart = timeToMinutes(other.start_time!.substring(0, 5))
+      const otEnd   = timeToMinutes(other.end_time!.substring(0, 5))
+      const gap = Math.max(otStart - prEnd, prStart - otEnd)
+      if (gap <= 0) {
+        result.prOverlapIds.add(pr.id)
+        result.prOverlapIds.add(other.id)
+      } else if (gap < 120) {
+        if (!result.prOverlapIds.has(pr.id))    result.prShortGapIds.add(pr.id)
+        if (!result.prOverlapIds.has(other.id)) result.prShortGapIds.add(other.id)
+      }
+    }
+  }
+
+  return result
 }
