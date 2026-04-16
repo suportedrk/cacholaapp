@@ -44,7 +44,7 @@ import { cn } from '@/lib/utils'
 // Tipos
 // ─────────────────────────────────────────────────────────────
 type ConflictFilter = 'overlap' | 'short_gap'
-type ActiveFilter   = EventStatus | ConflictFilter | null
+type ActiveFilter   = EventStatus | ConflictFilter | 'ploomes' | null
 
 // ─────────────────────────────────────────────────────────────
 // Configuração de chips de status
@@ -132,9 +132,8 @@ function EventosContent() {
   // Aba ativa (persistida na URL)
   const tab = (searchParams.get('tab') as TabKey) ?? 'all'
 
-  // Filtro ativo (status OU tipo de conflito — mutuamente exclusivos)
+  // Filtro ativo (status OU tipo de conflito OU ploomes — mutuamente exclusivos)
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>(null)
-  const [showPreReservasPloomes, setShowPreReservasPloomes] = useState(true)
   const [searchInput, setSearchInput]   = useState('')
   const debouncedSearch = useDebounce(searchInput, 300)
 
@@ -160,14 +159,15 @@ function EventosContent() {
     [prDiretoria, prPloomes],
   )
 
-  // Se o filtro ativo é de conflito, buscar os eventos por ID (servidor)
+  // Tipos de filtro
   const isConflictFilter = activeFilter === 'overlap' || activeFilter === 'short_gap'
+  const isPloomesFilter  = activeFilter === 'ploomes'
 
   // Paginação normal de eventos
   const queryStatus: EventStatus[] | undefined = useMemo(() => {
-    if (!activeFilter || isConflictFilter) return undefined
+    if (!activeFilter || isConflictFilter || isPloomesFilter) return undefined
     return [activeFilter as EventStatus]
-  }, [activeFilter, isConflictFilter])
+  }, [activeFilter, isConflictFilter, isPloomesFilter])
 
   const {
     data,
@@ -188,12 +188,12 @@ function EventosContent() {
   )
   const total = data?.pages[0]?.total ?? 0
 
-  // Aplica filtro de visibilidade das PRs Ploomes
+  // PRs visíveis: quando filtro Ploomes ativo, só mostra Ploomes; senão, todas
   const filteredPreReservas = useMemo(
-    () => showPreReservasPloomes
-      ? rawPreReservas
-      : rawPreReservas.filter((pr) => pr.source !== 'ploomes'),
-    [rawPreReservas, showPreReservasPloomes],
+    () => isPloomesFilter
+      ? prPloomes
+      : rawPreReservas,
+    [rawPreReservas, prPloomes, isPloomesFilter],
   )
 
   // Conflitos pré-reserva × evento (client-side)
@@ -238,10 +238,10 @@ function EventosContent() {
 
   const { isTimedOut, retry } = useLoadingTimeout(isLoading)
 
-  // Eventos a exibir
+  // Eventos a exibir (vazio quando filtro Ploomes ativo)
   const displayEvents = useMemo(
-    () => isConflictFilter ? (conflictEventsData ?? []) : allEvents,
-    [isConflictFilter, conflictEventsData, allEvents]
+    () => isPloomesFilter ? [] : isConflictFilter ? (conflictEventsData ?? []) : allEvents,
+    [isPloomesFilter, isConflictFilter, conflictEventsData, allEvents]
   )
 
   // Pré-reservas a exibir
@@ -411,15 +411,15 @@ function EventosContent() {
           )}
         </button>
 
-        {/* Separador + toggle Pré-reserva Ploomes */}
+        {/* Separador + filtro Pré-reserva Ploomes */}
         {prPloomes.length > 0 && (
           <>
             <span className="w-px h-5 bg-border self-center mx-0.5" />
             <button
-              onClick={() => setShowPreReservasPloomes((v) => !v)}
+              onClick={() => toggleFilter('ploomes')}
               className={cn(
                 'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium transition-colors',
-                showPreReservasPloomes
+                isPloomesFilter
                   ? 'border-pink-300 bg-pink-100 text-pink-700 dark:border-pink-700 dark:bg-pink-900/40 dark:text-pink-400'
                   : 'border-border bg-background text-muted-foreground hover:bg-muted',
               )}
@@ -428,7 +428,7 @@ function EventosContent() {
               Pré-reserva Ploomes
               <span className={cn(
                 'rounded-full px-1.5 py-0.5 text-xs font-semibold',
-                showPreReservasPloomes
+                isPloomesFilter
                   ? 'bg-pink-200 text-pink-800 dark:bg-pink-800 dark:text-pink-200'
                   : 'bg-muted text-muted-foreground',
               )}>
