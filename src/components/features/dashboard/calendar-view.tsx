@@ -629,7 +629,11 @@ function DayPopoverContent({
         >
           <Shield className="w-3 h-3 shrink-0 opacity-70" />
           <span className="truncate font-medium">{p.title}</span>
-          {p.time && <span className="ml-auto shrink-0 opacity-60">{p.time}</span>}
+          {(p.start_time || p.end_time) && (
+            <span className="ml-auto shrink-0 opacity-60">
+              {p.start_time ?? '—'}{p.end_time ? `→${p.end_time}` : ''}
+            </span>
+          )}
         </button>
       ))}
 
@@ -1157,8 +1161,10 @@ function DayView({ currentDate, eventsByDate, maintenanceByDate, checklistByDate
             <Shield className="w-4 h-4 shrink-0 opacity-70" />
             <p className="text-sm font-semibold truncate">{p.title}</p>
           </div>
-          {p.time && (
-            <p className="text-xs opacity-70 mt-0.5 ml-6">{p.time}</p>
+          {(p.start_time || p.end_time) && (
+            <p className="text-xs opacity-70 mt-0.5 ml-6">
+              {p.start_time ?? '—'}{p.end_time ? ` → ${p.end_time}` : ''}
+            </p>
           )}
         </button>
       ))}
@@ -1334,8 +1340,10 @@ function ListView({
                       <Shield className="w-3.5 h-3.5 shrink-0 opacity-70" />
                       <div className="min-w-0 flex-1">
                         <p className="text-xs font-semibold truncate">{p.title}</p>
-                        {p.time && (
-                          <p className="text-[10px] opacity-60 truncate">{p.time}</p>
+                        {(p.start_time || p.end_time) && (
+                          <p className="text-[10px] opacity-60 truncate">
+                            {p.start_time ?? '—'}{p.end_time ? ` → ${p.end_time}` : ''}
+                          </p>
                         )}
                       </div>
                       <span className="shrink-0 text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">

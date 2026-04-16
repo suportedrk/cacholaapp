@@ -108,10 +108,13 @@ export function PreReservaDetailModal({
                 </div>
 
                 {/* Horário */}
-                {item.time && (
+                {(item.start_time || item.end_time) && (
                   <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
                     <Clock className="w-4 h-4 shrink-0" />
-                    <span>{item.time}</span>
+                    <span>
+                      {item.start_time ?? '—'}
+                      {item.end_time && ` → ${item.end_time}`}
+                    </span>
                   </div>
                 )}
 

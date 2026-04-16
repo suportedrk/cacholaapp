@@ -1,12 +1,13 @@
 // ============================================================
-// TYPES — Pré-reservas Diretoria (Migration 045)
+// TYPES — Pré-reservas Diretoria (Migrations 045 + 046)
 // ============================================================
 
 export interface PreReservaDiretoria {
   id:             string
   unit_id:        string
   date:           string        // 'YYYY-MM-DD'
-  time:           string | null // 'HH:mm:ss' ou null
+  start_time:     string | null // 'HH:mm:ss' ou null
+  end_time:       string | null // 'HH:mm:ss' ou null
   client_name:    string
   client_contact: string | null
   description:    string | null
@@ -18,7 +19,8 @@ export interface PreReservaDiretoria {
 export interface PreReservaDiretoriaInsert {
   unit_id:         string
   date:            string
-  time?:           string | null
+  start_time?:     string | null
+  end_time?:       string | null
   client_name:     string
   client_contact?: string | null
   description?:    string | null
@@ -26,7 +28,8 @@ export interface PreReservaDiretoriaInsert {
 
 export interface PreReservaDiretoriaUpdate {
   date?:           string
-  time?:           string | null
+  start_time?:     string | null
+  end_time?:       string | null
   client_name?:    string
   client_contact?: string | null
   description?:    string | null
@@ -35,9 +38,10 @@ export interface PreReservaDiretoriaUpdate {
 /** Forma normalizada para o CalendarView */
 export interface CalendarPreReserva {
   id:              string
-  title:           string   // = client_name
-  date:            string   // 'YYYY-MM-DD'
-  time?:           string   // 'HH:mm' se existir
+  title:           string        // = client_name
+  date:            string        // 'YYYY-MM-DD'
+  start_time?:     string        // 'HH:mm' se existir
+  end_time?:       string        // 'HH:mm' se existir
   type:            'pre-reserva'
   description?:    string | null
   client_contact?: string | null

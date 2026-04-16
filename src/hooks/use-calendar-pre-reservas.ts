@@ -33,7 +33,7 @@ export function useCalendarPreReservas(startDate: string, endDate: string) {
 
       let query = db(supabase)
         .from('pre_reservas_diretoria')
-        .select('id, unit_id, date, time, client_name, client_contact, description, created_by')
+        .select('id, unit_id, date, start_time, end_time, client_name, client_contact, description, created_by')
         .gte('date', startDate)
         .lte('date', endDate)
         .order('date', { ascending: true })
@@ -50,7 +50,8 @@ export function useCalendarPreReservas(startDate: string, endDate: string) {
         id:             r.id,
         title:          r.client_name,
         date:           r.date,
-        time:           r.time ? r.time.substring(0, 5) : undefined,
+        start_time:     r.start_time ? r.start_time.substring(0, 5) : undefined,
+        end_time:       r.end_time   ? r.end_time.substring(0, 5)   : undefined,
         type:           'pre-reserva' as const,
         description:    r.description,
         client_contact: r.client_contact,
