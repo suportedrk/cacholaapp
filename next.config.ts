@@ -51,5 +51,10 @@ export default withBundleAnalyzer(withPWA({
   disable: process.env.NODE_ENV === 'development',
   workboxOptions: {
     disableDevLogs: true,
+    // Novo SW ativa imediatamente após um deploy, sem esperar todas as abas fecharem.
+    // Evita o bug "sem CSS" causado pelo SW antigo servindo chunks com hash desatualizados.
+    skipWaiting: true,
+    // Novo SW assume controle de todas as abas abertas imediatamente após ativar.
+    clientsClaim: true,
   },
 })(nextConfig))
