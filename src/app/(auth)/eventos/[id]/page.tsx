@@ -461,7 +461,7 @@ export default function EventoDetailPage() {
                   <span className="text-xs text-text-tertiary w-28 shrink-0 pt-0.5">Convidados</span>
                   <div>
                     <span className="text-sm text-text-primary">{event.guest_count} pessoas</span>
-                    {(event.adult_count || event.kids_under4 || event.kids_over5) && (
+                    {!!(event.adult_count || event.kids_under4 || event.kids_over5) && (
                       <p className="text-xs text-text-tertiary mt-0.5">
                         {[
                           event.adult_count ? `${event.adult_count} adultos` : null,
