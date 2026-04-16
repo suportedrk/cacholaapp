@@ -43,10 +43,10 @@ export const PreReservaPloomesCard = memo(function PreReservaPloomesCard({
       type="button"
       onClick={openPloomes}
       className={cn(
-        'group w-full text-left bg-card rounded-xl border border-pink-200 p-4',
+        'group w-full text-left bg-pink-50 rounded-xl border border-pink-200 p-4',
         'hover:border-pink-300 card-interactive',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200',
-        'dark:border-pink-800 dark:hover:border-pink-700',
+        'dark:bg-pink-950/20 dark:border-pink-800 dark:hover:border-pink-700',
       )}
     >
       {/* Linha 1: horário + badges */}

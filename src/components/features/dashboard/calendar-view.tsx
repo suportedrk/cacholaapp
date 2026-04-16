@@ -450,7 +450,7 @@ export function CalendarView({
             Pré-venda
           </button>
         )}
-        {preReservaItems !== undefined && preReservaItems.some((p) => p.source === 'ploomes') && (
+        {preReservaItems !== undefined && (
           <button
             onClick={toggleShowPreReservasPloomes}
             className={cn(
