@@ -1,3 +1,7 @@
+// NOTA: internamente usa "seller/sellers" por motivos históricos, mas a UI exibe
+// "Responsável por Deal" pois o campo reflete OwnerId do Ploomes (atendimento ao
+// cliente), não vendedor individual por produto/serviço.
+
 'use client'
 
 import { useState, useMemo } from 'react'
@@ -117,7 +121,7 @@ export function SellersRankingTable({ rows, onSelectSeller }: Props) {
     return (
       <div className="flex flex-col items-center justify-center py-14 gap-2 text-center">
         <p className="text-sm text-text-secondary">
-          Nenhuma vendedora com atividade no período selecionado.
+          Nenhum responsável com atividade no período selecionado.
         </p>
       </div>
     )
@@ -129,7 +133,7 @@ export function SellersRankingTable({ rows, onSelectSeller }: Props) {
         <thead>
           <tr className="border-b border-border-default">
             <th className="px-3 py-2.5 text-left text-xs font-semibold text-text-secondary w-8">#</th>
-            <th className="px-3 py-2.5 text-left text-xs font-semibold text-text-secondary">Vendedora</th>
+            <th className="px-3 py-2.5 text-left text-xs font-semibold text-text-secondary">Responsável</th>
             <ColHeader label="Leads"     sortKey="leads_count"     current={sort} onSort={handleSort} />
             <ColHeader label="Ganhos"    sortKey="won_count"       current={sort} onSort={handleSort} className="hidden sm:table-cell" />
             <ColHeader label="Conv%"     sortKey="conversion_rate" current={sort} onSort={handleSort} />

@@ -256,7 +256,7 @@ export default function BIPage() {
             <TabsTrigger value="visao-geral">Visão Geral</TabsTrigger>
             <TabsTrigger value="vendedoras" className="gap-1.5">
               <Users2 className="w-4 h-4" />
-              Vendedoras
+              Responsáveis por Deal
             </TabsTrigger>
           </TabsList>
         )}

@@ -1,7 +1,11 @@
+// NOTA: internamente usa "seller/sellers" por motivos históricos, mas a UI exibe
+// "Responsável por Deal" pois o campo reflete OwnerId do Ploomes (atendimento ao
+// cliente), não vendedor individual por produto/serviço.
+
 'use client'
 
 import { useState, useCallback } from 'react'
-import { Download, Loader2, Users2 } from 'lucide-react'
+import { Download, Info, Loader2, Users2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { SellersRankingTable } from './sellers-ranking-table'
@@ -88,6 +92,22 @@ export function SellersTab({ units, activeUnitId, activeUnitName }: Props) {
   return (
     <div className="space-y-4">
 
+      {/* ── Banner de aviso ── */}
+      <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-900/50 px-4 py-3 flex gap-3 items-start">
+        <Info className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+        <div className="text-sm text-amber-900 dark:text-amber-200">
+          <p className="font-medium mb-1">Sobre esta visão</p>
+          <p>
+            Os dados aqui representam o <strong>responsável pelo Deal no Ploomes</strong> —
+            quem conduz o atendimento inicial e a negociação com o cliente.{' '}
+            <strong>Não representa o vendedor real de cada produto ou serviço</strong>,
+            pois vendas individuais (decoração, itens adicionais, etc.) são registradas
+            em documentos de venda separados que ainda não integramos.
+            Para análise de performance de vendas individuais, aguarde integração futura.
+          </p>
+        </div>
+      </div>
+
       {/* ── Filters bar ── */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2 flex-wrap">
@@ -163,7 +183,7 @@ export function SellersTab({ units, activeUnitId, activeUnitName }: Props) {
         <div className="px-4 py-3 border-b border-border-default flex items-center gap-2">
           <Users2 className="w-4 h-4 text-text-tertiary" />
           <div>
-            <h2 className="text-sm font-semibold text-text-primary">Ranking de Vendedoras</h2>
+            <h2 className="text-sm font-semibold text-text-primary">Ranking de Responsáveis</h2>
             <p className="text-xs text-text-secondary mt-0.5">
               Clique em uma linha para ver o detalhe individual
             </p>

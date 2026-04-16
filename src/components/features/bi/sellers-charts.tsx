@@ -1,3 +1,7 @@
+// NOTA: internamente usa "seller/sellers" por motivos históricos, mas a UI exibe
+// "Responsável por Deal" pois o campo reflete OwnerId do Ploomes (atendimento ao
+// cliente), não vendedor individual por produto/serviço.
+
 'use client'
 
 import { useMemo, useRef, useEffect, useState } from 'react'
@@ -78,7 +82,7 @@ export function SellersCharts({ rows }: Props) {
       {/* Receita por Vendedora */}
       <div className="rounded-xl border border-border-default bg-card overflow-hidden">
         <div className="px-4 py-3 border-b border-border-default">
-          <h3 className="text-sm font-semibold text-text-primary">Receita por Vendedora</h3>
+          <h3 className="text-sm font-semibold text-text-primary">Receita por Responsável</h3>
           <p className="text-xs text-text-secondary mt-0.5">Deals ganhos no período</p>
         </div>
         <div className="p-4">
@@ -133,7 +137,7 @@ export function SellersCharts({ rows }: Props) {
       {/* Conversão por Vendedora */}
       <div className="rounded-xl border border-border-default bg-card overflow-hidden">
         <div className="px-4 py-3 border-b border-border-default">
-          <h3 className="text-sm font-semibold text-text-primary">Conversão por Vendedora</h3>
+          <h3 className="text-sm font-semibold text-text-primary">Conversão por Responsável</h3>
           <p className="text-xs text-text-secondary mt-0.5">Taxa de leads ganhos (%)</p>
         </div>
         <div className="p-4">
