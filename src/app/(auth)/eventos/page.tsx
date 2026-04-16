@@ -37,14 +37,14 @@ import { STATUS_CONFIG } from '@/components/shared/event-status-badge'
 import type { EventStatus } from '@/types/database.types'
 import type { CalendarPreReserva } from '@/types/pre-reservas'
 import type { FilterChipColor } from '@/components/shared/filter-chip'
-import { Search, X, Sparkles } from 'lucide-react'
+import { Search, X, Sparkles, Shield } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 // ─────────────────────────────────────────────────────────────
 // Tipos
 // ─────────────────────────────────────────────────────────────
 type ConflictFilter = 'overlap' | 'short_gap'
-type ActiveFilter   = EventStatus | ConflictFilter | 'ploomes' | null
+type ActiveFilter   = EventStatus | ConflictFilter | 'ploomes' | 'diretoria' | null
 
 // ─────────────────────────────────────────────────────────────
 // Configuração de chips de status
@@ -160,14 +160,15 @@ function EventosContent() {
   )
 
   // Tipos de filtro
-  const isConflictFilter = activeFilter === 'overlap' || activeFilter === 'short_gap'
-  const isPloomesFilter  = activeFilter === 'ploomes'
+  const isConflictFilter  = activeFilter === 'overlap' || activeFilter === 'short_gap'
+  const isPloomesFilter   = activeFilter === 'ploomes'
+  const isDiretoriaFilter = activeFilter === 'diretoria'
 
   // Paginação normal de eventos
   const queryStatus: EventStatus[] | undefined = useMemo(() => {
-    if (!activeFilter || isConflictFilter || isPloomesFilter) return undefined
+    if (!activeFilter || isConflictFilter || isPloomesFilter || isDiretoriaFilter) return undefined
     return [activeFilter as EventStatus]
-  }, [activeFilter, isConflictFilter, isPloomesFilter])
+  }, [activeFilter, isConflictFilter, isPloomesFilter, isDiretoriaFilter])
 
   const {
     data,
@@ -188,12 +189,12 @@ function EventosContent() {
   )
   const total = data?.pages[0]?.total ?? 0
 
-  // PRs visíveis: quando filtro Ploomes ativo, só mostra Ploomes; senão, todas
+  // PRs visíveis por filtro ativo
   const filteredPreReservas = useMemo(
-    () => isPloomesFilter
-      ? prPloomes
-      : rawPreReservas,
-    [rawPreReservas, prPloomes, isPloomesFilter],
+    () => isPloomesFilter   ? prPloomes
+        : isDiretoriaFilter ? prDiretoria
+        : rawPreReservas,
+    [rawPreReservas, prPloomes, prDiretoria, isPloomesFilter, isDiretoriaFilter],
   )
 
   // Conflitos pré-reserva × evento (server-side via RPC — todos os eventos, sem limitação de página)
@@ -235,10 +236,10 @@ function EventosContent() {
 
   const { isTimedOut, retry } = useLoadingTimeout(isLoading)
 
-  // Eventos a exibir (vazio quando filtro Ploomes ativo)
+  // Eventos a exibir (vazio quando filtro Ploomes ou Diretoria ativo)
   const displayEvents = useMemo(
-    () => isPloomesFilter ? [] : isConflictFilter ? (conflictEventsData ?? []) : allEvents,
-    [isPloomesFilter, isConflictFilter, conflictEventsData, allEvents]
+    () => (isPloomesFilter || isDiretoriaFilter) ? [] : isConflictFilter ? (conflictEventsData ?? []) : allEvents,
+    [isPloomesFilter, isDiretoriaFilter, isConflictFilter, conflictEventsData, allEvents]
   )
 
   // Pré-reservas a exibir
@@ -408,31 +409,57 @@ function EventosContent() {
           )}
         </button>
 
-        {/* Separador + filtro Pré-reserva Ploomes */}
+        {/* Separador + filtros de pré-reserva (Diretoria e Ploomes) */}
+        {(prDiretoria.length > 0 || prPloomes.length > 0) && (
+          <span className="w-px h-5 bg-border self-center mx-0.5" />
+        )}
+
+        {/* Chip: Pré-venda (Diretoria) */}
+        {prDiretoria.length > 0 && (
+          <button
+            onClick={() => toggleFilter('diretoria')}
+            className={cn(
+              'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium transition-colors',
+              isDiretoriaFilter
+                ? 'border-emerald-300 bg-emerald-100 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400'
+                : 'border-border bg-background text-muted-foreground hover:bg-muted',
+            )}
+          >
+            <Shield className="h-3.5 w-3.5" />
+            Pré-venda
+            <span className={cn(
+              'rounded-full px-1.5 py-0.5 text-xs font-semibold',
+              isDiretoriaFilter
+                ? 'bg-emerald-200 text-emerald-800 dark:bg-emerald-800 dark:text-emerald-200'
+                : 'bg-muted text-muted-foreground',
+            )}>
+              {prDiretoria.length}
+            </span>
+          </button>
+        )}
+
+        {/* Chip: Pré-reserva Ploomes */}
         {prPloomes.length > 0 && (
-          <>
-            <span className="w-px h-5 bg-border self-center mx-0.5" />
-            <button
-              onClick={() => toggleFilter('ploomes')}
-              className={cn(
-                'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium transition-colors',
-                isPloomesFilter
-                  ? 'border-pink-300 bg-pink-100 text-pink-700 dark:border-pink-700 dark:bg-pink-900/40 dark:text-pink-400'
-                  : 'border-border bg-background text-muted-foreground hover:bg-muted',
-              )}
-            >
-              <Sparkles className="h-3.5 w-3.5" />
-              Pré-reserva Ploomes
-              <span className={cn(
-                'rounded-full px-1.5 py-0.5 text-xs font-semibold',
-                isPloomesFilter
-                  ? 'bg-pink-200 text-pink-800 dark:bg-pink-800 dark:text-pink-200'
-                  : 'bg-muted text-muted-foreground',
-              )}>
-                {prPloomes.length}
-              </span>
-            </button>
-          </>
+          <button
+            onClick={() => toggleFilter('ploomes')}
+            className={cn(
+              'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium transition-colors',
+              isPloomesFilter
+                ? 'border-pink-300 bg-pink-100 text-pink-700 dark:border-pink-700 dark:bg-pink-900/40 dark:text-pink-400'
+                : 'border-border bg-background text-muted-foreground hover:bg-muted',
+            )}
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            Pré-reserva Ploomes
+            <span className={cn(
+              'rounded-full px-1.5 py-0.5 text-xs font-semibold',
+              isPloomesFilter
+                ? 'bg-pink-200 text-pink-800 dark:bg-pink-800 dark:text-pink-200'
+                : 'bg-muted text-muted-foreground',
+            )}>
+              {prPloomes.length}
+            </span>
+          </button>
         )}
 
         {/* Botão limpar filtros */}
