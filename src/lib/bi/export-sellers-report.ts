@@ -1,6 +1,8 @@
 /**
- * BI Vendedoras — Excel export (client-side via SheetJS dynamic import)
- * 2 sheets: Ranking | Histórico Mensal (uma linha por vendedora × mês)
+ * BI Responsáveis por Deal — Excel export (client-side via SheetJS dynamic import)
+ * 2 sheets: Ranking | Histórico Mensal (uma linha por responsável × mês)
+ *
+ * NOTA: "seller" no código é legado — a UI exibe "Responsável por Deal" (OwnerId do Ploomes).
  */
 
 import type { SellerRankingRow } from '@/hooks/use-bi-sellers-ranking'
@@ -51,8 +53,9 @@ export async function exportSellersReport(params: ExportSellersReportParams): Pr
 
   // ── ABA 1 — Ranking ─────────────────────────────────────────
   {
+    const disclaimer = 'AVISO: Dados referem-se ao responsável pelo Deal no Ploomes (atendimento/negociação), não ao vendedor individual por produto/serviço.'
     const headers = [
-      'Pos', 'Vendedora', 'Leads', 'Ganhos', 'Perdidos',
+      'Pos', 'Responsável', 'Leads', 'Ganhos', 'Perdidos',
       'Em Aberto', 'Conv%', 'Ticket Médio (R$)', 'Receita (R$)',
     ]
     const rows: (string | number | null)[][] = ranking.map((r, i) => [
@@ -67,23 +70,25 @@ export async function exportSellersReport(params: ExportSellersReportParams): Pr
       r.total_revenue,
     ])
 
-    const allRows = [headers, ...rows]
+    // disclaimer row + blank row before headers
+    const allRows = [[disclaimer], [], headers, ...rows]
     const ws = XLSX.utils.aoa_to_sheet(allRows)
 
-    // Format conversion as %
-    for (let i = 1; i <= rows.length; i++) {
+    // Format conversion as % (rows start at index 3 now, due to disclaimer + blank)
+    for (let i = 3; i <= rows.length + 2; i++) {
       const cellRef = XLSX.utils.encode_cell({ r: i, c: 6 })
       if (ws[cellRef]) ws[cellRef].z = '0.0%'
     }
 
     ws['!cols'] = autoFit(allRows)
-    XLSX.utils.book_append_sheet(wb, ws, 'Ranking Vendedoras')
+    XLSX.utils.book_append_sheet(wb, ws, 'Ranking Responsáveis')
   }
 
   // ── ABA 2 — Histórico Mensal ─────────────────────────────────
   {
+    const disclaimer = 'AVISO: Dados referem-se ao responsável pelo Deal no Ploomes (atendimento/negociação), não ao vendedor individual por produto/serviço.'
     const headers = [
-      'Vendedora', 'Mês', 'Leads', 'Ganhos', 'Receita (R$)', 'Tempo Médio Fech. (dias)',
+      'Responsável', 'Mês', 'Leads', 'Ganhos', 'Receita (R$)', 'Tempo Médio Fech. (dias)',
     ]
     const rows: (string | number | null)[][] = []
 
@@ -101,7 +106,7 @@ export async function exportSellersReport(params: ExportSellersReportParams): Pr
       }
     }
 
-    const allRows = [headers, ...rows]
+    const allRows = [[disclaimer], [], headers, ...rows]
     const ws = XLSX.utils.aoa_to_sheet(allRows)
     ws['!cols'] = autoFit(allRows)
     XLSX.utils.book_append_sheet(wb, ws, 'Histórico Mensal')
@@ -109,7 +114,7 @@ export async function exportSellersReport(params: ExportSellersReportParams): Pr
 
   const unitSlug  = unitName.replace(/\s+/g, '_')
   const dateLabel = formatFilenameDate(exportDate)
-  const filename  = `Vendedoras_${unitSlug}_${periodMonths}M_${dateLabel}.xlsx`
+  const filename  = `Responsaveis_por_Deal_${unitSlug}_${periodMonths}M_${dateLabel}.xlsx`
 
   XLSX.writeFile(wb, filename)
 }
