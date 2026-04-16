@@ -31,7 +31,9 @@ CREATE INDEX IF NOT EXISTS idx_events_owner
   WHERE owner_name IS NOT NULL;
 
 -- ── VIEW: recriar com owner_name ──────────────────────────────
-CREATE OR REPLACE VIEW public.pre_reservas_ploomes_view
+-- Usa DROP + CREATE para evitar erro de reordenação de colunas no PostgreSQL
+DROP VIEW IF EXISTS public.pre_reservas_ploomes_view;
+CREATE VIEW public.pre_reservas_ploomes_view
 WITH (security_invoker = true)
 AS
 SELECT
