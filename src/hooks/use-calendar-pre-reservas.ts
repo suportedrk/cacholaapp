@@ -57,6 +57,7 @@ export function useCalendarPreReservas(startDate: string, endDate: string) {
         client_contact: r.client_contact,
         unit_id:        r.unit_id,
         created_by:     r.created_by,
+        source:         'diretoria' as const,
       }))
     },
     enabled: isSessionReady,

@@ -6,7 +6,7 @@ import {
   startOfWeek, endOfWeek, startOfMonth, endOfMonth,
   addMonths, subMonths,
 } from 'date-fns'
-import { SearchX, PartyPopper, CalendarX, Loader2, AlertTriangle, Clock, Shield } from 'lucide-react'
+import { SearchX, PartyPopper, CalendarX, Loader2, AlertTriangle, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { PageHeader } from '@/components/shared/page-header'
@@ -14,6 +14,7 @@ import { EmptyState } from '@/components/shared/empty-state'
 import { FilterChip } from '@/components/shared/filter-chip'
 import { EventCard, EventCardSkeleton } from '@/components/features/events/event-card'
 import { PreReservaCard } from '@/components/features/events/pre-reserva-card'
+import { PreReservaPloomesCard } from '@/components/features/events/pre-reserva-ploomes-card'
 import { EventTemporalTabs } from '@/components/features/events/event-temporal-tabs'
 import { EventDayGroup } from '@/components/features/events/event-day-group'
 import { EventsKpiCards } from '@/components/features/events/events-kpi-cards'
@@ -26,6 +27,7 @@ import {
   computePreReservaConflicts,
 } from '@/hooks/use-event-conflicts'
 import { useCalendarPreReservas } from '@/hooks/use-calendar-pre-reservas'
+import { usePreReservasPloomes } from '@/hooks/use-pre-reservas-ploomes'
 import { useLoadingTimeout } from '@/hooks/use-loading-timeout'
 import { usePloomesIntegrationActive } from '@/hooks/use-ploomes-sync'
 import { useUnitStore } from '@/stores/unit-store'
@@ -35,7 +37,7 @@ import { STATUS_CONFIG } from '@/components/shared/event-status-badge'
 import type { EventStatus } from '@/types/database.types'
 import type { CalendarPreReserva } from '@/types/pre-reservas'
 import type { FilterChipColor } from '@/components/shared/filter-chip'
-import { Search, X } from 'lucide-react'
+import { Search, X, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 // ─────────────────────────────────────────────────────────────
@@ -132,6 +134,7 @@ function EventosContent() {
 
   // Filtro ativo (status OU tipo de conflito — mutuamente exclusivos)
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>(null)
+  const [showPreReservasPloomes, setShowPreReservasPloomes] = useState(true)
   const [searchInput, setSearchInput]   = useState('')
   const debouncedSearch = useDebounce(searchInput, 300)
 
@@ -149,7 +152,13 @@ function EventosContent() {
 
   // Pré-reservas — range calculado a partir da aba ativa
   const prDates = useMemo(() => tabDateRange(tab), [tab])
-  const { data: rawPreReservas = [] } = useCalendarPreReservas(prDates.from, prDates.to)
+  const { data: prDiretoria  = [] } = useCalendarPreReservas(prDates.from, prDates.to)
+  const { data: prPloomes    = [] } = usePreReservasPloomes(prDates.from, prDates.to)
+  // Filtra PRs Ploomes pelo estado de exibição e combina com Diretoria
+  const rawPreReservas = useMemo(
+    () => [...prDiretoria, ...prPloomes],
+    [prDiretoria, prPloomes],
+  )
 
   // Se o filtro ativo é de conflito, buscar os eventos por ID (servidor)
   const isConflictFilter = activeFilter === 'overlap' || activeFilter === 'short_gap'
@@ -179,10 +188,18 @@ function EventosContent() {
   )
   const total = data?.pages[0]?.total ?? 0
 
+  // Aplica filtro de visibilidade das PRs Ploomes
+  const filteredPreReservas = useMemo(
+    () => showPreReservasPloomes
+      ? rawPreReservas
+      : rawPreReservas.filter((pr) => pr.source !== 'ploomes'),
+    [rawPreReservas, showPreReservasPloomes],
+  )
+
   // Conflitos pré-reserva × evento (client-side)
   const prConflicts = useMemo(
-    () => computePreReservaConflicts(allEvents, rawPreReservas),
-    [allEvents, rawPreReservas]
+    () => computePreReservaConflicts(allEvents, filteredPreReservas),
+    [allEvents, filteredPreReservas]
   )
 
   // IDs de eventos incluindo os que conflitam com pré-reservas
@@ -229,7 +246,7 @@ function EventosContent() {
 
   // Pré-reservas a exibir
   const displayPreReservas = useMemo(() => {
-    let prs = rawPreReservas
+    let prs = filteredPreReservas
     // Filtro de conflito: só as pré-reservas que conflitam
     if (activeFilter === 'overlap')   prs = prs.filter((pr) => prConflicts.prOverlapIds.has(pr.id))
     if (activeFilter === 'short_gap') prs = prs.filter((pr) => prConflicts.prShortGapIds.has(pr.id))
@@ -394,6 +411,33 @@ function EventosContent() {
           )}
         </button>
 
+        {/* Separador + toggle Pré-reserva Ploomes */}
+        {prPloomes.length > 0 && (
+          <>
+            <span className="w-px h-5 bg-border self-center mx-0.5" />
+            <button
+              onClick={() => setShowPreReservasPloomes((v) => !v)}
+              className={cn(
+                'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium transition-colors',
+                showPreReservasPloomes
+                  ? 'border-pink-300 bg-pink-100 text-pink-700 dark:border-pink-700 dark:bg-pink-900/40 dark:text-pink-400'
+                  : 'border-border bg-background text-muted-foreground hover:bg-muted',
+              )}
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              Pré-reserva Ploomes
+              <span className={cn(
+                'rounded-full px-1.5 py-0.5 text-xs font-semibold',
+                showPreReservasPloomes
+                  ? 'bg-pink-200 text-pink-800 dark:bg-pink-800 dark:text-pink-200'
+                  : 'bg-muted text-muted-foreground',
+              )}>
+                {prPloomes.length}
+              </span>
+            </button>
+          </>
+        )}
+
         {/* Botão limpar filtros */}
         {hasFilter && (
           <button
@@ -523,15 +567,26 @@ function EventosContent() {
                         className="animate-fade-up"
                         style={{ animationDelay: `${Math.min(dayEvents.length + idx, 9) * 50}ms`, animationFillMode: 'backwards' }}
                       >
-                        <PreReservaCard
-                          item={pr}
-                          conflictType={
-                            prConflicts.prOverlapIds.has(pr.id)   ? 'overlap' :
-                            prConflicts.prShortGapIds.has(pr.id)  ? 'short_gap' :
-                            null
-                          }
-                          onDetailClick={setSelectedPreReserva}
-                        />
+                        {pr.source === 'ploomes' ? (
+                          <PreReservaPloomesCard
+                            item={pr}
+                            conflictType={
+                              prConflicts.prOverlapIds.has(pr.id)   ? 'overlap' :
+                              prConflicts.prShortGapIds.has(pr.id)  ? 'short_gap' :
+                              null
+                            }
+                          />
+                        ) : (
+                          <PreReservaCard
+                            item={pr}
+                            conflictType={
+                              prConflicts.prOverlapIds.has(pr.id)   ? 'overlap' :
+                              prConflicts.prShortGapIds.has(pr.id)  ? 'short_gap' :
+                              null
+                            }
+                            onDetailClick={setSelectedPreReserva}
+                          />
+                        )}
                       </div>
                     ))}
                   </div>

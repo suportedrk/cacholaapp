@@ -46,5 +46,13 @@ export interface CalendarPreReserva {
   description?:    string | null
   client_contact?: string | null
   unit_id:         string
-  created_by:      string
+  created_by?:     string        // undefined para source='ploomes'
+  /** Discriminador: 'diretoria' (manual) ou 'ploomes' (derivado de deal) */
+  source:          'diretoria' | 'ploomes'
+  /** URL do deal no Ploomes — preenchido quando source === 'ploomes' */
+  ploomes_url?:    string
+  /** Valor do deal em reais — preenchido quando source === 'ploomes' */
+  deal_amount?:    number | null
+  /** Nome do estágio Ploomes — preenchido quando source === 'ploomes' */
+  stage_name?:     string | null
 }

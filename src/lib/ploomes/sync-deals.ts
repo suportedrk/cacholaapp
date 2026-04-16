@@ -10,14 +10,14 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database.types'
 import { ploomesGet } from './client'
+import { parseDeal } from './field-mapping'
 import { loadPloomesConfig, resolveUnitId } from './sync'
 import type { PloomesDeal, DealsBISyncResult } from './types'
 
 type AdminClient = SupabaseClient<Database>
 
-// FieldKeys completos dos campos que usamos
-const FIELD_KEY_EVENT_DATE = 'deal_7CE92372-4576-498E-B8F6-E7A863348288'
-const FIELD_KEY_UNIT       = 'deal_A583075F-D19C-4034-A479-36625C621660'
+// FieldKeys dos campos básicos não cobertos por parseDeal
+const FIELD_KEY_UNIT = 'deal_A583075F-D19C-4034-A479-36625C621660'
 
 // Status IDs do Ploomes
 const STATUS_NAMES: Record<number, string> = {
@@ -30,15 +30,26 @@ function getStatusName(statusId: number): string {
   return STATUS_NAMES[statusId] ?? `Desconhecido (${statusId})`
 }
 
-function extractEventDate(deal: PloomesDeal): string | null {
-  const prop = deal.OtherProperties?.find((p) => p.FieldKey === FIELD_KEY_EVENT_DATE)
-  if (!prop?.DateTimeValue) return null
-  return prop.DateTimeValue.split('T')[0] // YYYY-MM-DD
-}
-
 function extractUnitName(deal: PloomesDeal): string | undefined {
   const prop = deal.OtherProperties?.find((p) => p.FieldKey === FIELD_KEY_UNIT)
   return prop?.ObjectValueName ?? undefined
+}
+
+/**
+ * Extrai data e horários do deal via parseDeal().
+ * Reutiliza a lógica de field-mapping já validada no sync de eventos.
+ */
+function extractDealDateTimes(deal: PloomesDeal): {
+  event_date: string | null
+  start_time: string | null
+  end_time:   string | null
+} {
+  const parsed = parseDeal(deal)
+  return {
+    event_date: parsed.eventDate ?? null,
+    start_time: parsed.startTime ?? null,
+    end_time:   parsed.endTime   ?? null,
+  }
 }
 
 export async function syncDealsForBI(
@@ -102,7 +113,7 @@ export async function syncDealsForBI(
         // Se sync scoped a uma unidade, pular deals de outras unidades
         if (unitId && dealUnitId !== unitId) continue
 
-        const eventDate = extractEventDate(deal)
+        const { event_date, start_time, end_time } = extractDealDateTimes(deal)
 
         // Verificar se já existe evento vinculado
         const { data: existingEvent } = await supabase
@@ -128,7 +139,9 @@ export async function syncDealsForBI(
               unit_id:            dealUnitId,
               ploomes_create_date: deal.CreateDate,
               ploomes_last_update: deal.LastUpdateDate ?? null,
-              event_date:         eventDate,
+              event_date,
+              start_time,
+              end_time,
               event_id:           existingEvent?.id ?? null,
             },
             { onConflict: 'ploomes_deal_id' },

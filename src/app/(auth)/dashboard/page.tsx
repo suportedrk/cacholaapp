@@ -23,6 +23,7 @@ import {
 } from '@/hooks/use-dashboard'
 import { useCalendarChecklists } from '@/hooks/use-calendar-checklists'
 import { useCalendarPreReservas } from '@/hooks/use-calendar-pre-reservas'
+import { usePreReservasPloomes } from '@/hooks/use-pre-reservas-ploomes'
 import { useLoadingTimeout } from '@/hooks/use-loading-timeout'
 import { useAuth } from '@/hooks/use-auth'
 import { BRAND_GREEN } from '@/lib/constants/brand-colors'
@@ -82,7 +83,12 @@ export default function DashboardPage() {
   } = useCalendarEvents(dateFrom, dateTo)
   const { data: calMaintenance = [] } = useCalendarMaintenance(dateFrom, dateTo, showMaintenance)
   const { data: calChecklists = [] } = useCalendarChecklists()
-  const { data: calPreReservas = [] } = useCalendarPreReservas(dateFrom, dateTo)
+  const { data: calPreReservasDiretoria = [] } = useCalendarPreReservas(dateFrom, dateTo)
+  const { data: calPreReservasPloomes   = [] } = usePreReservasPloomes(dateFrom, dateTo)
+  const calPreReservas = useMemo(
+    () => [...calPreReservasDiretoria, ...calPreReservasPloomes],
+    [calPreReservasDiretoria, calPreReservasPloomes],
+  )
 
   const { isTimedOut, retry } = useLoadingTimeout(loadingKpis || loadingCal)
 
@@ -227,7 +233,13 @@ export default function DashboardPage() {
           onViewChange={setCalView}
           onEventClick={setSelectedEvent}
           onMaintenanceClick={(id) => router.push(`/manutencao/${id}`)}
-          onPreReservaClick={setSelectedPreReserva}
+          onPreReservaClick={(item) => {
+            if (item.source === 'ploomes' && item.ploomes_url) {
+              window.open(item.ploomes_url, '_blank', 'noopener,noreferrer')
+            } else {
+              setSelectedPreReserva(item)
+            }
+          }}
           onNewPreReserva={canManagePreReservas ? handleNewPreReserva : undefined}
           canManagePreReservas={canManagePreReservas}
           isLoading={loadingCal}
