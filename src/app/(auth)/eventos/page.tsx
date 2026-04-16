@@ -24,8 +24,8 @@ import {
   useEventConflicts,
   useOverlappingEventIds,
   useShortGapEventIds,
-  computePreReservaConflicts,
 } from '@/hooks/use-event-conflicts'
+import { usePreReservaConflictSets } from '@/hooks/use-pre-reserva-conflicts'
 import { useCalendarPreReservas } from '@/hooks/use-calendar-pre-reservas'
 import { usePreReservasPloomes } from '@/hooks/use-pre-reservas-ploomes'
 import { useLoadingTimeout } from '@/hooks/use-loading-timeout'
@@ -196,11 +196,8 @@ function EventosContent() {
     [rawPreReservas, prPloomes, isPloomesFilter],
   )
 
-  // Conflitos pré-reserva × evento (client-side)
-  const prConflicts = useMemo(
-    () => computePreReservaConflicts(allEvents, filteredPreReservas),
-    [allEvents, filteredPreReservas]
-  )
+  // Conflitos pré-reserva × evento (server-side via RPC — todos os eventos, sem limitação de página)
+  const prConflicts = usePreReservaConflictSets()
 
   // IDs de eventos incluindo os que conflitam com pré-reservas
   const mergedOverlapIds = useMemo(
