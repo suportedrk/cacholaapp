@@ -261,7 +261,7 @@ function EventosContent() {
       )
     }
     return prs
-  }, [rawPreReservas, activeFilter, prConflicts, debouncedSearch])
+  }, [filteredPreReservas, activeFilter, prConflicts, debouncedSearch])
 
   // Agrupamento unificado por data (eventos + pré-reservas)
   const groupedEvents   = useMemo(() => groupByDate(displayEvents),   [displayEvents])
