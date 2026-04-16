@@ -14,6 +14,7 @@ import {
   Building2,
   Download,
   Loader2,
+  Users2,
 } from 'lucide-react'
 import Link from 'next/link'
 import { useState } from 'react'
@@ -21,6 +22,7 @@ import { PageHeader } from '@/components/shared/page-header'
 import { KpiCard } from '@/components/features/dashboard/kpi-card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
 import { useBIConversionData } from '@/hooks/use-bi-conversion'
 import { useBISalesMetrics } from '@/hooks/use-bi-sales-metrics'
@@ -29,11 +31,15 @@ import { useBIUnitComparison } from '@/hooks/use-bi-unit-comparison'
 import { useDashboardKpis } from '@/hooks/use-dashboard'
 import { useLoadingTimeout } from '@/hooks/use-loading-timeout'
 import { useUnitStore } from '@/stores/unit-store'
+import { useAuth } from '@/hooks/use-auth'
 import { CHART_COLORS } from '@/lib/constants/brand-colors'
 import { BIFunnel } from '@/components/features/bi/bi-funnel'
 import { BIUnitComparison } from '@/components/features/bi/bi-unit-comparison'
 import { BITrendCharts } from '@/components/features/bi/bi-trend-charts'
+import { SellersTab } from '@/components/features/bi/sellers-tab'
 import { exportBIReport } from '@/lib/bi/export-bi-report'
+
+const SELLERS_ROLES = ['super_admin', 'diretor'] as const
 
 // ── Formatting helpers ────────────────────────────────────────
 
@@ -95,6 +101,7 @@ type PeriodValue = typeof PERIOD_OPTIONS[number]['value']
 
 export default function BIPage() {
   const [selectedMonths, setSelectedMonths] = useState<PeriodValue>(6)
+  const [selectedTab, setSelectedTab]       = useState('visao-geral')
 
   // +1 so we always have the previous month available for trend calculation
   const conversion     = useBIConversionData(selectedMonths + 1)
@@ -104,6 +111,10 @@ export default function BIPage() {
   const { activeUnit } = useUnitStore()
   const [isExporting, setIsExporting] = useState(false)
   const kpis           = useDashboardKpis()
+
+  const { profile, userUnits } = useAuth()
+  const canSeeSellers = SELLERS_ROLES.includes(profile?.role as typeof SELLERS_ROLES[number])
+  const units = userUnits.map((u) => ({ id: u.unit.id, name: u.unit.name }))
 
   const isLoading = conversion.isLoading || salesMetrics.isLoading || kpis.isLoading
   const isError   = conversion.isError   || salesMetrics.isError
@@ -232,9 +243,29 @@ export default function BIPage() {
       <PageHeader
         title="Business Intelligence"
         description="Análise de conversão e operações"
-        actions={
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* Period pills */}
+      />
+
+      {/* ── Tab navigation ── */}
+      <Tabs
+        value={selectedTab}
+        onValueChange={setSelectedTab}
+        className="gap-0"
+      >
+        {canSeeSellers && (
+          <TabsList variant="line" className="mb-0">
+            <TabsTrigger value="visao-geral">Visão Geral</TabsTrigger>
+            <TabsTrigger value="vendedoras" className="gap-1.5">
+              <Users2 className="w-4 h-4" />
+              Vendedoras
+            </TabsTrigger>
+          </TabsList>
+        )}
+
+        {/* ── Visão Geral ── */}
+        <TabsContent value="visao-geral" className={cn('space-y-6', canSeeSellers ? 'mt-6' : 'mt-0')}>
+
+          {/* Period pills + Export */}
+          <div className="flex items-center gap-2 flex-wrap justify-between">
             <div className="flex items-center gap-1 bg-surface-secondary rounded-lg p-0.5 border border-border-default">
               {PERIOD_OPTIONS.map((opt) => (
                 <button
@@ -251,28 +282,24 @@ export default function BIPage() {
                 </button>
               ))}
             </div>
-
-            {/* Export button */}
             <Button
               variant="outline"
               size="sm"
               onClick={handleExport}
-            disabled={!canExport || isExporting}
-            className="gap-1.5"
-          >
-            {isExporting ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Download className="w-4 h-4" />
-            )}
-            {isExporting ? 'Gerando…' : 'Exportar Excel'}
-          </Button>
+              disabled={!canExport || isExporting}
+              className="gap-1.5"
+            >
+              {isExporting ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Download className="w-4 h-4" />
+              )}
+              {isExporting ? 'Gerando…' : 'Exportar Excel'}
+            </Button>
           </div>
-        }
-      />
 
-      {/* ── 4 KPI Cards — 2×2 grid ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* ── 4 KPI Cards — 2×2 grid ── */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {isLoading ? (
           <>
             <KpiSkeleton />
@@ -625,7 +652,20 @@ export default function BIPage() {
             </table>
           </div>
         )}
-      </div>
+        </div>
+        </TabsContent>
+
+        {/* ── Vendedoras ── */}
+        {canSeeSellers && (
+          <TabsContent value="vendedoras" className="mt-6">
+            <SellersTab
+              units={units}
+              activeUnitId={activeUnit?.id ?? null}
+              activeUnitName={activeUnit?.name ?? 'Todas as unidades'}
+            />
+          </TabsContent>
+        )}
+      </Tabs>
     </div>
   )
 }
