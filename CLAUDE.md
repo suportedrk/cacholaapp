@@ -434,6 +434,21 @@ docker compose exec supabase-db psql -U postgres -d postgres
 
 ⚠️ **ChecklistCard da listagem:** `app/(auth)/checklists/components/checklist-card.tsx` (PREMIUM) — não confundir com `components/features/checklists/checklist-card.tsx` (legado, não usado na listagem).
 
+**Pré-reserva Ploomes — Migration 047 — COMPLETO:**
+- VIEW `pre_reservas_ploomes_view` derivada de `ploomes_deals`: `status_id=1` + `stage_id IN (60004416 Fechamento, 60056754 Assinando Contrato)` + `event_date IS NOT NULL`
+- `ploomes_deals` ganhou colunas `start_time TIME` + `end_time TIME` (migration 047 parte 1)
+- `sync-deals.ts` extrai horários via `parseDeal()` (FieldKeys 30E82221... start / FD135180... end)
+- Cor pink (`bg-pink-50/100`, `border-pink-200`, `text-pink-700`), ícone `Sparkles`
+- Read-only — click abre `app10.ploomes.com/deal/{id}` em nova aba (sem modal interno)
+- Fallback visual "Horário a definir no Ploomes" quando `start_time` ausente
+- Hook: `usePreReservasPloomes(startDate, endDate)` em `src/hooks/use-pre-reservas-ploomes.ts`
+- Card: `PreReservaPloomesCard` em `src/components/features/events/pre-reserva-ploomes-card.tsx`
+- `/eventos`: chip toggle pink (visível só se há PRs Ploomes), render por `source === 'ploomes'`
+- Calendário `/inicio`: pills/dots pink + toggle "Pré-reserva Ploomes" (localStorage `prePloomes`)
+- Conflitos: `computePreReservaConflicts` recebe array combinado Diretoria+Ploomes — cobre 3 combinações novas
+- `CalendarPreReserva.source`: `'diretoria'|'ploomes'`; `created_by` agora opcional; campos extras: `ploomes_url`, `deal_amount`, `stage_name`
+- Backfill pendente: `npx tsx scripts/backfill-deal-times.ts` (script a criar se necessário após deploy)
+
 ---
 
 ## CREDENCIAIS DEV LOCAL

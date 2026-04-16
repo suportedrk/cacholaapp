@@ -57,6 +57,7 @@ export function StageDrilldown({ isOpen, onClose, stageId, stageName, stageTotal
 
   const debouncedSearch = useDebounce(search, 300)
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   // Reset page when filters change
   useEffect(() => { setPage(0) }, [debouncedSearch, statusFilter])
 
@@ -68,6 +69,7 @@ export function StageDrilldown({ isOpen, onClose, stageId, stageName, stageTotal
       setPage(0)
     }
   }, [isOpen, stageId])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const { data, isLoading, isFetching } = useStageDrilldownDeals({
     stageId:      isOpen ? stageId : null,

@@ -59,6 +59,7 @@ export function PreReservaModal({
   const isPending = createMutation.isPending || updateMutation.isPending
 
   // Preencher campos no modo edição / limpar no modo criar
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (open) {
       if (editItem) {
@@ -79,6 +80,7 @@ export function PreReservaModal({
       setErrors({})
     }
   }, [open, editItem, defaultDate])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   function validate() {
     const next: typeof errors = {}

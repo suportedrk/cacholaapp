@@ -106,6 +106,7 @@ export function ChecklistItemRow({
   // Sync commentsCount when fresh data arrives (React Query stale-while-revalidate)
   useEffect(() => {
     const fresh = initialCommentsCount ?? item.checklist_item_comments?.length ?? 0
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCommentsCount((prev) => Math.max(prev, fresh))
   }, [initialCommentsCount, item.checklist_item_comments?.length])
 

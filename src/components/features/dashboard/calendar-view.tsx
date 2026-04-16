@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 
-import { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import {
   format,
   addMonths, addWeeks, addDays,
@@ -12,7 +12,7 @@ import {
   isSameMonth, isToday,
 } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { ChevronLeft, ChevronRight, CalendarX, Wrench, LayoutList, CalendarDays, ClipboardList, CheckSquare, Shield, Plus } from 'lucide-react'
+import { ChevronLeft, ChevronRight, CalendarX, Wrench, LayoutList, CalendarDays, ClipboardList, CheckSquare, Shield, Sparkles, Plus } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
@@ -97,8 +97,27 @@ const MAINTENANCE_DOT: Record<MaintenanceType, string> = {
 const CHECKLIST_PILL = 'bg-purple-100 text-purple-800 border-l-2 border-l-purple-500 dark:bg-purple-900/40 dark:text-purple-300 dark:border-l-purple-600'
 const CHECKLIST_DOT  = 'bg-purple-500'
 
-const PRE_RESERVA_PILL = 'bg-emerald-100 text-emerald-800 border-l-2 border-l-emerald-500 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-l-emerald-600'
-const PRE_RESERVA_DOT  = 'bg-emerald-500'
+const PRE_RESERVA_PILL        = 'bg-emerald-100 text-emerald-800 border-l-2 border-l-emerald-500 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-l-emerald-600'
+const PRE_RESERVA_DOT         = 'bg-emerald-500'
+const PRE_RESERVA_PLOOMES_PILL = 'bg-pink-100 text-pink-800 border-l-2 border-l-pink-500 dark:bg-pink-950/50 dark:text-pink-300 dark:border-l-pink-600'
+const PRE_RESERVA_PLOOMES_DOT  = 'bg-pink-500'
+
+function prPill(pr: CalendarPreReserva): string {
+  return pr.source === 'ploomes' ? PRE_RESERVA_PLOOMES_PILL : PRE_RESERVA_PILL
+}
+function prDot(pr: CalendarPreReserva): string {
+  return pr.source === 'ploomes' ? PRE_RESERVA_PLOOMES_DOT : PRE_RESERVA_DOT
+}
+function prIcon(pr: CalendarPreReserva): React.ReactElement {
+  return pr.source === 'ploomes'
+    ? <Sparkles className="w-3 h-3 shrink-0 opacity-70" />
+    : <Shield   className="w-3 h-3 shrink-0 opacity-70" />
+}
+function prIconSm(pr: CalendarPreReserva): React.ReactElement {
+  return pr.source === 'ploomes'
+    ? <Sparkles className="w-2.5 h-2.5 shrink-0" />
+    : <Shield   className="w-2.5 h-2.5 shrink-0" />
+}
 
 // ─────────────────────────────────────────────────────────────
 // COMPONENTE PRINCIPAL
@@ -128,6 +147,7 @@ export function CalendarView({
   const [showMaintenanceInternal, setShowMaintenanceInternal] = useState(true)
   const [showChecklists, setShowChecklists] = useState(true)
   const [showPreReservas, setShowPreReservas] = useState(true)
+  const [showPreReservasPloomes, setShowPreReservasPloomes] = useState(true)
 
   // Persistir filtros de tipo no localStorage
   useEffect(() => {
@@ -139,22 +159,25 @@ export function CalendarView({
           showMaintenance?: boolean
           showChecklists?: boolean
           showPreReservas?: boolean
+          prePloomes?: boolean
         }
         if (typeof parsed.showEvents === 'boolean') setShowEvents(parsed.showEvents)
         if (typeof parsed.showMaintenance === 'boolean') setShowMaintenanceInternal(parsed.showMaintenance)
         if (typeof parsed.showChecklists === 'boolean') setShowChecklists(parsed.showChecklists)
         if (typeof parsed.showPreReservas === 'boolean') setShowPreReservas(parsed.showPreReservas)
+        if (typeof parsed.prePloomes === 'boolean') setShowPreReservasPloomes(parsed.prePloomes)
       }
     } catch { /* ignorar erro de parse */ }
   }, [])
 
-  function saveFilters(ev: boolean, maint: boolean, chkl: boolean, pr: boolean) {
+  function saveFilters(ev: boolean, maint: boolean, chkl: boolean, pr: boolean, prPloomes: boolean) {
     try {
       localStorage.setItem('calendar-type-filters', JSON.stringify({
         showEvents: ev,
         showMaintenance: maint,
         showChecklists: chkl,
         showPreReservas: pr,
+        prePloomes: prPloomes,
       }))
     } catch { /* ignorar */ }
   }
@@ -162,31 +185,43 @@ export function CalendarView({
   function toggleShowEvents() {
     const next = !showEvents
     setShowEvents(next)
-    saveFilters(next, showMaintenanceInternal, showChecklists, showPreReservas)
+    saveFilters(next, showMaintenanceInternal, showChecklists, showPreReservas, showPreReservasPloomes)
   }
 
   function toggleShowMaintenanceInternal() {
     const next = !showMaintenanceInternal
     setShowMaintenanceInternal(next)
-    saveFilters(showEvents, next, showChecklists, showPreReservas)
+    saveFilters(showEvents, next, showChecklists, showPreReservas, showPreReservasPloomes)
   }
 
   function toggleShowChecklists() {
     const next = !showChecklists
     setShowChecklists(next)
-    saveFilters(showEvents, showMaintenanceInternal, next, showPreReservas)
+    saveFilters(showEvents, showMaintenanceInternal, next, showPreReservas, showPreReservasPloomes)
   }
 
   function toggleShowPreReservas() {
     const next = !showPreReservas
     setShowPreReservas(next)
-    saveFilters(showEvents, showMaintenanceInternal, showChecklists, next)
+    saveFilters(showEvents, showMaintenanceInternal, showChecklists, next, showPreReservasPloomes)
+  }
+
+  function toggleShowPreReservasPloomes() {
+    const next = !showPreReservasPloomes
+    setShowPreReservasPloomes(next)
+    saveFilters(showEvents, showMaintenanceInternal, showChecklists, showPreReservas, next)
   }
 
   const filteredEvents      = showEvents ? events : []
   const filteredMaintenance = (showMaintenanceInternal && showMaintenance) ? (maintenanceItems ?? []) : []
   const filteredChecklists  = showChecklists ? (checklistItems ?? []) : []
-  const filteredPreReservas = showPreReservas ? (preReservaItems ?? []) : []
+  const filteredPreReservas = useMemo(() => {
+    const all = preReservaItems ?? []
+    return all.filter((p) => {
+      if (p.source === 'ploomes') return showPreReservasPloomes
+      return showPreReservas
+    })
+  }, [preReservaItems, showPreReservas, showPreReservasPloomes])
 
   const eventsByDate = useMemo(() => {
     const map: Record<string, CalendarEvent[]> = {}
@@ -415,6 +450,20 @@ export function CalendarView({
             Pré-venda
           </button>
         )}
+        {preReservaItems !== undefined && preReservaItems.some((p) => p.source === 'ploomes') && (
+          <button
+            onClick={toggleShowPreReservasPloomes}
+            className={cn(
+              'flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border transition-all',
+              showPreReservasPloomes
+                ? 'bg-pink-500/20 border-pink-500 text-pink-600 dark:text-pink-400'
+                : 'bg-muted/50 border-border text-text-tertiary opacity-60'
+            )}
+          >
+            <Sparkles className="w-3 h-3" />
+            Pré-reserva Ploomes
+          </button>
+        )}
 
         {/* Botão "Nova Pré-reserva" — só para super_admin/diretor */}
         {canManagePreReservas && onNewPreReserva && (
@@ -624,10 +673,10 @@ function DayPopoverContent({
           onClick={() => onPreReservaClick?.(p)}
           className={cn(
             'w-full text-left text-xs rounded-md px-2 py-1.5 transition-opacity hover:opacity-80 flex items-center gap-1.5',
-            PRE_RESERVA_PILL
+            prPill(p)
           )}
         >
-          <Shield className="w-3 h-3 shrink-0 opacity-70" />
+          {prIcon(p)}
           <span className="truncate font-medium">{p.title}</span>
           {(p.start_time || p.end_time) && (
             <span className="ml-auto shrink-0 opacity-60">
@@ -850,7 +899,7 @@ function MonthView({
                   <button
                     key={p.id}
                     onClick={() => onPreReservaClick?.(p)}
-                    className={cn('w-1.5 h-1.5 rounded-full min-w-[6px] min-h-[6px]', PRE_RESERVA_DOT)}
+                    className={cn('w-1.5 h-1.5 rounded-full min-w-[6px] min-h-[6px]', prDot(p))}
                     aria-label={p.title}
                   />
                 ))}
@@ -927,11 +976,11 @@ function MonthView({
                     onClick={() => onPreReservaClick?.(p)}
                     className={cn(
                       'w-full text-left text-[10px] leading-tight px-1 py-0.5 rounded-sm truncate font-medium transition-opacity hover:opacity-80 flex items-center gap-0.5',
-                      PRE_RESERVA_PILL
+                      prPill(p)
                     )}
                     title={p.title}
                   >
-                    <Shield className="w-2.5 h-2.5 shrink-0" />
+                    {prIconSm(p)}
                     <span className="truncate">{p.title}</span>
                   </button>
                 ))}
@@ -1050,11 +1099,11 @@ function WeekView({ currentDate, eventsByDate, maintenanceByDate, checklistByDat
                     onClick={() => onPreReservaClick?.(p)}
                     className={cn(
                       'w-full text-left text-[10px] leading-tight px-1 py-0.5 rounded-sm font-medium transition-opacity hover:opacity-80 flex items-center gap-0.5',
-                      PRE_RESERVA_PILL
+                      prPill(p)
                     )}
                     title={p.title}
                   >
-                    <Shield className="w-2.5 h-2.5 shrink-0" />
+                    {prIconSm(p)}
                     <span className="truncate">{p.title}</span>
                   </button>
                 ))}
@@ -1154,11 +1203,13 @@ function DayView({ currentDate, eventsByDate, maintenanceByDate, checklistByDate
           onClick={() => onPreReservaClick?.(p)}
           className={cn(
             'w-full text-left rounded-lg px-3 py-2.5 transition-opacity hover:opacity-80 min-h-[44px]',
-            PRE_RESERVA_PILL
+            prPill(p)
           )}
         >
           <div className="flex items-center gap-2">
-            <Shield className="w-4 h-4 shrink-0 opacity-70" />
+            {p.source === 'ploomes'
+              ? <Sparkles className="w-4 h-4 shrink-0 opacity-70" />
+              : <Shield   className="w-4 h-4 shrink-0 opacity-70" />}
             <p className="text-sm font-semibold truncate">{p.title}</p>
           </div>
           {(p.start_time || p.end_time) && (
@@ -1334,10 +1385,12 @@ function ListView({
                       onClick={() => onPreReservaClick?.(p)}
                       className={cn(
                         'w-full text-left rounded-lg px-2.5 py-2 min-h-[44px] transition-opacity hover:opacity-80 flex items-center gap-2',
-                        PRE_RESERVA_PILL
+                        prPill(p)
                       )}
                     >
-                      <Shield className="w-3.5 h-3.5 shrink-0 opacity-70" />
+                      {p.source === 'ploomes'
+                        ? <Sparkles className="w-3.5 h-3.5 shrink-0 opacity-70" />
+                        : <Shield   className="w-3.5 h-3.5 shrink-0 opacity-70" />}
                       <div className="min-w-0 flex-1">
                         <p className="text-xs font-semibold truncate">{p.title}</p>
                         {(p.start_time || p.end_time) && (
@@ -1346,8 +1399,13 @@ function ListView({
                           </p>
                         )}
                       </div>
-                      <span className="shrink-0 text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
-                        Pré-venda
+                      <span className={cn(
+                        'shrink-0 text-[9px] font-medium px-1.5 py-0.5 rounded-full',
+                        p.source === 'ploomes'
+                          ? 'bg-pink-500/10 text-pink-700 dark:text-pink-400'
+                          : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
+                      )}>
+                        {p.source === 'ploomes' ? 'Ploomes' : 'Pré-venda'}
                       </span>
                     </button>
                   )

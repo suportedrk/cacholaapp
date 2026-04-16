@@ -17,6 +17,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { syncDeals } from '@/lib/ploomes/sync'
+import { syncSingleDealToBI } from '@/lib/ploomes/sync-deals'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database.types'
 
@@ -143,7 +144,15 @@ export async function POST(req: NextRequest) {
       dealId: dealId,    // sync cirúrgico — apenas este deal
     })
 
-    // ── 8. Marcar como success ────────────────────────────────
+    // ── 8. Sync paralelo: atualizar ploomes_deals (BI) ───────
+    if (dealId) {
+      // fire-and-forget — não bloqueia resposta nem afeta o log do webhook
+      syncSingleDealToBI(supabase, dealId).catch((e: unknown) => {
+        console.error('[Ploomes webhook] syncSingleDealToBI falhou:', e)
+      })
+    }
+
+    // ── 9. Marcar como success ────────────────────────────────
     await updateWebhookLog(supabase, webhookLogId, 'success', null, startTime)
 
     console.info(`[Ploomes webhook] Concluído: dealId=${dealId ?? 'n/a'}, durationMs=${Date.now() - startTime}`)
