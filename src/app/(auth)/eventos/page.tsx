@@ -2,28 +2,38 @@
 
 import { Suspense, useState, useCallback, useMemo } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
-import { SearchX, PartyPopper, CalendarX, Loader2, AlertTriangle, Clock } from 'lucide-react'
+import {
+  startOfWeek, endOfWeek, startOfMonth, endOfMonth,
+  addMonths, subMonths,
+} from 'date-fns'
+import { SearchX, PartyPopper, CalendarX, Loader2, AlertTriangle, Clock, Shield } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { PageHeader } from '@/components/shared/page-header'
 import { EmptyState } from '@/components/shared/empty-state'
 import { FilterChip } from '@/components/shared/filter-chip'
 import { EventCard, EventCardSkeleton } from '@/components/features/events/event-card'
+import { PreReservaCard } from '@/components/features/events/pre-reserva-card'
 import { EventTemporalTabs } from '@/components/features/events/event-temporal-tabs'
 import { EventDayGroup } from '@/components/features/events/event-day-group'
 import { EventsKpiCards } from '@/components/features/events/events-kpi-cards'
+import { PreReservaDetailModal } from '@/components/features/dashboard/pre-reserva-detail-modal'
 import { useEventsInfinite, useEventsTabCounts, useEventsKpis, useEventsByIds, type TabKey } from '@/hooks/use-events'
 import {
   useEventConflicts,
   useOverlappingEventIds,
   useShortGapEventIds,
+  computePreReservaConflicts,
 } from '@/hooks/use-event-conflicts'
+import { useCalendarPreReservas } from '@/hooks/use-calendar-pre-reservas'
 import { useLoadingTimeout } from '@/hooks/use-loading-timeout'
 import { usePloomesIntegrationActive } from '@/hooks/use-ploomes-sync'
 import { useUnitStore } from '@/stores/unit-store'
+import { useAuth } from '@/hooks/use-auth'
 import { useDebounce } from '@/hooks/use-debounce'
 import { STATUS_CONFIG } from '@/components/shared/event-status-badge'
 import type { EventStatus } from '@/types/database.types'
+import type { CalendarPreReserva } from '@/types/pre-reservas'
 import type { FilterChipColor } from '@/components/shared/filter-chip'
 import { Search, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -50,19 +60,36 @@ const STATUS_COLOR: Record<EventStatus, FilterChipColor> = {
 const MAIN_STATUSES: EventStatus[] = ['confirmed']
 
 // ─────────────────────────────────────────────────────────────
-// Helper: agrupa eventos por data
+// Helper: agrupa itens por data
 // ─────────────────────────────────────────────────────────────
-function groupEventsByDate<T extends { date: string }>(events: T[]): Map<string, T[]> {
+function groupByDate<T extends { date: string }>(items: T[]): Map<string, T[]> {
   const map = new Map<string, T[]>()
-  for (const ev of events) {
-    const existing = map.get(ev.date)
-    if (existing) {
-      existing.push(ev)
-    } else {
-      map.set(ev.date, [ev])
-    }
+  for (const item of items) {
+    const arr = map.get(item.date)
+    if (arr) { arr.push(item) } else { map.set(item.date, [item]) }
   }
   return map
+}
+
+// Helper: calcula range de datas para a aba ativa
+function tabDateRange(tab: TabKey): { from: string; to: string } {
+  const today = new Date()
+  const fmt = (d: Date) => d.toISOString().substring(0, 10)
+  if (tab === 'today') {
+    const s = fmt(today)
+    return { from: s, to: s }
+  }
+  if (tab === 'week') {
+    return {
+      from: fmt(startOfWeek(today, { weekStartsOn: 1 })),
+      to:   fmt(endOfWeek(today,   { weekStartsOn: 1 })),
+    }
+  }
+  if (tab === 'month') {
+    return { from: fmt(startOfMonth(today)), to: fmt(endOfMonth(today)) }
+  }
+  // 'all' — janela ampla: 1 mês atrás → 12 meses à frente
+  return { from: fmt(subMonths(today, 1)), to: fmt(addMonths(today, 12)) }
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -97,6 +124,8 @@ function EventosContent() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const activeUnitId = useUnitStore((s) => s.activeUnitId)
+  const { profile } = useAuth()
+  const canManagePreReservas = profile?.role === 'super_admin' || profile?.role === 'diretor'
 
   // Aba ativa (persistida na URL)
   const tab = (searchParams.get('tab') as TabKey) ?? 'all'
@@ -106,33 +135,26 @@ function EventosContent() {
   const [searchInput, setSearchInput]   = useState('')
   const debouncedSearch = useDebounce(searchInput, 300)
 
+  // Modal de detalhe de pré-reserva
+  const [selectedPreReserva, setSelectedPreReserva] = useState<CalendarPreReserva | null>(null)
+
   const { data: ploomesActive } = usePloomesIntegrationActive(activeUnitId)
   const { data: tabCounts, isLoading: countsLoading } = useEventsTabCounts()
   const { data: kpis, isLoading: kpisLoading } = useEventsKpis()
 
-  // Conflitos de horário
+  // Conflitos de horário (evento × evento — via RPC)
   const { isLoading: conflictsLoading } = useEventConflicts()
   const overlappingIds = useOverlappingEventIds()
   const shortGapIds    = useShortGapEventIds()
 
+  // Pré-reservas — range calculado a partir da aba ativa
+  const prDates = useMemo(() => tabDateRange(tab), [tab])
+  const { data: rawPreReservas = [] } = useCalendarPreReservas(prDates.from, prDates.to)
+
   // Se o filtro ativo é de conflito, buscar os eventos por ID (servidor)
   const isConflictFilter = activeFilter === 'overlap' || activeFilter === 'short_gap'
 
-  // IDs a buscar quando filtro de conflito ativo (array ordenado = queryKey estável)
-  const conflictEventIds = useMemo(() => {
-    if (activeFilter === 'overlap')   return Array.from(overlappingIds).sort()
-    if (activeFilter === 'short_gap') return Array.from(shortGapIds).sort()
-    return []
-  }, [activeFilter, overlappingIds, shortGapIds])
-
-  // Query específica para filtros de conflito (sem paginação)
-  const {
-    data:      conflictEventsData,
-    isLoading: conflictEventsLoading,
-    isError:   conflictEventsError,
-  } = useEventsByIds(conflictEventIds)
-
-  // Status para a query de listagem normal
+  // Paginação normal de eventos
   const queryStatus: EventStatus[] | undefined = useMemo(() => {
     if (!activeFilter || isConflictFilter) return undefined
     return [activeFilter as EventStatus]
@@ -151,6 +173,46 @@ function EventosContent() {
     search: debouncedSearch || undefined,
   })
 
+  const allEvents = useMemo(
+    () => data?.pages.flatMap((p) => p.events) ?? [],
+    [data]
+  )
+  const total = data?.pages[0]?.total ?? 0
+
+  // Conflitos pré-reserva × evento (client-side)
+  const prConflicts = useMemo(
+    () => computePreReservaConflicts(allEvents, rawPreReservas),
+    [allEvents, rawPreReservas]
+  )
+
+  // IDs de eventos incluindo os que conflitam com pré-reservas
+  const mergedOverlapIds = useMemo(
+    () => new Set([...overlappingIds, ...prConflicts.eventOverlapFromPR]),
+    [overlappingIds, prConflicts.eventOverlapFromPR]
+  )
+  const mergedShortGapIds = useMemo(
+    () => new Set([...shortGapIds, ...prConflicts.eventShortGapFromPR]),
+    [shortGapIds, prConflicts.eventShortGapFromPR]
+  )
+
+  // Contagens exibidas nos chips (eventos + pré-reservas)
+  const totalOverlapCount   = mergedOverlapIds.size   + prConflicts.prOverlapIds.size
+  const totalShortGapCount  = mergedShortGapIds.size  + prConflicts.prShortGapIds.size
+
+  // IDs para busca por conflito (inclui eventos que conflitam com PRs)
+  const conflictEventIds = useMemo(() => {
+    if (activeFilter === 'overlap')   return Array.from(mergedOverlapIds).sort()
+    if (activeFilter === 'short_gap') return Array.from(mergedShortGapIds).sort()
+    return []
+  }, [activeFilter, mergedOverlapIds, mergedShortGapIds])
+
+  // Query específica para filtros de conflito (sem paginação)
+  const {
+    data:      conflictEventsData,
+    isLoading: conflictEventsLoading,
+    isError:   conflictEventsError,
+  } = useEventsByIds(conflictEventIds)
+
   // Unifica loading/error dependendo do modo ativo
   const isLoading = isConflictFilter
     ? (conflictsLoading || conflictEventsLoading)
@@ -159,19 +221,38 @@ function EventosContent() {
 
   const { isTimedOut, retry } = useLoadingTimeout(isLoading)
 
-  // Eventos a exibir: por IDs (conflito) ou paginado (normal)
-  const allEvents = useMemo(
-    () => data?.pages.flatMap((p) => p.events) ?? [],
-    [data]
-  )
-  const total = data?.pages[0]?.total ?? 0
-
+  // Eventos a exibir
   const displayEvents = useMemo(
     () => isConflictFilter ? (conflictEventsData ?? []) : allEvents,
     [isConflictFilter, conflictEventsData, allEvents]
   )
 
-  const grouped = useMemo(() => groupEventsByDate(displayEvents), [displayEvents])
+  // Pré-reservas a exibir
+  const displayPreReservas = useMemo(() => {
+    let prs = rawPreReservas
+    // Filtro de conflito: só as pré-reservas que conflitam
+    if (activeFilter === 'overlap')   prs = prs.filter((pr) => prConflicts.prOverlapIds.has(pr.id))
+    if (activeFilter === 'short_gap') prs = prs.filter((pr) => prConflicts.prShortGapIds.has(pr.id))
+    // Busca: filtrar por nome do cliente ou descrição
+    if (debouncedSearch.trim()) {
+      const q = debouncedSearch.trim().toLowerCase()
+      prs = prs.filter(
+        (pr) =>
+          pr.title.toLowerCase().includes(q) ||
+          (pr.description?.toLowerCase().includes(q) ?? false) ||
+          (pr.client_contact?.toLowerCase().includes(q) ?? false)
+      )
+    }
+    return prs
+  }, [rawPreReservas, activeFilter, prConflicts, debouncedSearch])
+
+  // Agrupamento unificado por data (eventos + pré-reservas)
+  const groupedEvents   = useMemo(() => groupByDate(displayEvents),   [displayEvents])
+  const groupedPRs      = useMemo(() => groupByDate(displayPreReservas), [displayPreReservas])
+  const allDates = useMemo(() => {
+    const dates = new Set([...groupedEvents.keys(), ...groupedPRs.keys()])
+    return Array.from(dates).sort()
+  }, [groupedEvents, groupedPRs])
 
   // Troca de aba: atualiza URL, limpa filtros
   const handleTabChange = useCallback((newTab: TabKey) => {
@@ -181,13 +262,14 @@ function EventosContent() {
     setActiveFilter(null)
   }, [searchParams, pathname, router])
 
-  // Toggle de filtro — exclusivo (click no ativo limpa, click em outro troca)
+  // Toggle de filtro — exclusivo
   const toggleFilter = useCallback((value: ActiveFilter) => {
     setActiveFilter((prev) => prev === value ? null : value)
   }, [])
 
   const hasSearch  = debouncedSearch.trim().length > 0
   const hasFilter  = activeFilter !== null
+  const isEmpty    = displayEvents.length === 0 && displayPreReservas.length === 0
 
   if (isTimedOut) {
     return (
@@ -276,14 +358,14 @@ function EventosContent() {
         >
           <AlertTriangle className="h-3.5 w-3.5" />
           Conflito de horário
-          {overlappingIds.size > 0 && (
+          {totalOverlapCount > 0 && (
             <span className={cn(
               'rounded-full px-1.5 py-0.5 text-xs font-semibold',
               activeFilter === 'overlap'
                 ? 'bg-red-200 text-red-800 dark:bg-red-800 dark:text-red-200'
                 : 'bg-muted text-muted-foreground'
             )}>
-              {overlappingIds.size}
+              {totalOverlapCount}
             </span>
           )}
         </button>
@@ -300,14 +382,14 @@ function EventosContent() {
         >
           <Clock className="h-3.5 w-3.5" />
           Intervalo &lt; 2h
-          {shortGapIds.size > 0 && (
+          {totalShortGapCount > 0 && (
             <span className={cn(
               'rounded-full px-1.5 py-0.5 text-xs font-semibold',
               activeFilter === 'short_gap'
                 ? 'bg-amber-200 text-amber-800 dark:bg-amber-800 dark:text-amber-200'
                 : 'bg-muted text-muted-foreground'
             )}>
-              {shortGapIds.size}
+              {totalShortGapCount}
             </span>
           )}
         </button>
@@ -324,19 +406,19 @@ function EventosContent() {
         )}
       </div>
 
-      {/* Banner de conflitos (separado por tipo) */}
-      {(overlappingIds.size > 0 || shortGapIds.size > 0) && (
+      {/* Banner de conflitos */}
+      {(totalOverlapCount > 0 || totalShortGapCount > 0) && (
         <div className="flex items-start gap-3 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-800 dark:bg-amber-950/30">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
-            {overlappingIds.size > 0 && (
+            {totalOverlapCount > 0 && (
               <span className="font-medium text-red-700 dark:text-red-400">
-                {overlappingIds.size} com sobreposição de horário
+                {totalOverlapCount} com sobreposição de horário
               </span>
             )}
-            {shortGapIds.size > 0 && (
+            {totalShortGapCount > 0 && (
               <span className="font-medium text-amber-800 dark:text-amber-300">
-                {shortGapIds.size} com intervalo inferior a 2h
+                {totalShortGapCount} com intervalo inferior a 2h
               </span>
             )}
           </div>
@@ -360,7 +442,7 @@ function EventosContent() {
       )}
 
       {/* Empty states */}
-      {!isLoading && !isError && displayEvents.length === 0 && (
+      {!isLoading && !isError && isEmpty && (
         <>
           {hasSearch ? (
             <EmptyState
@@ -406,41 +488,64 @@ function EventosContent() {
         </>
       )}
 
-      {/* Lista agrupada por dia */}
-      {!isLoading && displayEvents.length > 0 && (
+      {/* Lista agrupada por dia — eventos + pré-reservas unificados */}
+      {!isLoading && !isEmpty && (
         <>
           <div className="space-y-1">
-            {Array.from(grouped.entries()).map(([date, dayEvents]) => (
-              <div key={date}>
-                <EventDayGroup date={date} count={dayEvents.length} />
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-2">
-                  {dayEvents.map((event, idx) => (
-                    <div
-                      key={event.id}
-                      className="animate-fade-up"
-                      style={{ animationDelay: `${Math.min(idx, 9) * 50}ms`, animationFillMode: 'backwards' }}
-                    >
-                      <EventCard
-                        event={event}
-                        conflictType={
-                          overlappingIds.has(event.id) ? 'overlap' :
-                          shortGapIds.has(event.id)   ? 'short_gap' :
-                          null
-                        }
-                      />
-                    </div>
-                  ))}
+            {allDates.map((date) => {
+              const dayEvents = groupedEvents.get(date) ?? []
+              const dayPRs    = groupedPRs.get(date)    ?? []
+              const dayCount  = dayEvents.length + dayPRs.length
+
+              return (
+                <div key={date}>
+                  <EventDayGroup date={date} count={dayCount} />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-2">
+                    {dayEvents.map((event, idx) => (
+                      <div
+                        key={event.id}
+                        className="animate-fade-up"
+                        style={{ animationDelay: `${Math.min(idx, 9) * 50}ms`, animationFillMode: 'backwards' }}
+                      >
+                        <EventCard
+                          event={event}
+                          conflictType={
+                            mergedOverlapIds.has(event.id)   ? 'overlap' :
+                            mergedShortGapIds.has(event.id)  ? 'short_gap' :
+                            null
+                          }
+                        />
+                      </div>
+                    ))}
+                    {dayPRs.map((pr, idx) => (
+                      <div
+                        key={pr.id}
+                        className="animate-fade-up"
+                        style={{ animationDelay: `${Math.min(dayEvents.length + idx, 9) * 50}ms`, animationFillMode: 'backwards' }}
+                      >
+                        <PreReservaCard
+                          item={pr}
+                          conflictType={
+                            prConflicts.prOverlapIds.has(pr.id)   ? 'overlap' :
+                            prConflicts.prShortGapIds.has(pr.id)  ? 'short_gap' :
+                            null
+                          }
+                          onDetailClick={setSelectedPreReserva}
+                        />
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
 
           {/* Contador e Load More */}
           <div className="flex flex-col items-center gap-3 pt-2">
             <p className="text-xs text-muted-foreground">
               {isConflictFilter
-                ? `${displayEvents.length} evento${displayEvents.length !== 1 ? 's' : ''} com conflito`
-                : `Exibindo ${displayEvents.length} de ${total} evento${total !== 1 ? 's' : ''}`
+                ? `${displayEvents.length + displayPreReservas.length} item${(displayEvents.length + displayPreReservas.length) !== 1 ? 'ns' : ''} com conflito`
+                : `Exibindo ${displayEvents.length + displayPreReservas.length} de ${total + displayPreReservas.length} item${(total + displayPreReservas.length) !== 1 ? 'ns' : ''}`
               }
             </p>
             {hasNextPage && !isConflictFilter && (
@@ -463,6 +568,13 @@ function EventosContent() {
           </div>
         </>
       )}
+
+      {/* Modal de detalhe de pré-reserva */}
+      <PreReservaDetailModal
+        item={selectedPreReserva}
+        onClose={() => setSelectedPreReserva(null)}
+        canManage={canManagePreReservas}
+      />
     </div>
   )
 }
