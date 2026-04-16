@@ -434,20 +434,28 @@ docker compose exec supabase-db psql -U postgres -d postgres
 
 ⚠️ **ChecklistCard da listagem:** `app/(auth)/checklists/components/checklist-card.tsx` (PREMIUM) — não confundir com `components/features/checklists/checklist-card.tsx` (legado, não usado na listagem).
 
-**Pré-reserva Ploomes — Migration 047 — COMPLETO:**
-- VIEW `pre_reservas_ploomes_view` derivada de `ploomes_deals`: `status_id=1` + `stage_id IN (60004416 Fechamento, 60056754 Assinando Contrato)` + `event_date IS NOT NULL`
-- `ploomes_deals` ganhou colunas `start_time TIME` + `end_time TIME` (migration 047 parte 1)
+**Pré-reserva Ploomes — Migrations 046/048/049 — COMPLETO:**
+- VIEW `pre_reservas_ploomes_view` derivada de `ploomes_deals`: `status_id=1` + `stage_id IN (60004416 Fechamento, 60056754 Assinando Contrato)` + `event_date IS NOT NULL` (migration 048)
+- `ploomes_deals` ganhou colunas `start_time TIME` + `end_time TIME` (migration 046 parte da PR Diretoria, depois migration 048 parte 1)
 - `sync-deals.ts` extrai horários via `parseDeal()` (FieldKeys 30E82221... start / FD135180... end)
 - Cor pink (`bg-pink-50/100`, `border-pink-200`, `text-pink-700`), ícone `Sparkles`
 - Read-only — click abre `app10.ploomes.com/deal/{id}` em nova aba (sem modal interno)
 - Fallback visual "Horário a definir no Ploomes" quando `start_time` ausente
 - Hook: `usePreReservasPloomes(startDate, endDate)` em `src/hooks/use-pre-reservas-ploomes.ts`
 - Card: `PreReservaPloomesCard` em `src/components/features/events/pre-reserva-ploomes-card.tsx`
-- `/eventos`: chip toggle pink (visível só se há PRs Ploomes), render por `source === 'ploomes'`
+- `/eventos`: chip pink exclusivo (não toggle) + filtro `activeFilter === 'ploomes'` que oculta eventos regulares
 - Calendário `/inicio`: pills/dots pink + toggle "Pré-reserva Ploomes" (localStorage `prePloomes`)
-- Conflitos: `computePreReservaConflicts` recebe array combinado Diretoria+Ploomes — cobre 3 combinações novas
 - `CalendarPreReserva.source`: `'diretoria'|'ploomes'`; `created_by` agora opcional; campos extras: `ploomes_url`, `deal_amount`, `stage_name`
-- Backfill pendente: `npx tsx scripts/backfill-deal-times.ts` (script a criar se necessário após deploy)
+- Backfill executado em produção: 17/17 deals com start_time/end_time preenchidos via `scripts/backfill-deal-times.ts`
+
+**Detecção de conflitos PR — Migration 049 — COMPLETO:**
+- RPC `get_pre_reserva_conflicts(p_unit_id UUID)` — detecta conflitos server-side (sem limitação de paginação client-side)
+- 4 UNIONs: PR Diretoria×Evento, PR Ploomes×Evento, PR Diretoria×PR Ploomes, PR Ploomes×PR Ploomes
+- Retorna: `pr_id TEXT`, `pr_source TEXT`, `conflict_with_id TEXT`, `conflict_with_type TEXT`, `conflict_date DATE`, `gap_minutes INTEGER` (negativo=sobreposição, 0..119=intervalo<2h)
+- Hook: `usePreReservaConflicts()` + `usePreReservaConflictSets()` em `src/hooks/use-pre-reserva-conflicts.ts`
+- `usePreReservaConflictSets` retorna mesma forma `PRConflictResult` — substitui `computePreReservaConflicts` (client-side)
+- `/eventos`: chips "Conflito de horário" e "Intervalo < 2h" agora contam PRs de TODAS as páginas (não só a carregada)
+- Produção validada: 7 conflitos em Pinheiros (6 Ploomes + 1 Diretoria), 1 em Moema — todos sobreposição
 
 ---
 
