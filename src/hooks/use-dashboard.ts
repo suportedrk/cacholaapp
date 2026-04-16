@@ -30,6 +30,7 @@ export type CalendarEvent = {
   status: EventStatus
   client_name: string
   birthday_person: string | null
+  owner_name: string | null
   // event_types e venues foram dropadas na migration 030
   entityType?: 'event'  // default
 }
@@ -52,7 +53,7 @@ export type DashboardMaintenanceStats = {
 
 // event_types e venues foram dropadas na migration 030
 const CALENDAR_EVENT_SELECT = `
-  id, title, date, start_time, end_time, status, client_name, birthday_person
+  id, title, date, start_time, end_time, status, client_name, birthday_person, owner_name
 ` as const
 
 // ─────────────────────────────────────────────────────────────

@@ -1,7 +1,7 @@
 'use client'
 
 import { memo } from 'react'
-import { Sparkles, Clock, Phone, AlertTriangle, ExternalLink } from 'lucide-react'
+import { Sparkles, Clock, Phone, AlertTriangle, ExternalLink, User } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { CalendarPreReserva } from '@/types/pre-reservas'
 import type { ConflictType } from './event-card'
@@ -108,6 +108,12 @@ export const PreReservaPloomesCard = memo(function PreReservaPloomesCard({
             {item.deal_amount != null && item.deal_amount > 0 && (
               <span className="text-xs font-medium text-pink-600 dark:text-pink-400">
                 {formatBRL(item.deal_amount)}
+              </span>
+            )}
+            {item.owner_name && (
+              <span className="inline-flex items-center gap-1 text-xs text-text-tertiary">
+                <User className="w-3 h-3 shrink-0" />
+                {item.owner_name}
               </span>
             )}
           </div>

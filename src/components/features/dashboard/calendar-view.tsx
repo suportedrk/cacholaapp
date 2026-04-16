@@ -920,7 +920,7 @@ function MonthView({
                       'w-full text-left text-[10px] leading-tight px-1 py-0.5 rounded-sm truncate font-medium transition-opacity hover:opacity-80',
                       EVENT_PILL[ev.status]
                     )}
-                    title={ev.client_name || ev.title}
+                    title={[ev.client_name || ev.title, ev.owner_name].filter(Boolean).join(' · ')}
                   >
                     {ev.client_name || ev.title}
                   </button>
@@ -934,7 +934,7 @@ function MonthView({
                       'w-full text-left text-[10px] leading-tight px-1 py-0.5 rounded-sm font-medium transition-opacity hover:opacity-70 line-through opacity-50',
                       'bg-gray-100 text-gray-400 border-l-2 border-l-gray-200 dark:bg-gray-800/30 dark:text-gray-500'
                     )}
-                    title={ev.client_name || ev.title}
+                    title={[ev.client_name || ev.title, ev.owner_name].filter(Boolean).join(' · ')}
                   >
                     {ev.client_name || ev.title}
                   </button>
@@ -1156,6 +1156,9 @@ function DayView({ currentDate, eventsByDate, maintenanceByDate, checklistByDate
             </span>
           </div>
           <p className="text-xs opacity-70 mt-0.5">{ev.client_name}</p>
+          {ev.owner_name && (
+            <p className="text-xs opacity-50 mt-0.5">{ev.owner_name}</p>
+          )}
           {ev.status === 'lost' && (
             <span className="inline-block mt-1 text-[10px] opacity-60">{STATUS_LABEL.lost}</span>
           )}

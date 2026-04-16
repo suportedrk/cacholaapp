@@ -1,12 +1,15 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek } from 'date-fns'
 import {
   Calendar, UserPlus, ClipboardList, WifiOff,
   // TrendingUp, AlertTriangle — Movidos para módulo BI (Fase 3)
 } from 'lucide-react'
+import {
+  Select, SelectContent, SelectItem, SelectTrigger,
+} from '@/components/ui/select'
 import { PageHeader } from '@/components/shared/page-header'
 import { KpiCard } from '@/components/features/dashboard/kpi-card'
 import { CalendarView, type CalendarViewType } from '@/components/features/dashboard/calendar-view'
@@ -56,6 +59,12 @@ export default function DashboardPage() {
   const canManagePreReservas =
     profile?.role === 'super_admin' || profile?.role === 'diretor'
 
+  // Filtro por vendedora
+  const [selectedOwner, setSelectedOwner] = useState<string | null>(null)
+  const handleOwnerChange = useCallback((v: string | null) => {
+    setSelectedOwner(!v || v === '__all__' ? null : v)
+  }, [])
+
   // Calendar date range
   const { dateFrom, dateTo } = useMemo(() => {
     if (calView === 'month') {
@@ -88,6 +97,24 @@ export default function DashboardPage() {
   const calPreReservas = useMemo(
     () => [...calPreReservasDiretoria, ...calPreReservasPloomes],
     [calPreReservasDiretoria, calPreReservasPloomes],
+  )
+
+  // Vendedoras únicas dos eventos + pré-reservas carregados
+  const ownerOptions = useMemo(() => {
+    const names = new Set<string>()
+    calEvents.forEach((e) => { if (e.owner_name) names.add(e.owner_name) })
+    calPreReservas.forEach((pr) => { if (pr.owner_name) names.add(pr.owner_name) })
+    return Array.from(names).sort()
+  }, [calEvents, calPreReservas])
+
+  // Eventos + pré-reservas filtrados por vendedora
+  const filteredCalEvents = useMemo(
+    () => selectedOwner ? calEvents.filter((e) => e.owner_name === selectedOwner) : calEvents,
+    [calEvents, selectedOwner],
+  )
+  const filteredCalPreReservas = useMemo(
+    () => selectedOwner ? calPreReservas.filter((pr) => pr.owner_name === selectedOwner) : calPreReservas,
+    [calPreReservas, selectedOwner],
   )
 
   const { isTimedOut, retry } = useLoadingTimeout(loadingKpis || loadingCal)
@@ -220,11 +247,29 @@ export default function DashboardPage() {
 
       {/* ── Calendário — largura total ── */}
       <div data-tour="calendar">
+        {/* Filtro de vendedora */}
+        {ownerOptions.length > 0 && (
+          <div className="flex justify-end mb-3">
+            <Select value={selectedOwner ?? '__all__'} onValueChange={handleOwnerChange}>
+              <SelectTrigger className="w-40 text-sm">
+                <span data-slot="select-value" className="flex flex-1 text-left truncate">
+                  {selectedOwner ?? 'Vendedora'}
+                </span>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">Todas</SelectItem>
+                {ownerOptions.map((name) => (
+                  <SelectItem key={name} value={name}>{name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
         <CalendarView
-          events={calEvents}
+          events={filteredCalEvents}
           maintenanceItems={calMaintenance}
           checklistItems={calChecklists}
-          preReservaItems={calPreReservas}
+          preReservaItems={filteredCalPreReservas}
           showMaintenance={showMaintenance}
           onToggleMaintenance={() => setShowMaintenance((v) => !v)}
           currentDate={currentDate}

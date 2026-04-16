@@ -46,6 +46,13 @@ export type PloomesAttachment = {
   CreateDate?: string
 }
 
+/** Responsável (vendedora) do deal */
+export type PloomesOwner = {
+  Id: number
+  Name: string
+  Email?: string
+}
+
 /** Deal completo do Ploomes */
 export type PloomesDeal = {
   Id: number
@@ -53,6 +60,7 @@ export type PloomesDeal = {
   ContactId?: number
   Contact?: PloomesContact
   OwnerId?: number
+  Owner?: PloomesOwner
   Amount?: number
   StageId?: number
   Stage?: { Id: number; Name: string }

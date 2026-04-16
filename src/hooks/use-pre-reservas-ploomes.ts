@@ -20,6 +20,7 @@ type PreReservaPloomesRow = {
   deal_amount: number | null
   stage_id: number
   stage_name: string | null
+  owner_name: string | null
   created_at: string
   updated_at: string
   ploomes_url: string
@@ -71,6 +72,7 @@ export function usePreReservasPloomes(startDate: string, endDate: string) {
         ploomes_url:    r.ploomes_url,
         deal_amount:    r.deal_amount,
         stage_name:     r.stage_name,
+        owner_name:     r.owner_name,
       }))
     },
     enabled: isSessionReady,
