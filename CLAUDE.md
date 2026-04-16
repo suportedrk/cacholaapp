@@ -455,7 +455,21 @@ docker compose exec supabase-db psql -U postgres -d postgres
 - Hook: `usePreReservaConflicts()` + `usePreReservaConflictSets()` em `src/hooks/use-pre-reserva-conflicts.ts`
 - `usePreReservaConflictSets` retorna mesma forma `PRConflictResult` — substitui `computePreReservaConflicts` (client-side)
 - `/eventos`: chips "Conflito de horário" e "Intervalo < 2h" agora contam PRs de TODAS as páginas (não só a carregada)
+- Filtro de conflitos: apenas `conflict_date >= hoje` (passados ignorados nos hooks `useOverlappingEventIds`, `useShortGapEventIds`, `usePreReservaConflictSets`)
+- `/eventos`: chip "Pré-venda" emerald exclusivo filtra só Diretoria pre-reservas (`activeFilter === 'diretoria'`)
 - Produção validada: 7 conflitos em Pinheiros (6 Ploomes + 1 Diretoria), 1 em Moema — todos sobreposição
+
+**Responsável/Vendedora (owner) — Migration 050 — COMPLETO:**
+- Tabelas: `ploomes_deals.owner_id INTEGER`, `ploomes_deals.owner_name TEXT`, `events.owner_id INTEGER`, `events.owner_name TEXT` com índices parciais
+- `sync.ts` + `sync-deals.ts`: `$expand=Owner($select=Id,Name,Email)` — extrai `deal.Owner?.Name` e `deal.OwnerId`
+- VIEW `pre_reservas_ploomes_view` recriada com coluna `owner_name` (DROP + CREATE na migration)
+- `CalendarEvent`, `EventForList`, `CalendarPreReserva`: tipagem `owner_name: string | null`
+- `EventCard`: exibe vendedora com ícone `User` abaixo do `client_name`
+- `PreReservaPloomesCard`: exibe `owner_name` no bloco de metadados
+- `CalendarView`: `title` do pill inclui owner; expanded day view exibe owner abaixo do nome
+- `/eventos`: dropdown "Vendedora" (sem persistência) extrai nomes dos eventos carregados + PRs
+- `/inicio` (calendar): dropdown "Vendedora" acima do calendário, filtra `calEvents` e `calPreReservas`
+- Backfill executado em produção: 7218 ploomes_deals com owner_name + 13 events propagados via `scripts/backfill-owner.ts`
 
 ---
 
