@@ -7,7 +7,7 @@ import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import {
   ArrowLeft, Calendar, Clock, MapPin, Users,
-  Plus, ExternalLink, Wrench, PartyPopper, Truck, User2,
+  Plus, ExternalLink, Wrench, PartyPopper, Truck, User2, User,
   CheckSquare, MessageCircle, Phone, Mail,
   ClipboardList, History, Tag, Star, Camera, Music2, CakeSlice,
   DollarSign, School, BookText, Check, X as XIcon,
@@ -430,6 +430,12 @@ export default function EventoDetailPage() {
               <div className="flex items-center gap-2">
                 <Users className="w-4 h-4 shrink-0 text-text-tertiary" />
                 <span>{event.guest_count} convidados</span>
+              </div>
+            )}
+            {event.owner_name && (
+              <div className="flex items-center gap-2">
+                <User className="w-4 h-4 shrink-0 text-text-tertiary" />
+                <span>{event.owner_name}</span>
               </div>
             )}
           </div>
