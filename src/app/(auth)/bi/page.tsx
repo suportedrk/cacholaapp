@@ -37,9 +37,11 @@ import { BIFunnel } from '@/components/features/bi/bi-funnel'
 import { BIUnitComparison } from '@/components/features/bi/bi-unit-comparison'
 import { BITrendCharts } from '@/components/features/bi/bi-trend-charts'
 import { SellersTab } from '@/components/features/bi/sellers-tab'
+import { VendasRealizadasTab } from '@/components/features/bi/vendas-realizadas-tab'
 import { exportBIReport } from '@/lib/bi/export-bi-report'
 
 const SELLERS_ROLES = ['super_admin', 'diretor'] as const
+const VENDAS_ROLES  = ['super_admin', 'diretor', 'gerente', 'financeiro'] as const
 
 // ── Formatting helpers ────────────────────────────────────────
 
@@ -114,6 +116,7 @@ export default function BIPage() {
 
   const { profile, userUnits } = useAuth()
   const canSeeSellers = SELLERS_ROLES.includes(profile?.role as typeof SELLERS_ROLES[number])
+  const canSeeVendas  = VENDAS_ROLES.includes(profile?.role as typeof VENDAS_ROLES[number])
   const units = userUnits.map((u) => ({ id: u.unit.id, name: u.unit.name }))
 
   const isLoading = conversion.isLoading || salesMetrics.isLoading || kpis.isLoading
@@ -251,13 +254,21 @@ export default function BIPage() {
         onValueChange={setSelectedTab}
         className="gap-0"
       >
-        {canSeeSellers && (
+        {(canSeeSellers || canSeeVendas) && (
           <TabsList variant="line" className="mb-0">
             <TabsTrigger value="visao-geral">Visão Geral</TabsTrigger>
-            <TabsTrigger value="vendedoras" className="gap-1.5">
-              <Users2 className="w-4 h-4" />
-              Responsáveis por Deal
-            </TabsTrigger>
+            {canSeeSellers && (
+              <TabsTrigger value="vendedoras" className="gap-1.5">
+                <Users2 className="w-4 h-4" />
+                Atendimento (Deals)
+              </TabsTrigger>
+            )}
+            {canSeeVendas && (
+              <TabsTrigger value="vendas-realizadas" className="gap-1.5">
+                <Users2 className="w-4 h-4" />
+                Vendas Realizadas (Orders)
+              </TabsTrigger>
+            )}
           </TabsList>
         )}
 
@@ -655,13 +666,22 @@ export default function BIPage() {
         </div>
         </TabsContent>
 
-        {/* ── Vendedoras ── */}
+        {/* ── Atendimento (Deals) ── */}
         {canSeeSellers && (
           <TabsContent value="vendedoras" className="mt-6">
             <SellersTab
               units={units}
               activeUnitId={activeUnit?.id ?? null}
               activeUnitName={activeUnit?.name ?? 'Todas as unidades'}
+            />
+          </TabsContent>
+        )}
+
+        {/* ── Vendas Realizadas (Orders) ── */}
+        {canSeeVendas && (
+          <TabsContent value="vendas-realizadas" className="mt-6">
+            <VendasRealizadasTab
+              activeUnitId={activeUnit?.id ?? null}
             />
           </TabsContent>
         )}

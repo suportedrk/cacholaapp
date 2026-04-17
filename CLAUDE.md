@@ -216,10 +216,22 @@ pm2 restart cacholaos
 
 ### Migrations no deploy
 ```bash
-# Aplicar ANTES do build (na VPS via Docker)
+# Aplicar APÓS o deploy do código (na VPS via Docker)
 docker exec -i supabase-db psql -U postgres -d postgres \
-  < supabase/migrations/[arquivo].sql
+  < /opt/cacholaapp/supabase/migrations/[arquivo].sql
 ```
+
+> ⚠️ **REGRA PERMANENTE:** Migrations NUNCA devem ser aplicadas manualmente na VPS antes de
+> estarem commitadas e merged em `main`. Fluxo correto:
+> 1. Criar migration em `develop`
+> 2. Commit + push em `develop`, aguardar CI verde
+> 3. Merge `develop → main` via `--no-ff`
+> 4. GitHub Actions deploya o código (incluindo o arquivo .sql)
+> 5. **Após deploy verde**, SSH na VPS e aplicar:
+>    `docker exec -i supabase-db psql -U postgres -d postgres < /opt/cacholaapp/supabase/migrations/XXX.sql`
+>
+> Quebrar essa ordem causa `untracked working tree files would be overwritten by merge`
+> (incidente Sub-etapas A+B da tabela `sellers`, abr/2026).
 
 ---
 
@@ -482,7 +494,7 @@ docker compose exec supabase-db psql -U postgres -d postgres
 - Trigger `trg_auto_insert_seller` (Migration 054): AFTER INSERT em `ploomes_orders` → chama `auto_insert_seller_from_order()` SECURITY DEFINER (owner: `supabase_admin`) → ON CONFLICT DO NOTHING
 - Tela `/configuracoes/vendedoras`: CRUD de edição (sem criação manual); sidebar grupo Administração, restrita a `ADMIN_ROLES`; filtros Todas/Ativas/Inativas/Sistema; sheet lateral com `termination_date` condicional (só quando inativo) e `is_system_account` só para `super_admin`
 - Hooks: `useSellers()` + `useUpdateSeller()` em `src/hooks/use-sellers.ts`
-- Sub-etapa C (aba BI "Responsáveis") ainda pendente
+- Migration 055 + aba **"Vendas Realizadas (Orders)"** no BI: 3 RPCs guardados (super_admin+diretor+gerente+financeiro): `get_bi_sales_kpi`, `get_bi_sales_ranking` (avg_monthly_revenue normalizado por meses trabalhados respeitando hire_date/termination_date), `get_bi_seller_orders` (drill-down). Aba "Responsáveis por Deal" renomeada para **"Atendimento (Deals)"** — conteúdo intocado. Período default 12M, pills 3M/6M/12M/Tudo. Default filtra `status=active AND is_system_account=false`; toggle "Incluir histórico" expõe todas. Rodapé "Dados a partir de outubro/2024" apenas quando período=Tudo. Drill-down via sheet (sem página dedicada). `canSeeVendas = VENDAS_ROLES` (inclui gerente + financeiro).
 
 ---
 
