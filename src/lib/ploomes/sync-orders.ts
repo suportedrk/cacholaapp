@@ -307,7 +307,24 @@ export async function syncOrders(
 
           result.ordersUpserted++
 
-          // 8. Upsert produtos da Order
+          // 8. Limpar produtos antigos da Order antes de re-inserir
+          // Necessário porque o Ploomes reatribui IDs ao editar uma Order,
+          // fazendo com que o upsert por ploomes_product_id acumule duplicatas.
+          const { error: deleteError } = await supabase
+            .from('ploomes_order_products')
+            .delete()
+            .eq('order_id', order.Id)
+
+          if (deleteError) {
+            result.errors++
+            console.error(
+              `[Orders Sync] Falha ao limpar produtos antigos da order ${order.Id}:`,
+              deleteError.message,
+            )
+            continue // skip entire order to avoid partial state
+          }
+
+          // 9. Upsert produtos da Order
           const products = order.Products ?? []
           for (const prod of products) {
             if (!prod.Id) continue
