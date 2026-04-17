@@ -122,8 +122,10 @@ export function SellerEditSheet({
                   setForm((f) => ({ ...f, status: v as 'active' | 'inactive' }))
                 }
               >
-                <SelectTrigger id="status">
-                  <SelectValue />
+                <SelectTrigger id="status" className="w-full">
+                  <SelectValue>
+                    {form.status === 'active' ? 'Ativa' : 'Inativa'}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="active">Ativa</SelectItem>
@@ -167,10 +169,14 @@ export function SellerEditSheet({
                   setForm((f) => ({ ...f, primary_unit_id: v === 'none' ? null : v }))
                 }
               >
-                <SelectTrigger id="unit">
-                  <SelectValue placeholder="Nenhuma" />
+                <SelectTrigger id="unit" className="w-full">
+                  <SelectValue>
+                    {form.primary_unit_id
+                      ? (units.find((u) => u.id === form.primary_unit_id)?.name ?? 'Nenhuma')
+                      : 'Nenhuma'}
+                  </SelectValue>
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="w-full">
                   <SelectItem value="none">Nenhuma</SelectItem>
                   {units
                     .filter((u) => u.is_active)
