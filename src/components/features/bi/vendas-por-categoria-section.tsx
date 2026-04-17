@@ -1,11 +1,17 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Tag, ShoppingBag, TrendingUp, AlertCircle, RefreshCw } from 'lucide-react'
+import { Tag, ShoppingBag, TrendingUp, AlertCircle, RefreshCw, AlertTriangle } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Cell } from 'recharts'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
-import { useBiCategoryKpi, useBiCategoryRanking } from '@/hooks/use-bi-category'
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { cn } from '@/lib/utils'
+import {
+  useBiCategoryKpi,
+  useBiCategoryRanking,
+  useBiCategoryCrossUnit,
+} from '@/hooks/use-bi-category'
 import type { BICategoryRankingRow } from '@/hooks/use-bi-category'
 import { CategoryDrilldownSheet } from './category-drilldown-sheet'
 
@@ -23,6 +29,14 @@ function formatCurrencyCompact(v: number | null | undefined): string {
   if (v >= 1_000_000) return `R$${(v / 1_000_000).toFixed(1)}M`
   if (v >= 1_000)     return `R$${(v / 1_000).toFixed(0)}k`
   return formatCurrency(v)
+}
+
+/** "Cachola PINHEIROS" → "PIN", "Cachola MOEMA" → "MOE" */
+function abbreviateFamily(family: string | null | undefined): string {
+  if (!family) return '—'
+  if (family.toUpperCase().includes('PINHEIROS')) return 'PIN'
+  if (family.toUpperCase().includes('MOEMA'))     return 'MOE'
+  return family
 }
 
 // ResizeObserver hook — mesma abordagem de sellers-charts.tsx
@@ -58,14 +72,17 @@ export function VendasPorCategoriaSection({
   unitId,
   includeInactive,
 }: Props) {
-  const [drillCategory, setDrillCategory] = useState<string | null>(null)
-  const [sheetOpen,     setSheetOpen]     = useState(false)
+  const [groupByUnit,          setGroupByUnit]          = useState(false)
+  const [drillCategory,        setDrillCategory]        = useState<string | null>(null)
+  const [sheetOpen,            setSheetOpen]            = useState(false)
+  const [crossUnitSheetOpen,   setCrossUnitSheetOpen]   = useState(false)
 
   const chartRef   = useRef<HTMLDivElement>(null)
   const chartWidth = useChartWidth(chartRef)
 
-  const kpi     = useBiCategoryKpi({ startDate, endDate, unitId, includeInactive })
-  const ranking = useBiCategoryRanking({ startDate, endDate, unitId, includeInactive })
+  const kpi       = useBiCategoryKpi({ startDate, endDate, unitId, includeInactive })
+  const ranking   = useBiCategoryRanking({ startDate, endDate, unitId, includeInactive, groupByUnit })
+  const crossUnit = useBiCategoryCrossUnit({ startDate, endDate, includeInactive })
 
   const isLoading = kpi.isLoading || ranking.isLoading
   const isError   = kpi.isError   || ranking.isError
@@ -124,32 +141,48 @@ export function VendasPorCategoriaSection({
 
   if (rows.length === 0) return null
 
+  // Cross-unit aggregates
+  const crossUnitRows       = crossUnit.data ?? []
+  const hasCrossUnit        = crossUnitRows.length > 0
+  const crossUnitItemCount  = crossUnitRows.reduce((s, r) => s + Number(r.item_count), 0)
+  const crossUnitRevenue    = crossUnitRows.reduce((s, r) => s + Number(r.revenue), 0)
+
   // Dados para o gráfico horizontal
-  const BAR_H      = 40
+  const BAR_H       = 40
   const chartHeight = Math.max(160, rows.length * BAR_H + 24)
   const chartData   = rows.map((r) => ({
-    name:    r.category,
-    value:   r.revenue,
-    pct:     r.pct_of_total,
+    name:  groupByUnit ? `${r.category} · ${abbreviateFamily(r.unit_family)}` : r.category,
+    value: r.revenue,
+    pct:   r.pct_of_total,
   }))
 
-  // Cores por posição (verde sálvia degradê, igual ao sellers-charts)
   const BAR_COLOR = '#7C8D78'
 
   return (
     <>
       <div className="space-y-5 pt-2">
 
-        {/* ── Separador visual ──────────────────────────── */}
+        {/* ── Section header with toggle ─────────────────── */}
         <div className="flex items-center gap-3">
           <div className="h-px flex-1 bg-border-default" />
-          <div className="flex items-center gap-1.5 text-text-tertiary">
+          <div className="flex items-center gap-1.5 text-text-tertiary shrink-0">
             <Tag className="h-3.5 w-3.5" />
             <span className="text-xs font-semibold uppercase tracking-wide">
               Vendas por Categoria de Produto
             </span>
           </div>
           <div className="h-px flex-1 bg-border-default" />
+          <button
+            onClick={() => setGroupByUnit((v) => !v)}
+            className={cn(
+              'shrink-0 text-xs px-2.5 py-0.5 rounded-full border transition-colors whitespace-nowrap',
+              groupByUnit
+                ? 'bg-primary text-primary-foreground border-primary'
+                : 'border-border-default text-text-secondary hover:text-text-primary'
+            )}
+          >
+            por unidade
+          </button>
         </div>
 
         {/* ── KPI cards ─────────────────────────────────── */}
@@ -195,6 +228,29 @@ export function VendasPorCategoriaSection({
 
         </div>
 
+        {/* ── Cross-unit alert card ──────────────────────── */}
+        {hasCrossUnit && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800/50 dark:bg-amber-950/20 p-3 flex items-start gap-3">
+            <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                Produtos com unidade divergente
+              </p>
+              <p className="text-xs text-amber-700 dark:text-amber-300 mt-0.5">
+                {crossUnitItemCount.toLocaleString('pt-BR')} {crossUnitItemCount === 1 ? 'item' : 'itens'} ({formatCurrencyCompact(crossUnitRevenue)}) em que a unidade do pedido não coincide com a família do produto.
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCrossUnitSheetOpen(true)}
+              className="shrink-0 text-xs border-amber-300 text-amber-700 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-950/40"
+            >
+              Ver detalhes
+            </Button>
+          </div>
+        )}
+
         {/* ── Gráfico: Receita por Categoria ─────────────── */}
         <div className="rounded-xl border border-border-default bg-card overflow-hidden">
           <div className="px-4 py-3 border-b border-border-default">
@@ -220,7 +276,6 @@ export function VendasPorCategoriaSection({
                   tick={{ fontSize: 11, fill: '#94A3B8' }}
                   tickLine={false}
                   axisLine={false}
-                  tickFormatter={(v: string) => v.replace(' Cachola PINHEIROS', ' · PIN').replace(' Cachola MOEMA', ' · MOE')}
                 />
                 <Tooltip
                   cursor={{ fill: 'var(--muted)', opacity: 0.5 }}
@@ -245,7 +300,7 @@ export function VendasPorCategoriaSection({
                   fill: '#94A3B8',
                 }}>
                   {chartData.map((_, i) => (
-                    <Cell key={i} fill={BAR_COLOR} fillOpacity={1 - i * 0.1} />
+                    <Cell key={i} fill={BAR_COLOR} fillOpacity={1 - i * 0.08} />
                   ))}
                 </Bar>
               </BarChart>
@@ -259,6 +314,9 @@ export function VendasPorCategoriaSection({
             <thead className="bg-surface-secondary text-text-secondary">
               <tr>
                 <th className="text-left px-4 py-3 font-medium">Categoria</th>
+                {groupByUnit && (
+                  <th className="text-left px-4 py-3 font-medium hidden sm:table-cell">Unidade</th>
+                )}
                 <th className="text-right px-4 py-3 font-medium">Receita</th>
                 <th className="text-right px-4 py-3 font-medium hidden sm:table-cell">Itens</th>
                 <th className="text-right px-4 py-3 font-medium hidden md:table-cell">Ticket médio/item</th>
@@ -268,7 +326,7 @@ export function VendasPorCategoriaSection({
             <tbody className="divide-y divide-border-default">
               {rows.map((row, idx) => (
                 <tr
-                  key={row.category}
+                  key={`${row.category}|${row.unit_family ?? ''}`}
                   onClick={() => openDrill(row)}
                   className="bg-card hover:bg-surface-secondary transition-colors cursor-pointer"
                 >
@@ -280,6 +338,11 @@ export function VendasPorCategoriaSection({
                       <span className="font-medium text-text-primary">{row.category}</span>
                     </div>
                   </td>
+                  {groupByUnit && (
+                    <td className="px-4 py-3 text-text-secondary hidden sm:table-cell text-xs">
+                      {abbreviateFamily(row.unit_family)}
+                    </td>
+                  )}
                   <td className="px-4 py-3 text-right font-semibold text-text-primary">
                     {formatCurrency(row.revenue)}
                   </td>
@@ -302,7 +365,7 @@ export function VendasPorCategoriaSection({
 
       </div>
 
-      {/* ── Drill-down sheet ──────────────────────────────── */}
+      {/* ── Category drill-down sheet ──────────────────────── */}
       <CategoryDrilldownSheet
         category={drillCategory}
         startDate={startDate}
@@ -312,6 +375,56 @@ export function VendasPorCategoriaSection({
         open={sheetOpen}
         onOpenChange={setSheetOpen}
       />
+
+      {/* ── Cross-unit details sheet ───────────────────────── */}
+      <Sheet open={crossUnitSheetOpen} onOpenChange={setCrossUnitSheetOpen}>
+        <SheetContent
+          side="right"
+          showCloseButton
+          className="w-full sm:max-w-lg flex flex-col gap-0 p-0"
+        >
+          <SheetHeader className="px-6 py-4 border-b border-border-default">
+            <SheetTitle className="text-base font-semibold">
+              Itens com Unidade Divergente
+            </SheetTitle>
+            <p className="text-xs text-text-tertiary mt-0.5">
+              Pedidos em que a unidade de origem não coincide com a família do produto.
+            </p>
+          </SheetHeader>
+          <div className="flex-1 overflow-y-auto">
+            {crossUnitRows.length === 0 ? (
+              <div className="py-12 text-center text-text-tertiary text-sm">
+                Nenhuma divergência encontrada.
+              </div>
+            ) : (
+              <table className="w-full text-sm">
+                <thead className="bg-surface-secondary text-text-secondary sticky top-0">
+                  <tr>
+                    <th className="text-left px-4 py-3 font-medium">Unidade do pedido</th>
+                    <th className="text-left px-4 py-3 font-medium">Família do produto</th>
+                    <th className="text-right px-4 py-3 font-medium hidden sm:table-cell">Itens</th>
+                    <th className="text-right px-4 py-3 font-medium">Receita</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border-default">
+                  {crossUnitRows.map((row, idx) => (
+                    <tr key={idx} className="bg-card hover:bg-surface-secondary transition-colors">
+                      <td className="px-4 py-3 text-text-primary">{row.order_unit_name}</td>
+                      <td className="px-4 py-3 text-text-secondary">{row.product_family}</td>
+                      <td className="px-4 py-3 text-right text-text-secondary hidden sm:table-cell">
+                        {Number(row.item_count).toLocaleString('pt-BR')}
+                      </td>
+                      <td className="px-4 py-3 text-right font-semibold text-text-primary">
+                        {formatCurrency(row.revenue)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
     </>
   )
 }
