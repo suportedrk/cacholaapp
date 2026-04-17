@@ -38,9 +38,9 @@ export function VendedorasClient() {
   const { realProfile } = useAuth()
   const isSuperAdmin = realProfile?.role === 'super_admin'
 
-  const { data: sellers = [], isLoading, isError, refetch } = useSellers()
+  const { data: sellers = [], isLoading, isError } = useSellers()
   const { data: units = [] } = useUnits()
-  const timedOut = useLoadingTimeout(isLoading)
+  const { isTimedOut, retry } = useLoadingTimeout(isLoading)
 
   const [filter, setFilter] = useState<FilterKey>('all')
   const [editSeller, setEditSeller] = useState<Seller | null>(null)
@@ -61,7 +61,7 @@ export function VendedorasClient() {
   }
 
   // ── Loading ──────────────────────────────────────────────────
-  if (isLoading && !timedOut) {
+  if (isLoading && !isTimedOut) {
     return (
       <div className="space-y-6">
         <PageHeader title="Vendedoras" />
@@ -75,14 +75,14 @@ export function VendedorasClient() {
   }
 
   // ── Error / Timeout ──────────────────────────────────────────
-  if (isError || timedOut) {
+  if (isError || isTimedOut) {
     return (
       <div className="space-y-6">
         <PageHeader title="Vendedoras" />
         <div className="flex flex-col items-center gap-3 py-12 text-text-secondary">
           <AlertCircle className="h-8 w-8 text-status-error-text" />
           <p className="text-sm">Erro ao carregar vendedoras.</p>
-          <Button variant="outline" size="sm" onClick={() => refetch()}>
+          <Button variant="outline" size="sm" onClick={retry}>
             <RefreshCw className="mr-2 h-4 w-4" />
             Tentar novamente
           </Button>
