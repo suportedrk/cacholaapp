@@ -525,12 +525,22 @@ docker compose exec supabase-db psql -U postgres -d postgres
 - 6 categorias distintas (3 × PINHEIROS, 3 × MOEMA); 0 NULL; cobertura 100% (1538/1538 orders) — rodapé de cobertura não implementado
 - KPI retorna: `total_categories`, `top_category_name`, `top_category_revenue`, `total_items`
 - Drilldown: UNION ALL de produtos (kind='product') + top 5 vendedoras (kind='seller'); `rank_position` dentro de cada kind
-- Componentes em `src/components/features/bi/`: `vendas-por-categoria-section.tsx` (KPIs + chart horizontal + tabela), `category-drilldown-sheet.tsx` (produtos paginados + top 5 sellers)
+- Componentes em `src/components/features/bi/`: `vendas-por-categoria-section.tsx` (KPIs + chart horizontal + tabela + toggle + alerta cross-unit), `category-drilldown-sheet.tsx` (produtos paginados + top 5 sellers)
 - Hooks: `useBiCategoryKpi`, `useBiCategoryRanking`, `useBiCategoryDrilldown` em `src/hooks/use-bi-category.ts`
 - Seção renderizada ABAIXO do ranking de vendedoras, dentro da aba "Vendas Realizadas (Orders)"
 - Toggle "Incluir histórico completo" da aba afeta o painel de categorias (mesmas props `includeInactive`)
-- Gráfico: BarChart horizontal com abreviação de sufixo (PINHEIROS→PIN, MOEMA→MOE) para legibilidade
-- TODO: sufixos de unidade nas categorias Ploomes ("Pacotes Cachola PINHEIROS") ficam visíveis — dados do Ploomes, sem normalização por ora
+
+**Migration 057 — Sub-etapa D.1 — Normalização de categorias + cross-unit:**
+- `normalize_product_category(TEXT) IMMUTABLE`: strips ` Cachola PINHEIROS/MOEMA` → "Pacotes", "Adicionais", "Upgrades"
+- `family_name` 100% populado (3096/3096), sem ALTER TABLE / sync / backfill necessários
+- `get_bi_category_ranking` ganhou `p_group_by_unit BOOLEAN DEFAULT FALSE` e `unit_family TEXT` no RETURNS TABLE
+- Toggle pill "por unidade" no header da seção (session state): quando ON, 6 linhas com `unit_family`; composite React key `category|unit_family` evita duplicatas
+- `get_bi_category_cross_unit(start, end, include_inactive)`: 50 itens / R$571k cross-unit (49 Pinheiros×MOEMA + 1 Moema×PINHEIROS)
+- Card amber de alerta aparece quando cross-unit > 0; botão "Ver detalhes" abre sheet inline com tabela (unidade do pedido × família × itens × receita)
+- Nota metodológica no rodapé da aba: diferença faturamento negociado vs preço de tabela dos produtos
+- DROP FUNCTION IF EXISTS necessário antes de CREATE (RETURNS TABLE schema changes)
+- Índice: `idx_ploomes_order_products_family ON ploomes_order_products(family_name)`
+- Hook: `useBiCategoryCrossUnit` adicionado em `src/hooks/use-bi-category.ts`
 
 ---
 

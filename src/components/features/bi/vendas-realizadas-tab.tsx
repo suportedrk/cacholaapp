@@ -324,6 +324,13 @@ export function VendasRealizadasTab({ activeUnitId }: Props) {
           includeInactive={includeInactive}
         />
 
+        {/* ── Nota metodológica ─────────────────────────── */}
+        <p className="text-sm text-text-tertiary">
+          Os totais de Faturamento (painel superior) são baseados no valor final negociado de cada venda.
+          Os totais de Receita por Categoria (painel inferior) são baseados no preço de tabela dos produtos.
+          A diferença reflete descontos aplicados no fechamento.
+        </p>
+
       </div>
 
       {/* Drill-down sheet */}

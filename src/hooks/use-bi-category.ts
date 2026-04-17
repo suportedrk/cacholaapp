@@ -15,6 +15,8 @@ export interface BICategoryKpi {
 
 export interface BICategoryRankingRow {
   category:           string
+  /** Populated only when p_group_by_unit = true (e.g. "Cachola PINHEIROS") */
+  unit_family:        string | null
   revenue:            number
   product_count:      number
   avg_product_ticket: number
@@ -28,6 +30,13 @@ export interface BICategoryDrilldownRow {
   item_count:    number
   item_avg:      number
   rank_position: number
+}
+
+export interface BICategoryCrossUnitRow {
+  order_unit_name: string
+  product_family:  string
+  item_count:      number
+  revenue:         number
 }
 
 // ── Shared retry policy ────────────────────────────────────────
@@ -79,12 +88,13 @@ export function useBiCategoryRanking(params: {
   endDate:         string
   unitId:          string | null
   includeInactive: boolean
+  groupByUnit?:    boolean
 }) {
   const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
-  const { startDate, endDate, unitId, includeInactive } = params
+  const { startDate, endDate, unitId, includeInactive, groupByUnit = false } = params
 
   return useQuery({
-    queryKey:  ['bi', 'category-ranking', startDate, endDate, unitId, includeInactive],
+    queryKey:  ['bi', 'category-ranking', startDate, endDate, unitId, includeInactive, groupByUnit],
     enabled:   isSessionReady,
     staleTime: 5 * 60 * 1000,
     retry:     biRetry,
@@ -96,6 +106,7 @@ export function useBiCategoryRanking(params: {
         p_end_date:         endDate,
         p_unit_id:          unitId,
         p_include_inactive: includeInactive,
+        p_group_by_unit:    groupByUnit,
       })
       if (error) throw error
       return (data ?? []) as BICategoryRankingRow[]
@@ -130,6 +141,33 @@ export function useBiCategoryDrilldown(params: {
       })
       if (error) throw error
       return (data ?? []) as BICategoryDrilldownRow[]
+    },
+  })
+}
+
+export function useBiCategoryCrossUnit(params: {
+  startDate:       string
+  endDate:         string
+  includeInactive: boolean
+}) {
+  const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
+  const { startDate, endDate, includeInactive } = params
+
+  return useQuery({
+    queryKey:  ['bi', 'category-cross-unit', startDate, endDate, includeInactive],
+    enabled:   isSessionReady,
+    staleTime: 5 * 60 * 1000,
+    retry:     biRetry,
+    queryFn: async () => {
+      const supabase = createClient()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any).rpc('get_bi_category_cross_unit', {
+        p_start_date:       startDate,
+        p_end_date:         endDate,
+        p_include_inactive: includeInactive,
+      })
+      if (error) throw error
+      return (data ?? []) as BICategoryCrossUnitRow[]
     },
   })
 }
