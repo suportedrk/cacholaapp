@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ShoppingCart, TrendingUp, Banknote, Receipt, Info, Loader2, AlertCircle, RefreshCw } from 'lucide-react'
+import { ShoppingCart, TrendingUp, Banknote, Info, AlertCircle, RefreshCw } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'

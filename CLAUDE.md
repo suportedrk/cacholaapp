@@ -417,14 +417,29 @@ docker compose exec supabase-db psql -U postgres -d postgres
 - Tooltip usa `var(--card)` e `var(--border)` para dark mode
 - Exportação Excel respeita o período selecionado (dados já filtrados nos hooks)
 
-**Módulo BI — Exportação Excel:**
-- Botão "Exportar Excel" no header da página `/bi` (PageHeader `actions`)
+**Módulo BI — Exportação Excel (Visão Geral):**
+- Botão "Exportar Excel" dentro da aba "Visão Geral" em `/bi`
 - Gera `.xlsx` 100% client-side via SheetJS (`xlsx` já instalado) com dynamic import
 - 4 abas: Resumo (KPIs do mês atual), Desempenho Mensal, Funil do Pipeline, Comparativo Unidades
 - Valores numéricos (não formatados) para cálculos no Excel; conversão como decimal com `z: '0.00%'`
 - Comparativo transposto: métricas = linhas, unidades = colunas
 - Nome do arquivo: `BI_Cachola_{unidade}_{YYYY-MM-DD}.xlsx`
 - Utility em `src/lib/bi/export-bi-report.ts`; estado `isExporting` com spinner no botão
+
+**Módulo BI — Dashboard de Vendedoras (Migration 051) — COMPLETO:**
+- Tab "Vendedoras" em `/bi`, restrita a `super_admin` + `diretor` (`SELLERS_ROLES` check via `useAuth().profile?.role`)
+- Tabs com `variant="line"` (underline); só exibida quando `canSeeSellers`; aba "Visão Geral" continua para todos
+- RPC `get_bi_sellers_ranking(p_unit_id, p_period_months)` — por vendedora: leads_count, won_count, lost_count, open_count, conversion_rate, avg_ticket, total_revenue
+- RPC `get_bi_seller_history(p_owner_name, p_unit_id, p_period_months)` — série mensal: leads_count, won_count, revenue, avg_days_to_close
+- RPC `get_bi_seller_funnel(p_owner_name, p_unit_id, p_period_months)` — 3 buckets: em_aberto, ganhos, perdidos
+- Guards: `FROM public.users WHERE id = auth.uid() AND role IN ('super_admin', 'diretor')` — sem user_profiles
+- Índice: `idx_ploomes_deals_owner_create_date ON ploomes_deals (owner_name, ploomes_create_date, status_id) WHERE owner_name IS NOT NULL`
+- `SellersRankingTable`: sortável por qualquer coluna, avatar com iniciais + hash de cor, estrela amarela para melhor em Conversão/Ticket/Receita; colunas responsivas (Ganhos hidden sm, Ticket hidden md, Em Aberto hidden lg)
+- `SellersCharts`: 2 BarCharts horizontais — Receita (`#7C8D78`) e Conversão (`#22c55e`), top 8, `useChartWidth` + ResizeObserver
+- `SellerDrilldownSheet`: Sheet lateral com 4 abas pill (`variant="default"`): Histórico (AreaChart + tabela mensal), Funil (3 cards coloridos), Deals (busca + filtro + paginação server-side), Eventos (lista com link para `/eventos/{id}`)
+- `SellersTab`: filtros período (3M/6M/12M/Tudo, default 6M) + toggle de unidade + botão Exportar Excel (2 abas: Ranking + Histórico Mensal via `export-sellers-report.ts`)
+- Hooks: `useBISellersRanking`, `useBISellerHistory`, `useBISellerFunnel`, `useBISellerDeals` (paginação + busca + filtro), `useBISellerEvents`
+- `avg_days_to_close` = `ploomes_last_update − ploomes_create_date` (proxy, consistente com BI geral)
 
 **Módulo Atas de Reunião — `/atas` (Migration 044) — COMPLETO:**
 - Tabelas: `meeting_minutes`, `meeting_participants`, `meeting_action_items`
