@@ -17,6 +17,7 @@ import {
   BookOpen,
   UsersRound,
   FileText,
+  UserCog,
 } from 'lucide-react'
 import { ROUTES } from '@/lib/constants'
 import type { Module, Role } from '@/types/permissions'
@@ -104,6 +105,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: 'Usuários',          href: ROUTES.users,          icon: Users,      module: 'users',      allowedRoles: USER_ADMIN_ROLES },
       { label: 'Unidades',          href: ROUTES.units,          icon: Building2,  module: 'users',      allowedRoles: ADMIN_ROLES      },
+      { label: 'Vendedoras',        href: '/configuracoes/vendedoras', icon: UserCog, module: 'settings', allowedRoles: ADMIN_ROLES    },
       { label: 'Logs',              href: ROUTES.auditLogs,      icon: ScrollText, module: 'audit_logs', allowedRoles: ADMIN_ROLES      },
       { label: 'Configurações',     href: ROUTES.settings,       icon: Settings,   module: 'settings',   allowedRoles: SETTINGS_ROLES   },
       { label: 'Regras de Negócio', href: ROUTES.businessRules,  icon: BookOpen,   module: 'settings',   allowedRoles: SETTINGS_ROLES   },

@@ -471,15 +471,18 @@ docker compose exec supabase-db psql -U postgres -d postgres
 - `/inicio` (calendar): dropdown "Vendedora" acima do calendário, filtra `calEvents` e `calPreReservas`
 - Backfill executado em produção: 7218 ploomes_deals com owner_name + 13 events propagados via `scripts/backfill-owner.ts`
 
-**Tabela `sellers` — Migration 053 — CRIADA (aplicação pendente):**
+**Tabela `sellers` — Migrations 053 + 054 — COMPLETO:**
 - Tabela: `sellers` — cadastro mestre de vendedoras; fonte da verdade para filtros ativo/inativo no BI
-- Campos-chave: `owner_id INT UNIQUE` (FK Ploomes), `name`, `status` (`active`|`inactive`), `hire_date`, `termination_date`, `primary_unit_id`, `notes`, `photo_url`
+- Campos-chave: `owner_id INT UNIQUE` (FK Ploomes), `name`, `status` (`active`|`inactive`), `hire_date`, `termination_date`, `primary_unit_id`, `notes`, `photo_url`, `is_system_account`
 - Seed auto-populado de `ploomes_orders.owner_id` distintos; `hire_date = MIN(ploomes_create_date)` como proxy
 - Bruno Motta marcado `inactive`, `termination_date='2025-12-31'` (ex-gerente Pinheiros, desligado dez/2025)
 - RLS: SELECT todos autenticados; INSERT/UPDATE `super_admin`+`diretor`; DELETE apenas `super_admin`
 - Campo `is_system_account BOOLEAN` (default false): marca contas Ploomes que não são vendedoras reais (bots/automações). `Contador de negócios` (owner_id=10045234) seedado com `is_system_account=true`. BI filtra `is_system_account=false` no ranking.
 - Types em `src/types/seller.ts`: `Seller`, `SellerFormInput`, `SellerStatus`
-- Sub-etapa B (tela CRUD `/configuracoes/vendedoras`) e Sub-etapa C (aba BI "Vendedoras") ainda pendentes
+- Trigger `trg_auto_insert_seller` (Migration 054): AFTER INSERT em `ploomes_orders` → chama `auto_insert_seller_from_order()` SECURITY DEFINER (owner: `supabase_admin`) → ON CONFLICT DO NOTHING
+- Tela `/configuracoes/vendedoras`: CRUD de edição (sem criação manual); sidebar grupo Administração, restrita a `ADMIN_ROLES`; filtros Todas/Ativas/Inativas/Sistema; sheet lateral com `termination_date` condicional (só quando inativo) e `is_system_account` só para `super_admin`
+- Hooks: `useSellers()` + `useUpdateSeller()` em `src/hooks/use-sellers.ts`
+- Sub-etapa C (aba BI "Responsáveis") ainda pendente
 
 ---
 
