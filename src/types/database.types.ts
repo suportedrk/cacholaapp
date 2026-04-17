@@ -57,6 +57,8 @@ export interface Database {
       ploomes_unit_mapping:  { Row: PloomesUnitMapping;    Insert: Partial<PloomesUnitMapping>;    Update: Partial<PloomesUnitMapping>;    Relationships: [] }
       ploomes_webhook_log:   { Row: PloomesWebhookLog;     Insert: Partial<PloomesWebhookLog>;     Update: Partial<PloomesWebhookLog>;     Relationships: [] }
       ploomes_deals:         { Row: PloomesDealsRow;        Insert: Partial<PloomesDealsRow>;       Update: Partial<PloomesDealsRow>;       Relationships: [] }
+      ploomes_orders:        { Row: PloomesOrderRow;        Insert: Partial<PloomesOrderRow>;       Update: Partial<PloomesOrderRow>;       Relationships: [] }
+      ploomes_order_products:{ Row: PloomesOrderProductRow; Insert: Partial<PloomesOrderProductRow>;Update: Partial<PloomesOrderProductRow>;Relationships: [] }
       // Prestadores de Serviços (Migration 021)
       service_categories:   { Row: ServiceCategory;     Insert: Partial<ServiceCategory>;    Update: Partial<ServiceCategory>;    Relationships: [] }
       service_providers:    { Row: ServiceProvider;     Insert: Partial<ServiceProvider>;    Update: Partial<ServiceProvider>;    Relationships: [] }
@@ -945,6 +947,51 @@ export type PloomesDealsRow = {
   owner_name: string | null
   created_at: string
   updated_at: string
+}
+
+export type PloomesOrderRow = {
+  ploomes_order_id:    number
+  order_number:        number | null
+  deal_id:             number | null
+  unit_id:             string
+  date:                string
+  amount:              number
+  discount:            number | null
+  owner_id:            number | null
+  owner_name:          string | null
+  owner_email:         string | null
+  creator_id:          number | null
+  creator_name:        string | null
+  stage_id:            number | null
+  contact_id:          number | null
+  contact_name:        string | null
+  origin_quote_id:     number | null
+  document_url:        string | null
+  ploomes_create_date: string | null
+  ploomes_last_update: string | null
+  created_at:          string
+  updated_at:          string
+}
+
+export type PloomesOrderProductRow = {
+  ploomes_product_id: number
+  order_id:           number
+  deal_id:            number | null
+  unit_id:            string
+  product_id:         number | null
+  product_name:       string | null
+  product_code:       string | null
+  group_name:         string | null
+  family_name:        string | null
+  quantity:           number
+  unit_price:         number
+  discount:           number
+  total:              number
+  bonus:              boolean
+  owner_id:           number | null
+  owner_name:         string | null
+  order_date:         string | null
+  created_at:         string
 }
 
 // ─────────────────────────────────────────────────────────────
