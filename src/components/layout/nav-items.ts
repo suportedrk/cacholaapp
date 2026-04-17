@@ -21,6 +21,7 @@ import {
 } from 'lucide-react'
 import { ROUTES } from '@/lib/constants'
 import type { Module, Role } from '@/types/permissions'
+import { BI_ACCESS_ROLES } from '@/config/roles'
 
 export interface NavItem {
   label: string
@@ -51,9 +52,6 @@ export interface NavGroup {
 /** Roles que gerenciam operações do dia a dia (Manutenção, Equipamentos, Prestadores) */
 const OPS_ROLES: Role[] = ['super_admin', 'diretor', 'gerente', 'manutencao']
 
-/** Roles com acesso a relatórios e financeiro */
-const REPORT_ROLES: Role[] = ['super_admin', 'diretor', 'gerente', 'financeiro']
-
 /** Roles com acesso a Prestadores (gestão de terceiros) */
 const PROVIDER_ROLES: Role[] = ['super_admin', 'diretor', 'gerente']
 
@@ -76,7 +74,7 @@ export const NAV_GROUPS: NavGroup[] = [
     // Sem label de grupo — itens principais (todos os roles veem)
     items: [
       { label: 'Início',         href: ROUTES.dashboard,  icon: Home },
-      { label: 'BI',             href: '/bi',             icon: BarChart3, allowedRoles: REPORT_ROLES },
+      { label: 'BI',             href: '/bi',             icon: BarChart3, allowedRoles: [...BI_ACCESS_ROLES] },
       { label: 'Eventos',        href: ROUTES.events,     icon: CalendarDays,  module: 'events'    },
       { label: 'Checklists',     href: ROUTES.checklists, icon: ClipboardList, module: 'checklists' },
       { label: 'Minhas Tarefas',   href: ROUTES.myTasks,    icon: ListTodo,     module: 'checklists' },
@@ -97,7 +95,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: 'Equipamentos', href: ROUTES.equipment,   icon: Package,   module: 'maintenance', allowedRoles: OPS_ROLES       },
       { label: 'Prestadores',  href: ROUTES.providers,   icon: Handshake, module: 'providers',   allowedRoles: PROVIDER_ROLES  },
       { label: 'Atas',         href: ROUTES.minutes,     icon: FileText,  module: 'minutes'                                    },
-      { label: 'Relatórios',   href: ROUTES.reports,     icon: BarChart3, module: 'reports',     allowedRoles: REPORT_ROLES    },
+      { label: 'Relatórios',   href: ROUTES.reports,     icon: BarChart3, module: 'reports',     allowedRoles: [...BI_ACCESS_ROLES] },
     ],
   },
   {

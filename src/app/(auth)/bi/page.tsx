@@ -39,9 +39,7 @@ import { BITrendCharts } from '@/components/features/bi/bi-trend-charts'
 import { SellersTab } from '@/components/features/bi/sellers-tab'
 import { VendasRealizadasTab } from '@/components/features/bi/vendas-realizadas-tab'
 import { exportBIReport } from '@/lib/bi/export-bi-report'
-
-const SELLERS_ROLES = ['super_admin', 'diretor'] as const
-const VENDAS_ROLES  = ['super_admin', 'diretor', 'gerente', 'financeiro'] as const
+import { BI_ATENDIMENTO_ROLES, BI_VENDAS_ROLES, hasRole } from '@/config/roles'
 
 // ── Formatting helpers ────────────────────────────────────────
 
@@ -115,8 +113,8 @@ export default function BIPage() {
   const kpis           = useDashboardKpis()
 
   const { profile, userUnits } = useAuth()
-  const canSeeSellers = SELLERS_ROLES.includes(profile?.role as typeof SELLERS_ROLES[number])
-  const canSeeVendas  = VENDAS_ROLES.includes(profile?.role as typeof VENDAS_ROLES[number])
+  const canSeeSellers = hasRole(profile?.role, BI_ATENDIMENTO_ROLES)
+  const canSeeVendas  = hasRole(profile?.role, BI_VENDAS_ROLES)
   const units = userUnits.map((u) => ({ id: u.unit.id, name: u.unit.name }))
 
   const isLoading = conversion.isLoading || salesMetrics.isLoading || kpis.isLoading

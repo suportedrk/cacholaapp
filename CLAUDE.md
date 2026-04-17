@@ -509,7 +509,28 @@ docker compose exec supabase-db psql -U postgres -d postgres
 - Trigger `trg_auto_insert_seller` (Migration 054): AFTER INSERT em `ploomes_orders` → chama `auto_insert_seller_from_order()` SECURITY DEFINER (owner: `supabase_admin`) → ON CONFLICT DO NOTHING
 - Tela `/configuracoes/vendedoras`: CRUD de edição (sem criação manual); sidebar grupo Administração, restrita a `ADMIN_ROLES`; filtros Todas/Ativas/Inativas/Sistema; sheet lateral com `termination_date` condicional (só quando inativo) e `is_system_account` só para `super_admin`
 - Hooks: `useSellers()` + `useUpdateSeller()` em `src/hooks/use-sellers.ts`
-- Migration 055 + aba **"Vendas Realizadas (Orders)"** no BI: 3 RPCs guardados (super_admin+diretor+gerente+financeiro): `get_bi_sales_kpi`, `get_bi_sales_ranking` (avg_monthly_revenue normalizado por meses trabalhados respeitando hire_date/termination_date), `get_bi_seller_orders` (drill-down). Aba "Responsáveis por Deal" renomeada para **"Atendimento (Deals)"** — conteúdo intocado. Período default 12M, pills 3M/6M/12M/Tudo. Default filtra `status=active AND is_system_account=false`; toggle "Incluir histórico" expõe todas. Rodapé "Dados a partir de outubro/2024" apenas quando período=Tudo. Drill-down via sheet (sem página dedicada). `canSeeVendas = VENDAS_ROLES` (inclui gerente + financeiro).
+- Migration 055 + aba **"Vendas Realizadas (Orders)"** no BI: 3 RPCs guardados (super_admin+diretor+gerente+financeiro): `get_bi_sales_kpi`, `get_bi_sales_ranking` (avg_monthly_revenue normalizado por meses trabalhados respeitando hire_date/termination_date), `get_bi_seller_orders` (drill-down). Aba "Responsáveis por Deal" renomeada para **"Atendimento (Deals)"** — conteúdo intocado. Período default 12M, pills 3M/6M/12M/Tudo. Default filtra `status=active AND is_system_account=false`; toggle "Incluir histórico" expõe todas. Rodapé "Dados a partir de outubro/2024" apenas quando período=Tudo. Drill-down via sheet (sem página dedicada). `canSeeVendas = BI_VENDAS_ROLES` (inclui gerente + financeiro).
+
+**Débito 1 (roles BI consolidadas) — Migration sem número, commit separado:**
+- `src/config/roles.ts`: fonte única de verdade para constantes BI e vendedoras
+- Exporta: `BI_ACCESS_ROLES`, `BI_ATENDIMENTO_ROLES`, `BI_VENDAS_ROLES`, `SELLERS_MANAGE_ROLES` (`as const satisfies readonly Role[]`) + helper `hasRole<T>(role, allowed): role is T[number]`
+- `nav-items.ts`: remove `REPORT_ROLES` local → usa `[...BI_ACCESS_ROLES]` em BI e Relatórios
+- `bi/page.tsx`: remove `SELLERS_ROLES`/`VENDAS_ROLES` → `hasRole(profile?.role, BI_ATENDIMENTO_ROLES/BI_VENDAS_ROLES)`
+- Outras constantes (atas, admin, manutenção) ficam locais → **Débito 3** (PR futuro)
+
+**Migration 056 + painel "Vendas por Categoria de Produto" — Sub-etapa D:**
+- 3 RPCs SECURITY DEFINER (super_admin+diretor+gerente+financeiro): `get_bi_category_kpi`, `get_bi_category_ranking`, `get_bi_category_drilldown`
+- Fonte: `ploomes_order_products`; FK local = `order_id`; campo valor = `total`; campo categoria = `group_name`; campo produto = `product_name`
+- Joins diretamente por `pop.owner_id = s.owner_id` (sem passar por `ploomes_orders`) — usa colunas desnormalizadas `pop.unit_id`, `pop.order_date`
+- 6 categorias distintas (3 × PINHEIROS, 3 × MOEMA); 0 NULL; cobertura 100% (1538/1538 orders) — rodapé de cobertura não implementado
+- KPI retorna: `total_categories`, `top_category_name`, `top_category_revenue`, `total_items`
+- Drilldown: UNION ALL de produtos (kind='product') + top 5 vendedoras (kind='seller'); `rank_position` dentro de cada kind
+- Componentes em `src/components/features/bi/`: `vendas-por-categoria-section.tsx` (KPIs + chart horizontal + tabela), `category-drilldown-sheet.tsx` (produtos paginados + top 5 sellers)
+- Hooks: `useBiCategoryKpi`, `useBiCategoryRanking`, `useBiCategoryDrilldown` em `src/hooks/use-bi-category.ts`
+- Seção renderizada ABAIXO do ranking de vendedoras, dentro da aba "Vendas Realizadas (Orders)"
+- Toggle "Incluir histórico completo" da aba afeta o painel de categorias (mesmas props `includeInactive`)
+- Gráfico: BarChart horizontal com abreviação de sufixo (PINHEIROS→PIN, MOEMA→MOE) para legibilidade
+- TODO: sufixos de unidade nas categorias Ploomes ("Pacotes Cachola PINHEIROS") ficam visíveis — dados do Ploomes, sem normalização por ora
 
 ---
 
