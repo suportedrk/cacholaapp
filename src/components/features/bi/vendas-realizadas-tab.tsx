@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils'
 import { useBiSalesKpi, useBiSalesRanking } from '@/hooks/use-bi-sales'
 import type { BISalesRankingRow } from '@/hooks/use-bi-sales'
 import { SellerOrdersDrilldownSheet } from './seller-orders-drilldown-sheet'
+import { VendasPorCategoriaSection } from './vendas-por-categoria-section'
 
 // ── Period options ────────────────────────────────────────────
 
@@ -314,6 +315,15 @@ export function VendasRealizadasTab({ activeUnitId }: Props) {
             Dados disponíveis a partir de outubro/2024.
           </p>
         )}
+
+        {/* ── Vendas por Categoria de Produto ──────────── */}
+        <VendasPorCategoriaSection
+          startDate={startDate}
+          endDate={endDate}
+          unitId={activeUnitId}
+          includeInactive={includeInactive}
+        />
+
       </div>
 
       {/* Drill-down sheet */}
