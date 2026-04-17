@@ -48,6 +48,7 @@ export function SellerEditSheet({
 
   useEffect(() => {
     if (seller) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setForm({
         name: seller.name,
         email: seller.email,

@@ -3,14 +3,13 @@
 import { useState } from 'react'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { ExternalLink, ChevronLeft, ChevronRight, Loader2, AlertCircle } from 'lucide-react'
+import { ExternalLink, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useBiSellerOrders } from '@/hooks/use-bi-sales'
 import type { BISalesRankingRow } from '@/hooks/use-bi-sales'
-import { cn } from '@/lib/utils'
 
 // ── Helpers ───────────────────────────────────────────────────
 

@@ -142,16 +142,11 @@ BEGIN
          ELSE 0::NUMERIC
     END                                                                AS avg_ticket,
     -- Meses trabalhados no período (mínimo 1 para evitar divisão por zero)
-    GREATEST(
-      1.0,
-      EXTRACT(EPOCH FROM (a.eff_end - a.eff_start)) / (60.0 * 60 * 24 * 30.4375)
-    )::NUMERIC                                                         AS months_worked,
+    -- DATE - DATE = INTEGER (dias); dividir por 30.4375 → meses (mínimo 1)
+    GREATEST(1.0, (a.eff_end - a.eff_start)::NUMERIC / 30.4375)       AS months_worked,
     -- Receita média mensal normalizada
     CASE WHEN a.total_revenue > 0
-         THEN a.total_revenue / GREATEST(
-           1.0,
-           EXTRACT(EPOCH FROM (a.eff_end - a.eff_start)) / (60.0 * 60 * 24 * 30.4375)
-         )
+         THEN a.total_revenue / GREATEST(1.0, (a.eff_end - a.eff_start)::NUMERIC / 30.4375)
          ELSE 0::NUMERIC
     END                                                                AS avg_monthly_revenue
   FROM aggregated a
