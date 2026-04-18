@@ -581,6 +581,19 @@ docker compose exec supabase-db psql -U postgres -d postgres
 - `useVendasMyKpis`, `useVendasDailyRevenue`, `useVendasRanking` em `src/hooks/use-vendas.ts`
 - Fase B hotfix (Migration 060): `get_vendas_ranking` estendido com `deals_won` + `conversion_rate` via LEFT JOIN em `ploomes_deals`; ranking com 7 colunas sortáveis; seller-selector label fix (span data-slot — pitfall @base-ui)
 
+**Módulo Vendas — Fase C.1 (Migration 061) — INFRA UPSELL COMPLETA:**
+- Migration 061: `ploomes_contacts` (espelho Ploomes), `upsell_contact_log` (log de contatos), extend `ploomes_config` com `cliente_cachola_field_key` + `cliente_cachola_sim_option_id`
+- `ploomes_contacts`: `ploomes_contact_id BIGINT UNIQUE`, `name`, `email`, `phones JSONB`, `birthday`, `next_anniversary`, `previous_anniversary` (campos diretos da API), `owner_id/name`, `cliente_cachola BOOLEAN`; RLS SELECT para `VENDAS_MODULE_ROLES`; trigger `update_updated_at`
+- `upsell_contact_log`: `event_id FK events`, `seller_id FK sellers`, `contacted_by FK users`, `outcome CHECK (tentou|recusou|vendeu_adicional|vendeu_upgrade|outro)`, `reopened_at`; `UNIQUE INDEX uniq_upsell_log_active_per_event ON (event_id) WHERE reopened_at IS NULL`; RLS SELECT/INSERT/UPDATE com políticas granulares
+- **API Ploomes OtherProperties:** retorna 403 com a user_key disponível — impossível filtrar por "Cliente Cachola ?" campo custom diretamente
+- **Estratégia de sync:** busca e-mails únicos de `ploomes_deals` e faz lookup individual por `Email eq 'xxx'` na API Ploomes (fallback por nome); `NextAnniversary`/`PreviousAnniversary` são campos diretos do Contact
+- `scripts/ploomes-sync-contacts.ts`: `--mode=full` (todos os deals), `--mode=incremental` (deals desde MAX(synced_at)), `--mode=retry` (emails ainda não sincronizados); retry automático em 429 com wait 65s; rate limit 600ms (Ploomes limita 120 req/min)
+- `scripts/discover-cliente-cachola-fieldkey.ts`: script de descoberta — FieldKey=`contact_E2B745FB-3675-4C1D-9A14-7EBE88815C10`, TypeId=10 (checkbox), `BigIntegerValue eq 1` para Sim
+- **Backfill produção:** 703/704 contatos sincronizados (704 e-mails únicos em ploomes_deals; 1 duplicado detectado); 14 com birthday; breakdown por owner: Bruno Motta 322, Raphaela 171, Carolina 104, Bruna 82
+- **ploomes_config:** `cliente_cachola_field_key` e `cliente_cachola_sim_option_id=1` configurados em produção
+- **Cron:** `*/30 * * * *` → `npx tsx scripts/ploomes-sync-contacts.ts --mode=incremental` → log `/var/log/cachola/sync-contacts.log`
+- **Próxima fase: C.2** (UI + RPC + email + badge) — aguardando aprovação de Bruno
+
 ---
 
 ## CREDENCIAIS DEV LOCAL
