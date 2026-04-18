@@ -8,7 +8,6 @@ import {
   useRecompraFestaPassada,
   useRecompraCount,
   type RecompraType,
-  type RecompraSource,
 } from '@/hooks/use-recompra'
 import { useLoadingTimeout } from '@/hooks/use-loading-timeout'
 import { Button } from '@/components/ui/button'
