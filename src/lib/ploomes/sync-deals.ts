@@ -36,19 +36,20 @@ function extractUnitName(deal: PloomesDeal): string | undefined {
 }
 
 /**
- * Extrai data e horários do deal via parseDeal().
- * Reutiliza a lógica de field-mapping já validada no sync de eventos.
+ * Extrai datas/horários/birthday do deal via parseDeal().
  */
-function extractDealDateTimes(deal: PloomesDeal): {
-  event_date: string | null
-  start_time: string | null
-  end_time:   string | null
+function extractDealFields(deal: PloomesDeal): {
+  event_date:             string | null
+  start_time:             string | null
+  end_time:               string | null
+  aniversariante_birthday: string | null
 } {
   const parsed = parseDeal(deal)
   return {
-    event_date: parsed.eventDate ?? null,
-    start_time: parsed.startTime ?? null,
-    end_time:   parsed.endTime   ?? null,
+    event_date:              parsed.eventDate    ?? null,
+    start_time:              parsed.startTime    ?? null,
+    end_time:                parsed.endTime      ?? null,
+    aniversariante_birthday: parsed.birthdayDate ?? null,
   }
 }
 
@@ -113,7 +114,7 @@ export async function syncDealsForBI(
         // Se sync scoped a uma unidade, pular deals de outras unidades
         if (unitId && dealUnitId !== unitId) continue
 
-        const { event_date, start_time, end_time } = extractDealDateTimes(deal)
+        const { event_date, start_time, end_time, aniversariante_birthday } = extractDealFields(deal)
 
         // Verificar se já existe evento vinculado
         const { data: existingEvent } = await supabase
@@ -142,9 +143,10 @@ export async function syncDealsForBI(
               event_date,
               start_time,
               end_time,
-              owner_id:           deal.OwnerId ?? null,
-              owner_name:         deal.Owner?.Name ?? null,
-              event_id:           existingEvent?.id ?? null,
+              owner_id:            deal.OwnerId ?? null,
+              owner_name:          deal.Owner?.Name ?? null,
+              event_id:            existingEvent?.id ?? null,
+              aniversariante_birthday,
             },
             { onConflict: 'ploomes_deal_id' },
           )
@@ -216,8 +218,8 @@ export async function syncSingleDealToBI(
     const unitName   = extractUnitName(deal)
     const dealUnitId = await resolveUnitId(supabase, unitName)
 
-    // 4. Extrair datas e horários
-    const { event_date, start_time, end_time } = extractDealDateTimes(deal)
+    // 4. Extrair datas, horários e birthday
+    const { event_date, start_time, end_time, aniversariante_birthday } = extractDealFields(deal)
 
     // 5. Verificar FK para events
     const { data: existingEvent } = await supabase
@@ -247,9 +249,10 @@ export async function syncSingleDealToBI(
           event_date,
           start_time,
           end_time,
-          owner_id:            deal.OwnerId ?? null,
-          owner_name:          deal.Owner?.Name ?? null,
-          event_id:            existingEvent?.id ?? null,
+          owner_id:               deal.OwnerId ?? null,
+          owner_name:             deal.Owner?.Name ?? null,
+          event_id:               existingEvent?.id ?? null,
+          aniversariante_birthday,
         },
         { onConflict: 'ploomes_deal_id' },
       )

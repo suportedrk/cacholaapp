@@ -946,6 +946,8 @@ export type PloomesDealsRow = {
   end_time: string | null
   owner_id: number | null
   owner_name: string | null
+  aniversariante_birthday: string | null
+  aniversariante_birthday_synced_at: string | null
   created_at: string
   updated_at: string
 }
