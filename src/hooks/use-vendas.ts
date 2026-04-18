@@ -26,11 +26,13 @@ export interface VendasDailyRevenue {
 }
 
 export interface VendasRankingRow {
-  seller_id:    string
-  seller_name:  string
-  total_revenue: number
-  order_count:  number
-  avg_ticket:   number
+  seller_id:       string
+  seller_name:     string
+  total_revenue:   number
+  order_count:     number
+  avg_ticket:      number
+  deals_won:       number
+  conversion_rate: number
 }
 
 // ── Shared retry policy ───────────────────────────────────────
