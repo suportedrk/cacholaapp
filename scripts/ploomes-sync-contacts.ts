@@ -3,13 +3,18 @@
 // Sync: ploomes_contacts — espelho local de contatos Ploomes
 //       com "Cliente Cachola = Sim"
 // =============================================================
+// Estratégia: a API Ploomes não permite filtrar por OtherProperties
+// com a user_key disponível. Em vez disso, obtemos os e-mails
+// únicos dos contatos em ploomes_deals (negócios no pipeline) e
+// buscamos cada contato por e-mail na API Ploomes.
+//
 // Uso:
 //   npx tsx scripts/ploomes-sync-contacts.ts --mode=full
 //   npx tsx scripts/ploomes-sync-contacts.ts --mode=incremental
 //
-// --mode=full        Busca TODOS os contatos com Cliente Cachola=Sim
-// --mode=incremental Busca apenas os atualizados desde o último sync
-//                    (usa MAX(ploomes_update_date) da tabela local)
+// --mode=full        Sincroniza todos os contatos únicos em ploomes_deals
+// --mode=incremental Sincroniza apenas os de deals criados/atualizados
+//                    desde o último sync (usa MAX(synced_at) da tabela local)
 //
 // Pré-requisitos:
 //   NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
@@ -20,73 +25,34 @@ import 'dotenv/config'
 import { createClient } from '@supabase/supabase-js'
 
 const BASE_URL  = (process.env.PLOOMES_API_URL ?? 'https://api2.ploomes.com/').replace(/\/$/, '')
-const PAGE_SIZE = 100
-
-// FieldKey do campo "Cliente Cachola ?" — TypeId=10 (checkbox boolean)
-// Descoberto via scripts/discover-cliente-cachola-fieldkey.ts
-const CLIENTE_CACHOLA_FIELD_KEY = 'contact_E2B745FB-3675-4C1D-9A14-7EBE88815C10'
+const RATE_MS   = 200  // intervalo entre chamadas API (ms)
 
 // ── Ploomes types ─────────────────────────────────────────────
 
 interface PloomesPhone {
-  PhoneTypeId?: number
+  PhoneTypeId?:   number
   PhoneTypeName?: string
-  PhoneNumber?: string
+  PhoneNumber?:   string
 }
 
 interface PloomesOwner {
   Id:    number
   Name:  string
-  Email?: string
 }
 
 interface PloomesContact {
-  Id:                number
-  Name:              string
-  LegalName?:        string
-  Email?:            string
-  Phones?:           PloomesPhone[]
-  Birthday?:         string   // ISO "YYYY-MM-DDTHH:mm:ss"
-  OwnerId?:          number
-  Owner?:            PloomesOwner
-  CreateDate?:       string
-  LastUpdateDate?:   string
-}
-
-// ── Anniversary helpers ───────────────────────────────────────
-
-function computeAnniversaries(birthday: string | undefined): {
-  next: string | null
-  previous: string | null
-} {
-  if (!birthday) return { next: null, previous: null }
-
-  const d = new Date(birthday)
-  if (isNaN(d.getTime())) return { next: null, previous: null }
-
-  const month = d.getUTCMonth()  // 0-based
-  const day   = d.getUTCDate()
-  const today = new Date()
-  today.setUTCHours(0, 0, 0, 0)
-
-  const thisYear = today.getUTCFullYear()
-
-  // Candidate in current year
-  const thisYearDate = new Date(Date.UTC(thisYear, month, day))
-
-  let nextDate: Date
-  let prevDate: Date
-
-  if (thisYearDate >= today) {
-    nextDate = thisYearDate
-    prevDate = new Date(Date.UTC(thisYear - 1, month, day))
-  } else {
-    nextDate = new Date(Date.UTC(thisYear + 1, month, day))
-    prevDate = thisYearDate
-  }
-
-  const fmt = (dt: Date) => dt.toISOString().slice(0, 10)
-  return { next: fmt(nextDate), previous: fmt(prevDate) }
+  Id:                  number
+  Name:                string
+  LegalName?:          string
+  Email?:              string
+  Birthday?:           string
+  NextAnniversary?:    string
+  PreviousAnniversary?: string
+  OwnerId?:            number
+  Owner?:              PloomesOwner
+  Phones?:             PloomesPhone[]
+  CreateDate?:         string
+  LastUpdateDate?:     string
 }
 
 // ── Ploomes fetch ─────────────────────────────────────────────
@@ -95,63 +61,33 @@ async function ploomesGet<T>(path: string, userKey: string): Promise<T> {
   const url = `${BASE_URL}/${path.replace(/^\//, '')}`
   const res = await fetch(url, {
     headers: { 'User-Key': userKey, 'Content-Type': 'application/json' },
-    signal:  AbortSignal.timeout(30_000),
+    signal:  AbortSignal.timeout(15_000),
   })
   if (!res.ok) {
     const body = await res.text().catch(() => '')
-    throw new Error(`Ploomes ${res.status} (${url}): ${body}`)
+    throw new Error(`Ploomes ${res.status} (${path.slice(0, 80)}): ${body.slice(0, 200)}`)
   }
   return res.json() as Promise<T>
 }
 
-async function fetchContacts(
-  userKey:      string,
-  mode:         'full' | 'incremental',
-  sinceDate?:   string,
-): Promise<PloomesContact[]> {
-  const all: PloomesContact[] = []
-  let skip = 0
+async function findContactByEmail(email: string, userKey: string): Promise<PloomesContact | null> {
+  const encoded = email.replace(/'/g, "''")  // escape single quotes for OData
+  const path = `Contacts?$filter=Email eq '${encoded}'&$top=1&$select=Id,Name,LegalName,Email,Birthday,NextAnniversary,PreviousAnniversary,OwnerId,CreateDate,LastUpdateDate&$expand=Phones,Owner($select=Id,Name)`
+  const res = await ploomesGet<{ value?: PloomesContact[] }>(path, userKey)
+  return res.value?.[0] ?? null
+}
 
-  // Base filter: only "Cliente Cachola = Sim"
-  const clienteFilter = `OtherProperties/any(op: op/FieldKey eq '${CLIENTE_CACHOLA_FIELD_KEY}' and op/BigIntegerValue eq 1)`
-
-  // Incremental filter: updated since lastSync
-  const incrementalFilter = sinceDate
-    ? ` and LastUpdateDate gt ${sinceDate}`
-    : ''
-
-  const filter = clienteFilter + incrementalFilter
-
-  while (true) {
-    const qs = [
-      `$filter=${filter}`,
-      `$select=Id,Name,LegalName,Email,Phones,Birthday,OwnerId,CreateDate,LastUpdateDate`,
-      `$expand=Owner($select=Id,Name,Email)`,
-      `$top=${PAGE_SIZE}`,
-      `$skip=${skip}`,
-    ].join('&')
-
-    const res = await ploomesGet<{ value?: PloomesContact[] }>(
-      `Contacts?${qs}`,
-      userKey,
-    )
-    const page = res.value ?? []
-    all.push(...page)
-
-    console.info(`  · skip=${skip}: ${page.length} contatos`)
-    if (page.length < PAGE_SIZE) break
-    skip += PAGE_SIZE
-
-    await new Promise((r) => setTimeout(r, 300))
-  }
-
-  return all
+async function findContactByName(name: string, userKey: string): Promise<PloomesContact | null> {
+  const escaped = name.replace(/'/g, "''")
+  const path = `Contacts?$filter=Name eq '${escaped}'&$top=1&$select=Id,Name,LegalName,Email,Birthday,NextAnniversary,PreviousAnniversary,OwnerId,CreateDate,LastUpdateDate&$expand=Phones,Owner($select=Id,Name)`
+  const res = await ploomesGet<{ value?: PloomesContact[] }>(path, userKey)
+  return res.value?.[0] ?? null
 }
 
 // ── Main ──────────────────────────────────────────────────────
 
 async function main() {
-  const args = process.argv.slice(2)
+  const args    = process.argv.slice(2)
   const modeArg = args.find((a) => a.startsWith('--mode='))?.split('=')[1]
 
   if (modeArg !== 'full' && modeArg !== 'incremental') {
@@ -162,26 +98,18 @@ async function main() {
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const serviceKey  = process.env.SUPABASE_SERVICE_ROLE_KEY
-
   if (!supabaseUrl || !serviceKey) {
     console.error('❌ NEXT_PUBLIC_SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY são obrigatórios.')
     process.exit(1)
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const supabase = createClient(supabaseUrl, serviceKey, {
-    auth: { persistSession: false },
-  }) as any
+  const supabase = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } }) as any
 
-  // Carregar user_key do ploomes_config ou env
+  // Carregar user_key
   let userKey = process.env.PLOOMES_USER_KEY ?? ''
   if (!userKey) {
-    const { data } = await supabase
-      .from('ploomes_config')
-      .select('user_key')
-      .eq('is_active', true)
-      .limit(1)
-      .single()
+    const { data } = await supabase.from('ploomes_config').select('user_key').eq('is_active', true).limit(1).single()
     userKey = data?.user_key ?? ''
   }
   if (!userKey) {
@@ -190,80 +118,134 @@ async function main() {
   }
   console.info('[OK] user_key carregada\n')
 
-  // Para incremental, buscar o MAX(ploomes_update_date) da tabela
-  let sinceDate: string | undefined
+  // ── Determinar quais contatos sincronizar ─────────────────────
+  // Para mode=incremental: apenas deals criados/atualizados desde
+  // o último sync (MAX synced_at). Para mode=full: todos os deals.
+
+  let sinceFilter = ''
   if (mode === 'incremental') {
     const { data: maxRow } = await supabase
       .from('ploomes_contacts')
-      .select('ploomes_update_date')
-      .not('ploomes_update_date', 'is', null)
-      .order('ploomes_update_date', { ascending: false })
+      .select('synced_at')
+      .order('synced_at', { ascending: false })
       .limit(1)
       .single()
 
-    if (maxRow?.ploomes_update_date) {
-      // OData datetime format: 2025-01-01T00:00:00Z
-      sinceDate = new Date(maxRow.ploomes_update_date).toISOString()
-      console.info(`🕐 Incremental desde: ${sinceDate}`)
+    if (maxRow?.synced_at) {
+      sinceFilter = maxRow.synced_at as string
+      console.info(`🕐 Incremental desde: ${sinceFilter}`)
     } else {
       console.warn('⚠️  Tabela vazia — rodando como full.')
     }
   }
 
-  // Buscar contatos
-  console.info(`\n── Buscando contatos Ploomes (mode=${mode})…`)
-  const contacts = await fetchContacts(userKey, mode, sinceDate)
-  console.info(`\n📊 Total encontrado: ${contacts.length} contatos\n`)
+  // Buscar tuplas (contact_email, contact_name, owner_id, owner_name) de ploomes_deals
+  let dealsQuery = supabase
+    .from('ploomes_deals')
+    .select('contact_email, contact_name, owner_id, owner_name')
+    .not('contact_email', 'is', null)
 
-  if (contacts.length === 0) {
-    console.info('Nada a sincronizar.')
-    return
+  if (sinceFilter) {
+    dealsQuery = dealsQuery.gte('ploomes_create_date', sinceFilter)
   }
 
-  // Upsert em lotes
-  const BATCH = 50
-  let upserted = 0
-  let errors   = 0
+  const { data: dealRows, error: dealErr } = await dealsQuery
+  if (dealErr) {
+    console.error('❌ Erro ao buscar ploomes_deals:', dealErr.message)
+    process.exit(1)
+  }
 
-  for (let i = 0; i < contacts.length; i += BATCH) {
-    const batch = contacts.slice(i, i + BATCH)
-
-    const rows = batch.map((c) => {
-      const { next, previous } = computeAnniversaries(c.Birthday)
-
-      return {
-        ploomes_contact_id:   c.Id,
-        name:                 c.Name,
-        legal_name:           c.LegalName ?? null,
-        email:                c.Email ?? null,
-        phones:               c.Phones?.length ? c.Phones : null,
-        birthday:             c.Birthday ? c.Birthday.slice(0, 10) : null,
-        next_anniversary:     next,
-        previous_anniversary: previous,
-        owner_id:             c.OwnerId ?? c.Owner?.Id ?? null,
-        owner_name:           c.Owner?.Name ?? null,
-        cliente_cachola:      true,
-        ploomes_create_date:  c.CreateDate ?? null,
-        ploomes_update_date:  c.LastUpdateDate ?? null,
-        synced_at:            new Date().toISOString(),
-      }
-    })
-
-    const { error } = await supabase
-      .from('ploomes_contacts')
-      .upsert(rows, { onConflict: 'ploomes_contact_id' })
-
-    if (error) {
-      console.error(`❌ Upsert batch ${i}–${i + batch.length}: ${error.message}`)
-      errors += batch.length
-    } else {
-      upserted += batch.length
+  // Deduplicar por e-mail (case insensitive), mantendo o mais recente owner
+  const byEmail = new Map<string, { name: string; owner_id: number | null; owner_name: string | null }>()
+  for (const row of dealRows ?? []) {
+    const email = (row.contact_email as string).toLowerCase().trim()
+    if (!byEmail.has(email)) {
+      byEmail.set(email, {
+        name:       row.contact_name ?? '',
+        owner_id:   row.owner_id ?? null,
+        owner_name: row.owner_name ?? null,
+      })
     }
   }
 
+  console.info(`📋 Contatos únicos (por e-mail) em ploomes_deals: ${byEmail.size}`)
+  console.info(`\n── Buscando contatos na API Ploomes…\n`)
+
+  let found    = 0
+  let notFound = 0
+  let errors   = 0
+  let upserted = 0
+  let upsertErr = 0
+
+  const entries = Array.from(byEmail.entries())
+  for (let i = 0; i < entries.length; i++) {
+    const [email, meta] = entries[i]
+
+    if (i > 0 && i % 50 === 0) {
+      console.info(`  · progresso: ${i}/${entries.length} (encontrados: ${found}, não encontrados: ${notFound})`)
+    }
+
+    let contact: PloomesContact | null = null
+
+    try {
+      contact = await findContactByEmail(email, userKey)
+
+      // Fallback por nome se não encontrado por e-mail
+      if (!contact && meta.name) {
+        contact = await findContactByName(meta.name, userKey)
+      }
+    } catch (err) {
+      console.error(`❌ API error para ${email}: ${(err as Error).message}`)
+      errors++
+      await new Promise((r) => setTimeout(r, RATE_MS))
+      continue
+    }
+
+    if (!contact) {
+      notFound++
+      await new Promise((r) => setTimeout(r, RATE_MS))
+      continue
+    }
+
+    found++
+
+    const row = {
+      ploomes_contact_id:   contact.Id,
+      name:                 contact.Name,
+      legal_name:           contact.LegalName ?? null,
+      email:                contact.Email ?? null,
+      phones:               contact.Phones?.length ? contact.Phones : null,
+      birthday:             contact.Birthday ? contact.Birthday.slice(0, 10) : null,
+      next_anniversary:     contact.NextAnniversary ? contact.NextAnniversary.slice(0, 10) : null,
+      previous_anniversary: contact.PreviousAnniversary ? contact.PreviousAnniversary.slice(0, 10) : null,
+      owner_id:             contact.OwnerId ?? contact.Owner?.Id ?? meta.owner_id ?? null,
+      owner_name:           contact.Owner?.Name ?? meta.owner_name ?? null,
+      cliente_cachola:      true,
+      ploomes_create_date:  contact.CreateDate ?? null,
+      ploomes_update_date:  contact.LastUpdateDate ?? null,
+      synced_at:            new Date().toISOString(),
+    }
+
+    const { error: upsertError } = await supabase
+      .from('ploomes_contacts')
+      .upsert(row, { onConflict: 'ploomes_contact_id' })
+
+    if (upsertError) {
+      console.error(`❌ Upsert ${contact.Id} (${contact.Name}): ${upsertError.message}`)
+      upsertErr++
+    } else {
+      upserted++
+    }
+
+    await new Promise((r) => setTimeout(r, RATE_MS))
+  }
+
   console.info(`\n── Resultado ─────────────────────────────────────`)
-  console.info(`✅ Upsertados : ${upserted}`)
-  console.info(`❌ Erros      : ${errors}`)
+  console.info(`✅ Encontrados na API     : ${found}`)
+  console.info(`⚠️  Não encontrados        : ${notFound}`)
+  console.info(`❌ Erros de API           : ${errors}`)
+  console.info(`✅ Upsertados no banco    : ${upserted}`)
+  console.info(`❌ Erros de upsert        : ${upsertErr}`)
   console.info(`\n✅ Sync de contatos concluído.`)
 }
 
