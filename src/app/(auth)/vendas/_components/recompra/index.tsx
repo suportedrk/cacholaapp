@@ -31,19 +31,20 @@ export function RecompraTab() {
 
   const { data: counts } = useRecompraCount()
 
+  // Always fetch all data (source='all') so counts are accurate regardless of active source
   const {
     data: aniversarioData,
     isLoading: loadingAniv,
     isError: errorAniv,
     refetch: refetchAniv,
-  } = useRecompraAniversario({ sellerId, showContacted, source })
+  } = useRecompraAniversario({ sellerId, showContacted, source: 'all' })
 
   const {
     data: festaData,
     isLoading: loadingFesta,
     isError: errorFesta,
     refetch: refetchFesta,
-  } = useRecompraFestaPassada({ sellerId, showContacted, source })
+  } = useRecompraFestaPassada({ sellerId, showContacted, source: 'all' })
 
   const isActive = recompraType === 'aniversario'
   const isLoading = isActive ? loadingAniv : loadingFesta
@@ -52,18 +53,27 @@ export function RecompraTab() {
 
   const { isTimedOut: timedOut } = useLoadingTimeout(isLoading)
 
-  const anivItems  = aniversarioData ?? []
-  const festaItems = festaData       ?? []
-  const items      = isActive ? anivItems : festaItems
+  const anivAll  = aniversarioData ?? []
+  const festaAll = festaData       ?? []
 
-  // Compute source counts from loaded data for the source tabs
-  const mineCountAniv         = anivItems.filter((i) => !i.is_carteira_livre).length
-  const carteiraLivreCountAniv = anivItems.filter((i) => i.is_carteira_livre).length
-  const mineCountFesta         = festaItems.filter((i) => !i.is_carteira_livre).length
-  const carteiraLivreCountFesta = festaItems.filter((i) => i.is_carteira_livre).length
+  // Counts computed from full dataset (source='all')
+  const mineCountAniv          = anivAll.filter((i) => !i.is_carteira_livre).length
+  const carteiraLivreCountAniv = anivAll.filter((i) =>  i.is_carteira_livre).length
+  const mineCountFesta          = festaAll.filter((i) => !i.is_carteira_livre).length
+  const carteiraLivreCountFesta = festaAll.filter((i) =>  i.is_carteira_livre).length
 
-  const mineCount         = isActive ? mineCountAniv         : mineCountFesta
+  const mineCount          = isActive ? mineCountAniv          : mineCountFesta
   const carteiraLivreCount = isActive ? carteiraLivreCountAniv : carteiraLivreCountFesta
+
+  // Filter displayed items by selected source (client-side)
+  function filterBySource<T extends { is_carteira_livre: boolean }>(arr: T[]): T[] {
+    if (source === 'mine')           return arr.filter((i) => !i.is_carteira_livre)
+    if (source === 'carteira_livre') return arr.filter((i) =>  i.is_carteira_livre)
+    return arr
+  }
+  const anivItems  = filterBySource(anivAll)
+  const festaItems = filterBySource(festaAll)
+  const items      = isActive ? anivItems : festaItems
 
   const typeTabs = (
     <RecompraTypeTabs
@@ -128,7 +138,7 @@ export function RecompraTab() {
       {sourceTabs}
 
       {/* Carteira Livre banner */}
-      {(source === 'carteira_livre' || source === 'all') && carteiraLivreCount > 0 && (
+      {source === 'carteira_livre' && carteiraLivreCount > 0 && (
         <CarteiraLivreRecompraBanner />
       )}
 
