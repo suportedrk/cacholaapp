@@ -16,7 +16,11 @@ function formatCurrency(v: number): string {
   }).format(v)
 }
 
-type SortKey = 'total_revenue' | 'order_count' | 'avg_ticket'
+function formatPercent(v: number): string {
+  return `${v.toFixed(1)}%`
+}
+
+type SortKey = 'total_revenue' | 'order_count' | 'avg_ticket' | 'deals_won' | 'conversion_rate'
 type SortDir = 'asc' | 'desc'
 
 function SortIcon({ field, sortKey, sortDir }: { field: SortKey; sortKey: SortKey; sortDir: SortDir }) {
@@ -29,13 +33,13 @@ function SortIcon({ field, sortKey, sortDir }: { field: SortKey; sortKey: SortKe
 // ── Props ─────────────────────────────────────────────────────
 
 interface Props {
-  rows:           VendasRankingRow[]
-  isLoading:      boolean
-  canDrilldown:   boolean   // true = manager; false = vendedora
-  mySellerName:   string | null  // highlight own row for vendedora
-  startDate:      string
-  endDate:        string
-  unitId:         string | null
+  rows:          VendasRankingRow[]
+  isLoading:     boolean
+  canDrilldown:  boolean
+  mySellerName:  string | null
+  startDate:     string
+  endDate:       string
+  unitId:        string | null
 }
 
 // ── Component ─────────────────────────────────────────────────
@@ -67,7 +71,15 @@ export function RankingTable({
     return (a[sortKey] - b[sortKey]) * mul
   })
 
-  const thClass = 'px-4 py-2.5 text-left text-xs font-medium text-text-secondary select-none cursor-pointer hover:text-text-primary transition-colors'
+  function thProps(key: SortKey, extraClass = '') {
+    return {
+      className: cn(
+        'px-4 py-2.5 text-left text-xs font-medium text-text-secondary select-none cursor-pointer hover:text-text-primary transition-colors',
+        extraClass,
+      ),
+      onClick: () => handleSort(key),
+    }
+  }
 
   if (isLoading) {
     return (
@@ -95,49 +107,53 @@ export function RankingTable({
             <tr>
               <th className="px-4 py-2.5 text-left text-xs font-medium text-text-secondary w-8">#</th>
               <th className="px-4 py-2.5 text-left text-xs font-medium text-text-secondary">Vendedora</th>
-              <th className={thClass} onClick={() => handleSort('total_revenue')}>
+              <th {...thProps('total_revenue')}>
                 <span className="inline-flex items-center gap-1">
-                  Receita
-                  <SortIcon field="total_revenue" sortKey={sortKey} sortDir={sortDir} />
+                  Receita <SortIcon field="total_revenue" sortKey={sortKey} sortDir={sortDir} />
                 </span>
               </th>
-              <th className={cn(thClass, 'hidden sm:table-cell')} onClick={() => handleSort('order_count')}>
+              <th {...thProps('deals_won', 'hidden sm:table-cell')}>
                 <span className="inline-flex items-center gap-1">
-                  Orders
-                  <SortIcon field="order_count" sortKey={sortKey} sortDir={sortDir} />
+                  Deals ganhos <SortIcon field="deals_won" sortKey={sortKey} sortDir={sortDir} />
                 </span>
               </th>
-              <th className={cn(thClass, 'hidden md:table-cell')} onClick={() => handleSort('avg_ticket')}>
+              <th {...thProps('order_count', 'hidden md:table-cell')}>
                 <span className="inline-flex items-center gap-1">
-                  Ticket médio
-                  <SortIcon field="avg_ticket" sortKey={sortKey} sortDir={sortDir} />
+                  Orders <SortIcon field="order_count" sortKey={sortKey} sortDir={sortDir} />
+                </span>
+              </th>
+              <th {...thProps('avg_ticket', 'hidden lg:table-cell')}>
+                <span className="inline-flex items-center gap-1">
+                  Ticket médio <SortIcon field="avg_ticket" sortKey={sortKey} sortDir={sortDir} />
+                </span>
+              </th>
+              <th {...thProps('conversion_rate', 'hidden sm:table-cell')}>
+                <span className="inline-flex items-center gap-1">
+                  Conversão <SortIcon field="conversion_rate" sortKey={sortKey} sortDir={sortDir} />
                 </span>
               </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border-default">
             {sorted.map((row, idx) => {
-              const isMe = mySellerName
-                ? row.seller_name === mySellerName
-                : false
+              const isMe = mySellerName ? row.seller_name === mySellerName : false
 
               return (
                 <tr
                   key={row.seller_id}
                   onClick={() => {
                     if (!canDrilldown) return
-                    // Map VendasRankingRow → BISalesRankingRow shape for SellerOrdersDrilldownSheet
                     setDrilldownSeller({
-                      seller_id:          row.seller_id,
-                      seller_name:        row.seller_name,
-                      seller_status:      'active',
-                      is_system_account:  false,
-                      hire_date:          null,
-                      termination_date:   null,
-                      total_revenue:      row.total_revenue,
-                      order_count:        row.order_count,
-                      avg_ticket:         row.avg_ticket,
-                      months_worked:      1,
+                      seller_id:           row.seller_id,
+                      seller_name:         row.seller_name,
+                      seller_status:       'active',
+                      is_system_account:   false,
+                      hire_date:           null,
+                      termination_date:    null,
+                      total_revenue:       row.total_revenue,
+                      order_count:         row.order_count,
+                      avg_ticket:          row.avg_ticket,
+                      months_worked:       1,
                       avg_monthly_revenue: row.total_revenue,
                     })
                   }}
@@ -158,10 +174,16 @@ export function RankingTable({
                     {formatCurrency(row.total_revenue)}
                   </td>
                   <td className="px-4 py-2.5 text-text-secondary hidden sm:table-cell">
-                    {row.order_count}
+                    {row.deals_won}
                   </td>
                   <td className="px-4 py-2.5 text-text-secondary hidden md:table-cell">
+                    {row.order_count}
+                  </td>
+                  <td className="px-4 py-2.5 text-text-secondary hidden lg:table-cell">
                     {formatCurrency(row.avg_ticket)}
+                  </td>
+                  <td className="px-4 py-2.5 text-text-secondary hidden sm:table-cell">
+                    {formatPercent(row.conversion_rate)}
                   </td>
                 </tr>
               )
