@@ -25,7 +25,7 @@ import 'dotenv/config'
 import { createClient } from '@supabase/supabase-js'
 
 const BASE_URL  = (process.env.PLOOMES_API_URL ?? 'https://api2.ploomes.com/').replace(/\/$/, '')
-const RATE_MS   = 200  // intervalo entre chamadas API (ms)
+const RATE_MS   = 600  // 120 req/min limit → ~500ms min; 600ms is safe
 
 // ── Ploomes types ─────────────────────────────────────────────
 
@@ -57,12 +57,17 @@ interface PloomesContact {
 
 // ── Ploomes fetch ─────────────────────────────────────────────
 
-async function ploomesGet<T>(path: string, userKey: string): Promise<T> {
+async function ploomesGet<T>(path: string, userKey: string, retries = 2): Promise<T> {
   const url = `${BASE_URL}/${path.replace(/^\//, '')}`
   const res = await fetch(url, {
     headers: { 'User-Key': userKey, 'Content-Type': 'application/json' },
     signal:  AbortSignal.timeout(15_000),
   })
+  if (res.status === 429 && retries > 0) {
+    console.warn(`  ⏳ 429 rate limit — aguardando 65s…`)
+    await new Promise((r) => setTimeout(r, 65_000))
+    return ploomesGet<T>(path, userKey, retries - 1)
+  }
   if (!res.ok) {
     const body = await res.text().catch(() => '')
     throw new Error(`Ploomes ${res.status} (${path.slice(0, 80)}): ${body.slice(0, 200)}`)
@@ -90,11 +95,11 @@ async function main() {
   const args    = process.argv.slice(2)
   const modeArg = args.find((a) => a.startsWith('--mode='))?.split('=')[1]
 
-  if (modeArg !== 'full' && modeArg !== 'incremental') {
-    console.error('❌ Uso: npx tsx scripts/ploomes-sync-contacts.ts --mode=full|incremental')
+  if (modeArg !== 'full' && modeArg !== 'incremental' && modeArg !== 'retry') {
+    console.error('❌ Uso: npx tsx scripts/ploomes-sync-contacts.ts --mode=full|incremental|retry')
     process.exit(1)
   }
-  const mode: 'full' | 'incremental' = modeArg
+  const mode: 'full' | 'incremental' | 'retry' = modeArg
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const serviceKey  = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -119,10 +124,9 @@ async function main() {
   console.info('[OK] user_key carregada\n')
 
   // ── Determinar quais contatos sincronizar ─────────────────────
-  // Para mode=incremental: apenas deals criados/atualizados desde
-  // o último sync (MAX synced_at). Para mode=full: todos os deals.
-
   let sinceFilter = ''
+  let knownEmails: Set<string> | null = null
+
   if (mode === 'incremental') {
     const { data: maxRow } = await supabase
       .from('ploomes_contacts')
@@ -137,6 +141,16 @@ async function main() {
     } else {
       console.warn('⚠️  Tabela vazia — rodando como full.')
     }
+  }
+
+  if (mode === 'retry') {
+    // Retry: only emails NOT yet in ploomes_contacts
+    const { data: existing } = await supabase
+      .from('ploomes_contacts')
+      .select('email')
+      .not('email', 'is', null)
+    knownEmails = new Set((existing ?? []).map((r: { email: string }) => r.email?.toLowerCase()))
+    console.info(`📦 Contatos já sincronizados: ${knownEmails.size}`)
   }
 
   // Buscar tuplas (contact_email, contact_name, owner_id, owner_name) de ploomes_deals
@@ -169,6 +183,14 @@ async function main() {
   }
 
   console.info(`📋 Contatos únicos (por e-mail) em ploomes_deals: ${byEmail.size}`)
+
+  // Filter out already-synced in retry mode
+  let entries = Array.from(byEmail.entries())
+  if (knownEmails) {
+    entries = entries.filter(([email]) => !knownEmails!.has(email))
+    console.info(`🔄 Pendentes (não sincronizados): ${entries.length}`)
+  }
+
   console.info(`\n── Buscando contatos na API Ploomes…\n`)
 
   let found    = 0
@@ -177,7 +199,6 @@ async function main() {
   let upserted = 0
   let upsertErr = 0
 
-  const entries = Array.from(byEmail.entries())
   for (let i = 0; i < entries.length; i++) {
     const [email, meta] = entries[i]
 
