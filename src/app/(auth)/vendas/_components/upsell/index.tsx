@@ -28,7 +28,7 @@ export function UpsellTab() {
     refetch,
   } = useUpsellOpportunities({ sellerId, showContacted, source })
 
-  const timedOut = useLoadingTimeout(isLoading)
+  const { isTimedOut: timedOut } = useLoadingTimeout(isLoading)
   const items    = opportunities ?? []
 
   // Source tabs always render — outside loading/error blocks
