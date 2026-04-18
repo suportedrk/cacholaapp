@@ -542,6 +542,14 @@ docker compose exec supabase-db psql -U postgres -d postgres
 - Índice: `idx_ploomes_order_products_family ON ploomes_order_products(family_name)`
 - Hook: `useBiCategoryCrossUnit` adicionado em `src/hooks/use-bi-category.ts`
 
+**Sync-Fix: ploomes_order_products — ghost rows (commit 8b8c589, 2026-04-17) — COMPLETO:**
+- **Problema:** Ploomes reatribui `ploomes_product_id` ao editar uma Order → upsert por `ploomes_product_id` acumulava linhas-fantasma sem deletar as antigas → `SUM(products.total)` excedia `orders.amount`
+- **Impacto:** 3 orders Type B (601462305, 601463229, 601463321), 6 linhas-fantasma, R$70.2k duplicados; 8 orders Type A (Taxa de Rolha × 2, `sum = amount` exato) são intencionais e preservados
+- **Fix em `src/lib/ploomes/sync-orders.ts`:** `DELETE FROM ploomes_order_products WHERE order_id = X` antes do loop de upsert de produtos; `continue` em caso de erro no DELETE para evitar estado parcial
+- **Cleanup manual:** backup `ploomes_order_products_backup_20260417` (3113 linhas); DELETE 6 linhas em transação; pós-commit diff = R$0,00 nas 3 orders; tabela ficou com 3107 linhas
+- **Investigação (read-only):** R$843k excesso total = R$767k descontos legítimos (419 orders, `amount < sum`) + R$75k duplicação real; timestamps confirmaram 2 runs de cron em intervalos de 30–883 min como causa do Type B
+- **Backup:** `ploomes_order_products_backup_20260417` pode ser dropada após validação do primeiro cron pós-deploy
+
 ---
 
 ## CREDENCIAIS DEV LOCAL
