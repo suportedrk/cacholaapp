@@ -579,6 +579,7 @@ docker compose exec supabase-db psql -U postgres -d postgres
 - `MetaPlaceholder`: card estático "Em breve — aguardando integração Ploomes"
 - `MeuPainelClient`: orquestrador com `useLoadingTimeout` 12s + error state com botão retry
 - `useVendasMyKpis`, `useVendasDailyRevenue`, `useVendasRanking` em `src/hooks/use-vendas.ts`
+- Fase B hotfix (Migration 060): `get_vendas_ranking` estendido com `deals_won` + `conversion_rate` via LEFT JOIN em `ploomes_deals`; ranking com 7 colunas sortáveis; seller-selector label fix (span data-slot — pitfall @base-ui)
 
 ---
 
