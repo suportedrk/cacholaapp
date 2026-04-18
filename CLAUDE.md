@@ -617,6 +617,14 @@ docker compose exec supabase-db psql -U postgres -d postgres
 - **Checkpoint dados produção:** 131 aniversários nos próximos 90 dias; 52 festas passadas prontas para recontato; data real validada (ex.: Cristiane Sakumoto Cotait — aniversário HOJE)
 - **Próxima fase: D.2** — UI Recompra (cards, badge, e-mail) — BLOQUEADA até aprovação do checkpoint
 
+**Módulo Vendas — Fase D.2 (sem migration) — UI RECOMPRA — COMPLETO:**
+- `src/hooks/use-recompra.ts`: `useRecompraAniversario`, `useRecompraFestaPassada`, `useRecompraCount`, `useLogRecompraContact`, `useReopenRecompraContact`
+- 7 componentes em `src/app/(auth)/vendas/_components/recompra/`: `index.tsx` (RecompraTab), `recompra-type-tabs.tsx` (pills Aniversário/Festa Passada + counts), `recompra-card-aniversario.tsx` (chips 🔥0-7d/⚡8-30d/🎂31-60d/📅61-90d), `recompra-card-festa.tsx` (chip "Há N meses"), `carteira-livre-recompra-banner.tsx` (texto extra sobre clientes de vendedoras inativas), `recompra-contact-dialog.tsx`, `recompra-reopen-dialog.tsx`
+- `vendas/page.tsx`: substituído PlaceholderTab por RecompraTab; `?tab=recompra` suportado
+- `sidebar.tsx`: badge = `upsellCount.total + recompraCount.total` (consolidado)
+- `scripts/email-vendas-daily.ts`: e-mail consolidado (Upsell + Aniversários + Festas Passadas); `--dry-run` e `--sample` flags; `email_type='vendas_daily'`; cron **comentado** aguardando cadastro das vendedoras
+- RPC já correto (0-90 dias sem lower bound) — sem nova migration necessária
+
 ---
 
 ## REGRA DE PROCESSO (aprendizado Fase C.2)

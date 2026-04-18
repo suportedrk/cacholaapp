@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, Suspense, startTransition } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { TrendingUp, AlertCircle } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -22,7 +22,7 @@ function VendasPageInner() {
   useEffect(() => {
     const tab = searchParams.get('tab')
     if (tab && ['meu-painel', 'upsell', 'recompra'].includes(tab)) {
-      setActiveTab(tab)
+      startTransition(() => setActiveTab(tab))
     }
   }, [searchParams])
 
