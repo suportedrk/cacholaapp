@@ -142,6 +142,8 @@ async function main() {
       console.warn('⚠️  Tabela vazia — rodando como full.')
     }
   }
+  // Note: incremental uses ploomes_update_date (not create_date) to also catch
+  // deals where the contact details were updated after initial creation.
 
   if (mode === 'retry') {
     // Retry: only emails NOT yet in ploomes_contacts
@@ -160,7 +162,7 @@ async function main() {
     .not('contact_email', 'is', null)
 
   if (sinceFilter) {
-    dealsQuery = dealsQuery.gte('ploomes_create_date', sinceFilter)
+    dealsQuery = dealsQuery.gte('ploomes_update_date', sinceFilter)
   }
 
   const { data: dealRows, error: dealErr } = await dealsQuery

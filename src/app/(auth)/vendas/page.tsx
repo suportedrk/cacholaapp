@@ -1,10 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { TrendingUp, AlertCircle, Construction } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAuth } from '@/hooks/use-auth'
 import { MeuPainelClient } from './_components/meu-painel/meu-painel-client'
+import { UpsellTab } from './_components/upsell'
 
 function PlaceholderTab({ label }: { label: string }) {
   return (
@@ -16,9 +18,22 @@ function PlaceholderTab({ label }: { label: string }) {
   )
 }
 
-export default function VendasPage() {
-  const { profile } = useAuth()
-  const [activeTab, setActiveTab] = useState('meu-painel')
+// Inner component that reads search params
+function VendasPageInner() {
+  const { profile }   = useAuth()
+  const searchParams  = useSearchParams()
+  const initialTab    = searchParams.get('tab') ?? 'meu-painel'
+  const [activeTab, setActiveTab] = useState(
+    ['meu-painel', 'upsell', 'recompra'].includes(initialTab) ? initialTab : 'meu-painel',
+  )
+
+  // Sync tab when URL changes (e.g. CTA email link)
+  useEffect(() => {
+    const tab = searchParams.get('tab')
+    if (tab && ['meu-painel', 'upsell', 'recompra'].includes(tab)) {
+      setActiveTab(tab)
+    }
+  }, [searchParams])
 
   const isVendedora      = profile?.role === 'vendedora'
   const vendedoraSemLink = isVendedora && !profile?.seller_id
@@ -70,7 +85,7 @@ export default function VendasPage() {
         </TabsContent>
 
         <TabsContent value="upsell" className="mt-6">
-          <PlaceholderTab label="Upsell" />
+          <UpsellTab />
         </TabsContent>
 
         <TabsContent value="recompra" className="mt-6">
@@ -78,5 +93,13 @@ export default function VendasPage() {
         </TabsContent>
       </Tabs>
     </div>
+  )
+}
+
+export default function VendasPage() {
+  return (
+    <Suspense>
+      <VendasPageInner />
+    </Suspense>
   )
 }
