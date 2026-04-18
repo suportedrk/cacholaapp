@@ -604,9 +604,30 @@ docker compose exec supabase-db psql -U postgres -d postgres
 - Hook `src/hooks/use-upsell.ts`: `useUpsellOpportunities`, `useUpsellCount`, `useUpsellPopularAddons`, `useLogUpsellContact`, `useReopenUpsellContact`; invalidate `['upsell-opportunities']` + `['upsell-count']` após mutações
 - `vendas/page.tsx`: `useSearchParams()` em `<Suspense>` — suporte a `?tab=upsell` (link do e-mail)
 - `sidebar.tsx`: `useUpsellCount().total` injetado no badge do item `/vendas`
-- `scripts/email-upsell-daily.ts`: `--dry-run` flag; dedup via `email_sent_log`; cron `0 11 * * *` (08h BRT); e-mail com tabela de oportunidades + CTA `/vendas?tab=upsell`
+- `scripts/email-upsell-daily.ts`: `--dry-run` flag; `--sample` flag (gera HTML de amostra sem DB/SMTP); dedup via `email_sent_log`; cron `0 11 * * *` (08h BRT) — **comentado na VPS aguardando cadastro das vendedoras**; e-mail com tabela de oportunidades + CTA `/vendas?tab=upsell`
 - **Dados produção (18/04/2026):** 7 oportunidades ativas — 4 Bruna Jana, 2 Carolina Warzée, 1 Carteira Livre (Maria 2 anos — Bruno Motta inativo)
 - **Próxima fase: C.3** — oportunidades de recompra (deals ganhos há 6–18 meses)
+
+---
+
+## REGRA DE PROCESSO (aprendizado Fase C.2)
+
+Antes de reportar fase concluída, Claude Code deve pedir screenshot visual
+ao Bruno e aguardar confirmação. Reportar "screenshot confirmou" sem
+screenshot real no chat = violação de processo. 3 bugs passaram em C.2
+por pular essa validação.
+
+---
+
+## DÉBITOS TÉCNICOS
+
+- **Sellers órfãos:** sync de sellers deve garantir que todo `owner_id` que aparece em
+  `ploomes_deals`, `ploomes_contacts` ou `events` tem entrada em `sellers` (mesmo que `inactive`).
+  Hoje há ~16 contatos com `owner_id` sem entrada (Vitória Menezes, Vinícius Lupi, etc.) — caem na
+  Carteira Livre (comportamento ok por ora). Impacta corretamente o módulo Recompra (Fase D) quando
+  puxar clientes de 10–13 meses atrás com owners antigos.
+- **`ploomes_order_products_backup_20260417`** pode ser dropada após validação do primeiro cron
+  pós-deploy do fix de ghost rows (commit 8b8c589).
 
 ---
 

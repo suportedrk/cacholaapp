@@ -7,6 +7,7 @@
 // Uso:
 //   npx tsx scripts/email-upsell-daily.ts          # envia de verdade
 //   npx tsx scripts/email-upsell-daily.ts --dry-run # só imprime, não envia
+//   npx tsx scripts/email-upsell-daily.ts --sample  # dumpa HTML de amostra (sem DB/SMTP)
 //
 // Pré-requisitos:
 //   NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
@@ -18,6 +19,7 @@ import { createClient } from '@supabase/supabase-js'
 import nodemailer from 'nodemailer'
 
 const DRY_RUN = process.argv.includes('--dry-run')
+const SAMPLE  = process.argv.includes('--sample')
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://cachola.cloud'
 
 // ── Supabase ──────────────────────────────────────────────────
@@ -115,6 +117,24 @@ function buildHtml(
 </html>`
 }
 
+// ── Sample mode (--sample) ────────────────────────────────────
+
+function sampleMain() {
+  const sampleOpps = [
+    { event_title: 'Festa da Ana Clara',  event_date: '2026-05-20', contact_name: 'Fernanda Souza',  missing_categories: ['Adicionais'] },
+    { event_title: 'Aniversário do Pedro', event_date: '2026-05-22', contact_name: 'Mariana Lima',   missing_categories: ['Upgrades'] },
+    { event_title: 'Festa da Isabela',    event_date: '2026-05-25', contact_name: 'Juliana Martins', missing_categories: ['Adicionais', 'Upgrades'] },
+    { event_title: 'Aniversário do Lucas', event_date: '2026-05-28', contact_name: 'Patricia Costa', missing_categories: ['Adicionais'] },
+  ]
+  const html = buildHtml('Bruna Jana', sampleOpps)
+  console.info('[email-upsell-daily] (SAMPLE) HTML gerado — cole num browser para visualizar:\n')
+  console.info('────────────────────────────────────────────────────────────────')
+  console.info(html)
+  console.info('────────────────────────────────────────────────────────────────')
+  console.info(`\n✅ Assunto seria: "4 oportunidades de upsell — Cachola OS"`)
+  console.info(`✅ CTA aponta para: ${APP_URL}/vendas?tab=upsell`)
+}
+
 // ── Main ──────────────────────────────────────────────────────
 
 async function main() {
@@ -183,6 +203,8 @@ async function main() {
 
     if (DRY_RUN) {
       console.info(`  [DRY] Enviaria para ${user.name} <${user.email}> — ${myOpps.length} oportunidades`)
+      console.info(`        Assunto: "${myOpps.length} oportunidade${myOpps.length !== 1 ? 's' : ''} de upsell — Cachola OS"`)
+      console.info(`        HTML (primeiros 200 chars): ${buildHtml(user.name, myOpps).slice(0, 200)}…`)
     } else {
       try {
         await transport!.sendMail({
@@ -213,7 +235,11 @@ async function main() {
   console.info(`✅ Concluído.`)
 }
 
-main().catch((err) => {
-  console.error('❌ Erro fatal:', err)
-  process.exit(1)
-})
+if (SAMPLE) {
+  sampleMain()
+} else {
+  main().catch((err) => {
+    console.error('❌ Erro fatal:', err)
+    process.exit(1)
+  })
+}
