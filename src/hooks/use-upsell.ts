@@ -3,6 +3,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useAuthReadyStore } from '@/stores/auth-store'
+import { useAuth } from '@/hooks/use-auth'
+import { VENDAS_MODULE_ROLES } from '@/config/roles'
 
 // ── Types ─────────────────────────────────────────────────────
 
@@ -92,10 +94,12 @@ export function useUpsellOpportunities(params: {
 
 export function useUpsellCount() {
   const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
+  const { profile }    = useAuth()
+  const hasAccess      = VENDAS_MODULE_ROLES.includes((profile?.role ?? '') as typeof VENDAS_MODULE_ROLES[number])
 
   return useQuery({
     queryKey:    ['upsell-count'],
-    enabled:     isSessionReady,
+    enabled:     isSessionReady && hasAccess,
     staleTime:   3 * 60 * 1000,
     networkMode: 'always',
     retry:       upsellRetry,
