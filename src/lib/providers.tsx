@@ -85,6 +85,9 @@ function AuthBootstrap() {
       if (session?.user) {
         const profile = await loadProfile(session.user.id)
         await loadUserUnits(session.user.id)
+        if (profile?.role === 'vendedora' && !profile.seller_id) {
+          console.warn('[AuthBootstrap] vendedora sem seller_id vinculado — user:', session.user.id)
+        }
         setAuthState(session.user, session, profile)
       } else {
         setAuthState(null, null, null)

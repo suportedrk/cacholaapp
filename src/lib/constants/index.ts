@@ -71,6 +71,7 @@ export const ROUTES = {
   businessRules: '/configuracoes/regras',
   unitSetup: '/admin/unidades/setup',
   minutes: '/atas',
+  vendas: '/vendas',
 } as const
 
 // ============================================================

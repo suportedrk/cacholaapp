@@ -1,3 +1,6 @@
+// TODO Fase futura: coluna "Usuário vinculado" na listagem de vendedoras,
+// com ação de desvincular/revincular (JOIN users.seller_id = sellers.id).
+
 'use client'
 
 import { useState } from 'react'

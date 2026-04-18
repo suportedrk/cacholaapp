@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
 import { Loader2, UserPlus } from 'lucide-react'
 import { useIsReadOnly } from '@/hooks/use-read-only'
+import { useAvailableSellersForInvite } from '@/hooks/use-sellers'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -20,18 +21,28 @@ const ROLES = Object.keys(ROLE_LABELS) as UserRole[]
 export default function NovoUsuarioPage() {
   const router = useRouter()
 
-  const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
-  const [phone, setPhone] = useState('')
-  const [role, setRole] = useState<UserRole>('vendedora')
+  const [name, setName]       = useState('')
+  const [email, setEmail]     = useState('')
+  const [phone, setPhone]     = useState('')
+  const [role, setRole]       = useState<UserRole>('vendedora')
+  const [sellerId, setSellerId] = useState<string>('')
   const [isPending, setIsPending] = useState(false)
+
   const isReadOnly = useIsReadOnly()
   const queryClient = useQueryClient()
+  const { data: availableSellers = [], isLoading: loadingSellers } = useAvailableSellersForInvite()
+
+  const isVendedora = role === 'vendedora'
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    setIsPending(true)
 
+    if (isVendedora && !sellerId) {
+      toast.error('Selecione a vendedora a ser vinculada.')
+      return
+    }
+
+    setIsPending(true)
     try {
       const res = await fetch('/api/admin/users', {
         method: 'POST',
@@ -41,6 +52,7 @@ export default function NovoUsuarioPage() {
           email: email.trim().toLowerCase(),
           phone: phone.trim() || null,
           role,
+          seller_id: isVendedora ? sellerId : null,
         }),
       })
 
@@ -52,7 +64,6 @@ export default function NovoUsuarioPage() {
       }
 
       toast.success('Usuário criado com sucesso! Um e-mail de boas-vindas foi enviado.')
-      // Invalida o cache para a lista de usuários recarregar imediatamente
       await queryClient.invalidateQueries({ queryKey: ['users'] })
       router.push(ROUTES.users)
     } catch {
@@ -64,7 +75,6 @@ export default function NovoUsuarioPage() {
 
   return (
     <div className="max-w-2xl space-y-6">
-      {/* Cabeçalho */}
       <div>
         <h1 className="text-2xl font-semibold text-foreground tracking-tight">Novo Usuário</h1>
         <p className="mt-0.5 text-sm text-muted-foreground">
@@ -72,7 +82,6 @@ export default function NovoUsuarioPage() {
         </p>
       </div>
 
-      {/* Formulário */}
       <form onSubmit={handleSubmit} className="bg-card rounded-2xl border border-border p-6 space-y-4">
         <div className="space-y-1.5">
           <Label htmlFor="name">Nome completo *</Label>
@@ -113,7 +122,12 @@ export default function NovoUsuarioPage() {
           <Label htmlFor="role">Cargo *</Label>
           <Select
             value={role}
-            onValueChange={(v) => v && setRole(v as UserRole)}
+            onValueChange={(v) => {
+              if (v) {
+                setRole(v as UserRole)
+                setSellerId('')
+              }
+            }}
           >
             <SelectTrigger className="w-full">
               <span data-slot="select-value" className="flex flex-1 text-left">
@@ -127,6 +141,41 @@ export default function NovoUsuarioPage() {
             </SelectContent>
           </Select>
         </div>
+
+        {/* Campo condicional: só visível quando role=vendedora */}
+        {isVendedora && (
+          <div className="space-y-1.5">
+            <Label htmlFor="seller">Vincular à vendedora *</Label>
+            {loadingSellers ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground h-10">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Carregando vendedoras disponíveis...
+              </div>
+            ) : availableSellers.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-2">
+                Nenhuma vendedora disponível para vinculação. Todas já possuem usuário ou estão inativas.
+              </p>
+            ) : (
+              <Select
+                value={sellerId}
+                onValueChange={(v) => v && setSellerId(v)}
+              >
+                <SelectTrigger className="w-full">
+                  <span data-slot="select-value" className="flex flex-1 text-left">
+                    {sellerId
+                      ? (availableSellers.find((s) => s.id === sellerId)?.name ?? 'Selecionar...')
+                      : 'Selecionar vendedora...'}
+                  </span>
+                </SelectTrigger>
+                <SelectContent>
+                  {availableSellers.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+        )}
 
         <div className="flex flex-wrap gap-3 pt-2">
           <Button type="submit" disabled={isPending || isReadOnly}>

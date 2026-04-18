@@ -18,10 +18,11 @@ import {
   UsersRound,
   FileText,
   UserCog,
+  TrendingUp,
 } from 'lucide-react'
 import { ROUTES } from '@/lib/constants'
 import type { Module, Role } from '@/types/permissions'
-import { BI_ACCESS_ROLES } from '@/config/roles'
+import { BI_ACCESS_ROLES, VENDAS_MODULE_ROLES } from '@/config/roles'
 
 export interface NavItem {
   label: string
@@ -74,7 +75,8 @@ export const NAV_GROUPS: NavGroup[] = [
     // Sem label de grupo — itens principais (todos os roles veem)
     items: [
       { label: 'Início',         href: ROUTES.dashboard,  icon: Home },
-      { label: 'BI',             href: '/bi',             icon: BarChart3, allowedRoles: [...BI_ACCESS_ROLES] },
+      { label: 'BI',             href: '/bi',             icon: BarChart3,    allowedRoles: [...BI_ACCESS_ROLES]        },
+      { label: 'Vendas',         href: ROUTES.vendas,     icon: TrendingUp,   allowedRoles: [...VENDAS_MODULE_ROLES]    },
       { label: 'Eventos',        href: ROUTES.events,     icon: CalendarDays,  module: 'events'    },
       { label: 'Checklists',     href: ROUTES.checklists, icon: ClipboardList, module: 'checklists' },
       { label: 'Minhas Tarefas',   href: ROUTES.myTasks,    icon: ListTodo,     module: 'checklists' },
