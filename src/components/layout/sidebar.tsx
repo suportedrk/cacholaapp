@@ -17,6 +17,7 @@ import { useUnitBrand } from '@/hooks/use-unit-settings'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
 import { useUpsellCount } from '@/hooks/use-upsell'
+import { useRecompraCount } from '@/hooks/use-recompra'
 import type { Role } from '@/types/permissions'
 
 interface SidebarProps {
@@ -80,9 +81,10 @@ export function Sidebar({ isOpen, isCollapsed, onClose, onToggleCollapse }: Side
     })
   }, [pathname, activeHref])
 
-  // Upsell badge — only for vendas module roles
-  const { data: upsellCount } = useUpsellCount()
-  const upsellTotal = upsellCount?.total ?? 0
+  // Vendas badge = upsell + recompra (not contacted)
+  const { data: upsellCount }   = useUpsellCount()
+  const { data: recompraCount } = useRecompraCount()
+  const upsellTotal = (upsellCount?.total ?? 0) + (recompraCount?.total ?? 0)
 
   // Filtra grupos removendo itens que o role atual não pode ver.
   // Grupos que ficarem completamente vazios são omitidos.
