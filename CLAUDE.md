@@ -310,6 +310,7 @@ docker compose exec supabase-db psql -U postgres -d postgres
 |------|--------|
 | `/dashboard` | ✅ label "Início" na sidebar (ícone Home) |
 | `/bi` | 🚧 Placeholder "Em breve" — item disabled na sidebar |
+| `/vendas` | 🚧 Placeholder 3 tabs — Fase A concluída, Fases B/C/D pendentes |
 | `/eventos` | ✅ |
 | `/eventos/[id]` | ✅ |
 | `/checklists` | ✅ |
@@ -549,6 +550,21 @@ docker compose exec supabase-db psql -U postgres -d postgres
 - **Cleanup manual:** backup `ploomes_order_products_backup_20260417` (3113 linhas); DELETE 6 linhas em transação; pós-commit diff = R$0,00 nas 3 orders; tabela ficou com 3107 linhas
 - **Investigação (read-only):** R$843k excesso total = R$767k descontos legítimos (419 orders, `amount < sum`) + R$75k duplicação real; timestamps confirmaram 2 runs de cron em intervalos de 30–883 min como causa do Type B
 - **Backup:** `ploomes_order_products_backup_20260417` pode ser dropada após validação do primeiro cron pós-deploy
+
+**Módulo Vendas — Fase A (Migration 058) — FUNDAÇÃO COMPLETA:**
+- Rota: `/vendas`, restrita a `VENDAS_MODULE_ROLES` (super_admin, diretor, gerente, vendedora)
+- Sidebar: item "Vendas" com ícone `TrendingUp`, grupo principal (após BI)
+- `users.seller_id UUID FK → sellers(id) ON DELETE SET NULL` — vínculo entre usuário e vendedora
+- Índices: `idx_users_seller_id` + `uniq_users_seller_id_not_null` (partial, onde NOT NULL)
+- Roles: `VENDEDORA_ROLES`, `VENDAS_MODULE_ROLES`, `VENDAS_MANAGE_ROLES` em `src/config/roles.ts`
+- `User` type em `database.types.ts` inclui `seller_id: string | null`
+- `ROUTES.vendas = '/vendas'` em `src/lib/constants/index.ts`
+- Página `/vendas`: 3 tabs placeholder (Meu Painel / Upsell / Recompra); alerta quando vendedora sem seller_id; mensagem diferenciada para gestores
+- Convite de usuário (`/admin/usuarios/novo`): campo "Vincular à vendedora" obrigatório quando role=vendedora; hook `useAvailableSellersForInvite()` filtra sellers ativas + não-sistema + sem usuário vinculado
+- API `POST /api/admin/users`: valida `seller_id` obrigatório para `role=vendedora`; persiste via `UPDATE users SET seller_id`
+- `AuthBootstrap`: `console.warn` quando vendedora logada não tem `seller_id`
+- TODO em `/configuracoes/vendedoras/vendedoras-client.tsx` para coluna "Usuário vinculado" (Fase futura)
+- Próximas fases: B (Meu Painel com KPIs), C (Upsell), D (Recompra)
 
 ---
 
