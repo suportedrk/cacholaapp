@@ -608,6 +608,15 @@ docker compose exec supabase-db psql -U postgres -d postgres
 - **Dados produção (18/04/2026):** 7 oportunidades ativas — 4 Bruna Jana, 2 Carolina Warzée, 1 Carteira Livre (Maria 2 anos — Bruno Motta inativo)
 - **Próxima fase: C.3** — oportunidades de recompra (deals ganhos há 6–18 meses)
 
+**Módulo Vendas — Fase D.1 (Migration 063) — INFRA RECOMPRA COMPLETA — AGUARDA APROVAÇÃO CHECKPOINT:**
+- Migration 063: `ALTER ploomes_deals ADD aniversariante_birthday DATE + synced_at`; `ALTER ploomes_config ADD aniversariante_birthday_field_key` (setado para `deal_13506031-C53E-48A0-A92B-686F76AC77ED`); `CREATE TABLE recompra_contact_log` (chave lógica: email+birthday+recompra_type, UNIQUE WHERE reopened_at IS NULL, RLS select/insert/update)
+- 3 RPCs SECURITY DEFINER (super_admin+diretor+gerente+vendedora): `get_recompra_aniversario_proximo(seller_id, show_contacted, source, days_ahead=90)` — Ajuste 2 (precedência por ref_date DESC), Ajuste 3 (group por email+birthday), Feb-29→Feb-28; `get_recompra_festa_passada(seller_id, show_contacted, source)` — Ajuste 4 (exclui email com qualquer deal status=1/2 nos últimos 10 meses); `get_recompra_count_for_user()`
+- `sync-deals.ts`: `extractDealDateTimes` → `extractDealFields` (add `aniversariante_birthday: parsed.birthdayDate ?? null`); ambos `syncDealsForBI` e `syncSingleDealToBI` atualizados
+- `database.types.ts`: `aniversariante_birthday` + `aniversariante_birthday_synced_at` adicionados em `PloomesDealsRow`
+- **Backfill produção (18/04/2026):** 7249 deals upsertados; 490/698 deals ganhos com birthday (70.2%)
+- **Checkpoint dados produção:** 131 aniversários nos próximos 90 dias; 52 festas passadas prontas para recontato; data real validada (ex.: Cristiane Sakumoto Cotait — aniversário HOJE)
+- **Próxima fase: D.2** — UI Recompra (cards, badge, e-mail) — BLOQUEADA até aprovação do checkpoint
+
 ---
 
 ## REGRA DE PROCESSO (aprendizado Fase C.2)

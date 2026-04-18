@@ -2,21 +2,12 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { TrendingUp, AlertCircle, Construction } from 'lucide-react'
+import { TrendingUp, AlertCircle } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAuth } from '@/hooks/use-auth'
 import { MeuPainelClient } from './_components/meu-painel/meu-painel-client'
 import { UpsellTab } from './_components/upsell'
-
-function PlaceholderTab({ label }: { label: string }) {
-  return (
-    <div className="flex flex-col items-center justify-center py-16 gap-3 text-muted-foreground">
-      <Construction className="w-10 h-10 opacity-40" />
-      <p className="text-sm font-medium">{label} — Em construção</p>
-      <p className="text-xs">Disponível na próxima fase de desenvolvimento.</p>
-    </div>
-  )
-}
+import { RecompraTab } from './_components/recompra'
 
 // Inner component that reads search params
 function VendasPageInner() {
@@ -89,7 +80,7 @@ function VendasPageInner() {
         </TabsContent>
 
         <TabsContent value="recompra" className="mt-6">
-          <PlaceholderTab label="Recompra" />
+          <RecompraTab />
         </TabsContent>
       </Tabs>
     </div>
