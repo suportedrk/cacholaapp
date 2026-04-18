@@ -17,7 +17,7 @@ export function UpsellTab() {
   const [source,        setSource]        = useState<UpsellSource>('mine')
   const [showContacted, setShowContacted] = useState(false)
 
-  const sellerId   = (profile?.seller_id as string | null) ?? null
+  const sellerId    = (profile?.seller_id as string | null) ?? null
   const canRegister = !!sellerId
 
   const { data: count } = useUpsellCount()
@@ -29,18 +29,32 @@ export function UpsellTab() {
   } = useUpsellOpportunities({ sellerId, showContacted, source })
 
   const timedOut = useLoadingTimeout(isLoading)
+  const items    = opportunities ?? []
+
+  // Source tabs always render — outside loading/error blocks
+  const sourceTabs = (
+    <UpsellSourceTabs
+      source={source}
+      onSourceChange={setSource}
+      mineCount={count?.my_count ?? 0}
+      carteiraLivreCount={count?.carteira_livre_count ?? 0}
+    />
+  )
 
   // ── Loading ───────────────────────────────────────────────
   if (isLoading && !timedOut) {
     return (
-      <div className="space-y-3">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="rounded-lg border bg-card p-4 space-y-3">
-            <div className="skeleton-shimmer h-4 w-48 rounded" />
-            <div className="skeleton-shimmer h-3 w-32 rounded" />
-            <div className="skeleton-shimmer h-3 w-56 rounded" />
-          </div>
-        ))}
+      <div className="space-y-4">
+        {sourceTabs}
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="rounded-lg border bg-card p-4 space-y-3">
+              <div className="skeleton-shimmer h-4 w-48 rounded" />
+              <div className="skeleton-shimmer h-3 w-32 rounded" />
+              <div className="skeleton-shimmer h-3 w-56 rounded" />
+            </div>
+          ))}
+        </div>
       </div>
     )
   }
@@ -48,34 +62,30 @@ export function UpsellTab() {
   // ── Error / timeout ────────────────────────────────────────
   if (isError || timedOut) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 gap-3 text-muted-foreground">
-        <AlertCircle className="w-10 h-10 opacity-40" />
-        <p className="text-sm font-medium">Erro ao carregar oportunidades</p>
-        <Button variant="outline" size="sm" onClick={() => refetch()}>
-          Tentar novamente
-        </Button>
+      <div className="space-y-4">
+        {sourceTabs}
+        <div className="flex flex-col items-center justify-center py-16 gap-3 text-muted-foreground">
+          <AlertCircle className="w-10 h-10 opacity-40" />
+          <p className="text-sm font-medium">Erro ao carregar oportunidades</p>
+          <Button variant="outline" size="sm" onClick={() => refetch()}>
+            Tentar novamente
+          </Button>
+        </div>
       </div>
     )
   }
 
-  const items = opportunities ?? []
-
   return (
     <div className="space-y-4">
-      {/* Source sub-tabs */}
-      <UpsellSourceTabs
-        source={source}
-        onSourceChange={setSource}
-        mineCount={count?.my_count ?? 0}
-        carteiraLivreCount={count?.carteira_livre_count ?? 0}
-      />
+      {/* Source sub-tabs — always visible */}
+      {sourceTabs}
 
       {/* Carteira Livre banner */}
       {(source === 'carteira_livre' || source === 'all') && (count?.carteira_livre_count ?? 0) > 0 && (
         <CarteireLivreBanner />
       )}
 
-      {/* Popular addons hint (shows for "50 Pessoas" package type) */}
+      {/* Popular addons hint */}
       <PopularAddonsHint packageName="50 Pessoas" />
 
       {/* Filters + count */}
