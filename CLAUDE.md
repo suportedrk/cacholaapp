@@ -592,7 +592,21 @@ docker compose exec supabase-db psql -U postgres -d postgres
 - **Backfill produção:** 703/704 contatos sincronizados (704 e-mails únicos em ploomes_deals; 1 duplicado detectado); 14 com birthday; breakdown por owner: Bruno Motta 322, Raphaela 171, Carolina 104, Bruna 82
 - **ploomes_config:** `cliente_cachola_field_key` e `cliente_cachola_sim_option_id=1` configurados em produção
 - **Cron:** `*/30 * * * *` → `npx tsx scripts/ploomes-sync-contacts.ts --mode=incremental` → log `/var/log/cachola/sync-contacts.log`
-- **Próxima fase: C.2** (UI + RPC + email + badge) — aguardando aprovação de Bruno
+- **sync incremental:** usa `ploomes_update_date` (não create_date) para capturar deals com contato atualizado
+
+**Módulo Vendas — Fase C.2 (Migration 062) — UI UPSELL COMPLETO:**
+- Migration 062: `ALTER upsell_contact_log ADD COLUMN captured_from_carteira_livre BOOLEAN DEFAULT false`; `email_sent_log` (dedup diário: UNIQUE ON email_type + recipient_user_id + sent_date); 3 RPCs SECURITY DEFINER (super_admin+diretor+gerente+vendedora)
+- RPC `get_upsell_opportunities(p_seller_id, p_show_contacted, p_source)`: janela 30–40 dias, status='confirmed', filtro option B (NOT (tem_adicional AND tem_upgrade)), join via LOWER(TRIM(contact_email))=pc.email; suporte Carteira Livre (owner não em sellers ativos); retorna `missing_categories TEXT[]`
+- RPC `get_upsell_count_for_user()`: usa auth.uid(), retorna {my_count, carteira_livre_count, total}; filtra só não contatados para badge
+- RPC `get_upsell_popular_addons(p_package_name)`: co-ocorrência de Adicionais/Upgrades com um pacote, top 10
+- **Carteira Livre:** contatos cujo owner_id não está em sellers ativos (inclui Bruno Motta 325 contatos + orphans Vitória/Vinícius). INSERT usa capturer's seller_id + `captured_from_carteira_livre=true`
+- 8 componentes em `src/app/(auth)/vendas/_components/upsell/`: `index.tsx` (UpsellTab), `upsell-source-tabs.tsx` (pills Minhas/Carteira Livre/Todas + contagens), `upsell-filters.tsx` (toggle incluir contatadas + count), `upsell-card.tsx` (evento+contato+chips categoria+ações), `carteira-livre-banner.tsx`, `contact-dialog.tsx` (outcome select + notes), `reopen-dialog.tsx`, `popular-addons-hint.tsx`
+- Hook `src/hooks/use-upsell.ts`: `useUpsellOpportunities`, `useUpsellCount`, `useUpsellPopularAddons`, `useLogUpsellContact`, `useReopenUpsellContact`; invalidate `['upsell-opportunities']` + `['upsell-count']` após mutações
+- `vendas/page.tsx`: `useSearchParams()` em `<Suspense>` — suporte a `?tab=upsell` (link do e-mail)
+- `sidebar.tsx`: `useUpsellCount().total` injetado no badge do item `/vendas`
+- `scripts/email-upsell-daily.ts`: `--dry-run` flag; dedup via `email_sent_log`; cron `0 11 * * *` (08h BRT); e-mail com tabela de oportunidades + CTA `/vendas?tab=upsell`
+- **Dados produção (18/04/2026):** 7 oportunidades ativas — 4 Bruna Jana, 2 Carolina Warzée, 1 Carteira Livre (Maria 2 anos — Bruno Motta inativo)
+- **Próxima fase: C.3** — oportunidades de recompra (deals ganhos há 6–18 meses)
 
 ---
 
