@@ -29,6 +29,49 @@ export function useSellers() {
   })
 }
 
+/**
+ * Sellers ativas, não-sistema e ainda sem usuário vinculado.
+ * Usado no formulário de convite quando role=vendedora.
+ */
+export function useAvailableSellersForInvite() {
+  const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
+  return useQuery({
+    queryKey: ['sellers', 'available-for-invite'],
+    enabled: isSessionReady,
+    staleTime: 60 * 1000,
+    retry: (count, err: unknown) => {
+      const status = (err as { status?: number })?.status
+      return count < 3 && status !== 401 && status !== 403
+    },
+    queryFn: async () => {
+      const supabase = createClient()
+
+      // Busca sellers ativas e não-sistema
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: allSellers, error: sellersError } = await (supabase as any)
+        .from('sellers')
+        .select('id, name')
+        .eq('status', 'active')
+        .eq('is_system_account', false)
+        .order('name')
+      if (sellersError) throw sellersError
+
+      // Busca seller_ids já vinculados a algum usuário
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: taken, error: takenError } = await (supabase as any)
+        .from('users')
+        .select('seller_id')
+        .not('seller_id', 'is', null)
+      if (takenError) throw takenError
+
+      const takenIds = new Set((taken ?? []).map((r: { seller_id: string }) => r.seller_id))
+      return (allSellers ?? []).filter(
+        (s: { id: string; name: string }) => !takenIds.has(s.id)
+      ) as { id: string; name: string }[]
+    },
+  })
+}
+
 export function useUpdateSeller() {
   const queryClient = useQueryClient()
   return useMutation({

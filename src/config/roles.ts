@@ -43,6 +43,26 @@ export const SELLERS_MANAGE_ROLES = [
   'diretor',
 ] as const satisfies readonly Role[]
 
+/** Identifica o role de vendedora (para checks de vinculação seller_id). */
+export const VENDEDORA_ROLES = [
+  'vendedora',
+] as const satisfies readonly Role[]
+
+/** Acesso ao módulo Vendas (/vendas) — vendedoras + gestão. */
+export const VENDAS_MODULE_ROLES = [
+  'super_admin',
+  'diretor',
+  'gerente',
+  'vendedora',
+] as const satisfies readonly Role[]
+
+/** Vê dados de TODAS as vendedoras (não apenas os próprios). */
+export const VENDAS_MANAGE_ROLES = [
+  'super_admin',
+  'diretor',
+  'gerente',
+] as const satisfies readonly Role[]
+
 /**
  * Helper type-safe: verifica se um role pertence a uma lista readonly.
  *

@@ -449,6 +449,7 @@ export type User = {
   avatar_url: string | null
   role: UserRole
   is_active: boolean
+  seller_id: string | null
   preferences: {
     notifications: {
       email: boolean

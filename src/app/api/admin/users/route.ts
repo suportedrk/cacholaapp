@@ -4,7 +4,6 @@ import type { UserRole } from '@/types/database.types'
 
 export async function POST(request: Request) {
   try {
-    // Verificar se o usuário atual é admin
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
@@ -23,24 +22,28 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Permissão insuficiente.' }, { status: 403 })
     }
 
-    // Criar usuário com admin client
+    const adminSupabase = await createAdminClient()
+
     const body = await request.json()
-    const { name, email, phone, role } = body as {
+    const { name, email, phone, role, seller_id } = body as {
       name: string
       email: string
       phone: string | null
       role: UserRole
+      seller_id?: string | null
     }
 
     if (!name || !email || !role) {
       return NextResponse.json({ error: 'Campos obrigatórios ausentes.' }, { status: 400 })
     }
 
-    const adminSupabase = await createAdminClient()
+    if (role === 'vendedora' && !seller_id) {
+      return NextResponse.json(
+        { error: 'Campo "Vincular à vendedora" é obrigatório para o cargo Vendedora.' },
+        { status: 400 }
+      )
+    }
 
-    // inviteUserByEmail envia e-mail de convite via GoTrue (SMTP configurado)
-    // e gera token mágico para o usuário definir a senha.
-    // O campo "data" equivale a user_metadata — lido pelo trigger handle_new_user().
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://cachola.cloud'
 
     const { data: newUser, error: createError } = await adminSupabase.auth.admin.inviteUserByEmail(
@@ -58,12 +61,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: msg }, { status: 400 })
     }
 
-    // O trigger handle_new_user() cria o registro em public.users automaticamente.
-    // Atualizar o role (o trigger usa metadata, mas garantimos aqui também).
     if (newUser.user) {
+      const updatePayload: Record<string, unknown> = {
+        role,
+        phone: phone ?? null,
+      }
+      if (seller_id) updatePayload.seller_id = seller_id
+
       await adminSupabase
         .from('users')
-        .update({ role, phone: phone ?? null })
+        .update(updatePayload)
         .eq('id', newUser.user.id)
     }
 
