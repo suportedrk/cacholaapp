@@ -16,6 +16,7 @@ import { APP_NAME } from '@/lib/constants'
 import { useUnitBrand } from '@/hooks/use-unit-settings'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
+import { useUpsellCount } from '@/hooks/use-upsell'
 import type { Role } from '@/types/permissions'
 
 interface SidebarProps {
@@ -79,6 +80,10 @@ export function Sidebar({ isOpen, isCollapsed, onClose, onToggleCollapse }: Side
     })
   }, [pathname, activeHref])
 
+  // Upsell badge — only for vendas module roles
+  const { data: upsellCount } = useUpsellCount()
+  const upsellTotal = upsellCount?.total ?? 0
+
   // Filtra grupos removendo itens que o role atual não pode ver.
   // Grupos que ficarem completamente vazios são omitidos.
   const visibleGroups = NAV_GROUPS.map((group) => ({
@@ -90,6 +95,8 @@ export function Sidebar({ isOpen, isCollapsed, onClose, onToggleCollapse }: Side
       })
       .map((item) => ({
         ...item,
+        // Inject upsell count badge into the Vendas nav item
+        badge: item.href === '/vendas' && upsellTotal > 0 ? upsellTotal : item.badge,
         children: item.children?.filter((child) => {
           if (!child.allowedRoles || child.allowedRoles.length === 0) return true
           return child.allowedRoles.includes(effectiveRole)
