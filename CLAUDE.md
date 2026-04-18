@@ -310,7 +310,7 @@ docker compose exec supabase-db psql -U postgres -d postgres
 |------|--------|
 | `/dashboard` | ✅ label "Início" na sidebar (ícone Home) |
 | `/bi` | 🚧 Placeholder "Em breve" — item disabled na sidebar |
-| `/vendas` | 🚧 Placeholder 3 tabs — Fase A concluída, Fases B/C/D pendentes |
+| `/vendas` | 🚧 Meu Painel ativo — Fases C/D pendentes |
 | `/eventos` | ✅ |
 | `/eventos/[id]` | ✅ |
 | `/checklists` | ✅ |
@@ -559,12 +559,26 @@ docker compose exec supabase-db psql -U postgres -d postgres
 - Roles: `VENDEDORA_ROLES`, `VENDAS_MODULE_ROLES`, `VENDAS_MANAGE_ROLES` em `src/config/roles.ts`
 - `User` type em `database.types.ts` inclui `seller_id: string | null`
 - `ROUTES.vendas = '/vendas'` em `src/lib/constants/index.ts`
-- Página `/vendas`: 3 tabs placeholder (Meu Painel / Upsell / Recompra); alerta quando vendedora sem seller_id; mensagem diferenciada para gestores
+- Página `/vendas`: 3 tabs; alerta quando vendedora sem seller_id
 - Convite de usuário (`/admin/usuarios/novo`): campo "Vincular à vendedora" obrigatório quando role=vendedora; hook `useAvailableSellersForInvite()` filtra sellers ativas + não-sistema + sem usuário vinculado
-- API `POST /api/admin/users`: valida `seller_id` obrigatório para `role=vendedora`; persiste via `UPDATE users SET seller_id`
+- API `POST /api/admin/users`: valida `seller_id` obrigatório + servidor valida seller existe, ativa, não-sistema, sem usuário já vinculado; persiste via `UPDATE users SET seller_id`
 - `AuthBootstrap`: `console.warn` quando vendedora logada não tem `seller_id`
 - TODO em `/configuracoes/vendedoras/vendedoras-client.tsx` para coluna "Usuário vinculado" (Fase futura)
-- Próximas fases: B (Meu Painel com KPIs), C (Upsell), D (Recompra)
+- Próximas fases: C (Upsell), D (Recompra)
+
+**Módulo Vendas — Fase B (Migration 059) — MEU PAINEL COMPLETO:**
+- Migration 059: 3 RPCs `get_vendas_my_kpis`, `get_vendas_daily_revenue`, `get_vendas_ranking` — guarda `super_admin, diretor, gerente, vendedora`
+- `get_vendas_my_kpis`: período atual + anterior em uma chamada (p_prev_start/p_prev_end); vendedora → força próprio seller_id; gestor → NULL agrega todas
+- `get_vendas_daily_revenue`: série diária com `cumulative_revenue` via window function `SUM(SUM(...)) OVER (ORDER BY date)`
+- `get_vendas_ranking`: apenas sellers ativas + não-sistema; acessível por vendedoras (sem drill-down no UI)
+- 5 pills de período: Mês atual, Mês anterior, 3M, 6M, 12M — `buildVendasPeriods()` em `_components/shared/period-types.ts`
+- 5 KPI cards com delta badge vs período anterior: Faturamento, Deals ganhos, Orders, Ticket médio, Conversão
+- Gráfico de receita acumulada: Recharts AreaChart com `useChartWidth` local + ResizeObserver
+- RankingTable: sortável; linha da vendedora logada destacada (`bg-brand-50`); drill-down via `SellerOrdersDrilldownSheet` existente (apenas gestores)
+- `SellerSelector` dropdown (gestores): "Todas (agregada)" = NULL; selecionar vendedora filtra KPIs + gráfico
+- `MetaPlaceholder`: card estático "Em breve — aguardando integração Ploomes"
+- `MeuPainelClient`: orquestrador com `useLoadingTimeout` 12s + error state com botão retry
+- `useVendasMyKpis`, `useVendasDailyRevenue`, `useVendasRanking` em `src/hooks/use-vendas.ts`
 
 ---
 
