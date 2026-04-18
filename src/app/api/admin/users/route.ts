@@ -44,6 +44,36 @@ export async function POST(request: Request) {
       )
     }
 
+    if (role === 'vendedora' && seller_id) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: sellerCheck } = await (adminSupabase as any)
+        .from('sellers')
+        .select('id, status, is_system_account')
+        .eq('id', seller_id)
+        .maybeSingle() as { data: { id: string; status: string; is_system_account: boolean } | null }
+      if (!sellerCheck) {
+        return NextResponse.json({ error: 'Vendedora não encontrada.' }, { status: 400 })
+      }
+      if (sellerCheck.status !== 'active' || sellerCheck.is_system_account) {
+        return NextResponse.json(
+          { error: 'Vendedora inválida: inativa ou conta de sistema.' },
+          { status: 400 }
+        )
+      }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: existingUser } = await (adminSupabase as any)
+        .from('users')
+        .select('id')
+        .eq('seller_id', seller_id)
+        .maybeSingle() as { data: { id: string } | null }
+      if (existingUser) {
+        return NextResponse.json(
+          { error: 'Esta vendedora já está vinculada a outro usuário.' },
+          { status: 400 }
+        )
+      }
+    }
+
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://cachola.cloud'
 
     const { data: newUser, error: createError } = await adminSupabase.auth.admin.inviteUserByEmail(
