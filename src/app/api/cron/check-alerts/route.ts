@@ -172,6 +172,35 @@ export async function GET(request: Request) {
   // Seção 4 (manutenções recorrentes) movida para migration do novo módulo
 
   // ─────────────────────────────────────────────────────────────
+  // 4. Tasks comerciais atrasadas → alertar assignee
+  // Dedup: unique index parcial por (user_id, type, link, dia UTC)
+  // garante no máximo 1 notificação por task por dia.
+  // ─────────────────────────────────────────────────────────────
+  try {
+    const { data: overdueTasks, error } = await supabase
+      .from('commercial_tasks')
+      .select('id, title, assignee_id')
+      .lt('due_date', `${todayStr}T00:00:00`)
+      .not('status', 'in', '("completed","cancelled")')
+      .not('assignee_id', 'is', null)
+
+    if (error) throw error
+
+    for (const task of overdueTasks ?? []) {
+      const { error: rpcErr } = await supabase.rpc('create_notification', {
+        p_user_id: task.assignee_id,
+        p_type:    'commercial_task_overdue',
+        p_title:   'Tarefa comercial atrasada',
+        p_body:    `A tarefa "${task.title}" está atrasada. Confira seu checklist comercial.`,
+        p_link:    `/vendas/checklist`,
+      })
+      if (!rpcErr) created++
+    }
+  } catch (e) {
+    errors.push(`commercial_task_overdue: ${e}`)
+  }
+
+  // ─────────────────────────────────────────────────────────────
   // 5. Retenção: remover notificações com mais de 30 dias
   // ─────────────────────────────────────────────────────────────
   let deletedCount = 0

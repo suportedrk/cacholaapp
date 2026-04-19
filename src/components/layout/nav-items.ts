@@ -19,10 +19,16 @@ import {
   FileText,
   UserCog,
   TrendingUp,
+  ClipboardCheck,
 } from 'lucide-react'
 import { ROUTES } from '@/lib/constants'
 import type { Module, Role } from '@/types/permissions'
-import { BI_ACCESS_ROLES, VENDAS_MODULE_ROLES } from '@/config/roles'
+import {
+  BI_ACCESS_ROLES,
+  VENDAS_MODULE_ROLES,
+  COMMERCIAL_CHECKLIST_ACCESS_ROLES,
+  COMMERCIAL_CHECKLIST_MANAGE_ROLES,
+} from '@/config/roles'
 
 export interface NavItem {
   label: string
@@ -77,6 +83,32 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: 'Início',         href: ROUTES.dashboard,  icon: Home },
       { label: 'BI',             href: '/bi',             icon: BarChart3,    allowedRoles: [...BI_ACCESS_ROLES]        },
       { label: 'Vendas',         href: ROUTES.vendas,     icon: TrendingUp,   allowedRoles: [...VENDAS_MODULE_ROLES]    },
+      {
+        label: 'Checklist Comercial',
+        href:  ROUTES.commercialChecklist,
+        icon:  ClipboardCheck,
+        allowedRoles: [...COMMERCIAL_CHECKLIST_ACCESS_ROLES],
+        children: [
+          {
+            label: 'Minhas Tarefas',
+            href:  ROUTES.commercialChecklist,
+            icon:  ClipboardCheck,
+            allowedRoles: [...COMMERCIAL_CHECKLIST_ACCESS_ROLES],
+          },
+          {
+            label: 'Equipe Comercial',
+            href:  ROUTES.commercialChecklistEquipe,
+            icon:  UsersRound,
+            allowedRoles: [...COMMERCIAL_CHECKLIST_MANAGE_ROLES],
+          },
+          {
+            label: 'Templates',
+            href:  ROUTES.commercialChecklistTemplates,
+            icon:  FileText,
+            allowedRoles: [...COMMERCIAL_CHECKLIST_MANAGE_ROLES],
+          },
+        ],
+      },
       { label: 'Eventos',        href: ROUTES.events,     icon: CalendarDays,  module: 'events'    },
       { label: 'Checklists',     href: ROUTES.checklists, icon: ClipboardList, module: 'checklists' },
       { label: 'Minhas Tarefas',   href: ROUTES.myTasks,    icon: ListTodo,     module: 'checklists' },
