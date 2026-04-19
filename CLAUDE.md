@@ -674,6 +674,25 @@ por pular essa validação.
 
 ---
 
+## LABORATÓRIO DE USUÁRIOS DE TESTE
+
+Scripts em `scripts/seed-test-users.ts` e `scripts/cleanup-test-users.ts`.
+Executar na VPS via `npx tsx scripts/seed-test-users.ts`.
+
+| Email | Role | Senha | Obs |
+|-------|------|-------|-----|
+| `teste-superadmin@cachola.cloud` | super_admin | `Teste@2026cacholaos!` | — |
+| `teste-diretor@cachola.cloud` | diretor | `Teste@2026cacholaos!` | — |
+| `teste-gerente@cachola.cloud` | gerente | `Teste@2026cacholaos!` | user_units → Pinheiros |
+| `teste-financeiro@cachola.cloud` | financeiro | `Teste@2026cacholaos!` | — |
+| `teste-vendedora@cachola.cloud` | vendedora | `Teste@2026cacholaos!` | seller_id → Raphaela Melo |
+
+- Seed é idempotente (skip se já existe) e recriável a qualquer momento
+- Cleanup deleta via `auth.admin.deleteUser` → CASCADE limpa `user_units` e `user_permissions`
+- `sellers` NÃO são afetados (ON DELETE SET NULL)
+
+---
+
 ## CREDENCIAIS DEV LOCAL
 
 ```
