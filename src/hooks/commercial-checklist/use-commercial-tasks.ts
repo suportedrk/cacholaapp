@@ -13,25 +13,29 @@ export type CommercialTaskSource   = 'manual' | 'template' | 'automation'
 export type MyTasksFilter          = 'today' | 'overdue' | 'upcoming_7d' | 'all'
 
 export interface CommercialTask {
-  id:                 string
-  unit_id:            string
-  assignee_id:        string
-  title:              string
-  description:        string | null
-  priority:           CommercialTaskPriority | null
-  status:             CommercialTaskStatus
-  due_date:           string | null
-  source:             CommercialTaskSource
-  template_id:        string | null
-  linked_entity_type: string | null
-  linked_entity_id:   string | null
-  notes:              string | null
-  created_by:         string | null
-  created_at:         string
-  updated_at:         string
+  id:                   string
+  unit_id:              string
+  assignee_id:          string
+  title:                string
+  description:          string | null
+  priority:             CommercialTaskPriority | null
+  status:               CommercialTaskStatus
+  due_date:             string | null
+  source:               CommercialTaskSource
+  template_id:          string | null
+  linked_entity_type:   string | null
+  linked_entity_id:     string | null
+  notes:                string | null
+  created_by:           string | null
+  created_at:           string
+  updated_at:           string
+  // Fase 2 — automação por stage Ploomes
+  automation_deal_id:   number | null
+  automation_stage_id:  number | null
+  automation_source_id: string | null
   // joined
-  assignee_name?:     string | null
-  unit_name?:         string | null
+  assignee_name?:       string | null
+  unit_name?:           string | null
 }
 
 export interface CommercialTaskFormInput {
@@ -93,6 +97,7 @@ export function useMyCommercialTasks(filter: MyTasksFilter = 'today') {
           id, unit_id, assignee_id, title, description, priority,
           status, due_date, source, template_id, linked_entity_type,
           linked_entity_id, notes, created_by, created_at, updated_at,
+          automation_deal_id, automation_stage_id, automation_source_id,
           units(name)
         `)
         .not('status', 'in', '("completed","cancelled")')
@@ -141,6 +146,7 @@ export function useTeamCommercialTasks(filters: TeamTaskFilters = {}) {
           id, unit_id, assignee_id, title, description, priority,
           status, due_date, source, template_id, linked_entity_type,
           linked_entity_id, notes, created_by, created_at, updated_at,
+          automation_deal_id, automation_stage_id, automation_source_id,
           users!commercial_tasks_assignee_id_fkey(name),
           units(name)
         `)

@@ -630,10 +630,22 @@ docker compose exec supabase-db psql -U postgres -d postgres
 - Hooks em `src/hooks/commercial-checklist/`: `use-commercial-templates.ts`, `use-commercial-template-items.ts`, `use-commercial-tasks.ts`, `use-apply-template.ts`
 - Rotas: `/vendas/checklist` (Minhas Tarefas), `/vendas/checklist/equipe` (Equipe Comercial), `/vendas/checklist/templates`, `/vendas/checklist/templates/[id]`
 - Todas as 4 páginas têm guard `hasRole` com `COMMERCIAL_CHECKLIST_ACCESS_ROLES` (Minhas Tarefas) ou `COMMERCIAL_CHECKLIST_MANAGE_ROLES` (demais)
-- Sidebar: "Checklist Comercial" com 3 sub-itens via `children` em `nav-items.ts`; badge sidebar consolidado Upsell+Recompra (não alterado)
+- Sidebar: "Checklist Comercial" com 4 sub-itens via `children` em `nav-items.ts`; badge sidebar consolidado Upsell+Recompra (não alterado)
 - Cron `check-alerts`: seção 4 notifica `commercial_task_overdue` para tarefas em atraso
 - `src/config/roles.ts`: `COMMERCIAL_CHECKLIST_MANAGE_ROLES` + `COMMERCIAL_CHECKLIST_ACCESS_ROLES` (super_admin, diretor, gerente [+ vendedora para Access])
-- Débitos técnicos abertos (não-bloqueantes): (a) `useSoftDeleteCommercialTemplate` exportado mas não conectado à UI; (b) `key="new"` em `templates/page.tsx` não muda → estado persiste ao fechar/reabrir form; (c) parent "Checklist Comercial" e filho "Minhas Tarefas" compartilham mesmo href (frágil, funciona via most-specific-match)
+- Débitos técnicos resolvidos na Fase 1.5 (commits ca29c0e + 2b18336): (a) archive/reactivate UI — `COMMERCIAL_CHECKLIST_ARCHIVE_ROLES` em `roles.ts`, botão Archive/ArchiveRestore na lista e na detalhe, banner amber quando inativo, "Aplicar" desabilitado; (b) key counter-based `new-${formInstance}` corrige estado residual do form; (c) sidebar `hasActiveChild` usa `pathname.startsWith(c.href + '/')` para robustez em sub-rotas
+
+**Checklist Comercial — Fase 2 (Migration 065) — Jornada do Negócio via Ploomes — COMPLETO:**
+- Migration 065: tabela `commercial_stage_automations` (unit_id nullable, stage_id BIGINT, template_id FK, active); ALTER `commercial_tasks` ADD `automation_deal_id BIGINT`, `automation_stage_id BIGINT`, `automation_source_id UUID`; 4 RLS policies; trigger function `trg_stage_automation_fn()` SECURITY DEFINER + 2 triggers em `ploomes_deals`; RPC `trigger_stage_automation(p_ploomes_deal_id BIGINT)` para disparo manual; RPC `get_ploomes_stages()` para UI
+- **Trigger pattern (Postgres, não TS):** AFTER INSERT + AFTER UPDATE OF stage_id em `ploomes_deals`; WHEN (NEW.stage_id IS DISTINCT FROM OLD.stage_id); EXCEPTION WHEN OTHERS isola falhas por automação
+- **Idempotência:** `IF EXISTS (automation_source_id=X AND automation_deal_id=Y AND status NOT IN ('completed','cancelled'))` — pula se task ativa já existe para o par (automação, deal)
+- **Resolve vendedora:** `sellers.owner_id = ploomes_deals.owner_id → users.seller_id = sellers.id`; skip se owner_id IS NULL ou sem usuário vinculado
+- **AVISO DE MASSA:** ao fazer carga massiva em `ploomes_deals` (backfill, re-sync), desativar triggers temporariamente: `ALTER TABLE ploomes_deals DISABLE TRIGGER trg_stage_automation_update, trg_stage_automation_insert;` ... `ENABLE TRIGGER ...`
+- Hooks: `use-commercial-automations.ts` (CRUD), `use-ploomes-stages.ts` (RPC `get_ploomes_stages`)
+- `CommercialTask` type ganhou `automation_deal_id`, `automation_stage_id`, `automation_source_id`; SELECT queries de ambas as funções incluem os novos campos
+- `task-card.tsx`: badge "Automática" (ícone Zap, badge-amber) + link ExternalLink para `app10.ploomes.com/deal/{automation_deal_id}` quando `source === 'automation'`
+- Rota `/vendas/checklist/automacoes`: CRUD de regras; guard `COMMERCIAL_CHECKLIST_MANAGE_ROLES`; delete restrito a `COMMERCIAL_CHECKLIST_ARCHIVE_ROLES`
+- Sidebar: 4º filho "Automações" com ícone `Zap`, `allowedRoles: [...COMMERCIAL_CHECKLIST_MANAGE_ROLES]`
 
 ---
 

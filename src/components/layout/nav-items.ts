@@ -20,6 +20,7 @@ import {
   UserCog,
   TrendingUp,
   ClipboardCheck,
+  Zap,
 } from 'lucide-react'
 import { ROUTES } from '@/lib/constants'
 import type { Module, Role } from '@/types/permissions'
@@ -105,6 +106,12 @@ export const NAV_GROUPS: NavGroup[] = [
             label: 'Templates',
             href:  ROUTES.commercialChecklistTemplates,
             icon:  FileText,
+            allowedRoles: [...COMMERCIAL_CHECKLIST_MANAGE_ROLES],
+          },
+          {
+            label: 'Automações',
+            href:  ROUTES.commercialChecklistAutomacoes,
+            icon:  Zap,
             allowedRoles: [...COMMERCIAL_CHECKLIST_MANAGE_ROLES],
           },
         ],

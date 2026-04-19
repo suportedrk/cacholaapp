@@ -3,7 +3,7 @@
 import { cn } from '@/lib/utils'
 import { formatDistanceToNow, isPast, isToday, isTomorrow, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { CheckSquare, Clock, User } from 'lucide-react'
+import { CheckSquare, Clock, ExternalLink, User, Zap } from 'lucide-react'
 import type { CommercialTask } from '@/hooks/commercial-checklist/use-commercial-tasks'
 
 interface TaskCardProps {
@@ -130,6 +130,28 @@ export function TaskCard({ task, showAssignee, onComplete, onClick }: TaskCardPr
             )}>
               {STATUS_LABEL[task.status]}
             </span>
+          )}
+
+          {/* Badge + link quando task gerada por automação */}
+          {task.source === 'automation' && (
+            <>
+              <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium badge-amber border">
+                <Zap className="h-3 w-3" />
+                Automática
+              </span>
+              {task.automation_deal_id && (
+                <a
+                  href={`https://app10.ploomes.com/deal/${task.automation_deal_id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="inline-flex items-center gap-1 text-text-link hover:underline"
+                >
+                  <ExternalLink className="h-3 w-3" />
+                  Deal
+                </a>
+              )}
+            </>
           )}
         </div>
 
