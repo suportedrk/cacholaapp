@@ -216,7 +216,9 @@ export function Sidebar({ isOpen, isCollapsed, onClose, onToggleCollapse }: Side
               <div className="px-2 space-y-0.5">
                 {group.items.map((item) => {
                   const hasChildren = item.children && item.children.length > 0
-                  const hasActiveChild = item.children?.some((c) => c.href === activeHref) ?? false
+                  const hasActiveChild = item.children?.some((c) =>
+                    c.href === activeHref || pathname.startsWith(c.href + '/')
+                  ) ?? false
                   const isActive = !hasChildren && item.href === activeHref
                   const isExpanded = expandedItems.has(item.href)
                   const isDisabled = item.disabled === true
