@@ -633,7 +633,7 @@ docker compose exec supabase-db psql -U postgres -d postgres
 - Sidebar: "Checklist Comercial" com 3 sub-itens via `children` em `nav-items.ts`; badge sidebar consolidado Upsell+Recompra (não alterado)
 - Cron `check-alerts`: seção 4 notifica `commercial_task_overdue` para tarefas em atraso
 - `src/config/roles.ts`: `COMMERCIAL_CHECKLIST_MANAGE_ROLES` + `COMMERCIAL_CHECKLIST_ACCESS_ROLES` (super_admin, diretor, gerente [+ vendedora para Access])
-- Débitos técnicos abertos (não-bloqueantes): (a) `useSoftDeleteCommercialTemplate` exportado mas não conectado à UI; (b) `key="new"` em `templates/page.tsx` não muda → estado persiste ao fechar/reabrir form; (c) parent "Checklist Comercial" e filho "Minhas Tarefas" compartilham mesmo href (frágil, funciona via most-specific-match)
+- Débitos técnicos resolvidos na Fase 1.5 (commits ca29c0e + 2b18336): (a) archive/reactivate UI — `COMMERCIAL_CHECKLIST_ARCHIVE_ROLES` em `roles.ts`, botão Archive/ArchiveRestore na lista e na detalhe, banner amber quando inativo, "Aplicar" desabilitado; (b) key counter-based `new-${formInstance}` corrige estado residual do form; (c) sidebar `hasActiveChild` usa `pathname.startsWith(c.href + '/')` para robustez em sub-rotas
 
 ---
 
