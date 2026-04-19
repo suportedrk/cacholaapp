@@ -625,6 +625,16 @@ docker compose exec supabase-db psql -U postgres -d postgres
 - `scripts/email-vendas-daily.ts`: e-mail consolidado (Upsell + Aniversários + Festas Passadas); `--dry-run` e `--sample` flags; `email_type='vendas_daily'`; cron **comentado** aguardando cadastro das vendedoras
 - RPC já correto (0-90 dias sem lower bound) — sem nova migration necessária
 
+**Checklist Comercial — Fase 1 / Fundação (Migration 064) — COMPLETO:**
+- Migration 064: 4 tabelas (`commercial_task_templates`, `commercial_template_items`, `commercial_tasks`, `commercial_task_completions`) + triggers + `can_view_commercial_template` + `can_view_commercial_task` + `apply_commercial_template` SECURITY DEFINER + dedup index atualizado para incluir `commercial_task_overdue`; 14 RLS policies
+- Hooks em `src/hooks/commercial-checklist/`: `use-commercial-templates.ts`, `use-commercial-template-items.ts`, `use-commercial-tasks.ts`, `use-apply-template.ts`
+- Rotas: `/vendas/checklist` (Minhas Tarefas), `/vendas/checklist/equipe` (Equipe Comercial), `/vendas/checklist/templates`, `/vendas/checklist/templates/[id]`
+- Todas as 4 páginas têm guard `hasRole` com `COMMERCIAL_CHECKLIST_ACCESS_ROLES` (Minhas Tarefas) ou `COMMERCIAL_CHECKLIST_MANAGE_ROLES` (demais)
+- Sidebar: "Checklist Comercial" com 3 sub-itens via `children` em `nav-items.ts`; badge sidebar consolidado Upsell+Recompra (não alterado)
+- Cron `check-alerts`: seção 4 notifica `commercial_task_overdue` para tarefas em atraso
+- `src/config/roles.ts`: `COMMERCIAL_CHECKLIST_MANAGE_ROLES` + `COMMERCIAL_CHECKLIST_ACCESS_ROLES` (super_admin, diretor, gerente [+ vendedora para Access])
+- Débitos técnicos abertos (não-bloqueantes): (a) `useSoftDeleteCommercialTemplate` exportado mas não conectado à UI; (b) `key="new"` em `templates/page.tsx` não muda → estado persiste ao fechar/reabrir form; (c) parent "Checklist Comercial" e filho "Minhas Tarefas" compartilham mesmo href (frágil, funciona via most-specific-match)
+
 ---
 
 ## REGRA DE PROCESSO (aprendizado Fase C.2)
