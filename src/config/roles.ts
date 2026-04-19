@@ -63,6 +63,27 @@ export const VENDAS_MANAGE_ROLES = [
   'gerente',
 ] as const satisfies readonly Role[]
 
+/** Gestão de templates e tarefas do checklist comercial (criar/editar). */
+export const COMMERCIAL_CHECKLIST_MANAGE_ROLES = [
+  'super_admin',
+  'diretor',
+  'gerente',
+] as const satisfies readonly Role[]
+
+/** Acesso ao checklist comercial (gestão + vendedoras). */
+export const COMMERCIAL_CHECKLIST_ACCESS_ROLES = [
+  'super_admin',
+  'diretor',
+  'gerente',
+  'vendedora',
+] as const satisfies readonly Role[]
+
+export type CommercialChecklistManageRole =
+  (typeof COMMERCIAL_CHECKLIST_MANAGE_ROLES)[number]
+
+export type CommercialChecklistAccessRole =
+  (typeof COMMERCIAL_CHECKLIST_ACCESS_ROLES)[number]
+
 /**
  * Helper type-safe: verifica se um role pertence a uma lista readonly.
  *

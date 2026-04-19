@@ -72,6 +72,9 @@ export const ROUTES = {
   unitSetup: '/admin/unidades/setup',
   minutes: '/atas',
   vendas: '/vendas',
+  commercialChecklist: '/vendas/checklist',
+  commercialChecklistEquipe: '/vendas/checklist/equipe',
+  commercialChecklistTemplates: '/vendas/checklist/templates',
 } as const
 
 // ============================================================
