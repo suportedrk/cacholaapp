@@ -2,13 +2,20 @@
 
 import { use, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Play, Pencil, ClipboardCheck } from 'lucide-react'
+import { ArrowLeft, Play, Pencil, ClipboardCheck, Archive, ArchiveRestore, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/hooks/use-auth'
-import { hasRole, COMMERCIAL_CHECKLIST_MANAGE_ROLES } from '@/config/roles'
+import {
+  hasRole,
+  COMMERCIAL_CHECKLIST_MANAGE_ROLES,
+  COMMERCIAL_CHECKLIST_ARCHIVE_ROLES,
+} from '@/config/roles'
 import {
   useCommercialTemplate,
+  useSoftDeleteCommercialTemplate,
+  useUpdateCommercialTemplate,
 } from '@/hooks/commercial-checklist/use-commercial-templates'
+import { ConfirmDialog } from '@/components/shared/confirm-dialog'
 import {
   useCommercialTemplateItems,
   useCreateCommercialTemplateItem,
@@ -46,9 +53,17 @@ export default function EditTemplatePage({ params }: PageProps) {
 }
 
 function EditTemplateContent({ id }: { id: string }) {
+  const { profile } = useAuth()
   const router   = useRouter()
-  const [editOpen,  setEditOpen]  = useState(false)
-  const [applyOpen, setApplyOpen] = useState(false)
+  const [editOpen,    setEditOpen]    = useState(false)
+  const [applyOpen,   setApplyOpen]   = useState(false)
+  const [archivePending, setArchivePending] = useState(false)
+
+  const softDelete = useSoftDeleteCommercialTemplate()
+  const updateTpl  = useUpdateCommercialTemplate()
+
+  const canArchive = hasRole(profile?.role, COMMERCIAL_CHECKLIST_ARCHIVE_ROLES)
+  const isActing   = softDelete.isPending || updateTpl.isPending
 
   const { data: template, isLoading: tplLoading, isError: tplError, refetch } =
     useCommercialTemplate(id)
@@ -144,6 +159,14 @@ function EditTemplateContent({ id }: { id: string }) {
         </Button>
       </div>
 
+      {/* Inactive banner */}
+      {!template.active && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 p-3 flex items-center gap-2 text-sm text-amber-800 dark:text-amber-300">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          Este template está arquivado e não pode ser aplicado a eventos. Reative-o para voltar a usá-lo.
+        </div>
+      )}
+
       {/* Template card */}
       <div className="rounded-lg border bg-card p-5">
         <div className="flex items-start justify-between gap-4">
@@ -173,11 +196,24 @@ function EditTemplateContent({ id }: { id: string }) {
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
+            {canArchive && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setArchivePending(true)}
+                title={template.active ? 'Arquivar template' : 'Reativar template'}
+              >
+                {template.active
+                  ? <><Archive className="h-4 w-4 mr-1.5" />Arquivar</>
+                  : <><ArchiveRestore className="h-4 w-4 mr-1.5" />Reativar</>
+                }
+              </Button>
+            )}
             <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
               <Pencil className="h-4 w-4 mr-1.5" />
               Editar
             </Button>
-            <Button size="sm" onClick={() => setApplyOpen(true)}>
+            <Button size="sm" onClick={() => setApplyOpen(true)} disabled={!template.active}>
               <Play className="h-4 w-4 mr-1.5" />
               Aplicar
             </Button>
@@ -224,6 +260,27 @@ function EditTemplateContent({ id }: { id: string }) {
       <ApplyTemplateDialog
         template={applyOpen ? template : null}
         onClose={() => setApplyOpen(false)}
+      />
+      <ConfirmDialog
+        open={archivePending}
+        onOpenChange={(o) => { if (!o) setArchivePending(false) }}
+        title={template.active ? 'Arquivar template?' : 'Reativar template?'}
+        description={
+          template.active
+            ? 'O template ficará inativo e não poderá ser aplicado a novos eventos. Pode ser reativado a qualquer momento.'
+            : 'O template voltará a estar disponível para aplicação em eventos.'
+        }
+        confirmLabel={template.active ? 'Arquivar' : 'Reativar'}
+        destructive={template.active}
+        loading={isActing}
+        onConfirm={async () => {
+          if (template.active) {
+            await softDelete.mutateAsync(template.id)
+          } else {
+            await updateTpl.mutateAsync({ id: template.id, title: template.title, active: true })
+          }
+          setArchivePending(false)
+        }}
       />
     </div>
   )

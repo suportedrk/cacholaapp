@@ -1,16 +1,25 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, FileText, ChevronRight } from 'lucide-react'
+import { Plus, FileText, ChevronRight, Archive, ArchiveRestore } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/hooks/use-auth'
-import { hasRole, COMMERCIAL_CHECKLIST_MANAGE_ROLES } from '@/config/roles'
-import { useCommercialTemplates } from '@/hooks/commercial-checklist/use-commercial-templates'
+import {
+  hasRole,
+  COMMERCIAL_CHECKLIST_MANAGE_ROLES,
+  COMMERCIAL_CHECKLIST_ARCHIVE_ROLES,
+} from '@/config/roles'
+import {
+  useCommercialTemplates,
+  useSoftDeleteCommercialTemplate,
+  useUpdateCommercialTemplate,
+} from '@/hooks/commercial-checklist/use-commercial-templates'
 import { useLoadingTimeout } from '@/hooks/use-loading-timeout'
+import { ConfirmDialog } from '@/components/shared/confirm-dialog'
 import { TemplateForm } from '../_components/template-form'
 
 export default function TemplatesPage() {
@@ -28,13 +37,37 @@ export default function TemplatesPage() {
 }
 
 function TemplatesContent() {
+  const { profile } = useAuth()
   const [showInactive, setShowInactive] = useState(false)
   const [formOpen,     setFormOpen]     = useState(false)
+  const [formInstance, setFormInstance] = useState(0)
+  const [pending, setPending] = useState<{ id: string; action: 'archive' | 'reactivate' } | null>(null)
 
   const { data, isLoading, isError, refetch } = useCommercialTemplates(showInactive)
   const { isTimedOut, retry } = useLoadingTimeout(isLoading)
+  const softDelete  = useSoftDeleteCommercialTemplate()
+  const update      = useUpdateCommercialTemplate()
 
-  const templates = data ?? []
+  const templates  = data ?? []
+  const canArchive = hasRole(profile?.role, COMMERCIAL_CHECKLIST_ARCHIVE_ROLES)
+  const isActing   = softDelete.isPending || update.isPending
+
+  function handleCloseForm() {
+    setFormOpen(false)
+    setFormInstance((n) => n + 1)
+  }
+
+  async function handleConfirmPending() {
+    if (!pending) return
+    if (pending.action === 'archive') {
+      await softDelete.mutateAsync(pending.id)
+    } else {
+      const tpl = templates.find((t) => t.id === pending.id)
+      if (!tpl) return
+      await update.mutateAsync({ id: pending.id, title: tpl.title, active: true })
+    }
+    setPending(null)
+  }
 
   return (
     <div className="space-y-6">
@@ -101,48 +134,89 @@ function TemplatesContent() {
       {!isLoading && !isError && templates.length > 0 && (
         <div className="space-y-3">
           {templates.map((tpl) => (
-            <Link
+            <div
               key={tpl.id}
-              href={`/vendas/checklist/templates/${tpl.id}`}
               className={cn(
-                'flex items-center gap-4 rounded-lg border bg-card p-4 card-interactive',
+                'flex items-center gap-2 rounded-lg border bg-card transition-colors hover:bg-muted/30',
                 !tpl.active && 'opacity-60',
               )}
             >
-              <span className="icon-brand rounded-md p-2 shrink-0">
-                <FileText className="h-4 w-4" />
-              </span>
+              <Link
+                href={`/vendas/checklist/templates/${tpl.id}`}
+                className="flex items-center gap-4 flex-1 min-w-0 p-4"
+              >
+                <span className="icon-brand rounded-md p-2 shrink-0">
+                  <FileText className="h-4 w-4" />
+                </span>
 
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <p className="font-medium text-sm text-text-primary">{tpl.title}</p>
-                  {!tpl.active && (
-                    <span className="badge-gray border text-xs rounded-full px-2 py-0.5">
-                      Inativo
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="font-medium text-sm text-text-primary">{tpl.title}</p>
+                    {!tpl.active && (
+                      <span className="badge-gray border text-xs rounded-full px-2 py-0.5">
+                        Inativo
+                      </span>
+                    )}
+                    <span className="badge-brand border text-xs rounded-full px-2 py-0.5">
+                      {tpl.unit_name ?? 'Global'}
                     </span>
+                  </div>
+
+                  {tpl.description && (
+                    <p className="text-xs text-text-tertiary mt-0.5 line-clamp-1">{tpl.description}</p>
                   )}
-                  <span className="badge-brand border text-xs rounded-full px-2 py-0.5">
-                    {tpl.unit_name ?? 'Global'}
-                  </span>
+
+                  <p className="text-xs text-text-secondary mt-1">
+                    Criado por {tpl.creator_name ?? '—'}
+                  </p>
                 </div>
 
-                {tpl.description && (
-                  <p className="text-xs text-text-tertiary mt-0.5 line-clamp-1">{tpl.description}</p>
-                )}
+                <ChevronRight className="h-4 w-4 text-text-tertiary shrink-0" />
+              </Link>
 
-                <p className="text-xs text-text-secondary mt-1">
-                  Criado por {tpl.creator_name ?? '—'}
-                </p>
-              </div>
-
-              <ChevronRight className="h-4 w-4 text-text-tertiary shrink-0" />
-            </Link>
+              {canArchive && (
+                <div className="pr-3">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-text-tertiary hover:text-text-primary"
+                    title={tpl.active ? 'Arquivar template' : 'Reativar template'}
+                    onClick={() => setPending({ id: tpl.id, action: tpl.active ? 'archive' : 'reactivate' })}
+                  >
+                    {tpl.active
+                      ? <Archive className="h-4 w-4" />
+                      : <ArchiveRestore className="h-4 w-4" />
+                    }
+                  </Button>
+                </div>
+              )}
+            </div>
           ))}
         </div>
       )}
 
-      {/* Create form */}
-      <TemplateForm key="new" open={formOpen} onClose={() => setFormOpen(false)} />
+      {/* Create form — counter-based key resets state on each open/close cycle */}
+      <TemplateForm
+        key={`new-${formInstance}`}
+        open={formOpen}
+        onClose={handleCloseForm}
+      />
+
+      {/* Archive / Reactivate confirmation */}
+      <ConfirmDialog
+        open={!!pending}
+        onOpenChange={(o) => { if (!o) setPending(null) }}
+        title={pending?.action === 'archive' ? 'Arquivar template?' : 'Reativar template?'}
+        description={
+          pending?.action === 'archive'
+            ? 'O template ficará inativo e não poderá ser aplicado a novos eventos. Pode ser reativado a qualquer momento.'
+            : 'O template voltará a estar disponível para aplicação em eventos.'
+        }
+        confirmLabel={pending?.action === 'archive' ? 'Arquivar' : 'Reativar'}
+        destructive={pending?.action === 'archive'}
+        loading={isActing}
+        onConfirm={handleConfirmPending}
+      />
     </div>
   )
 }

@@ -78,11 +78,20 @@ export const COMMERCIAL_CHECKLIST_ACCESS_ROLES = [
   'vendedora',
 ] as const satisfies readonly Role[]
 
+/** Pode arquivar/reativar templates do checklist comercial (gerente pode criar mas não arquivar). */
+export const COMMERCIAL_CHECKLIST_ARCHIVE_ROLES = [
+  'super_admin',
+  'diretor',
+] as const satisfies readonly Role[]
+
 export type CommercialChecklistManageRole =
   (typeof COMMERCIAL_CHECKLIST_MANAGE_ROLES)[number]
 
 export type CommercialChecklistAccessRole =
   (typeof COMMERCIAL_CHECKLIST_ACCESS_ROLES)[number]
+
+export type CommercialChecklistArchiveRole =
+  (typeof COMMERCIAL_CHECKLIST_ARCHIVE_ROLES)[number]
 
 /**
  * Helper type-safe: verifica se um role pertence a uma lista readonly.
