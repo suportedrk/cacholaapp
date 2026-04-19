@@ -75,6 +75,7 @@ export const ROUTES = {
   commercialChecklist: '/vendas/checklist',
   commercialChecklistEquipe: '/vendas/checklist/equipe',
   commercialChecklistTemplates: '/vendas/checklist/templates',
+  commercialChecklistAutomacoes: '/vendas/checklist/automacoes',
 } as const
 
 // ============================================================

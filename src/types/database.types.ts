@@ -67,11 +67,12 @@ export interface Database {
       provider_documents:   { Row: ProviderDocument;    Insert: Partial<ProviderDocument>;   Update: Partial<ProviderDocument>;   Relationships: [] }
       event_providers:      { Row: EventProvider;       Insert: Partial<EventProvider>;      Update: Partial<EventProvider>;      Relationships: [] }
       provider_ratings:     { Row: ProviderRating;      Insert: Partial<ProviderRating>;     Update: Partial<ProviderRating>;     Relationships: [] }
-      // Checklist Comercial (Migration 064)
-      commercial_task_templates:   { Row: CommercialTaskTemplate;   Insert: Partial<CommercialTaskTemplate>;   Update: Partial<CommercialTaskTemplate>;   Relationships: [] }
-      commercial_template_items:   { Row: CommercialTemplateItem;   Insert: Partial<CommercialTemplateItem>;   Update: Partial<CommercialTemplateItem>;   Relationships: [] }
-      commercial_tasks:            { Row: CommercialTaskRow;        Insert: Partial<CommercialTaskRow>;        Update: Partial<CommercialTaskRow>;        Relationships: [] }
-      commercial_task_completions: { Row: CommercialTaskCompletion; Insert: Partial<CommercialTaskCompletion>; Update: Partial<CommercialTaskCompletion>; Relationships: [] }
+      // Checklist Comercial (Migration 064–065)
+      commercial_task_templates:     { Row: CommercialTaskTemplate;        Insert: Partial<CommercialTaskTemplate>;        Update: Partial<CommercialTaskTemplate>;        Relationships: [] }
+      commercial_template_items:     { Row: CommercialTemplateItem;        Insert: Partial<CommercialTemplateItem>;        Update: Partial<CommercialTemplateItem>;        Relationships: [] }
+      commercial_tasks:              { Row: CommercialTaskRow;             Insert: Partial<CommercialTaskRow>;             Update: Partial<CommercialTaskRow>;             Relationships: [] }
+      commercial_task_completions:   { Row: CommercialTaskCompletion;      Insert: Partial<CommercialTaskCompletion>;      Update: Partial<CommercialTaskCompletion>;      Relationships: [] }
+      commercial_stage_automations:  { Row: CommercialStageAutomationRow;  Insert: Partial<CommercialStageAutomationRow>;  Update: Partial<CommercialStageAutomationRow>;  Relationships: [] }
       // Sistema
       notifications:        { Row: AppNotification;     Insert: Partial<AppNotification>; Update: Partial<AppNotification>; Relationships: [] }
       audit_logs:           { Row: AuditLog;            Insert: Partial<AuditLog>;       Update: Partial<AuditLog>;       Relationships: [] }
@@ -117,8 +118,10 @@ export interface Database {
       get_bi_sellers_ranking:        { Args: { p_unit_id?: string | null; p_period_months?: number }; Returns: { owner_name: string; leads_count: number; won_count: number; lost_count: number; open_count: number; conversion_rate: number; avg_ticket: number; total_revenue: number }[] }
       get_bi_seller_history:         { Args: { p_owner_name: string; p_unit_id?: string | null; p_period_months?: number }; Returns: { month_label: string; leads_count: number; won_count: number; revenue: number; avg_days_to_close: number | null }[] }
       get_bi_seller_funnel:          { Args: { p_owner_name: string; p_unit_id?: string | null; p_period_months?: number }; Returns: { bucket: string; deals_count: number; total_value: number }[] }
-      // ── Checklist Comercial (Migration 064) ──────────────────────────────────
+      // ── Checklist Comercial (Migration 064–065) ──────────────────────────────
       apply_commercial_template:     { Args: { p_template_id: string; p_assignee_id: string; p_base_date: string }; Returns: number }
+      trigger_stage_automation:      { Args: { p_ploomes_deal_id: number }; Returns: number }
+      get_ploomes_stages:            { Args: Record<string, never>; Returns: { stage_id: number; stage_name: string }[] }
     }
     Enums: Record<string, never>
   }
@@ -1328,22 +1331,38 @@ export type CommercialTemplateItem = {
 }
 
 export type CommercialTaskRow = {
-  id:                 string
-  unit_id:            string
-  assignee_id:        string
-  title:              string
-  description:        string | null
-  priority:           CommercialTaskPriority | null
-  status:             CommercialTaskStatus
-  due_date:           string | null
-  source:             CommercialTaskSource
-  template_id:        string | null
-  linked_entity_type: string | null
-  linked_entity_id:   string | null
-  notes:              string | null
-  created_by:         string | null
-  created_at:         string
-  updated_at:         string
+  id:                   string
+  unit_id:              string
+  assignee_id:          string
+  title:                string
+  description:          string | null
+  priority:             CommercialTaskPriority | null
+  status:               CommercialTaskStatus
+  due_date:             string | null
+  source:               CommercialTaskSource
+  template_id:          string | null
+  linked_entity_type:   string | null
+  linked_entity_id:     string | null
+  notes:                string | null
+  created_by:           string | null
+  created_at:           string
+  updated_at:           string
+  // Fase 2 — automação por stage Ploomes (Migration 065)
+  automation_deal_id:   number | null
+  automation_stage_id:  number | null
+  automation_source_id: string | null
+}
+
+export type CommercialStageAutomationRow = {
+  id:         string
+  unit_id:    string | null
+  stage_id:   number
+  stage_name: string | null
+  template_id: string
+  active:     boolean
+  created_by: string | null
+  created_at: string
+  updated_at: string
 }
 
 export type CommercialTaskCompletion = {
