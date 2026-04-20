@@ -44,6 +44,7 @@ export { tplEventTomorrow } from './email-templates/event-tomorrow'
 export { tplChecklistOverdue } from './email-templates/checklist-overdue'
 export { tplGenericNotification } from './email-templates/generic-notification'
 export { tplMeetingMinuteNotification } from './email-templates/meeting-minute-notification'
+export { tplBackupFailure } from './email-templates/backup-failure'
 
 // ─────────────────────────────────────────────────────────────
 // SEND — graceful fallback (nunca lança exceção)
