@@ -378,6 +378,7 @@ docker compose exec supabase-db psql -U postgres -d postgres
 | Retry | `retry: (count, err) => count < 3 && err?.status !== 401 && err?.status !== 403` |
 | Páginas DEVEM tratar `isError` | Nunca só `isLoading` — sempre banner "Tentar novamente" |
 | `useLoadingTimeout(isLoading)` | Safety net 12s → exibe retry em vez de skeleton eterno |
+| **PITFALL `useLoadingTimeout`** | Retorna `{ isTimedOut, retry }` — **NUNCA** usar sem desestruturar. `const isTimeout = useLoadingTimeout(...)` é sempre truthy (objeto) → página entra em estado de erro imediatamente. Correto: `const { isTimedOut: isTimeout } = useLoadingTimeout(isLoading)` |
 | `createClient()` é singleton | Uma instância = um lock. Múltiplas instâncias → timeouts de 5s |
 | NUNCA `getUser()` em `useEffect` | Strict Mode roda 2× → 2 lock acquisitions concorrentes |
 | `AppReadyGate` em `(auth)/layout.tsx` | Renderiza filhos só quando `isSessionReady && _hasHydrated` |
@@ -742,6 +743,50 @@ por pular essa validação.
 
 ---
 
+## REGRA DE VALIDAÇÃO PÓS-DEPLOY (aprendizado sessão backup/bi)
+
+**TypeScript limpo + curl 200 NÃO é validação suficiente para bugs de estado de UI.**
+
+Ao fazer fix de loading/error state em qualquer página (ex.: `useLoadingTimeout`,
+`isError`, skeleton, error banner), a validação obrigatória é:
+
+1. Após deploy, abrir a rota em **janela anônima** logada como super_admin
+2. Confirmar que a tela renderiza o conteúdo esperado (KPIs, tabela, gráficos)
+3. Só então reportar o fix como resolvido
+
+Motivação: `/admin/backups` e `/bi` tinham o mesmo bug (`useLoadingTimeout` sem
+desestruturar). O fix do `/admin/backups` foi validado visualmente e funcionou. O `/bi`
+ficou quebrado por semanas porque não houve validação — a suposição "o código está
+correto" não substituiu o olho humano na tela.
+
+**Corolário:** se após deploy a tela ainda mostrar erro, reportar ao Bruno antes de
+assumir que o fix resolveu.
+
+---
+
+## REGRA NEXT.JS APP ROUTER — GUARD DE ROLE EM LAYOUT
+
+Ao testar se um layout guard (`requireRoleServer`) está funcionando:
+
+- O redirect de um Server Component nested dentro de Client Component wrappers
+  chega ao browser como payload `NEXT_REDIRECT`, **não** como HTTP 307
+- Isso significa que `curl -I /rota-protegida` pode retornar 200 mesmo com o guard ativo
+- A única validação real é **abrir no browser logado com a role errada** e confirmar /403
+
+Padrão correto de guard em layout (Server Component):
+```ts
+// src/app/(auth)/modulo/layout.tsx
+import { requireRoleServer } from '@/lib/auth/require-role'
+import { MODULO_ROLES } from '@/config/roles'
+
+export default async function Layout({ children }: { children: React.ReactNode }) {
+  await requireRoleServer(MODULO_ROLES)  // redirect('/403') se insuficiente
+  return <>{children}</>
+}
+```
+
+---
+
 ## DÉBITOS TÉCNICOS
 
 - **Sellers órfãos:** sync de sellers deve garantir que todo `owner_id` que aparece em
@@ -751,6 +796,16 @@ por pular essa validação.
   puxar clientes de 10–13 meses atrás com owners antigos.
 - **`ploomes_order_products_backup_20260417`** pode ser dropada após validação do primeiro cron
   pós-deploy do fix de ghost rows (commit 8b8c589).
+- **Backup hardening — On the horizon (não urgente):**
+  - `backup_log` só registra `_db.sql.gz`. `_storage.tar.gz` e `_config.tar.gz` não têm
+    registro → a página `/admin/backups` e o cron `backup-check` não detectam falha nesses dois.
+    Solução futura: `backup-full.sh` chamar `log_backup_row()` para os 3 artefatos (ou 4 com checksum).
+  - Backup diário verifica ausência apenas após 04:00 local (backup roda às 03:00). Se o servidor
+    mudar de timezone ou o cron rodar antes das 04:00, a detecção falha silenciosamente.
+    Solução futura: usar `now AT TIME ZONE 'America/Sao_Paulo'` explicitamente no route handler.
+  - `email_sent_log` dedup exige `recipient_user_id` (FK em `users`). Se `BACKUP_ALERT_EMAIL` não
+    existir em `users`, o e-mail é enviado mas não há registro → pode disparar múltiplos alertas
+    no mesmo dia. Solução futura: dedup por `recipient_email TEXT` diretamente.
 
 ---
 

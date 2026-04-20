@@ -119,7 +119,7 @@ export default function BIPage() {
 
   const isLoading = conversion.isLoading || salesMetrics.isLoading || kpis.isLoading
   const isError   = conversion.isError   || salesMetrics.isError
-  const isTimeout = useLoadingTimeout(isLoading)
+  const { isTimedOut: isTimeout } = useLoadingTimeout(isLoading)
 
   const currentMonth = getCurrentMonth()
 
