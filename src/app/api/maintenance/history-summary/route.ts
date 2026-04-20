@@ -4,6 +4,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import { requireRoleApi } from '@/lib/auth/require-role'
+import { MAINTENANCE_MODULE_ROLES } from '@/config/roles'
 
 type TicketNature = 'emergencial' | 'pontual' | 'agendado' | 'preventivo'
 
@@ -19,9 +21,10 @@ export interface HistorySummaryResponse {
 
 export async function GET(req: NextRequest) {
   try {
+    const guard = await requireRoleApi(MAINTENANCE_MODULE_ROLES)
+    if (!guard.ok) return guard.response
+
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 })
 
     const { searchParams } = new URL(req.url)
     const unitId    = searchParams.get('unit_id')

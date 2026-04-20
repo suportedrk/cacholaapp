@@ -674,6 +674,75 @@ por pular essa validação.
 
 ---
 
+## CONTROLE DE ACESSO — ARQUITETURA (Fase 2.8a)
+
+**Commits:** `7c463f8` → `316f316` (develop/main)
+
+### Camadas de segurança (defense-in-depth)
+
+| Camada | Arquivo | Responsabilidade |
+|--------|---------|-----------------|
+| Edge (proxy) | `src/proxy.ts` | Session refresh + redirect unauthenticated → /login + is_active check |
+| Layout Server | `src/app/(auth)/**/layout.tsx` | Role check por rota — redirect to `/403` |
+| API handler | `src/app/api/**` | `requireRoleApi()` — retorna 401/403 |
+
+> ⚠️ **NUNCA** usar `next/headers` em `proxy.ts` (middleware). O proxy usa `@supabase/ssr` com `request.cookies` diretamente.
+
+### Helper `requireRoleServer` / `requireRoleApi`
+
+```ts
+// Layout (Server Component):
+await requireRoleServer(ADMIN_ACCESS_ROLES)   // redirect('/403') se role insuficiente
+
+// API Route Handler:
+const guard = await requireRoleApi(ADMIN_USERS_MANAGE_ROLES)
+if (!guard.ok) return guard.response          // NextResponse 401/403
+```
+
+Arquivo: `src/lib/auth/require-role.ts`
+
+### Constantes de role (src/config/roles.ts) — adicionadas na Fase 2.8a
+
+| Constante | Roles | Rota |
+|-----------|-------|------|
+| `ADMIN_ACCESS_ROLES` | super_admin, diretor, rh | `/admin/**` (pai) |
+| `ADMIN_USERS_MANAGE_ROLES` | super_admin, rh | `/admin/usuarios` |
+| `ADMIN_UNITS_MANAGE_ROLES` | super_admin, diretor | `/admin/unidades` |
+| `ADMIN_LOGS_VIEW_ROLES` | super_admin, diretor | `/admin/logs` |
+
+### Layouts de guarda criados/corrigidos
+
+| Arquivo | Roles | Bug corrigido |
+|---------|-------|---------------|
+| `src/app/(auth)/admin/layout.tsx` | `ADMIN_ACCESS_ROLES` | BUG2 (remov. gerente) |
+| `src/app/(auth)/admin/usuarios/layout.tsx` | `ADMIN_USERS_MANAGE_ROLES` | BUG2 (sub-rota) |
+| `src/app/(auth)/admin/unidades/layout.tsx` | `ADMIN_UNITS_MANAGE_ROLES` | — |
+| `src/app/(auth)/admin/logs/layout.tsx` | `ADMIN_LOGS_VIEW_ROLES` | — |
+| `src/app/(auth)/bi/layout.tsx` | `BI_ACCESS_ROLES` | BUG4 (vendedora bloq.) |
+| `src/app/(auth)/vendas/layout.tsx` | `VENDAS_MODULE_ROLES` | BUG3 (financeiro bloq.) |
+| `src/app/(auth)/configuracoes/vendedoras/layout.tsx` | `SELLERS_MANAGE_ROLES` | BUG1+BUG5 |
+
+### Página `/403`
+
+`src/app/403/page.tsx` — Server Component, acessível sem auth (em `PUBLIC_ROUTES` do `proxy.ts`).
+
+### Bugs corrigidos (5 críticos)
+
+| Bug | Role | Rota bloqueada antes | Status |
+|-----|------|----------------------|--------|
+| BUG1 | gerente | `/configuracoes/vendedoras` | ✅ Corrigido |
+| BUG2 | gerente | `/admin/usuarios` (+ escalação API) | ✅ Corrigido |
+| BUG3 | financeiro | `/vendas` | ✅ Corrigido |
+| BUG4 | vendedora | `/bi` | ✅ Corrigido |
+| BUG5 | vendedora | `/configuracoes/vendedoras` | ✅ Corrigido |
+
+### Débito: Fase 2.8b (futura)
+
+- Adicionar `teste-rh@cachola.cloud` ao seed script para testar `/admin/usuarios` com role rh
+- BUG6-11 (ELEVADOS): vendedora/financeiro acessando manutencao/equipamentos/prestadores/relatorios — precisam de layouts específicos
+
+---
+
 ## LABORATÓRIO DE USUÁRIOS DE TESTE
 
 Scripts em `scripts/seed-test-users.ts` e `scripts/cleanup-test-users.ts`.

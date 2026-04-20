@@ -1,6 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database.types'
 import { sendEmail, tplMaintenanceEmergency } from '@/lib/email'
+import { requireRoleApi } from '@/lib/auth/require-role'
+import { MAINTENANCE_MODULE_ROLES } from '@/config/roles'
 
 /**
  * POST /api/email/maintenance-emergency
@@ -11,6 +13,9 @@ import { sendEmail, tplMaintenanceEmergency } from '@/lib/email'
  */
 export async function POST(request: Request) {
   try {
+    const guard = await requireRoleApi(MAINTENANCE_MODULE_ROLES)
+    if (!guard.ok) return guard.response
+
     const { orderId } = await request.json() as { orderId?: string }
     if (!orderId) return Response.json({ error: 'orderId required' }, { status: 400 })
 

@@ -113,6 +113,33 @@ export const ADMIN_LOGS_VIEW_ROLES = [
   'diretor',
 ] as const satisfies readonly Role[]
 
+// ──────────────────────────────────────────────────────────────
+// Módulos Operacionais (/manutencao, /equipamentos, /prestadores)
+// ──────────────────────────────────────────────────────────────
+
+/**
+ * Acesso aos módulos de Manutenção e Equipamentos.
+ * Inclui a role `manutencao` (técnicos internos).
+ * /relatorios reutiliza BI_ACCESS_ROLES (super_admin, diretor, gerente, financeiro).
+ */
+export const MAINTENANCE_MODULE_ROLES = [
+  'super_admin',
+  'diretor',
+  'gerente',
+  'manutencao',
+] as const satisfies readonly Role[]
+
+/**
+ * Acesso ao módulo de Prestadores (gestão de terceiros).
+ * Exclui `manutencao` intencionalmente — prestadores externos são responsabilidade
+ * de gestão, não dos técnicos operacionais.
+ */
+export const PRESTADORES_ACCESS_ROLES = [
+  'super_admin',
+  'diretor',
+  'gerente',
+] as const satisfies readonly Role[]
+
 export type CommercialChecklistManageRole =
   (typeof COMMERCIAL_CHECKLIST_MANAGE_ROLES)[number]
 
