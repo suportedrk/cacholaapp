@@ -285,6 +285,34 @@ Backups locais (`/backup/daily|weekly|monthly`) são enviados diariamente para o
 
 > **Testado em 20/04/2026:** restore do backup daily em container descartável (`postgres:15`) devolveu 719 events e 7.278 deals — compatível com produção.
 
+### Dashboard de Backups — `/admin/backups` (Migration 067)
+
+Página de observabilidade de backups, restrita a `super_admin` + `diretor`.
+
+**Arquitetura:**
+- Migration 067: tabela `backup_log` (kind × source × filename, UNIQUE INDEX para idempotência)
+- `BACKUP_VIEW_ROLES = ['super_admin', 'diretor']` em `src/config/roles.ts`
+- Layout guard: `src/app/(auth)/admin/backups/layout.tsx`
+- API `GET /api/admin/backups` — lista todos os registros
+- API `POST /api/admin/backups/[id]/download-url` — gera presigned URL R2 (15 min, via `@aws-sdk/client-s3`). Retorna 503 se `R2_ENDPOINT` não configurado (ex: ambiente local).
+- Hook: `src/hooks/use-backups.ts` — `useBackups()` + `requestDownloadUrl()`
+- Sidebar: item "Backups" (ícone `HardDrive`) no grupo Administração
+
+**Variáveis de ambiente na VPS** (em `/opt/cacholaapp/.env`, **nunca no repo**):
+```
+R2_ENDPOINT=https://6208eacdf92f16868ea59a71cac15941.r2.cloudflarestorage.com
+R2_ACCESS_KEY_ID=ec98c6fff66e92918186c162e784dcc9
+R2_SECRET_ACCESS_KEY=<scoped key — ver rclone.conf na VPS>
+R2_BUCKET=cacholaos-backups
+```
+
+**Scripts VPS atualizados:**
+- `backup-full.sh` — chama `log_backup_row()` ao fim (sucesso) e via trap ERR (falha)
+- `upload-to-r2.sh` — chama `log_r2_rows()` após cada `rclone copy` por folder
+- `backfill-backup-log.sh` — popula dados históricos (executado uma vez em 20/04/2026; 16 rows inseridas)
+
+**Workflow deploy:** `.github/workflows/deploy.yml` agora inclui `npm install` após `git pull` para garantir que novas dependências sejam instaladas na VPS antes do build.
+
 ---
 
 ## COMANDOS ÚTEIS
