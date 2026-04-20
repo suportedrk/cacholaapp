@@ -25,7 +25,7 @@ function formatBytes(bytes: number | null): string {
 function StatusBadge({ status }: { status: BackupLogRow['status'] }) {
   if (status === 'success') {
     return (
-      <Badge variant="outline" className="gap-1.5 text-green-700 border-green-300 bg-green-50">
+      <Badge variant="outline" className="gap-1.5 text-green-700 dark:text-green-400 border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-950">
         <CheckCircle2 className="size-3" />
         Sucesso
       </Badge>
@@ -33,14 +33,14 @@ function StatusBadge({ status }: { status: BackupLogRow['status'] }) {
   }
   if (status === 'failed') {
     return (
-      <Badge variant="outline" className="gap-1.5 text-red-700 border-red-300 bg-red-50">
+      <Badge variant="outline" className="gap-1.5 text-red-700 dark:text-red-400 border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-950">
         <XCircle className="size-3" />
         Falhou
       </Badge>
     )
   }
   return (
-    <Badge variant="outline" className="gap-1.5 text-yellow-700 border-yellow-300 bg-yellow-50">
+    <Badge variant="outline" className="gap-1.5 text-yellow-700 dark:text-yellow-400 border-yellow-300 dark:border-yellow-700 bg-yellow-50 dark:bg-yellow-950">
       <Clock className="size-3" />
       Em progresso
     </Badge>
@@ -69,15 +69,15 @@ function HealthCard({ rows }: { rows: BackupLogRow[] }) {
     <div
       className={`rounded-lg border p-4 ${
         healthOk
-          ? 'border-green-200 bg-green-50'
-          : 'border-yellow-200 bg-yellow-50'
+          ? 'border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-950'
+          : 'border-yellow-200 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-950'
       }`}
     >
       <div className="flex items-center gap-2 mb-3">
         {healthOk ? (
-          <CheckCircle2 className="size-5 text-green-600" />
+          <CheckCircle2 className="size-5 text-green-600 dark:text-green-400" />
         ) : (
-          <AlertTriangle className="size-5 text-yellow-600" />
+          <AlertTriangle className="size-5 text-yellow-600 dark:text-yellow-400" />
         )}
         <h2 className="text-sm font-semibold text-foreground">Status do Backup</h2>
       </div>
@@ -111,9 +111,9 @@ function HealthCard({ rows }: { rows: BackupLogRow[] }) {
         <div>
           <p className="text-muted-foreground text-xs uppercase tracking-wide mb-1">Falhas Recentes</p>
           {failedCount > 0 ? (
-            <p className="font-semibold text-red-700">{failedCount} falha{failedCount > 1 ? 's' : ''}</p>
+            <p className="font-semibold text-red-700 dark:text-red-400">{failedCount} falha{failedCount > 1 ? 's' : ''}</p>
           ) : (
-            <p className="font-medium text-green-700">Nenhuma</p>
+            <p className="font-medium text-green-700 dark:text-green-400">Nenhuma</p>
           )}
         </div>
       </div>
