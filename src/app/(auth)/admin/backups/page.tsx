@@ -230,7 +230,7 @@ function BackupTable({ rows }: { rows: BackupLogRow[] }) {
 
 export default function BackupsPage() {
   const { data: rows = [], isLoading, isError, refetch } = useBackups()
-  const timedOut = useLoadingTimeout(isLoading)
+  const { isTimedOut: timedOut } = useLoadingTimeout(isLoading)
 
   if (isLoading && !timedOut) {
     return (
