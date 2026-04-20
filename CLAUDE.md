@@ -214,6 +214,8 @@ NODE_OPTIONS=--max-old-space-size=4096 npm run build
 pm2 restart cacholaos
 ```
 
+> **CI DEPLOY CONCORRENTE RESOLVIDO (20/04/2026):** a hipótese original (SSH timeout) estava errada — `command_timeout: 12m` e `timeout-minutes: 15` já estavam corretos. Causa raiz real: dois commits quase simultâneos em `main` disparavam runs paralelos; ambos tentavam rodar `next build` na VPS e o segundo falhava em `.next/cache/.lock` com `"Another next build process is already running"`. Fix: `concurrency` group `deploy-production` com `cancel-in-progress: false` no workflow — segundo run fica enfileirado até o primeiro terminar. Bruno não precisa mais fazer deploy manual após merges rápidos.
+
 ### Migrations no deploy
 ```bash
 # Aplicar APÓS o deploy do código (na VPS via Docker)
