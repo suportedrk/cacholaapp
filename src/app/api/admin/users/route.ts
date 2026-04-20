@@ -1,26 +1,13 @@
 import { NextResponse } from 'next/server'
-import { createAdminClient, createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
+import { requireRoleApi } from '@/lib/auth/require-role'
+import { ADMIN_USERS_MANAGE_ROLES } from '@/config/roles'
 import type { UserRole } from '@/types/database.types'
 
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-
-    if (!user) {
-      return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 })
-    }
-
-    const { data: profile } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    const adminRoles: UserRole[] = ['super_admin', 'diretor', 'gerente']
-    if (!profile || !adminRoles.includes(profile.role as UserRole)) {
-      return NextResponse.json({ error: 'Permissão insuficiente.' }, { status: 403 })
-    }
+    const guard = await requireRoleApi(ADMIN_USERS_MANAGE_ROLES)
+    if (!guard.ok) return guard.response
 
     const adminSupabase = await createAdminClient()
 

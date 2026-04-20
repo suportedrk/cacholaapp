@@ -1,38 +1,20 @@
-import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
-
-// Roles com acesso à área administrativa
-const ADMIN_ROLES = ['super_admin', 'rh', 'gerente']
+import { ADMIN_ACCESS_ROLES } from '@/config/roles'
+import { requireRoleServer } from '@/lib/auth/require-role'
 
 /**
- * Layout de Server Component para rotas /admin.
- * Verifica o role do usuário UMA VEZ por navegação,
- * sem adicionar latência ao proxy (que roda em todo request).
+ * Layout de Server Component para a área /admin.
+ *
+ * Permite acesso apenas para super_admin, diretor e rh.
+ * Cada sub-rota tem seu próprio layout para granularidade adicional:
+ *   /admin/usuarios → ADMIN_USERS_MANAGE_ROLES (super_admin, rh)
+ *   /admin/unidades → ADMIN_UNITS_MANAGE_ROLES (super_admin, diretor)
+ *   /admin/logs     → ADMIN_LOGS_VIEW_ROLES    (super_admin, diretor)
  */
 export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const supabase = await createClient()
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    redirect('/login')
-  }
-
-  const { data: profile } = await supabase
-    .from('users')
-    .select('role')
-    .eq('id', user.id)
-    .single()
-
-  if (!profile || !ADMIN_ROLES.includes(profile.role)) {
-    redirect('/dashboard?error=sem_permissao')
-  }
-
+  await requireRoleServer(ADMIN_ACCESS_ROLES)
   return <>{children}</>
 }
