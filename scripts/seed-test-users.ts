@@ -34,6 +34,8 @@ const TEST_USERS = [
   { email: 'teste-gerente@cachola.cloud',     name: 'Teste Gerente',     role: 'gerente'     },
   { email: 'teste-financeiro@cachola.cloud',  name: 'Teste Financeiro',  role: 'financeiro'  },
   { email: 'teste-vendedora@cachola.cloud',   name: 'Teste Vendedora',   role: 'vendedora'   },
+  { email: 'teste-rh@cachola.cloud',          name: 'Teste RH',          role: 'rh'          },
+  { email: 'teste-manutencao@cachola.cloud',  name: 'Teste Manutenção',  role: 'manutencao'  },
 ] as const
 
 async function seedUser(email: string, name: string, role: string): Promise<string | null> {
@@ -121,10 +123,10 @@ async function main() {
   }
 
   console.table(rows)
-  console.log(`[seed] ${rows?.length ?? 0}/5 usuários presentes.`)
+  console.log(`[seed] ${rows?.length ?? 0}/7 usuários presentes.`)
 
-  if ((rows?.length ?? 0) < 5) {
-    console.warn('[seed] ATENÇÃO: menos de 5 usuários encontrados!')
+  if ((rows?.length ?? 0) < 7) {
+    console.warn('[seed] ATENÇÃO: menos de 7 usuários encontrados!')
     process.exit(1)
   }
 

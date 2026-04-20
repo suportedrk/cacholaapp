@@ -1,6 +1,15 @@
 import { createClient } from '@supabase/supabase-js'
 import { sendEmail } from '@/lib/email'
 import { tplMeetingMinuteNotification } from '@/lib/email-templates/meeting-minute-notification'
+import { requireRoleApi } from '@/lib/auth/require-role'
+import type { Role } from '@/types/permissions'
+
+/** Roles que podem publicar atas e disparar notificações. */
+const MINUTES_NOTIFY_ROLES = [
+  'super_admin',
+  'diretor',
+  'gerente',
+] as const satisfies readonly Role[]
 
 /**
  * POST /api/minutes/notify
@@ -12,6 +21,9 @@ import { tplMeetingMinuteNotification } from '@/lib/email-templates/meeting-minu
  */
 export async function POST(request: Request) {
   try {
+    const guard = await requireRoleApi(MINUTES_NOTIFY_ROLES)
+    if (!guard.ok) return guard.response
+
     const body = await request.json() as {
       meetingMinuteId?: string
       previousStatus?:  string | null

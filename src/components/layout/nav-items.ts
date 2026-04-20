@@ -29,6 +29,8 @@ import {
   VENDAS_MODULE_ROLES,
   COMMERCIAL_CHECKLIST_ACCESS_ROLES,
   COMMERCIAL_CHECKLIST_MANAGE_ROLES,
+  MAINTENANCE_MODULE_ROLES,
+  PRESTADORES_ACCESS_ROLES,
 } from '@/config/roles'
 
 export interface NavItem {
@@ -56,12 +58,6 @@ export interface NavGroup {
 }
 
 // ── Grupos de roles reutilizáveis ──────────────────────────────────────────────
-
-/** Roles que gerenciam operações do dia a dia (Manutenção, Equipamentos, Prestadores) */
-const OPS_ROLES: Role[] = ['super_admin', 'diretor', 'gerente', 'manutencao']
-
-/** Roles com acesso a Prestadores (gestão de terceiros) */
-const PROVIDER_ROLES: Role[] = ['super_admin', 'diretor', 'gerente']
 
 /** Roles com acesso à visão de Tarefas da Equipe */
 const TEAM_TASKS_ROLES: Role[] = ['super_admin', 'diretor', 'gerente']
@@ -126,15 +122,15 @@ export const NAV_GROUPS: NavGroup[] = [
     label: 'Operações',
     items: [
       {
-        label: 'Manutenção', href: ROUTES.maintenance, icon: Wrench, module: 'maintenance', allowedRoles: OPS_ROLES,
+        label: 'Manutenção', href: ROUTES.maintenance, icon: Wrench, module: 'maintenance', allowedRoles: [...MAINTENANCE_MODULE_ROLES],
         children: [
-          { label: 'Dashboard',     href: ROUTES.maintenanceDashboard, icon: LayoutDashboard, module: 'maintenance', allowedRoles: OPS_ROLES },
-          { label: 'Chamados',      href: ROUTES.maintenanceChamados,  icon: ClipboardList,   module: 'maintenance', allowedRoles: OPS_ROLES },
-          { label: 'Configurações', href: ROUTES.maintenanceConfig,    icon: Settings2,       module: 'maintenance', allowedRoles: OPS_ROLES },
+          { label: 'Dashboard',     href: ROUTES.maintenanceDashboard, icon: LayoutDashboard, module: 'maintenance', allowedRoles: [...MAINTENANCE_MODULE_ROLES] },
+          { label: 'Chamados',      href: ROUTES.maintenanceChamados,  icon: ClipboardList,   module: 'maintenance', allowedRoles: [...MAINTENANCE_MODULE_ROLES] },
+          { label: 'Configurações', href: ROUTES.maintenanceConfig,    icon: Settings2,       module: 'maintenance', allowedRoles: [...MAINTENANCE_MODULE_ROLES] },
         ],
       },
-      { label: 'Equipamentos', href: ROUTES.equipment,   icon: Package,   module: 'maintenance', allowedRoles: OPS_ROLES       },
-      { label: 'Prestadores',  href: ROUTES.providers,   icon: Handshake, module: 'providers',   allowedRoles: PROVIDER_ROLES  },
+      { label: 'Equipamentos', href: ROUTES.equipment,   icon: Package,   module: 'maintenance', allowedRoles: [...MAINTENANCE_MODULE_ROLES]  },
+      { label: 'Prestadores',  href: ROUTES.providers,   icon: Handshake, module: 'providers',   allowedRoles: [...PRESTADORES_ACCESS_ROLES]  },
       { label: 'Atas',         href: ROUTES.minutes,     icon: FileText,  module: 'minutes'                                    },
       { label: 'Relatórios',   href: ROUTES.reports,     icon: BarChart3, module: 'reports',     allowedRoles: [...BI_ACCESS_ROLES] },
     ],
