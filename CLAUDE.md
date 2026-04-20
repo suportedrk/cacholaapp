@@ -235,6 +235,56 @@ docker exec -i supabase-db psql -U postgres -d postgres \
 > Quebrar essa ordem causa `untracked working tree files would be overwritten by merge`
 > (incidente Sub-etapas A+B da tabela `sellers`, abr/2026).
 
+### Sync VPS → Banco Local (com anonimização LGPD)
+
+```bash
+npm run db:sync-local
+# equivalente a: bash scripts/sync-db-local.sh
+```
+
+**O que faz (3 etapas):**
+1. `pg_dump --schema=public` na VPS via SSH, excluindo `audit_logs` (1.3 GB) + `ploomes_webhook_log` + `ploomes_sync_log` (apenas dados) e `ploomes_order_products_backup_20260417` (tabela inteira). Dump resultante: ~35–45 MB.
+2. Restore no container Docker local (`docker compose exec supabase-db psql`).
+3. Executa `scripts/anonymize-local.sql` com `-v LOCAL_TOKEN=1` — anonimiza PII de clientes (nomes, e-mails, telefones, datas de nascimento) e trunca tabelas de texto livre.
+
+**Scripts:**
+- `scripts/sync-db-local.sh` — orquestrador (bash, rodar da raiz do projeto)
+- `scripts/anonymize-local.sql` — SQL de anonimização com guard `\if :{?LOCAL_TOKEN}` (aborta sem a variável → protege produção se executado por engano)
+
+**O que é preservado no banco local:**
+- `owner_name` (vendedoras) — necessário para debug do BI
+- `users.name`, `sellers.name` — staff interno, não são clientes
+- Valores financeiros (`amount`, `deal_amount`, `discount`) — necessários para BI realista
+
+> ⚠️ **BANCO LOCAL — REGRA DE CONFIDENCIALIDADE:** valores financeiros são mantidos **reais** para permitir debug realista do BI. Isso torna o banco local "confidencial comercial" mesmo após anonimização LGPD. **NÃO compartilhar dump**, **NÃO screenshotar BI em contextos públicos**, **NÃO expor via tunnel público**. Tratar o banco local com o mesmo cuidado de um backup de produção.
+
+**Pré-requisito:** containers Docker locais rodando (`docker compose up -d`).
+
+### Backup Offsite — Cloudflare R2
+
+Backups locais (`/backup/daily|weekly|monthly`) são enviados diariamente para o bucket `cacholaos-backups` no Cloudflare R2 (storage S3-compatível, tier free 10GB, sem custo de egress).
+
+**Script:** `/opt/scripts/backup/upload-to-r2.sh`  
+**Cron:** `45 3 * * *` (3h45 — 45 min após `backup-full.sh` às 3h00)  
+**Config rclone:** `/root/.config/rclone/rclone.conf` (chmod 600 — **NUNCA no repo**)  
+**Log:** `/var/log/cachola-r2-upload.log`
+
+**Retenção no R2** (lifecycle rules configuradas no bucket):
+- `daily/` → 30 dias
+- `weekly/` → 90 dias
+- `monthly/` → 365 dias
+
+**Disaster Recovery — Procedimento** (em caso de perda total da VPS):
+1. Subir nova VPS e instalar Supabase via `docker compose` padrão
+2. Instalar rclone: `curl -fsSL https://rclone.org/install.sh | bash`
+3. Recriar `/root/.config/rclone/rclone.conf` com credenciais R2 (guardadas em cofre separado — **NÃO na VPS**)
+4. Baixar último backup daily: `rclone copy r2:cacholaos-backups/daily/ /backup/restore/ --max-age 48h`
+5. Restaurar: `gunzip -c /backup/restore/*_db.sql.gz | docker exec -i supabase-db psql -U postgres`
+6. Validar counts: `SELECT COUNT(*) FROM public.events;` e `SELECT COUNT(*) FROM public.ploomes_deals;`
+7. Apontar DNS de `cachola.cloud` para nova VPS
+
+> **Testado em 20/04/2026:** restore do backup daily em container descartável (`postgres:15`) devolveu 719 events e 7.278 deals — compatível com produção.
+
 ---
 
 ## COMANDOS ÚTEIS
