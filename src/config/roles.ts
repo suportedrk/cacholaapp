@@ -84,6 +84,35 @@ export const COMMERCIAL_CHECKLIST_ARCHIVE_ROLES = [
   'diretor',
 ] as const satisfies readonly Role[]
 
+// ──────────────────────────────────────────────────────────────
+// Administração (/admin/**)
+// ──────────────────────────────────────────────────────────────
+
+/** Acesso à área /admin (pai comum). */
+export const ADMIN_ACCESS_ROLES = [
+  'super_admin',
+  'diretor',
+  'rh',
+] as const satisfies readonly Role[]
+
+/** Gestão de usuários (/admin/usuarios). */
+export const ADMIN_USERS_MANAGE_ROLES = [
+  'super_admin',
+  'rh',
+] as const satisfies readonly Role[]
+
+/** Gestão de unidades (/admin/unidades). */
+export const ADMIN_UNITS_MANAGE_ROLES = [
+  'super_admin',
+  'diretor',
+] as const satisfies readonly Role[]
+
+/** Visualização de logs (/admin/logs). */
+export const ADMIN_LOGS_VIEW_ROLES = [
+  'super_admin',
+  'diretor',
+] as const satisfies readonly Role[]
+
 export type CommercialChecklistManageRole =
   (typeof COMMERCIAL_CHECKLIST_MANAGE_ROLES)[number]
 
