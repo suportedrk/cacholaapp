@@ -113,6 +113,12 @@ export const ADMIN_LOGS_VIEW_ROLES = [
   'diretor',
 ] as const satisfies readonly Role[]
 
+/** Visualização do dashboard de backups (/admin/backups). Exclui rh intencionalmente. */
+export const BACKUP_VIEW_ROLES = [
+  'super_admin',
+  'diretor',
+] as const satisfies readonly Role[]
+
 // ──────────────────────────────────────────────────────────────
 // Módulos Operacionais (/manutencao, /equipamentos, /prestadores)
 // ──────────────────────────────────────────────────────────────

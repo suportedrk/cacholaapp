@@ -21,6 +21,7 @@ import {
   TrendingUp,
   ClipboardCheck,
   Zap,
+  HardDrive,
 } from 'lucide-react'
 import { ROUTES } from '@/lib/constants'
 import type { Module, Role } from '@/types/permissions'
@@ -31,6 +32,7 @@ import {
   COMMERCIAL_CHECKLIST_MANAGE_ROLES,
   MAINTENANCE_MODULE_ROLES,
   PRESTADORES_ACCESS_ROLES,
+  BACKUP_VIEW_ROLES,
 } from '@/config/roles'
 
 export interface NavItem {
@@ -142,6 +144,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: 'Unidades',          href: ROUTES.units,          icon: Building2,  module: 'users',      allowedRoles: ADMIN_ROLES      },
       { label: 'Vendedoras',        href: '/configuracoes/vendedoras', icon: UserCog, module: 'settings', allowedRoles: ADMIN_ROLES    },
       { label: 'Logs',              href: ROUTES.auditLogs,      icon: ScrollText, module: 'audit_logs', allowedRoles: ADMIN_ROLES      },
+      { label: 'Backups',           href: ROUTES.backups,        icon: HardDrive,  module: 'settings',   allowedRoles: [...BACKUP_VIEW_ROLES] },
       { label: 'Configurações',     href: ROUTES.settings,       icon: Settings,   module: 'settings',   allowedRoles: SETTINGS_ROLES   },
       { label: 'Regras de Negócio', href: ROUTES.businessRules,  icon: BookOpen,   module: 'settings',   allowedRoles: SETTINGS_ROLES   },
     ],
