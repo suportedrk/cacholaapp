@@ -674,9 +674,9 @@ por pular essa validação.
 
 ---
 
-## CONTROLE DE ACESSO — ARQUITETURA (Fase 2.8a)
+## CONTROLE DE ACESSO — ARQUITETURA (Fases 2.8a + 2.8b)
 
-**Commits:** `7c463f8` → `316f316` (develop/main)
+**Commits 2.8a:** `7c463f8` → `316f316` | **Commits 2.8b:** `8099e79` → `80222d6` (develop/main)
 
 ### Camadas de segurança (defense-in-depth)
 
@@ -701,7 +701,7 @@ if (!guard.ok) return guard.response          // NextResponse 401/403
 
 Arquivo: `src/lib/auth/require-role.ts`
 
-### Constantes de role (src/config/roles.ts) — adicionadas na Fase 2.8a
+### Constantes de role (src/config/roles.ts) — completas
 
 | Constante | Roles | Rota |
 |-----------|-------|------|
@@ -709,37 +709,75 @@ Arquivo: `src/lib/auth/require-role.ts`
 | `ADMIN_USERS_MANAGE_ROLES` | super_admin, rh | `/admin/usuarios` |
 | `ADMIN_UNITS_MANAGE_ROLES` | super_admin, diretor | `/admin/unidades` |
 | `ADMIN_LOGS_VIEW_ROLES` | super_admin, diretor | `/admin/logs` |
+| `MAINTENANCE_MODULE_ROLES` | super_admin, diretor, gerente, **manutencao** | `/manutencao`, `/equipamentos` |
+| `PRESTADORES_ACCESS_ROLES` | super_admin, diretor, gerente | `/prestadores` (sem manutencao — intencional) |
+| `BI_ACCESS_ROLES` _(existente)_ | super_admin, diretor, gerente, financeiro | `/bi`, `/relatorios` |
 
-### Layouts de guarda criados/corrigidos
+> `OPS_ROLES` e `PROVIDER_ROLES` que viviam em `nav-items.ts` foram promovidos para `roles.ts` na Fase 2.8b.
 
-| Arquivo | Roles | Bug corrigido |
-|---------|-------|---------------|
-| `src/app/(auth)/admin/layout.tsx` | `ADMIN_ACCESS_ROLES` | BUG2 (remov. gerente) |
+### Layouts de guarda — todos os módulos protegidos
+
+| Arquivo | Constante | Bugs corrigidos |
+|---------|-----------|-----------------|
+| `src/app/(auth)/admin/layout.tsx` | `ADMIN_ACCESS_ROLES` | BUG2 |
 | `src/app/(auth)/admin/usuarios/layout.tsx` | `ADMIN_USERS_MANAGE_ROLES` | BUG2 (sub-rota) |
 | `src/app/(auth)/admin/unidades/layout.tsx` | `ADMIN_UNITS_MANAGE_ROLES` | — |
 | `src/app/(auth)/admin/logs/layout.tsx` | `ADMIN_LOGS_VIEW_ROLES` | — |
-| `src/app/(auth)/bi/layout.tsx` | `BI_ACCESS_ROLES` | BUG4 (vendedora bloq.) |
-| `src/app/(auth)/vendas/layout.tsx` | `VENDAS_MODULE_ROLES` | BUG3 (financeiro bloq.) |
-| `src/app/(auth)/configuracoes/vendedoras/layout.tsx` | `SELLERS_MANAGE_ROLES` | BUG1+BUG5 |
+| `src/app/(auth)/bi/layout.tsx` | `BI_ACCESS_ROLES` | BUG4 |
+| `src/app/(auth)/vendas/layout.tsx` | `VENDAS_MODULE_ROLES` | BUG3 |
+| `src/app/(auth)/configuracoes/vendedoras/layout.tsx` | `SELLERS_MANAGE_ROLES` | BUG1+BUG5+BUG11 |
+| `src/app/(auth)/manutencao/layout.tsx` | `MAINTENANCE_MODULE_ROLES` | BUG6+BUG9 |
+| `src/app/(auth)/equipamentos/layout.tsx` | `MAINTENANCE_MODULE_ROLES` | BUG7+BUG10 |
+| `src/app/(auth)/prestadores/layout.tsx` | `PRESTADORES_ACCESS_ROLES` | BUG8 |
+| `src/app/(auth)/relatorios/layout.tsx` | `BI_ACCESS_ROLES` | — |
 
 ### Página `/403`
 
 `src/app/403/page.tsx` — Server Component, acessível sem auth (em `PUBLIC_ROUTES` do `proxy.ts`).
 
-### Bugs corrigidos (5 críticos)
+### APIs com role check adicionado na Fase 2.8b
 
-| Bug | Role | Rota bloqueada antes | Status |
-|-----|------|----------------------|--------|
-| BUG1 | gerente | `/configuracoes/vendedoras` | ✅ Corrigido |
-| BUG2 | gerente | `/admin/usuarios` (+ escalação API) | ✅ Corrigido |
-| BUG3 | financeiro | `/vendas` | ✅ Corrigido |
-| BUG4 | vendedora | `/bi` | ✅ Corrigido |
-| BUG5 | vendedora | `/configuracoes/vendedoras` | ✅ Corrigido |
+| Endpoint | Constante | Antes |
+|----------|-----------|-------|
+| `POST /api/email/maintenance-emergency` | `MAINTENANCE_MODULE_ROLES` | ❌ sem auth |
+| `POST /api/minutes/notify` | super_admin, diretor, gerente | ❌ sem auth |
+| `GET /api/maintenance/stats` | `MAINTENANCE_MODULE_ROLES` | ✅ auth, sem role |
+| `GET /api/maintenance/history-summary` | `MAINTENANCE_MODULE_ROLES` | ✅ auth, sem role |
 
-### Débito: Fase 2.8b (futura)
+### Bugs corrigidos (11 total — 5 na 2.8a, 6 na 2.8b)
 
-- Adicionar `teste-rh@cachola.cloud` ao seed script para testar `/admin/usuarios` com role rh
-- BUG6-11 (ELEVADOS): vendedora/financeiro acessando manutencao/equipamentos/prestadores/relatorios — precisam de layouts específicos
+| Bug | Role | Rota | Fase |
+|-----|------|------|------|
+| BUG1 | gerente | `/configuracoes/vendedoras` | 2.8a ✅ |
+| BUG2 | gerente | `/admin/usuarios` (+ escalação API) | 2.8a ✅ |
+| BUG3 | financeiro | `/vendas` | 2.8a ✅ |
+| BUG4 | vendedora | `/bi` | 2.8a ✅ |
+| BUG5 | vendedora | `/configuracoes/vendedoras` | 2.8a ✅ |
+| BUG6 | vendedora | `/manutencao` | 2.8b ✅ |
+| BUG7 | vendedora | `/equipamentos` | 2.8b ✅ |
+| BUG8 | vendedora | `/prestadores` | 2.8b ✅ |
+| BUG9 | financeiro | `/manutencao` | 2.8b ✅ |
+| BUG10 | financeiro | `/equipamentos` | 2.8b ✅ |
+| BUG11 | financeiro | `/configuracoes/vendedoras` | 2.8a ✅ |
+
+### Validação Chrome MCP — Matriz 7 roles × 5 rotas (Fase 2.8b)
+
+| User | /manutencao | /equipamentos | /prestadores | /relatorios | /bi |
+|------|-------------|---------------|--------------|-------------|-----|
+| superadmin | ✅ | ✅ | ✅ | ✅ | ✅ |
+| diretor | ✅ | ✅ | ✅ | ✅ | ✅ |
+| gerente | ✅ | ✅ | ✅ | ✅ | ✅ |
+| financeiro | 🚫/403 | 🚫/403 | 🚫/403 | ✅ | ✅ |
+| vendedora | 🚫/403 | 🚫/403 | 🚫/403 | 🚫/403 | 🚫/403 |
+| rh | 🚫/403 | — | — | — | 🚫/403 |
+| **manutencao** | ✅ | ✅ | **🚫/403** | — | 🚫/403 |
+
+> Assimetria manutencao: acessa /manutencao e /equipamentos mas NÃO /prestadores — comportamento intencional (gestão de terceiros é responsabilidade de gestão, não de técnicos).
+
+### Débito: Fase 2.8c (futura)
+
+- Verificar se `rh` e `manutencao` precisam de guard em outras rotas (eventos, checklists, atas)
+- Consolidar constantes de atas/manutenção ainda locais nos handlers — Débito 3
 
 ---
 
@@ -755,10 +793,13 @@ Executar na VPS via `npx tsx scripts/seed-test-users.ts`.
 | `teste-gerente@cachola.cloud` | gerente | `Teste@2026cacholaos!` | user_units → Pinheiros |
 | `teste-financeiro@cachola.cloud` | financeiro | `Teste@2026cacholaos!` | — |
 | `teste-vendedora@cachola.cloud` | vendedora | `Teste@2026cacholaos!` | seller_id → Raphaela Melo |
+| `teste-rh@cachola.cloud` | rh | `Teste@2026cacholaos!` | adicionado Fase 2.8b |
+| `teste-manutencao@cachola.cloud` | manutencao | `Teste@2026cacholaos!` | adicionado Fase 2.8b — valida assimetria /prestadores |
 
 - Seed é idempotente (skip se já existe) e recriável a qualquer momento
 - Cleanup deleta via `auth.admin.deleteUser` → CASCADE limpa `user_units` e `user_permissions`
 - `sellers` NÃO são afetados (ON DELETE SET NULL)
+- Total: 7 usuários — cobertura completa das 7 roles operacionais do sistema
 
 ---
 
