@@ -1,6 +1,5 @@
 import Link from 'next/link'
 import { ShieldX } from 'lucide-react'
-import { buttonVariants } from '@/components/ui/button'
 
 /**
  * Página 403 — Acesso Negado
@@ -25,7 +24,10 @@ export default function ForbiddenPage() {
         </p>
       </div>
 
-      <Link href="/dashboard" className={buttonVariants({ variant: 'outline' })}>
+      <Link
+        href="/dashboard"
+        className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground"
+      >
         Voltar ao início
       </Link>
     </div>
