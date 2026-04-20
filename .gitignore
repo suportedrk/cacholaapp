@@ -74,3 +74,9 @@ public/swe-worker-*.js.map
 # Claude worktrees
 .claude/worktrees/
 .claude/
+
+# ============================================================
+# SYNC LOCAL — dumps temporários (contêm dados reais anonimizados)
+# ============================================================
+tmp/
+tmp/cachola-dump-*.sql.gz
