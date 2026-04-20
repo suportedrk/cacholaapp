@@ -34,6 +34,9 @@ jobs:
             cd /opt/cacholaapp
             git pull origin main
 
+            echo "Instalando dependencias..."
+            npm install
+
             echo "Buildando aplicacao..."
             NODE_OPTIONS=--max-old-space-size=4096 npm run build
 
