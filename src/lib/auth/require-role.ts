@@ -26,11 +26,14 @@ export async function requireRoleServer(allowed: readonly Role[]): Promise<void>
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from('users')
     .select('role')
     .eq('id', user.id)
     .single()
+
+  // DEBUG TEMPORÁRIO — remover após diagnóstico
+  console.warn('[requireRoleServer] user.id=', user.id, 'profile=', profile, 'profileError=', profileError, 'allowed=', allowed)
 
   if (!profile || !(allowed as readonly string[]).includes(profile.role)) {
     redirect('/403')
