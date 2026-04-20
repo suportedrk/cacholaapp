@@ -803,6 +803,69 @@ Executar na VPS via `npx tsx scripts/seed-test-users.ts`.
 
 ---
 
+## PWA — ATUALIZAÇÃO AUTOMÁTICA (ServiceWorkerUpdater)
+
+**Problema resolvido:** Com `skipWaiting: true` + `clientsClaim: true`, o novo SW ativa
+imediatamente, mas o usuário continua vendo a versão anterior até recarregar manualmente.
+
+### Componente `ServiceWorkerUpdater`
+
+`src/components/pwa/service-worker-updater.tsx` — `'use client'`, renderiza `null`.
+
+**Dois mecanismos de detecção:**
+
+1. **`controllerchange`** — Dispara quando o novo SW assume controle de todas as abas.
+   Guard de `sessionStorage` previne loop infinito (ver regra 3 abaixo).
+
+2. **Polling `/api/build-info`** — A cada 5 minutos e no `window.focus`.
+   Compara `NEXT_PUBLIC_BUILD_ID` da resposta com o da build atual.
+   Cobre casos onde `controllerchange` chega antes do componente montar (múltiplas abas).
+
+**Ao detectar nova versão:**
+- Toast Sonner infinito com botão "Atualizar agora"
+- Auto-reload após 30 s
+- Guard de formulário: se o usuário estiver digitando (`activeElement` com valor), adia o reload em 5 s
+- Antes do reload: `caches.delete()` (fire-and-forget) + `sessionStorage.setItem(SW_RELOAD_KEY, '1')`
+
+**Endpoint:** `GET /api/build-info` — público, `Cache-Control: no-store`, retorna `{ buildId }`.
+
+### 3 Regras arquiteturais descobertas (NÃO violar)
+
+**Regra 1 — Toaster e componentes que dependem do Sonner:**
+`ServiceWorkerUpdater` (e qualquer componente que chame `toast()`) DEVE ser montado DENTRO
+de `<Providers>` em `(auth)/layout.tsx`. O `<Toaster>` do Sonner só existe nessa árvore.
+Componentes fora de `<Providers>` podem chamar `toast()` sem erro mas o toast nunca aparece.
+
+**Regra 2 — `generateBuildId` e `env` são opções do `nextConfig` base:**
+```ts
+// ✅ CORRETO — em nextConfig
+const nextConfig: NextConfig = {
+  generateBuildId: async () => BUILD_ID,
+  env: { NEXT_PUBLIC_BUILD_ID: BUILD_ID },
+}
+export default withBundleAnalyzer(withPWA({ ... })(nextConfig))
+
+// ❌ ERRADO — dentro de withPWA({...}) — silenciosamente ignorado
+export default withPWA({ generateBuildId: ..., env: ... })(nextConfig)
+```
+
+**Regra 3 — Com `skipWaiting: true`, `reg.waiting` é sempre `null`:**
+`postMessage({ type: 'SKIP_WAITING' })` é código morto — o SW já pulou a fila na instalação.
+Para forçar ativação não é necessário nenhum `postMessage`. O `controllerchange` dispara
+automaticamente; o único cuidado é o guard de sessionStorage para não entrar em loop:
+```ts
+// Antes de qualquer window.location.reload():
+sessionStorage.setItem('sw-reloading', '1')
+
+// No handler de controllerchange:
+if (sessionStorage.getItem('sw-reloading')) {
+  sessionStorage.removeItem('sw-reloading')
+  return // este evento é consequência do nosso próprio reload — ignorar
+}
+```
+
+---
+
 ## CREDENCIAIS DEV LOCAL
 
 ```
