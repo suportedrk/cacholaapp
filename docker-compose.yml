@@ -298,6 +298,7 @@ services:
       - "3000:3000"
     environment:
       NEXT_PUBLIC_SUPABASE_URL: http://localhost:8000
+      SUPABASE_INTERNAL_URL: http://cacholaos-kong:8000
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${ANON_KEY}
       SUPABASE_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY}
       SUPABASE_JWT_SECRET: ${JWT_SECRET}

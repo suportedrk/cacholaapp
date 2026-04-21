@@ -1,5 +1,6 @@
 import type { NextConfig } from 'next'
 import { execSync } from 'child_process'
+import { readFileSync } from 'fs'
 import withPWA from '@ducanh2912/next-pwa'
 
 /** Determina o BUILD_ID uma única vez, no início do processo de build. */
@@ -13,6 +14,8 @@ function getBuildId(): string {
 }
 
 const BUILD_ID = getBuildId()
+const BUILD_DATE = new Date().toISOString().split('T')[0]
+const APP_VERSION = JSON.parse(readFileSync('./package.json', 'utf-8')).version as string
 
 // Uso: ANALYZE=true npm run build
 // @next/bundle-analyzer é opcional — não quebra o build se não estiver instalado
@@ -30,6 +33,8 @@ const nextConfig: NextConfig = {
   generateBuildId: async () => BUILD_ID,
   env: {
     NEXT_PUBLIC_BUILD_ID: BUILD_ID,
+    NEXT_PUBLIC_BUILD_DATE: BUILD_DATE,
+    NEXT_PUBLIC_APP_VERSION: APP_VERSION,
   },
 
   // Turbopack é o padrão no Next.js 16 — config vazia silencia aviso de conflito webpack

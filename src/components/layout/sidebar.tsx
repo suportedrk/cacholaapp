@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { APP_NAME } from '@/lib/constants'
+import { APP_VERSION, getVersionTooltip } from '@/lib/version'
 import { useUnitBrand } from '@/hooks/use-unit-settings'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
@@ -420,13 +421,20 @@ export function Sidebar({ isOpen, isCollapsed, onClose, onToggleCollapse }: Side
           isCollapsed && 'lg:justify-center lg:px-2',
         )}>
           {/* Versão — esconde quando collapsed */}
-          <span className={cn(
-            'text-xs text-muted-foreground',
-            'transition-[opacity,width] duration-150 overflow-hidden',
-            isCollapsed ? 'lg:opacity-0 lg:w-0' : 'opacity-100 w-auto',
-          )}>
-            v{process.env.NEXT_PUBLIC_APP_VERSION ?? '0.1.0'}
-          </span>
+          <Tooltip>
+            <TooltipTrigger
+              className={cn(
+                'text-xs text-muted-foreground cursor-default',
+                'transition-[opacity,width] duration-150 overflow-hidden',
+                isCollapsed ? 'lg:opacity-0 lg:w-0' : 'opacity-100 w-auto',
+              )}
+            >
+              v{APP_VERSION}
+            </TooltipTrigger>
+            <TooltipContent side="right" className="font-mono text-xs">
+              {getVersionTooltip()}
+            </TooltipContent>
+          </Tooltip>
 
           {/* Botão collapse — apenas desktop */}
           <Tooltip>
