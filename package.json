@@ -1,13 +1,17 @@
 {
   "name": "cacholaos",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
-    "db:sync-local": "bash scripts/sync-db-local.sh"
+    "db:sync-local": "bash scripts/sync-db-local.sh",
+    "seed:local-admin": "tsx scripts/seed-local-admin.ts",
+    "version:patch": "tsx scripts/bump-version.ts patch",
+    "version:minor": "tsx scripts/bump-version.ts minor",
+    "version:major": "tsx scripts/bump-version.ts major"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1033.0",
