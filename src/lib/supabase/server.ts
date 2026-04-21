@@ -6,10 +6,13 @@ import type { Database } from '@/types/database.types'
 export async function createClient() {
   const cookieStore = await cookies()
 
+  const supabaseUrl = process.env.SUPABASE_INTERNAL_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL!
+  const browserHostname = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!).hostname
   return createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    supabaseUrl,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      auth: { storageKey: `sb-${browserHostname}-auth-token` },
       cookies: {
         getAll() {
           return cookieStore.getAll()
@@ -33,7 +36,7 @@ export async function createAdminClient() {
   const cookieStore = await cookies()
 
   return createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_INTERNAL_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     {
       cookies: {

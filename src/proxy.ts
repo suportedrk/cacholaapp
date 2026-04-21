@@ -9,10 +9,16 @@ export async function proxy(request: NextRequest) {
     request,
   })
 
+  // SUPABASE_INTERNAL_URL: URL interna para rodar de dentro do Docker (cacholaos-kong:8000).
+  // O storageKey é forçado para o hostname do browser (localhost) para que o cookie name
+  // coincida entre browser (localhost:8000) e servidor (cacholaos-kong:8000).
+  const supabaseUrl = process.env.SUPABASE_INTERNAL_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL!
+  const browserHostname = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!).hostname
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    supabaseUrl,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      auth: { storageKey: `sb-${browserHostname}-auth-token` },
       cookies: {
         getAll() {
           return request.cookies.getAll()
