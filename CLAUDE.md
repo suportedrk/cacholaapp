@@ -764,6 +764,36 @@ assumir que o fix resolveu.
 
 ---
 
+## REGRA SUPABASE SSR — storageKey NO MIDDLEWARE
+
+**Nunca usar o hostname completo no `storageKey` do `createServerClient`.**
+
+`@supabase/supabase-js` deriva a chave do cookie como:
+```ts
+`sb-${new URL(supabaseUrl).hostname.split('.')[0]}-auth-token`
+// 'api.cachola.cloud' → 'sb-api-auth-token'
+```
+
+O middleware e o `server.ts` **DEVEM** usar o mesmo formato. Usar o hostname completo causa mismatch silencioso:
+- Browser armazena: `sb-api-auth-token`
+- Middleware busca: `sb-api.cachola.cloud-auth-token` ← não acha → redirect loop
+
+**Padrão correto em `proxy.ts` e `server.ts`:**
+```ts
+// ✅ CORRETO — split para coincidir com o client
+const browserHostname = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!).hostname.split('.')[0]
+auth: { storageKey: `sb-${browserHostname}-auth-token` }
+
+// ❌ ERRADO — causa loop de login em produção com domínio multi-parte
+const browserHostname = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!).hostname
+```
+
+Este bug só aparece em produção quando `NEXT_PUBLIC_SUPABASE_URL` tem domínio multi-parte (ex: `https://api.cachola.cloud`). Em dev com `http://localhost:8000`, `hostname = 'localhost'` e o split não muda nada — por isso o bug fica invisível no ambiente local.
+
+Sintoma: login via email/senha retorna 200 no GoTrue mas imediatamente redireciona de volta ao `/login` (GET `/?_rsc=...` → 307 → `/login`).
+
+---
+
 ## REGRA NEXT.JS APP ROUTER — GUARD DE ROLE EM LAYOUT
 
 Ao testar se um layout guard (`requireRoleServer`) está funcionando:
