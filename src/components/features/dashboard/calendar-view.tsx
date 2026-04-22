@@ -472,7 +472,7 @@ export function CalendarView({
             className="ml-auto flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border transition-all bg-emerald-500 border-emerald-600 text-white hover:bg-emerald-600"
           >
             <Plus className="w-3 h-3" />
-            <span className="hidden sm:inline">Nova Pré-reserva</span>
+            <span className="hidden sm:inline">Nova Pré-venda</span>
             <span className="sm:hidden">Pré-reserva</span>
           </button>
         )}
