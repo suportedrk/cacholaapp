@@ -14,6 +14,7 @@ export type Role =
   | 'rh'
   | 'freelancer'
   | 'entregador'
+  | 'pos_vendas'
 
 export type Module =
   | 'events'
