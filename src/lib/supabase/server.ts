@@ -7,7 +7,9 @@ export async function createClient() {
   const cookieStore = await cookies()
 
   const supabaseUrl = process.env.SUPABASE_INTERNAL_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL!
-  const browserHostname = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!).hostname
+  // ATENÇÃO: usar .split('.')[0] para coincidir com o defaultStorageKey do @supabase/supabase-js
+  // (ex: 'api.cachola.cloud' → 'api' → 'sb-api-auth-token')
+  const browserHostname = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!).hostname.split('.')[0]
   return createServerClient<Database>(
     supabaseUrl,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
