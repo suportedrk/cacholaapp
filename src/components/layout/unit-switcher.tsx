@@ -12,8 +12,7 @@ import {
 import { cn } from '@/lib/utils'
 import { useUnitStore } from '@/stores/unit-store'
 import { useAuth } from '@/hooks/use-auth'
-
-const GLOBAL_VIEWER_ROLES = ['super_admin', 'diretor']
+import { GLOBAL_VIEWER_ROLES, hasRole } from '@/config/roles'
 
 function formatSlug(slug: string) {
   return slug.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
@@ -25,7 +24,7 @@ export function UnitSwitcher() {
   const { setActiveUnit } = useUnitStore()
 
   // Verificar se o usuário pode ver todas as unidades
-  const canViewAll = userUnits.some((u) => GLOBAL_VIEWER_ROLES.includes(u.role))
+  const canViewAll = userUnits.some((u) => hasRole(u.role, GLOBAL_VIEWER_ROLES))
 
   const activeUserUnit = userUnits.find((u) => u.unit_id === activeUnitId)
   const activeSlug = (activeUserUnit?.unit as { slug: string } | undefined)?.slug

@@ -27,21 +27,26 @@ export function ImpersonateBanner() {
 
   return (
     <div
-      className="fixed top-0 left-0 right-0 z-[60] h-10 bg-amber-500 dark:bg-amber-600 flex items-center px-3 sm:px-4 gap-3"
+      className="fixed top-0 left-0 right-0 z-[60] h-10 sm:h-14 bg-amber-500 dark:bg-amber-600 flex items-center px-3 sm:px-4 gap-3"
       role="status"
       aria-live="polite"
     >
-      {/* Ícone + texto */}
+      {/* Ícone + bloco de texto */}
       <Eye className="w-4 h-4 text-white shrink-0" aria-hidden="true" />
 
-      <p className="flex-1 min-w-0 text-sm font-medium text-white truncate">
-        <span className="hidden sm:inline">Visualizando como </span>
-        <span className="font-semibold">{impersonatedProfile.name}</span>
-        <span className="text-white/80">
-          {' '}({roleLabel}
-          {unitName ? ` — ${unitName}` : ''})
-        </span>
-      </p>
+      <div className="flex-1 min-w-0 flex flex-col justify-center">
+        <p className="text-sm font-medium text-white truncate">
+          <span className="hidden sm:inline">Visualizando como </span>
+          <span className="font-semibold">{impersonatedProfile.name}</span>
+          <span className="text-white/80">
+            {' '}({roleLabel}
+            {unitName ? ` — ${unitName}` : ''})
+          </span>
+        </p>
+        <p className="hidden sm:block text-xs text-white/80 mt-0.5 truncate">
+          ⚠️ Simulação visual apenas — os menus e botões refletem o que este usuário vê, mas os dados mostrados continuam sendo os seus.
+        </p>
+      </div>
 
       {/* Botão voltar */}
       <button

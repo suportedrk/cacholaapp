@@ -46,7 +46,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   const [scrolled, setScrolled]                 = useState(false)
   const mainRef = useRef<HTMLElement>(null)
 
-  // Banner de impersonate eleva o layout em 40px (h-10)
+  // Banner de impersonate eleva o layout: h-10 (40px) em mobile, h-14 (56px) em sm+
   const isImpersonating = useImpersonateStore((s) => s.isImpersonating)
 
   // Restore collapse state from localStorage
@@ -80,7 +80,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       {/* Banner de impersonate — fixo acima de tudo, z-[60] */}
       <ImpersonateBanner />
 
-      <div className={cn('flex bg-background overflow-hidden', isImpersonating ? 'h-[calc(100svh-2.5rem)]' : 'h-svh')}>
+      <div className={cn('flex bg-background overflow-hidden', isImpersonating ? 'h-[calc(100svh-2.5rem)] sm:h-[calc(100svh-3.5rem)]' : 'h-svh')}>
         {/* Global layers */}
         <OnboardingLayer />
         <KeyboardLayer />

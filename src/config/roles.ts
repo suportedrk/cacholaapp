@@ -85,6 +85,20 @@ export const COMMERCIAL_CHECKLIST_ARCHIVE_ROLES = [
 ] as const satisfies readonly Role[]
 
 // ──────────────────────────────────────────────────────────────
+// Visibilidade multi-unidade
+// ──────────────────────────────────────────────────────────────
+
+/**
+ * Roles que podem selecionar "Todas as unidades" no UnitSwitcher
+ * e visualizar dados consolidados (activeUnitId = null).
+ * Fonte única de verdade — não duplicar em componentes.
+ */
+export const GLOBAL_VIEWER_ROLES = [
+  'super_admin',
+  'diretor',
+] as const satisfies readonly Role[]
+
+// ──────────────────────────────────────────────────────────────
 // Administração (/admin/**)
 // ──────────────────────────────────────────────────────────────
 
