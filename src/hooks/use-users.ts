@@ -123,3 +123,58 @@ export function useReactivateUser() {
     },
   })
 }
+
+// ─────────────────────────────────────────────────────────────
+// CONVITES PENDENTES
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Retorna um Set com os IDs de usuários que ainda não confirmaram o e-mail
+ * (convite enviado mas não aceito). Chama GET /api/admin/users/pending-invites.
+ */
+export function usePendingInvites() {
+  const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
+
+  return useQuery({
+    queryKey: ['users', 'pending-invites'],
+    enabled: isSessionReady,
+    queryFn: async () => {
+      const res = await fetch('/api/admin/users/pending-invites')
+      if (!res.ok) throw new Error('Falha ao buscar convites pendentes')
+      const data = await res.json() as { pendingIds: string[] }
+      return new Set(data.pendingIds)
+    },
+    staleTime: 60 * 1000, // 1 min — convites não mudam com frequência
+    retry: (count, err) => count < 2 && (err as { status?: number })?.status !== 401,
+  })
+}
+
+/**
+ * Reenvia o e-mail de convite para um usuário com confirmação pendente.
+ * Chama POST /api/admin/resend-invite.
+ */
+export function useResendInvite() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (userId: string) => {
+      const res = await fetch('/api/admin/resend-invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      })
+      if (!res.ok) {
+        const data = await res.json() as { error?: string }
+        throw new Error(data.error ?? 'Erro ao reenviar convite')
+      }
+    },
+    onSuccess: () => {
+      // Invalida a lista de pendentes para refletir se o convite foi aceito
+      queryClient.invalidateQueries({ queryKey: ['users', 'pending-invites'] })
+      toast.success('Convite reenviado com sucesso!')
+    },
+    onError: (error: Error) => {
+      toast.error(error.message)
+    },
+  })
+}

@@ -95,9 +95,10 @@ export const ADMIN_ACCESS_ROLES = [
   'rh',
 ] as const satisfies readonly Role[]
 
-/** Gestão de usuários (/admin/usuarios). */
+/** Gestão de usuários (/admin/usuarios) — criar, editar, permissões, reenviar convite. */
 export const ADMIN_USERS_MANAGE_ROLES = [
   'super_admin',
+  'diretor',
   'rh',
 ] as const satisfies readonly Role[]
 

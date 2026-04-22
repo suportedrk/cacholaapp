@@ -6,7 +6,7 @@ import { requireRoleServer } from '@/lib/auth/require-role'
  *
  * Permite acesso apenas para super_admin, diretor e rh.
  * Cada sub-rota tem seu próprio layout para granularidade adicional:
- *   /admin/usuarios → ADMIN_USERS_MANAGE_ROLES (super_admin, rh)
+ *   /admin/usuarios → ADMIN_USERS_MANAGE_ROLES (super_admin, diretor, rh)
  *   /admin/unidades → ADMIN_UNITS_MANAGE_ROLES (super_admin, diretor)
  *   /admin/logs     → ADMIN_LOGS_VIEW_ROLES    (super_admin, diretor)
  */
