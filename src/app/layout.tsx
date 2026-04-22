@@ -21,10 +21,7 @@ export const metadata: Metadata = {
     statusBarStyle: 'default',
     title: 'Cachola OS',
   },
-  icons: {
-    icon: '/icons/icon-192.png',
-    apple: '/icons/icon-192.png',
-  },
+  // icons são auto-descobertos pelo Next.js via src/app/icon.tsx e src/app/apple-icon.tsx
 }
 
 export const viewport: Viewport = {
