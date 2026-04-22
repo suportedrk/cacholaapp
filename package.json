@@ -1,6 +1,6 @@
 {
   "name": "cacholaos",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -11,7 +11,8 @@
     "seed:local-admin": "tsx scripts/seed-local-admin.ts",
     "version:patch": "tsx scripts/bump-version.ts patch",
     "version:minor": "tsx scripts/bump-version.ts minor",
-    "version:major": "tsx scripts/bump-version.ts major"
+    "version:major": "tsx scripts/bump-version.ts major",
+    "icons:generate": "tsx scripts/generate-icons.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1033.0",
@@ -48,6 +49,7 @@
     "zustand": "^5.0.12"
   },
   "devDependencies": {
+    "@fontsource/playfair-display": "^5.2.8",
     "@next/bundle-analyzer": "^16.2.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
@@ -59,6 +61,7 @@
     "eslint-plugin-import": "^2.32.0",
     "prettier": "^3.8.1",
     "prettier-plugin-tailwindcss": "^0.7.2",
+    "satori": "^0.26.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
