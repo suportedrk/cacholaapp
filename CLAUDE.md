@@ -793,9 +793,9 @@ export const GLOBAL_VIEWER_ROLES = ['super_admin', 'diretor'] as const satisfies
 - Hook: `useEventSalesSummary(eventId, isOpen)` em `src/hooks/use-event-sales.ts`; `enabled: isOpen && isSessionReady && !!eventId` (lazy fetch)
 - Componente: `EventSalesSection` em `src/app/(auth)/eventos/[id]/components/sections/EventSalesSection.tsx`
   - Self-contained accordion (gerencia próprio `isOpen`); 3 sub-blocos: `DealHeader` (status badge + link Ploomes + owner + valor), `ProductsTable` (tabela com total), `UpsellTimeline` (timeline cronológica reversa)
-  - Visível apenas para `VENDAS_MODULE_ROLES` (check via `hasRole`)
+  - Visível para todos os usuários autenticados que acessam o detalhe do evento (sem guard de role)
   - Inserido entre Financeiro (S3d) e Prestadores (S4) no `/eventos/[id]`
-- Versão: 1.2.1 → 1.4.0 (bumped manual; package.json estava desatualizado vs git tags)
+- Versão: 1.2.1 → 1.4.0 → 1.4.1 (1.4.1 removeu guard VENDAS_MODULE_ROLES — seção é universal)
 
 ---
 
