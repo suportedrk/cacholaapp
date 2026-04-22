@@ -34,6 +34,7 @@ import {
   PRESTADORES_ACCESS_ROLES,
   BACKUP_VIEW_ROLES,
   ADMIN_USERS_MANAGE_ROLES,
+  OPERATIONAL_CHECKLIST_ROLES,
 } from '@/config/roles'
 
 export interface NavItem {
@@ -115,8 +116,8 @@ export const NAV_GROUPS: NavGroup[] = [
         ],
       },
       { label: 'Eventos',        href: ROUTES.events,     icon: CalendarDays,  module: 'events'    },
-      { label: 'Checklists',     href: ROUTES.checklists, icon: ClipboardList, module: 'checklists' },
-      { label: 'Minhas Tarefas',   href: ROUTES.myTasks,    icon: ListTodo,     module: 'checklists' },
+      { label: 'Checklists',     href: ROUTES.checklists, icon: ClipboardList, module: 'checklists', allowedRoles: [...OPERATIONAL_CHECKLIST_ROLES] },
+      { label: 'Minhas Tarefas',   href: ROUTES.myTasks,    icon: ListTodo,     module: 'checklists', allowedRoles: [...OPERATIONAL_CHECKLIST_ROLES] },
       { label: 'Tarefas da Equipe', href: ROUTES.teamTasks,  icon: UsersRound,   module: 'checklists', allowedRoles: TEAM_TASKS_ROLES },
     ],
   },

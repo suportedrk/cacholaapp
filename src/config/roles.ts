@@ -10,7 +10,7 @@
  *
  * Roles disponíveis no Cachola OS:
  *   super_admin | diretor | gerente | financeiro | manutencao
- *   vendedora   | decoracao | rh | freelancer | entregador
+ *   vendedora   | pos_vendas | decoracao | rh | freelancer | entregador
  */
 
 import type { Role } from '@/types/permissions'
@@ -48,12 +48,13 @@ export const VENDEDORA_ROLES = [
   'vendedora',
 ] as const satisfies readonly Role[]
 
-/** Acesso ao módulo Vendas (/vendas) — vendedoras + gestão. */
+/** Acesso ao módulo Vendas (/vendas) — vendedoras + gestão + pós-vendas. */
 export const VENDAS_MODULE_ROLES = [
   'super_admin',
   'diretor',
   'gerente',
   'vendedora',
+  'pos_vendas',
 ] as const satisfies readonly Role[]
 
 /** Vê dados de TODAS as vendedoras (não apenas os próprios). */
@@ -96,6 +97,7 @@ export const COMMERCIAL_CHECKLIST_ARCHIVE_ROLES = [
 export const GLOBAL_VIEWER_ROLES = [
   'super_admin',
   'diretor',
+  'pos_vendas',
 ] as const satisfies readonly Role[]
 
 // ──────────────────────────────────────────────────────────────
@@ -159,6 +161,24 @@ export const PRESTADORES_ACCESS_ROLES = [
   'super_admin',
   'diretor',
   'gerente',
+] as const satisfies readonly Role[]
+
+/**
+ * Roles que têm acesso ao módulo operacional de Checklists
+ * (/checklists e /checklists/minhas-tarefas).
+ * `pos_vendas` NÃO tem acesso — foca em dados de pós-venda, não em operação.
+ */
+export const OPERATIONAL_CHECKLIST_ROLES = [
+  'super_admin',
+  'diretor',
+  'gerente',
+  'vendedora',
+  'rh',
+  'financeiro',
+  'manutencao',
+  'freelancer',
+  'entregador',
+  'decoracao',
 ] as const satisfies readonly Role[]
 
 export type CommercialChecklistManageRole =

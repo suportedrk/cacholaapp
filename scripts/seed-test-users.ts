@@ -36,6 +36,9 @@ const TEST_USERS = [
   { email: 'teste-vendedora@cachola.cloud',   name: 'Teste Vendedora',   role: 'vendedora'   },
   { email: 'teste-rh@cachola.cloud',          name: 'Teste RH',          role: 'rh'          },
   { email: 'teste-manutencao@cachola.cloud',  name: 'Teste Manutenção',  role: 'manutencao'  },
+  { email: 'teste-posvendas@cachola.cloud',   name: 'Teste Pós-Vendas',  role: 'pos_vendas'  },
+  // Usuário local-only para testes no ambiente de desenvolvimento
+  { email: 'vendedora.teste@cachola.local',   name: 'Vendedora Teste Local', role: 'vendedora' },
 ] as const
 
 async function seedUser(email: string, name: string, role: string): Promise<string | null> {
@@ -123,10 +126,10 @@ async function main() {
   }
 
   console.table(rows)
-  console.log(`[seed] ${rows?.length ?? 0}/7 usuários presentes.`)
+  console.log(`[seed] ${rows?.length ?? 0}/8 usuários presentes.`)
 
-  if ((rows?.length ?? 0) < 7) {
-    console.warn('[seed] ATENÇÃO: menos de 7 usuários encontrados!')
+  if ((rows?.length ?? 0) < 8) {
+    console.warn('[seed] ATENÇÃO: menos de 8 usuários encontrados!')
     process.exit(1)
   }
 

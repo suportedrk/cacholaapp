@@ -155,6 +155,7 @@ financeiro  → Relatórios, valores
 rh          → Gestão usuários, escalas
 freelancer  → Evento do dia, checklist designado
 entregador  → Rotas do dia, checklist carga
+pos_vendas  → Módulo Vendas (Upsell/Recompra), Eventos (read), Atas — visão global (todas as unidades)
 ```
 
 ### RLS
@@ -999,6 +1000,43 @@ Arquivo: `src/lib/auth/require-role.ts`
 
 ---
 
+## ROLE `pos_vendas` — Migration 068
+
+Role transversal para equipe de pós-venda: acessa Vendas (Upsell + Recompra) + Eventos + Atas.
+Não é vendedora (sem seller_id), não é gestor — sempre recebe visão agregada de todas as vendedoras.
+
+### Comportamento no sistema
+
+| Aspecto | Comportamento |
+|---------|--------------|
+| Módulo Vendas (`/vendas`) | ✅ Acesso completo via `VENDAS_MODULE_ROLES` |
+| `isVendedora` | `false` → `effectiveSellerId = null` → agrega todas as vendedoras |
+| `isManager` | `false` → `SellerSelector` oculto (não precisa escolher vendedora) |
+| Upsell + Recompra | ✅ RPCs guardam `pos_vendas` desde Migration 068 |
+| UnitSwitcher "Todas as unidades" | ✅ via `GLOBAL_VIEWER_ROLES` |
+| `/bi` | 🚫 Não tem acesso (não está em `BI_ACCESS_ROLES`) |
+| `/configuracoes/vendedoras` | 🚫 Não tem acesso (não está em `SELLERS_MANAGE_ROLES`) |
+| Atas (`/atas`) | ✅ Sem `allowedRoles` — todos os roles veem; RLS controla acesso real |
+| Eventos (`/eventos`) | ✅ Sem `allowedRoles` — todos os roles veem |
+| `/manutencao`, `/equipamentos`, `/prestadores` | 🚫 Guards de layout ativas |
+| `role_default_perms` | events(view+export), minutes(view+create+edit), notifications(view) |
+
+### Arquivos modificados (Migration 068)
+
+| Arquivo | Mudança |
+|---------|---------|
+| `supabase/migrations/068_role_pos_vendas.sql` | CHECK constraints (3 tabelas), `is_global_viewer()`, `role_default_perms`, 9 RPCs |
+| `src/types/database.types.ts` | `UserRole` union + `'pos_vendas'` |
+| `src/types/permissions.ts` | `Role` union + `'pos_vendas'` |
+| `src/lib/constants/index.ts` | `ROLE_LABELS.pos_vendas = 'Pós-Vendas'` |
+| `src/config/roles.ts` | `GLOBAL_VIEWER_ROLES` + `VENDAS_MODULE_ROLES` incluem `'pos_vendas'` |
+| `scripts/seed-test-users.ts` | `teste-posvendas@cachola.cloud` adicionado |
+
+### RPCs atualizadas (9 total)
+`get_vendas_my_kpis`, `get_vendas_daily_revenue`, `get_vendas_ranking`, `get_upsell_opportunities`, `get_upsell_count_for_user`, `get_upsell_popular_addons`, `get_recompra_aniversario_proximo`, `get_recompra_festa_passada`, `get_recompra_count_for_user`
+
+---
+
 ## LABORATÓRIO DE USUÁRIOS DE TESTE
 
 Scripts em `scripts/seed-test-users.ts` e `scripts/cleanup-test-users.ts`.
@@ -1013,11 +1051,12 @@ Executar na VPS via `npx tsx scripts/seed-test-users.ts`.
 | `teste-vendedora@cachola.cloud` | vendedora | `Teste@2026cacholaos!` | seller_id → Raphaela Melo |
 | `teste-rh@cachola.cloud` | rh | `Teste@2026cacholaos!` | adicionado Fase 2.8b |
 | `teste-manutencao@cachola.cloud` | manutencao | `Teste@2026cacholaos!` | adicionado Fase 2.8b — valida assimetria /prestadores |
+| `teste-posvendas@cachola.cloud` | pos_vendas | `Teste@2026cacholaos!` | adicionado Migration 068 — valida acesso transversal |
 
 - Seed é idempotente (skip se já existe) e recriável a qualquer momento
 - Cleanup deleta via `auth.admin.deleteUser` → CASCADE limpa `user_units` e `user_permissions`
 - `sellers` NÃO são afetados (ON DELETE SET NULL)
-- Total: 7 usuários — cobertura completa das 7 roles operacionais do sistema
+- Total: 8 usuários — cobertura completa das 8 roles operacionais do sistema
 
 ---
 
