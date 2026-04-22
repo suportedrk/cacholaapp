@@ -8,10 +8,7 @@ import {
   ShoppingBag, MessageCircle, Loader2, PackageOpen,
 } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useAuth } from '@/hooks/use-auth'
 import { useEventSalesSummary } from '@/hooks/use-event-sales'
-import { hasRole } from '@/config/roles'
-import { VENDAS_MODULE_ROLES } from '@/config/roles'
 import { cn } from '@/lib/utils'
 import type { EventSalesDeal, EventSalesProduct, EventSalesContact } from '@/hooks/use-event-sales'
 
@@ -173,11 +170,6 @@ interface EventSalesSectionProps {
 
 export function EventSalesSection({ eventId }: EventSalesSectionProps) {
   const [isOpen, setIsOpen] = useState(false)
-  const { profile } = useAuth()
-
-  if (!hasRole(profile?.role, VENDAS_MODULE_ROLES)) return null
-
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const { data, isLoading, isError } = useEventSalesSummary(eventId, isOpen)
 
   const hasData = data && (data.deal || data.products.length > 0 || data.upsell_contacts.length > 0)
