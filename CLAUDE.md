@@ -385,6 +385,59 @@ docker compose exec supabase-db psql -U postgres -d postgres
 
 ---
 
+## UNIT STORE — `user_units.is_default`
+
+**Regra invariante:** cada usuário deve ter exatamente **1** linha em `user_units` com `is_default = true`. A ausência de qualquer linha com `is_default = true` causa comportamento indeterminado no boot.
+
+### Lógica de boot (`providers.tsx`)
+
+```
+localStorage ('cachola-active-unit')
+  → is_default = true
+  → units[0]  (ordem indeterminada no PostgreSQL — evitar depender disso)
+  → null
+```
+
+Se nenhuma das linhas tem `is_default = true`, o fallback é `units[0]` com **ordem arbitrária do banco** — o usuário pode ver uma unidade errada a cada login.
+
+### Sintoma clínico
+
+Usuário com múltiplas unidades reporta "não vejo eventos / vejo eventos errados" mas RLS está correto — a query de eventos filtra por `activeUnitId` client-side (`if (activeUnitId) query.eq('unit_id', activeUnitId)`). O bug é silencioso porque o erro não aparece no console.
+
+### Diagnóstico SQL
+
+```sql
+-- Verifica se o usuário tem exatamente 1 unidade padrão
+SELECT uu.user_id, u.name, uu.unit_id, un.slug, uu.is_default
+FROM user_units uu
+JOIN users u ON u.id = uu.user_id
+JOIN units un ON un.id = uu.unit_id
+WHERE uu.user_id = '<uuid>'
+ORDER BY uu.is_default DESC;
+```
+
+### Fix SQL
+
+```sql
+-- Seta a primeira unidade como padrão (garante exatamente 1 true)
+UPDATE user_units
+SET is_default = (unit_id = (
+  SELECT unit_id FROM user_units WHERE user_id = '<uuid>' ORDER BY created_at LIMIT 1
+))
+WHERE user_id = '<uuid>';
+```
+
+### `GLOBAL_VIEWER_ROLES`
+
+Roles que podem selecionar "Todas as unidades" no UnitSwitcher (`activeUnitId = null`):
+```ts
+// src/config/roles.ts — fonte única de verdade
+export const GLOBAL_VIEWER_ROLES = ['super_admin', 'diretor'] as const satisfies readonly Role[]
+```
+**Nunca duplicar** como array local em componentes — importar de `@/config/roles`.
+
+---
+
 ## ROTAS FUNCIONAIS
 
 | Rota | Status |
