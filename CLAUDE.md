@@ -786,6 +786,17 @@ export const GLOBAL_VIEWER_ROLES = ['super_admin', 'diretor'] as const satisfies
 - Rota `/vendas/checklist/automacoes`: CRUD de regras; guard `COMMERCIAL_CHECKLIST_MANAGE_ROLES`; delete restrito a `COMMERCIAL_CHECKLIST_ARCHIVE_ROLES`
 - Sidebar: 4º filho "Automações" com ícone `Zap`, `allowedRoles: [...COMMERCIAL_CHECKLIST_MANAGE_ROLES]`
 
+**Seção Vendas no detalhe do evento — Sub-etapa E (Migration 070) — COMPLETO:**
+- Migration 070: RPC `get_event_sales_summary(p_event_id UUID) RETURNS JSONB` — SECURITY DEFINER, guard `VENDAS_MODULE_ROLES`
+- Retorna 3 blocos: `deal` (header Ploomes), `products` (ploomes_order_products via ploomes_orders), `upsell_contacts` (upsell_contact_log com nome do responsável e vendedora)
+- Cast obrigatório: `events.ploomes_deal_id` é TEXT; `ploomes_deals.ploomes_deal_id` é BIGINT → `::bigint` na query SQL
+- Hook: `useEventSalesSummary(eventId, isOpen)` em `src/hooks/use-event-sales.ts`; `enabled: isOpen && isSessionReady && !!eventId` (lazy fetch)
+- Componente: `EventSalesSection` em `src/app/(auth)/eventos/[id]/components/sections/EventSalesSection.tsx`
+  - Self-contained accordion (gerencia próprio `isOpen`); 3 sub-blocos: `DealHeader` (status badge + link Ploomes + owner + valor), `ProductsTable` (tabela com total), `UpsellTimeline` (timeline cronológica reversa)
+  - Visível apenas para `VENDAS_MODULE_ROLES` (check via `hasRole`)
+  - Inserido entre Financeiro (S3d) e Prestadores (S4) no `/eventos/[id]`
+- Versão: 1.2.1 → 1.4.0 (bumped manual; package.json estava desatualizado vs git tags)
+
 ---
 
 ## REGRA DE PROCESSO (aprendizado Fase C.2)
