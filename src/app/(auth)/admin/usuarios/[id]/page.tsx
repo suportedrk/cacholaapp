@@ -246,7 +246,7 @@ export default function EditarUsuarioPage() {
                     variant="ghost"
                     size="sm"
                     className="text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
-                    onClick={() => removeFromUnit({ id: uu.id, userId: uu.user_id })}
+                    onClick={() => removeFromUnit({ id: uu.id, userId: uu.user_id, wasDefault: uu.is_default })}
                   >
                     Remover
                   </Button>

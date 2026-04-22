@@ -275,19 +275,23 @@ export function useUpdateUserUnitRole() {
 export function useRemoveUserFromUnit() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ id, userId }: { id: string; userId: string }) => {
+    mutationFn: async ({ id, userId, wasDefault }: { id: string; userId: string; wasDefault?: boolean }) => {
       const supabase = createClient()
       const { error } = await supabase
         .from('user_units')
         .delete()
         .eq('id', id)
       if (error) throw error
-      return userId
+      return { userId, wasDefault }
     },
-    onSuccess: (userId) => {
+    onSuccess: ({ userId, wasDefault }) => {
       qc.invalidateQueries({ queryKey: ['user-units'] })
       qc.invalidateQueries({ queryKey: ['user-units', 'user', userId] })
-      toast.success('Vínculo removido.')
+      if (wasDefault) {
+        toast.success('Vínculo removido. A próxima unidade foi definida como padrão automaticamente.')
+      } else {
+        toast.success('Vínculo removido.')
+      }
     },
     onError: () => toast.error('Erro ao remover vínculo.'),
   })
@@ -301,17 +305,11 @@ export function useSetDefaultUnit() {
   return useMutation({
     mutationFn: async ({ userId, unitId }: { userId: string; unitId: string }) => {
       const supabase = createClient()
-      // 1. Desmarcar todas as unidades do usuário como padrão
-      await supabase
-        .from('user_units')
-        .update({ is_default: false })
-        .eq('user_id', userId)
-      // 2. Marcar a selecionada como padrão
-      const { error } = await supabase
-        .from('user_units')
-        .update({ is_default: true })
-        .eq('user_id', userId)
-        .eq('unit_id', unitId)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase as any).rpc('set_user_default_unit', {
+        p_user_id: userId,
+        p_unit_id: unitId,
+      })
       if (error) throw error
     },
     onSuccess: (_, { userId }) => {
