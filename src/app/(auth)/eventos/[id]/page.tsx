@@ -24,6 +24,7 @@ import { useEventChecklists } from '@/hooks/use-checklists'
 import { useEventMaintenances } from '@/hooks/use-maintenance'
 import { AccordionSection } from './components/AccordionSection'
 import { ProvidersSection } from './components/sections/ProvidersSection'
+import { EventSalesSection } from './components/sections/EventSalesSection'
 import { cn } from '@/lib/utils'
 import type { ChecklistForList } from '@/types/database.types'
 
@@ -637,6 +638,9 @@ export default function EventoDetailPage() {
             </div>
           </AccordionSection>
         )}
+
+        {/* S3e: Vendas */}
+        <EventSalesSection eventId={id} />
 
         {/* S4: Prestadores */}
         <ProvidersSection eventId={id} eventDate={event.date} eventTitle={event.birthday_person || event.title || ''} />
