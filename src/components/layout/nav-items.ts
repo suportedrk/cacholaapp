@@ -33,6 +33,7 @@ import {
   MAINTENANCE_MODULE_ROLES,
   PRESTADORES_ACCESS_ROLES,
   BACKUP_VIEW_ROLES,
+  ADMIN_USERS_MANAGE_ROLES,
 } from '@/config/roles'
 
 export interface NavItem {
@@ -64,8 +65,7 @@ export interface NavGroup {
 /** Roles com acesso à visão de Tarefas da Equipe */
 const TEAM_TASKS_ROLES: Role[] = ['super_admin', 'diretor', 'gerente']
 
-/** Roles com acesso a gestão de usuários e unidades (RH incluso para usuários) */
-const USER_ADMIN_ROLES: Role[] = ['super_admin', 'diretor', 'rh']
+// USER_ADMIN_ROLES removida — consolidada em ADMIN_USERS_MANAGE_ROLES (src/config/roles.ts)
 
 /** Roles com acesso a configurações avançadas e logs */
 const ADMIN_ROLES: Role[] = ['super_admin', 'diretor']
@@ -140,7 +140,7 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Administração',
     items: [
-      { label: 'Usuários',          href: ROUTES.users,          icon: Users,      module: 'users',      allowedRoles: USER_ADMIN_ROLES },
+      { label: 'Usuários',          href: ROUTES.users,          icon: Users,      module: 'users',      allowedRoles: [...ADMIN_USERS_MANAGE_ROLES] },
       { label: 'Unidades',          href: ROUTES.units,          icon: Building2,  module: 'users',      allowedRoles: ADMIN_ROLES      },
       { label: 'Vendedoras',        href: '/configuracoes/vendedoras', icon: UserCog, module: 'settings', allowedRoles: ADMIN_ROLES    },
       { label: 'Logs',              href: ROUTES.auditLogs,      icon: ScrollText, module: 'audit_logs', allowedRoles: ADMIN_ROLES      },
