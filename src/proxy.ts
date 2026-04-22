@@ -114,10 +114,11 @@ export const config = {
      * - _next/static (arquivos estáticos)
      * - _next/image (otimização de imagens)
      * - favicon.ico
+     * - icon / apple-icon / opengraph-image (Next.js App Router special files)
      * - manifest.json / manifest.webmanifest (PWA — sem exclusão causava redirect para /login)
      * - sw.js + workbox (service worker PWA)
      * - arquivos estáticos por extensão (imagens, fontes, scripts, estilos)
      */
-    '/((?!_next/static|_next/image|favicon\\.ico|manifest\\.json|manifest\\.webmanifest|sw\\.js|workbox-.*|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|js|css|json|woff2?|ttf|eot)$).*)',
+    '/((?!_next/static|_next/image|favicon\\.ico|icon|apple-icon|opengraph-image|manifest\\.json|manifest\\.webmanifest|sw\\.js|workbox-.*|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|js|css|json|woff2?|ttf|eot)$).*)',
   ],
 }
