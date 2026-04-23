@@ -35,7 +35,7 @@ jobs:
             git pull origin main
 
             echo "Instalando dependencias..."
-            npm install
+            npm ci
 
             echo "Buildando aplicacao..."
             NODE_OPTIONS=--max-old-space-size=4096 npm run build
