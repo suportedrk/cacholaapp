@@ -13,6 +13,8 @@ import {
 } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight, CalendarX, Wrench, LayoutList, CalendarDays, ClipboardList, CheckSquare, Shield, Sparkles, Plus } from 'lucide-react'
+import { CalendarExportButton } from './calendar-export'
+import type { ExportPeriod } from './calendar-export'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
@@ -43,6 +45,8 @@ interface CalendarViewProps {
   onNewPreReserva?: () => void
   canManagePreReservas?: boolean
   isLoading?: boolean
+  activeUnitName?: string
+  exportPeriod?: ExportPeriod
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -139,6 +143,8 @@ export function CalendarView({
   onNewPreReserva,
   canManagePreReservas = false,
   isLoading,
+  activeUnitName,
+  exportPeriod,
 }: CalendarViewProps) {
   const router = useRouter()
   const [navDir, setNavDir] = useState<1 | -1 | 0>(0)
@@ -463,6 +469,17 @@ export function CalendarView({
             <Sparkles className="w-3 h-3" />
             Pré-reserva Ploomes
           </button>
+        )}
+
+        {/* Botão "Enviar ao cliente" — exporta PNG do calendário */}
+        {exportPeriod && (
+          <CalendarExportButton
+            events={events}
+            preReservas={preReservaItems}
+            unitName={activeUnitName ?? 'Cachola'}
+            period={exportPeriod}
+            disabled={isLoading}
+          />
         )}
 
         {/* Botão "Nova Pré-reserva" — só para super_admin/diretor */}
