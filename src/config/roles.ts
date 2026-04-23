@@ -64,22 +64,27 @@ export const VENDAS_MANAGE_ROLES = [
   'gerente',
 ] as const satisfies readonly Role[]
 
-/** Gestão de templates e tarefas do checklist comercial (criar/editar). */
+/**
+ * Gestão do Checklist Comercial: criar/editar templates, ver Equipe Comercial e Automações.
+ * A partir de v1.5.0 restrito a super_admin + diretor — gerente removido.
+ */
 export const COMMERCIAL_CHECKLIST_MANAGE_ROLES = [
   'super_admin',
   'diretor',
-  'gerente',
 ] as const satisfies readonly Role[]
 
-/** Acesso ao checklist comercial (gestão + vendedoras). */
+/**
+ * Acesso ao Checklist Comercial (/vendas/checklist > Minhas Tarefas).
+ * A partir de v1.5.0: gerente removido; pos_vendas adicionado como consumidor.
+ */
 export const COMMERCIAL_CHECKLIST_ACCESS_ROLES = [
   'super_admin',
   'diretor',
-  'gerente',
   'vendedora',
+  'pos_vendas',
 ] as const satisfies readonly Role[]
 
-/** Pode arquivar/reativar templates do checklist comercial (gerente pode criar mas não arquivar). */
+/** Pode arquivar/reativar templates do checklist comercial. */
 export const COMMERCIAL_CHECKLIST_ARCHIVE_ROLES = [
   'super_admin',
   'diretor',
@@ -164,21 +169,26 @@ export const PRESTADORES_ACCESS_ROLES = [
 ] as const satisfies readonly Role[]
 
 /**
- * Roles que têm acesso ao módulo operacional de Checklists
+ * Roles que têm acesso ao módulo de Checklist Operacional
  * (/checklists e /checklists/minhas-tarefas).
- * `pos_vendas` NÃO tem acesso — foca em dados de pós-venda, não em operação.
+ * A partir de v1.5.0: removidos vendedora, rh, financeiro, manutencao, freelancer,
+ * entregador. gerente e decoracao permanecem.
  */
 export const OPERATIONAL_CHECKLIST_ROLES = [
   'super_admin',
   'diretor',
   'gerente',
-  'vendedora',
-  'rh',
-  'financeiro',
-  'manutencao',
-  'freelancer',
-  'entregador',
   'decoracao',
+] as const satisfies readonly Role[]
+
+/**
+ * Roles que veem "Tarefas da Equipe" no Checklist Operacional.
+ * decoracao entrou em OPERATIONAL_CHECKLIST_ROLES em v1.5.0 mas NÃO vê Tarefas da Equipe.
+ */
+export const TEAM_TASKS_ROLES = [
+  'super_admin',
+  'diretor',
+  'gerente',
 ] as const satisfies readonly Role[]
 
 export type CommercialChecklistManageRole =

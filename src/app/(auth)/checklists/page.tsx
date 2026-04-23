@@ -207,7 +207,7 @@ export default function ChecklistsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Checklists"
+        title="Checklist Operacional"
         description="Acompanhe e preencha os checklists operacionais"
         actions={
           <div className="flex items-center gap-2">
