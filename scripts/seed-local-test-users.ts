@@ -123,9 +123,19 @@ async function main() {
   }
   console.log(`   ${toDelete.length} usuário(s) removido(s).`);
 
-  // Limpar public.users órfãos (sem CASCADE automático no self-hosted local)
-  psql(`DELETE FROM public.users WHERE email LIKE 'teste.%@cachola.local'`);
-  console.log('   ✅ public.users órfãos removidos.\n');
+  // Limpeza por whitelist (não por pattern) — ambiente dev deve ter apenas admin + 10 users de teste seedados abaixo
+  // Limpeza por whitelist: desativa FKs temporariamente (dados do prod têm referências cruzadas)
+  // session_replication_role = replica bypassa FK checks + triggers para a sessão
+  execSync(
+    `docker exec ${DB_CONTAINER} psql -U postgres -d postgres` +
+    ` -c "SET session_replication_role = replica"` +
+    ` -c "DELETE FROM public.user_permissions WHERE user_id IN (SELECT id FROM public.users WHERE email != 'admin@cachola.local')"` +
+    ` -c "DELETE FROM public.user_units WHERE user_id IN (SELECT id FROM public.users WHERE email != 'admin@cachola.local')"` +
+    ` -c "DELETE FROM public.users WHERE email != 'admin@cachola.local'"` +
+    ` -c "RESET session_replication_role"`,
+    { encoding: 'utf-8' }
+  );
+  console.log('   ✅ public.users limpo (whitelist: somente admin preservado).\n');
 
   // 2. Descobrir unidades dinamicamente
   const units = psqlJson('SELECT id, name FROM public.units ORDER BY name') as UnitRow[];
