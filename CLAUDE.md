@@ -951,14 +951,20 @@ Arquivo: `src/lib/auth/require-role.ts`
 
 | Constante | Roles | Rota |
 |-----------|-------|------|
-| `ADMIN_ACCESS_ROLES` | super_admin, diretor, rh | `/admin/**` (pai) |
-| `ADMIN_USERS_MANAGE_ROLES` | super_admin, rh | `/admin/usuarios` |
+| `ADMIN_ACCESS_ROLES` | super_admin, diretor | `/admin/**` (pai) — rh removido em v1.5.1 |
+| `ADMIN_USERS_MANAGE_ROLES` | super_admin, diretor | `/admin/usuarios` — rh removido em v1.5.1 |
 | `ADMIN_UNITS_MANAGE_ROLES` | super_admin, diretor | `/admin/unidades` |
 | `ADMIN_LOGS_VIEW_ROLES` | super_admin, diretor | `/admin/logs` |
 | `MAINTENANCE_MODULE_ROLES` | super_admin, diretor, gerente, **manutencao** | `/manutencao`, `/equipamentos` |
-| `PRESTADORES_ACCESS_ROLES` | super_admin, diretor, gerente | `/prestadores` (sem manutencao — intencional) |
-| `BI_ACCESS_ROLES` _(existente)_ | super_admin, diretor, gerente, financeiro | `/bi`, `/relatorios` |
-| `OPERATIONAL_CHECKLIST_ROLES` | super_admin, diretor, gerente, decoracao | `/checklists/**` (v1.5.0 — outros roles removidos) |
+| `MAINTENANCE_ADMIN_ROLES` | super_admin, diretor, gerente | `/manutencao/dashboard`, `/manutencao/configuracoes` — v1.5.1 |
+| `PRESTADORES_ACCESS_ROLES` | super_admin, diretor, gerente, financeiro, manutencao, vendedora, pos_vendas, decoracao | `/prestadores` — expandido v1.5.1 |
+| `BI_ACCESS_ROLES` | super_admin, diretor | `/bi`, `/relatorios` — gerente+financeiro removidos v1.5.1 |
+| `OPERATIONAL_CHECKLIST_ROLES` | super_admin, diretor, gerente, decoracao, **freelancer**, **entregador** | `/checklists/**` — freelancer+entregador restaurados v1.5.1 |
+| `DASHBOARD_ACCESS_ROLES` | todos exceto freelancer e entregador | `/dashboard` — guard v1.5.1 |
+| `SETTINGS_ROLES` | super_admin, diretor | `/configuracoes` — gerente removido v1.5.1 |
+| `EVENTOS_ACCESS_ROLES` | todos exceto manutencao, freelancer, entregador | `/eventos` — guard v1.5.1 |
+| `ATAS_ACCESS_ROLES` | todos exceto manutencao, freelancer, entregador | `/atas` — guard v1.5.1 |
+| `VENDAS_MODULE_ROLES` | super_admin, diretor, vendedora, pos_vendas | `/vendas` — gerente removido v1.5.1 |
 | `COMMERCIAL_CHECKLIST_ACCESS_ROLES` | super_admin, diretor, vendedora, pos_vendas | `/vendas/checklist` (gerente removido v1.5.0) |
 | `COMMERCIAL_CHECKLIST_MANAGE_ROLES` | super_admin, diretor | `/vendas/checklist/equipe, /templates, /automacoes` |
 | `TEAM_TASKS_ROLES` | super_admin, diretor, gerente | sidebar "Tarefas da Equipe" (decoracao excluída) |
@@ -977,14 +983,21 @@ Arquivo: `src/lib/auth/require-role.ts`
 | `src/app/(auth)/vendas/layout.tsx` | `VENDAS_MODULE_ROLES` | BUG3 |
 | `src/app/(auth)/configuracoes/vendedoras/layout.tsx` | `SELLERS_MANAGE_ROLES` | BUG1+BUG5+BUG11 |
 | `src/app/(auth)/manutencao/layout.tsx` | `MAINTENANCE_MODULE_ROLES` | BUG6+BUG9 |
+| `src/app/(auth)/manutencao/dashboard/layout.tsx` | `MAINTENANCE_ADMIN_ROLES` | v1.5.1 |
+| `src/app/(auth)/manutencao/configuracoes/layout.tsx` | `MAINTENANCE_ADMIN_ROLES` | v1.5.1 |
 | `src/app/(auth)/equipamentos/layout.tsx` | `MAINTENANCE_MODULE_ROLES` | BUG7+BUG10 |
 | `src/app/(auth)/prestadores/layout.tsx` | `PRESTADORES_ACCESS_ROLES` | BUG8 |
 | `src/app/(auth)/relatorios/layout.tsx` | `BI_ACCESS_ROLES` | — |
 | `src/app/(auth)/checklists/layout.tsx` | `OPERATIONAL_CHECKLIST_ROLES` | v1.5.0 |
+| `src/app/(auth)/dashboard/layout.tsx` | `DASHBOARD_ACCESS_ROLES` | v1.5.1 |
+| `src/app/(auth)/eventos/layout.tsx` | `EVENTOS_ACCESS_ROLES` | v1.5.1 |
+| `src/app/(auth)/atas/layout.tsx` | `ATAS_ACCESS_ROLES` | v1.5.1 |
+| `src/app/(auth)/configuracoes/layout.tsx` | `SETTINGS_ROLES` | v1.5.1 |
 
 ### Página `/403`
 
 `src/app/403/page.tsx` — Server Component, acessível sem auth (em `PUBLIC_ROUTES` do `proxy.ts`).
+Link "Voltar" é role-aware (v1.5.1): freelancer/entregador → `/checklists/minhas-tarefas`; outros → `/dashboard`; sem sessão → `/login`.
 
 ### APIs com role check adicionado na Fase 2.8b
 
@@ -1050,8 +1063,8 @@ Não é vendedora (sem seller_id), não é gestor — sempre recebe visão agreg
 | `/configuracoes/vendedoras` | 🚫 Não tem acesso (não está em `SELLERS_MANAGE_ROLES`) |
 | Checklist Comercial (`/vendas/checklist`) | ✅ Acesso via `COMMERCIAL_CHECKLIST_ACCESS_ROLES` (v1.5.0) |
 | Checklist Operacional (`/checklists`) | 🚫 Guard de layout `OPERATIONAL_CHECKLIST_ROLES` — redireciona para /403 |
-| Atas (`/atas`) | ✅ Sem `allowedRoles` — todos os roles veem; RLS controla acesso real |
-| Eventos (`/eventos`) | ✅ Sem `allowedRoles` — todos os roles veem |
+| Atas (`/atas`) | ✅ Guard de layout `ATAS_ACCESS_ROLES` (v1.5.1) — pos_vendas está na lista |
+| Eventos (`/eventos`) | ✅ Guard de layout `EVENTOS_ACCESS_ROLES` (v1.5.1) — pos_vendas está na lista |
 | `/manutencao`, `/equipamentos`, `/prestadores` | 🚫 Guards de layout ativas |
 | `role_default_perms` | events(view+export), minutes(view+create+edit), notifications(view) |
 
