@@ -767,7 +767,7 @@ export const GLOBAL_VIEWER_ROLES = ['super_admin', 'diretor'] as const satisfies
 - Todas as 4 páginas têm guard `hasRole` com `COMMERCIAL_CHECKLIST_ACCESS_ROLES` (Minhas Tarefas) ou `COMMERCIAL_CHECKLIST_MANAGE_ROLES` (demais)
 - Sidebar: "Checklist Comercial" com 4 sub-itens via `children` em `nav-items.ts`; badge sidebar consolidado Upsell+Recompra (não alterado)
 - Cron `check-alerts`: seção 4 notifica `commercial_task_overdue` para tarefas em atraso
-- `src/config/roles.ts`: `COMMERCIAL_CHECKLIST_MANAGE_ROLES` + `COMMERCIAL_CHECKLIST_ACCESS_ROLES` (super_admin, diretor, gerente [+ vendedora para Access])
+- `src/config/roles.ts`: `COMMERCIAL_CHECKLIST_MANAGE_ROLES` + `COMMERCIAL_CHECKLIST_ACCESS_ROLES` (super_admin, diretor, vendedora, pos_vendas — gerente removido em v1.5.0)
 - Débitos técnicos resolvidos na Fase 1.5 (commits ca29c0e + 2b18336): (a) archive/reactivate UI — `COMMERCIAL_CHECKLIST_ARCHIVE_ROLES` em `roles.ts`, botão Archive/ArchiveRestore na lista e na detalhe, banner amber quando inativo, "Aplicar" desabilitado; (b) key counter-based `new-${formInstance}` corrige estado residual do form; (c) sidebar `hasActiveChild` usa `pathname.startsWith(c.href + '/')` para robustez em sub-rotas
 
 **Checklist Comercial — Fase 2 (Migration 065) — Jornada do Negócio via Ploomes — COMPLETO:**
@@ -958,6 +958,10 @@ Arquivo: `src/lib/auth/require-role.ts`
 | `MAINTENANCE_MODULE_ROLES` | super_admin, diretor, gerente, **manutencao** | `/manutencao`, `/equipamentos` |
 | `PRESTADORES_ACCESS_ROLES` | super_admin, diretor, gerente | `/prestadores` (sem manutencao — intencional) |
 | `BI_ACCESS_ROLES` _(existente)_ | super_admin, diretor, gerente, financeiro | `/bi`, `/relatorios` |
+| `OPERATIONAL_CHECKLIST_ROLES` | super_admin, diretor, gerente, decoracao | `/checklists/**` (v1.5.0 — outros roles removidos) |
+| `COMMERCIAL_CHECKLIST_ACCESS_ROLES` | super_admin, diretor, vendedora, pos_vendas | `/vendas/checklist` (gerente removido v1.5.0) |
+| `COMMERCIAL_CHECKLIST_MANAGE_ROLES` | super_admin, diretor | `/vendas/checklist/equipe, /templates, /automacoes` |
+| `TEAM_TASKS_ROLES` | super_admin, diretor, gerente | sidebar "Tarefas da Equipe" (decoracao excluída) |
 
 > `OPS_ROLES` e `PROVIDER_ROLES` que viviam em `nav-items.ts` foram promovidos para `roles.ts` na Fase 2.8b.
 
@@ -976,6 +980,7 @@ Arquivo: `src/lib/auth/require-role.ts`
 | `src/app/(auth)/equipamentos/layout.tsx` | `MAINTENANCE_MODULE_ROLES` | BUG7+BUG10 |
 | `src/app/(auth)/prestadores/layout.tsx` | `PRESTADORES_ACCESS_ROLES` | BUG8 |
 | `src/app/(auth)/relatorios/layout.tsx` | `BI_ACCESS_ROLES` | — |
+| `src/app/(auth)/checklists/layout.tsx` | `OPERATIONAL_CHECKLIST_ROLES` | v1.5.0 |
 
 ### Página `/403`
 
@@ -1043,6 +1048,8 @@ Não é vendedora (sem seller_id), não é gestor — sempre recebe visão agreg
 | UnitSwitcher "Todas as unidades" | ✅ via `GLOBAL_VIEWER_ROLES` |
 | `/bi` | 🚫 Não tem acesso (não está em `BI_ACCESS_ROLES`) |
 | `/configuracoes/vendedoras` | 🚫 Não tem acesso (não está em `SELLERS_MANAGE_ROLES`) |
+| Checklist Comercial (`/vendas/checklist`) | ✅ Acesso via `COMMERCIAL_CHECKLIST_ACCESS_ROLES` (v1.5.0) |
+| Checklist Operacional (`/checklists`) | 🚫 Guard de layout `OPERATIONAL_CHECKLIST_ROLES` — redireciona para /403 |
 | Atas (`/atas`) | ✅ Sem `allowedRoles` — todos os roles veem; RLS controla acesso real |
 | Eventos (`/eventos`) | ✅ Sem `allowedRoles` — todos os roles veem |
 | `/manutencao`, `/equipamentos`, `/prestadores` | 🚫 Guards de layout ativas |
