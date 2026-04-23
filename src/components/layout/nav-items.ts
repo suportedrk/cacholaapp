@@ -35,6 +35,7 @@ import {
   BACKUP_VIEW_ROLES,
   ADMIN_USERS_MANAGE_ROLES,
   OPERATIONAL_CHECKLIST_ROLES,
+  TEAM_TASKS_ROLES,
 } from '@/config/roles'
 
 export interface NavItem {
@@ -63,8 +64,7 @@ export interface NavGroup {
 
 // ── Grupos de roles reutilizáveis ──────────────────────────────────────────────
 
-/** Roles com acesso à visão de Tarefas da Equipe */
-const TEAM_TASKS_ROLES: Role[] = ['super_admin', 'diretor', 'gerente']
+// TEAM_TASKS_ROLES importado de @/config/roles
 
 // USER_ADMIN_ROLES removida — consolidada em ADMIN_USERS_MANAGE_ROLES (src/config/roles.ts)
 
@@ -116,9 +116,9 @@ export const NAV_GROUPS: NavGroup[] = [
         ],
       },
       { label: 'Eventos',        href: ROUTES.events,     icon: CalendarDays,  module: 'events'    },
-      { label: 'Checklists',     href: ROUTES.checklists, icon: ClipboardList, module: 'checklists', allowedRoles: [...OPERATIONAL_CHECKLIST_ROLES] },
+      { label: 'Checklist Operacional', href: ROUTES.checklists, icon: ClipboardList, module: 'checklists', allowedRoles: [...OPERATIONAL_CHECKLIST_ROLES] },
       { label: 'Minhas Tarefas',   href: ROUTES.myTasks,    icon: ListTodo,     module: 'checklists', allowedRoles: [...OPERATIONAL_CHECKLIST_ROLES] },
-      { label: 'Tarefas da Equipe', href: ROUTES.teamTasks,  icon: UsersRound,   module: 'checklists', allowedRoles: TEAM_TASKS_ROLES },
+      { label: 'Tarefas da Equipe', href: ROUTES.teamTasks,  icon: UsersRound,   module: 'checklists', allowedRoles: [...TEAM_TASKS_ROLES] },
     ],
   },
   {
