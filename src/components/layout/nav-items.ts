@@ -31,11 +31,16 @@ import {
   COMMERCIAL_CHECKLIST_ACCESS_ROLES,
   COMMERCIAL_CHECKLIST_MANAGE_ROLES,
   MAINTENANCE_MODULE_ROLES,
+  MAINTENANCE_ADMIN_ROLES,
   PRESTADORES_ACCESS_ROLES,
   BACKUP_VIEW_ROLES,
   ADMIN_USERS_MANAGE_ROLES,
   OPERATIONAL_CHECKLIST_ROLES,
   TEAM_TASKS_ROLES,
+  EVENTOS_ACCESS_ROLES,
+  ATAS_ACCESS_ROLES,
+  DASHBOARD_ACCESS_ROLES,
+  SETTINGS_ROLES,
 } from '@/config/roles'
 
 export interface NavItem {
@@ -64,15 +69,12 @@ export interface NavGroup {
 
 // ── Grupos de roles reutilizáveis ──────────────────────────────────────────────
 
-// TEAM_TASKS_ROLES importado de @/config/roles
+// TEAM_TASKS_ROLES, SETTINGS_ROLES importados de @/config/roles
 
 // USER_ADMIN_ROLES removida — consolidada em ADMIN_USERS_MANAGE_ROLES (src/config/roles.ts)
 
 /** Roles com acesso a configurações avançadas e logs */
 const ADMIN_ROLES: Role[] = ['super_admin', 'diretor']
-
-/** Roles com acesso a configurações gerais (gerente pode ajustar horários, etc.) */
-const SETTINGS_ROLES: Role[] = ['super_admin', 'diretor', 'gerente']
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -80,7 +82,7 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     // Sem label de grupo — itens principais (todos os roles veem)
     items: [
-      { label: 'Início',         href: ROUTES.dashboard,  icon: Home },
+      { label: 'Início',         href: ROUTES.dashboard,  icon: Home,          allowedRoles: [...DASHBOARD_ACCESS_ROLES] },
       { label: 'BI',             href: '/bi',             icon: BarChart3,    allowedRoles: [...BI_ACCESS_ROLES]        },
       { label: 'Vendas',         href: ROUTES.vendas,     icon: TrendingUp,   allowedRoles: [...VENDAS_MODULE_ROLES]    },
       {
@@ -115,7 +117,7 @@ export const NAV_GROUPS: NavGroup[] = [
           },
         ],
       },
-      { label: 'Eventos',        href: ROUTES.events,     icon: CalendarDays,  module: 'events'    },
+      { label: 'Eventos',        href: ROUTES.events,     icon: CalendarDays,  module: 'events',   allowedRoles: [...EVENTOS_ACCESS_ROLES] },
       { label: 'Checklist Operacional', href: ROUTES.checklists, icon: ClipboardList, module: 'checklists', allowedRoles: [...OPERATIONAL_CHECKLIST_ROLES] },
       { label: 'Minhas Tarefas',   href: ROUTES.myTasks,    icon: ListTodo,     module: 'checklists', allowedRoles: [...OPERATIONAL_CHECKLIST_ROLES] },
       { label: 'Tarefas da Equipe', href: ROUTES.teamTasks,  icon: UsersRound,   module: 'checklists', allowedRoles: [...TEAM_TASKS_ROLES] },
@@ -127,14 +129,14 @@ export const NAV_GROUPS: NavGroup[] = [
       {
         label: 'Manutenção', href: ROUTES.maintenance, icon: Wrench, module: 'maintenance', allowedRoles: [...MAINTENANCE_MODULE_ROLES],
         children: [
-          { label: 'Dashboard',     href: ROUTES.maintenanceDashboard, icon: LayoutDashboard, module: 'maintenance', allowedRoles: [...MAINTENANCE_MODULE_ROLES] },
+          { label: 'Dashboard',     href: ROUTES.maintenanceDashboard, icon: LayoutDashboard, module: 'maintenance', allowedRoles: [...MAINTENANCE_ADMIN_ROLES]  },
           { label: 'Chamados',      href: ROUTES.maintenanceChamados,  icon: ClipboardList,   module: 'maintenance', allowedRoles: [...MAINTENANCE_MODULE_ROLES] },
-          { label: 'Configurações', href: ROUTES.maintenanceConfig,    icon: Settings2,       module: 'maintenance', allowedRoles: [...MAINTENANCE_MODULE_ROLES] },
+          { label: 'Configurações', href: ROUTES.maintenanceConfig,    icon: Settings2,       module: 'maintenance', allowedRoles: [...MAINTENANCE_ADMIN_ROLES]  },
         ],
       },
       { label: 'Equipamentos', href: ROUTES.equipment,   icon: Package,   module: 'maintenance', allowedRoles: [...MAINTENANCE_MODULE_ROLES]  },
       { label: 'Prestadores',  href: ROUTES.providers,   icon: Handshake, module: 'providers',   allowedRoles: [...PRESTADORES_ACCESS_ROLES]  },
-      { label: 'Atas',         href: ROUTES.minutes,     icon: FileText,  module: 'minutes'                                    },
+      { label: 'Atas',         href: ROUTES.minutes,     icon: FileText,  module: 'minutes',    allowedRoles: [...ATAS_ACCESS_ROLES]  },
       { label: 'Relatórios',   href: ROUTES.reports,     icon: BarChart3, module: 'reports',     allowedRoles: [...BI_ACCESS_ROLES] },
     ],
   },
@@ -146,8 +148,8 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: 'Vendedoras',        href: '/configuracoes/vendedoras', icon: UserCog, module: 'settings', allowedRoles: ADMIN_ROLES    },
       { label: 'Logs',              href: ROUTES.auditLogs,      icon: ScrollText, module: 'audit_logs', allowedRoles: ADMIN_ROLES      },
       { label: 'Backups',           href: ROUTES.backups,        icon: HardDrive,  module: 'settings',   allowedRoles: [...BACKUP_VIEW_ROLES] },
-      { label: 'Configurações',     href: ROUTES.settings,       icon: Settings,   module: 'settings',   allowedRoles: SETTINGS_ROLES   },
-      { label: 'Regras de Negócio', href: ROUTES.businessRules,  icon: BookOpen,   module: 'settings',   allowedRoles: SETTINGS_ROLES   },
+      { label: 'Configurações',     href: ROUTES.settings,       icon: Settings,   module: 'settings',   allowedRoles: [...SETTINGS_ROLES] },
+      { label: 'Regras de Negócio', href: ROUTES.businessRules,  icon: BookOpen,   module: 'settings',   allowedRoles: [...SETTINGS_ROLES] },
     ],
   },
 ]

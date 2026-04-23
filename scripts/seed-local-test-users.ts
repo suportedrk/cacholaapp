@@ -97,8 +97,7 @@ function psqlJson(sql: string): unknown[] {
 }
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
-interface UnitRow  { id: string; name: string }
-interface UserRow  { id: string; email: string }
+interface UnitRow { id: string; name: string }
 
 // ─── Main ────────────────────────────────────────────────────────────────────
 async function main() {
