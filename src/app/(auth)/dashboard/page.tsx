@@ -29,6 +29,7 @@ import { useCalendarPreReservas } from '@/hooks/use-calendar-pre-reservas'
 import { usePreReservasPloomes } from '@/hooks/use-pre-reservas-ploomes'
 import { useLoadingTimeout } from '@/hooks/use-loading-timeout'
 import { useAuth } from '@/hooks/use-auth'
+import { useUnitStore } from '@/stores/unit-store'
 import { BRAND_GREEN } from '@/lib/constants/brand-colors'
 import type { CalendarPreReserva } from '@/types/pre-reservas'
 
@@ -44,6 +45,7 @@ const STROKE = {
 export default function DashboardPage() {
   const router = useRouter()
   const { profile, activeUnitId } = useAuth()
+  const { activeUnit, userUnits } = useUnitStore()
 
   const [currentDate, setCurrentDate] = useState(() => new Date())
   const [calView, setCalView]         = useState<CalendarViewType>('month')
@@ -82,6 +84,14 @@ export default function DashboardPage() {
     const d = format(currentDate, 'yyyy-MM-dd')
     return { dateFrom: d, dateTo: d }
   }, [currentDate, calView])
+
+  // Período para exportação do calendário
+  const exportPeriod = useMemo(() => ({
+    viewType: calView,
+    startDate: new Date(dateFrom),
+    endDate: new Date(dateTo),
+    referenceDate: currentDate,
+  }), [calView, dateFrom, dateTo, currentDate])
 
   const { data: kpis, isLoading: loadingKpis } = useDashboardKpis()
   const {
@@ -288,6 +298,12 @@ export default function DashboardPage() {
           onNewPreReserva={canManagePreReservas ? handleNewPreReserva : undefined}
           canManagePreReservas={canManagePreReservas}
           isLoading={loadingCal}
+          activeUnitName={
+            activeUnit?.name ??
+            userUnits.find((uu) => uu.unit_id === activeUnitId)?.unit.name ??
+            undefined
+          }
+          exportPeriod={exportPeriod}
         />
       </div>
 
