@@ -797,6 +797,22 @@ export const GLOBAL_VIEWER_ROLES = ['super_admin', 'diretor'] as const satisfies
   - Inserido entre Financeiro (S3d) e Prestadores (S4) no `/eventos/[id]`
 - Versão: 1.2.1 → 1.4.0 → 1.4.1 (1.4.1 removeu guard VENDAS_MODULE_ROLES — seção é universal)
 
+**Exportar Calendário para Cliente — v1.4.2 — COMPLETO:**
+- Botão "Enviar ao cliente" no toolbar do `CalendarView` em `/dashboard`
+- Gera PNG do período visualizado (mês/semana/dia) via **html2canvas v1.4.1**
+- Componentes em `src/components/features/dashboard/calendar-export/`:
+  - `sanitize-events.ts` — remove TODOS os campos sensíveis: `client_name`, `birthday_person`, `owner_name`, `client_contact`, `description`, `deal_amount`, `ploomes_url`, `stage_name`, `source`
+  - `calendar-export-view.tsx` — layout 900px fixo com **inline styles hex** (nunca Tailwind — `oklch()` quebra o html2canvas)
+  - `calendar-export-button.tsx` — portal `position: fixed; top:0; left:0; opacity:0` + `onclone` remove stylesheets do DOM clonado
+  - `types.ts`, `build-file-name.ts`, `index.ts`
+- Fontes incluídas: eventos (`status !== 'lost'`) + `pre_reservas_diretoria` + `pre_reservas_ploomes`
+- Fontes excluídas: manutenção, checklists
+- Visual: chip 8×8px + texto preto. Ocupado = vermelho (`#ef4444`), Reservado = amarelo (`#fbbf24`)
+- Acesso: qualquer usuário autenticado (sem restrição de role)
+- **Regra dura:** `CalendarExportView` usa APENAS inline styles com hex — html2canvas não suporta `oklch()` que o Tailwind v4 gera
+- **Regra dura:** `EventBadge` usa `display: block + lineHeight px fixo (22px) + chip inline-block com position: relative top: 2`. Flex+alignItems:center quebra o render do texto no html2canvas
+- **Regra dura:** `onclone` remove todos os `<style>` e `<link rel="stylesheet">` do documento clonado antes da captura
+
 ---
 
 ## REGRA DE PROCESSO (aprendizado Fase C.2)
