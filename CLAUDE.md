@@ -1078,25 +1078,34 @@ Não é vendedora (sem seller_id), não é gestor — sempre recebe visão agreg
 > (registro histórico em `/opt/cacholaapp/scripts/ops/2026-04-22-remove-test-users.sql` na VPS).
 > Para regressão de roles, use o ambiente local (docker compose) recriando via seed abaixo.
 
-Scripts em `scripts/seed-test-users.ts` e `scripts/cleanup-test-users.ts`.
-Executar **apenas em ambiente local** via `npx tsx scripts/seed-test-users.ts`.
+### Script principal (v1.5.0+)
 
-| Email | Role | Senha | Obs |
-|-------|------|-------|-----|
-| `teste-superadmin@cachola.cloud` | super_admin | `Teste@2026cacholaos!` | — |
-| `teste-diretor@cachola.cloud` | diretor | `Teste@2026cacholaos!` | — |
-| `teste-gerente@cachola.cloud` | gerente | `Teste@2026cacholaos!` | user_units → Pinheiros |
-| `teste-financeiro@cachola.cloud` | financeiro | `Teste@2026cacholaos!` | — |
-| `teste-vendedora@cachola.cloud` | vendedora | `Teste@2026cacholaos!` | seller_id → Raphaela Melo |
-| `teste-rh@cachola.cloud` | rh | `Teste@2026cacholaos!` | adicionado Fase 2.8b |
-| `teste-manutencao@cachola.cloud` | manutencao | `Teste@2026cacholaos!` | adicionado Fase 2.8b — valida assimetria /prestadores |
-| `teste-posvendas@cachola.cloud` | pos_vendas | `Teste@2026cacholaos!` | planejado Migration 068 — **nunca foi criado em produção** |
+```bash
+npx tsx scripts/seed-local-test-users.ts
+```
 
-- Seed é idempotente (skip se já existe) e recriável a qualquer momento
-- Cleanup deleta via `auth.admin.deleteUser` → CASCADE limpa `user_units` e `user_permissions`
-- `sellers` NÃO são afetados (ON DELETE SET NULL)
-- Total planejado: 8 usuários — cobertura completa das 8 roles operacionais do sistema
-- **NUNCA rodar seed em produção** — senha padrão conhecida é risco de segurança
+**`scripts/seed-local-test-users.ts`** — Script canônico para ambiente local. Double guard-rail (URL localhost + NODE_ENV). Apaga todos os usuários de teste anteriores e cria 10 novos — um por role — com Pinheiros (default) + Moema e permissões populadas de `role_default_perms`.
+
+| Email | Role | Senha |
+|-------|------|-------|
+| `teste.diretor@cachola.local` | diretor | `LocalTeste2026!` |
+| `teste.gerente@cachola.local` | gerente | `LocalTeste2026!` |
+| `teste.vendedora@cachola.local` | vendedora | `LocalTeste2026!` |
+| `teste.posvendas@cachola.local` | pos_vendas | `LocalTeste2026!` |
+| `teste.decoracao@cachola.local` | decoracao | `LocalTeste2026!` |
+| `teste.manutencao@cachola.local` | manutencao | `LocalTeste2026!` |
+| `teste.financeiro@cachola.local` | financeiro | `LocalTeste2026!` |
+| `teste.rh@cachola.local` | rh | `LocalTeste2026!` |
+| `teste.freelancer@cachola.local` | freelancer | `LocalTeste2026!` |
+| `teste.entregador@cachola.local` | entregador | `LocalTeste2026!` |
+
+- Idempotente — pode rodar múltiplas vezes sem efeitos colaterais
+- Requer banco local com schema populado (`docker compose up -d` + sync de produção)
+- **NUNCA rodar em produção** — double guard-rail aborta se URL não for localhost
+
+### Scripts legados (descontinuados)
+
+`scripts/seed-test-users.ts` e `scripts/cleanup-test-users.ts` — usavam domínio `@cachola.cloud` e não tinham guard-rail. Substituídos pelo script acima. Manter no repo para referência histórica.
 
 ---
 

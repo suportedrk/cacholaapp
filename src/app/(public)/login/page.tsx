@@ -246,7 +246,29 @@ function LoginForm() {
       triggerShake()
     } else if (result.success) {
       setSubmitState('success')
-      setTimeout(() => router.replace(redirectTo), 700)
+
+      // Redirect por role — freelancer/entregador vão direto para tarefas do dia
+      let destination = redirectTo
+      if (redirectTo === '/dashboard') {
+        try {
+          const supabase = createClient()
+          const { data: { user: authUser } } = await supabase.auth.getUser()
+          if (authUser) {
+            const { data: profile } = await supabase
+              .from('users')
+              .select('role')
+              .eq('id', authUser.id)
+              .single()
+            if (profile?.role === 'freelancer' || profile?.role === 'entregador') {
+              destination = '/checklists/minhas-tarefas'
+            }
+          }
+        } catch {
+          // fallback silencioso — /dashboard é seguro para roles não-determinados
+        }
+      }
+
+      setTimeout(() => router.replace(destination), 700)
     }
   }
 

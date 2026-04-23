@@ -15,12 +15,10 @@
 
 import type { Role } from '@/types/permissions'
 
-/** Acesso a qualquer aba do módulo BI (sidebar + página /bi). */
+/** Acesso a qualquer aba do módulo BI (sidebar + página /bi) e Relatórios. */
 export const BI_ACCESS_ROLES = [
   'super_admin',
   'diretor',
-  'gerente',
-  'financeiro',
 ] as const satisfies readonly Role[]
 
 /** Acesso à aba "Atendimento (Deals)" — visão mais restrita. */
@@ -48,11 +46,10 @@ export const VENDEDORA_ROLES = [
   'vendedora',
 ] as const satisfies readonly Role[]
 
-/** Acesso ao módulo Vendas (/vendas) — vendedoras + gestão + pós-vendas. */
+/** Acesso ao módulo Vendas (/vendas) — vendedoras + diretoria + pós-vendas. */
 export const VENDAS_MODULE_ROLES = [
   'super_admin',
   'diretor',
-  'gerente',
   'vendedora',
   'pos_vendas',
 ] as const satisfies readonly Role[]
@@ -113,14 +110,12 @@ export const GLOBAL_VIEWER_ROLES = [
 export const ADMIN_ACCESS_ROLES = [
   'super_admin',
   'diretor',
-  'rh',
 ] as const satisfies readonly Role[]
 
 /** Gestão de usuários (/admin/usuarios) — criar, editar, permissões, reenviar convite. */
 export const ADMIN_USERS_MANAGE_ROLES = [
   'super_admin',
   'diretor',
-  'rh',
 ] as const satisfies readonly Role[]
 
 /** Gestão de unidades (/admin/unidades). */
@@ -148,7 +143,6 @@ export const BACKUP_VIEW_ROLES = [
 /**
  * Acesso aos módulos de Manutenção e Equipamentos.
  * Inclui a role `manutencao` (técnicos internos).
- * /relatorios reutiliza BI_ACCESS_ROLES (super_admin, diretor, gerente, financeiro).
  */
 export const MAINTENANCE_MODULE_ROLES = [
   'super_admin',
@@ -158,37 +152,117 @@ export const MAINTENANCE_MODULE_ROLES = [
 ] as const satisfies readonly Role[]
 
 /**
- * Acesso ao módulo de Prestadores (gestão de terceiros).
- * Exclui `manutencao` intencionalmente — prestadores externos são responsabilidade
- * de gestão, não dos técnicos operacionais.
+ * Acesso a sub-rotas de gestão em Manutenção: Dashboard e Configurações.
+ * Exclui `manutencao` — técnicos não precisam dessas visões gerenciais.
  */
-export const PRESTADORES_ACCESS_ROLES = [
+export const MAINTENANCE_ADMIN_ROLES = [
   'super_admin',
   'diretor',
   'gerente',
 ] as const satisfies readonly Role[]
 
 /**
- * Roles que têm acesso ao módulo de Checklist Operacional
+ * Acesso ao módulo de Prestadores (gestão de terceiros).
+ * Exclui rh, freelancer, entregador — sem necessidade operacional nesse módulo.
+ */
+export const PRESTADORES_ACCESS_ROLES = [
+  'super_admin',
+  'diretor',
+  'gerente',
+  'financeiro',
+  'manutencao',
+  'vendedora',
+  'pos_vendas',
+  'decoracao',
+] as const satisfies readonly Role[]
+
+/**
+ * Roles com acesso ao módulo de Checklist Operacional
  * (/checklists e /checklists/minhas-tarefas).
- * A partir de v1.5.0: removidos vendedora, rh, financeiro, manutencao, freelancer,
- * entregador. gerente e decoracao permanecem.
+ * v1.5.0 reduziu para 4 roles. v1.5.1 restaurou freelancer e entregador porque o
+ * fluxo operacional desses roles é checklist/tarefas do dia. Continuam fora:
+ * vendedora, rh, financeiro, manutencao (trabalho não é checklist operacional de festa).
  */
 export const OPERATIONAL_CHECKLIST_ROLES = [
   'super_admin',
   'diretor',
   'gerente',
   'decoracao',
+  'freelancer',
+  'entregador',
 ] as const satisfies readonly Role[]
 
 /**
  * Roles que veem "Tarefas da Equipe" no Checklist Operacional.
- * decoracao entrou em OPERATIONAL_CHECKLIST_ROLES em v1.5.0 mas NÃO vê Tarefas da Equipe.
+ * decoracao/freelancer/entregador estão em OPERATIONAL_CHECKLIST_ROLES mas NÃO veem Tarefas da Equipe.
  */
 export const TEAM_TASKS_ROLES = [
   'super_admin',
   'diretor',
   'gerente',
+] as const satisfies readonly Role[]
+
+// ──────────────────────────────────────────────────────────────
+// Módulos de acesso geral
+// ──────────────────────────────────────────────────────────────
+
+/**
+ * Acesso ao módulo de Eventos (/eventos).
+ * Exclui manutencao, freelancer, entregador — sem contexto de festa.
+ */
+export const EVENTOS_ACCESS_ROLES = [
+  'super_admin',
+  'diretor',
+  'gerente',
+  'financeiro',
+  'vendedora',
+  'pos_vendas',
+  'decoracao',
+  'rh',
+] as const satisfies readonly Role[]
+
+/**
+ * Acesso ao módulo de Atas (/atas).
+ * Exclui manutencao, freelancer, entregador.
+ */
+export const ATAS_ACCESS_ROLES = [
+  'super_admin',
+  'diretor',
+  'gerente',
+  'financeiro',
+  'vendedora',
+  'pos_vendas',
+  'decoracao',
+  'rh',
+] as const satisfies readonly Role[]
+
+/**
+ * Acesso ao Dashboard principal (/dashboard).
+ * Exclui freelancer e entregador — redirecionados para /checklists/minhas-tarefas.
+ */
+export const DASHBOARD_ACCESS_ROLES = [
+  'super_admin',
+  'diretor',
+  'gerente',
+  'financeiro',
+  'manutencao',
+  'vendedora',
+  'pos_vendas',
+  'decoracao',
+  'rh',
+] as const satisfies readonly Role[]
+
+// ──────────────────────────────────────────────────────────────
+// Configurações
+// ──────────────────────────────────────────────────────────────
+
+/**
+ * Acesso a configurações (/configuracoes, Regras de Negócio).
+ * Restrito a super_admin e diretor — gerente removido em v1.5.1.
+ */
+export const SETTINGS_ROLES = [
+  'super_admin',
+  'diretor',
 ] as const satisfies readonly Role[]
 
 export type CommercialChecklistManageRole =
