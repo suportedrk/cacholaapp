@@ -12,9 +12,10 @@ import { CostCard, CostCardSkeleton } from './cost-card'
 import { CostFormModal } from './cost-form-modal'
 import {
   useMaintCosts, useCostsSummary, useCurrentUser,
-  COST_TYPE_LABELS, PERIOD_OPTIONS, MANAGER_ROLES, formatBRL,
+  COST_TYPE_LABELS, PERIOD_OPTIONS, formatBRL,
   type CostFilters,
 } from '@/hooks/use-maintenance-costs'
+import { MAINTENANCE_ADMIN_ROLES } from '@/config/roles'
 import type { MaintenanceCostStatus, MaintenanceCostType } from '@/types/database.types'
 
 // ─────────────────────────────────────────────────────────────
@@ -69,7 +70,7 @@ export function CostsTab() {
   const { data: currentUser }                     = useCurrentUser()
 
   const currentUserId = currentUser?.id ?? null
-  const canApprove    = !!currentUser && (MANAGER_ROLES as readonly string[]).includes(currentUser.role)
+  const canApprove    = !!currentUser && (MAINTENANCE_ADMIN_ROLES as readonly string[]).includes(currentUser.role)
 
   // Toggle helpers
   function toggleStatus(s: MaintenanceCostStatus) {

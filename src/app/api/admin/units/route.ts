@@ -4,6 +4,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
+import { ADMIN_ACCESS_ROLES } from '@/config/roles'
 
 interface CreateUnitPayload {
   name: string
@@ -11,8 +12,6 @@ interface CreateUnitPayload {
   address?: string | null
   phone?: string | null
 }
-
-const ALLOWED_ROLES = ['super_admin', 'diretor']
 
 export async function POST(req: NextRequest) {
   try {
@@ -30,7 +29,7 @@ export async function POST(req: NextRequest) {
       .eq('id', user.id)
       .single()
 
-    if (!profile || !ALLOWED_ROLES.includes(profile.role)) {
+    if (!profile || !(ADMIN_ACCESS_ROLES as readonly string[]).includes(profile.role)) {
       return NextResponse.json(
         { error: 'Acesso restrito a super_admin e diretor.' },
         { status: 403 }
