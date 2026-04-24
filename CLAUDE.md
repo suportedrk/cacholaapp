@@ -15,6 +15,80 @@
 
 ---
 
+## PROTOCOLO DE DESENVOLVIMENTO — SEQUÊNCIA OBRIGATÓRIA
+
+> Esta seção existe porque a falta de validação local em dev foi fator contribuinte no incidente de 24/abr/2026 (v1.5.2). Leia antes de cada sessão.
+
+### Sequência obrigatória para qualquer mudança de código
+
+1. git checkout develop && git pull origin develop (sempre começar sincronizado)
+2. Copiar .env.local se não existir
+3. Implementar a mudança em dev local (Windows do Bruno, pasta do projeto)
+4. CLASSIFICAR a mudança em uma das duas categorias abaixo
+5. Aplicar a regra correspondente à categoria
+6. npx tsc --noEmit | grep -v .next  →  obrigatório, deve estar limpo
+7. npm run lint (não introduzir warnings novos em relação ao baseline)
+8. git add + git commit (mensagem descritiva em pt-BR)
+9. git push origin develop
+10. Aguardar CI verde antes de qualquer merge para main
+
+### Categoria A — Muda comportamento percebido
+
+Inclui qualquer alteração em: UI, fluxo de navegação, lógica de negócio, permissão efetiva (quem vê o quê), dados retornados por API/RPC, conteúdo exibido, redirecionamentos, emails, cálculos, textos visíveis.
+
+Regra: obrigatório rodar npm run dev e validar funcionalmente o que mudou. Bruno fará a validação final com olho humano via screenshot antes do merge em main, mas Claude Code deve ter aberto a tela e confirmado que não quebrou o visível antes de commitar.
+
+Exemplos de Categoria A:
+- Mudança em layout, botão, modal, dropdown, tabela
+- Nova rota ou alteração em rota existente
+- Ajuste em role/guard que muda quem acessa o quê
+- Novo campo em formulário ou alteração em validação
+- Mudança em texto de email, notificação, toast
+- Alteração em RPC que muda o shape dos dados
+- Qualquer correção de bug (é comportamento por definição)
+
+### Categoria B — Refactor invisível ao usuário
+
+Inclui apenas: consolidação de constantes idênticas, renomeação de variável/constante, ajuste de formatação, atualização de import path, reorganização de código sem alterar output.
+
+Regra: npm run dev não é obrigatório SE tsc e lint passam limpos. O compilador é suficiente como validador.
+
+Exemplos de Categoria B:
+- Substituir ADMIN_ROLES local por ADMIN_ACCESS_ROLES de @/config/roles (quando conteúdo é idêntico)
+- Renomear helper interno
+- Mover função de um arquivo para outro sem mudar behavior
+- Atualizar CLAUDE.md ou outros .md
+- Ajustes de formatação/lint automáticos
+
+### Regra do desempate
+
+EM QUALQUER DÚVIDA sobre qual categoria se aplica, trate como Categoria A e valide em dev local. Dúvida empurra para o lado seguro.
+
+Exemplo: "essa mudança em um hook compartilhado parece refactor, mas é usada em 3 componentes de UI". → Categoria A. Roda.
+
+### Regra de VPS / SSH
+
+SSH na VPS é permitido APENAS para:
+- Diagnóstico (git status, pm2 logs, ls, docker exec … psql … SELECT)
+- Operações de infraestrutura (pm2 restart, docker restart, reindex, aplicar migration via docker exec)
+- Restauração em incidente (git checkout HEAD -- file após aprovação explícita do Bruno)
+
+SSH na VPS é PROIBIDO para:
+- Editar arquivo de código-fonte (.ts, .tsx, .js, .yml, .json, .md)
+- Executar npm install (usar npm ci quando for o caso, sempre controlado pelo deploy.yml)
+- Criar, mover ou deletar arquivos rastreados pelo git
+- Fazer commit, git reset, git clean, git checkout em branch diferente de main
+
+Toda alteração de código vai obrigatoriamente pelo fluxo: editar em dev local → commit em develop → merge em main → deploy automático aplica na VPS.
+
+### Por que essas regras existem
+
+No incidente de 24/abr/2026, 4 arquivos de código foram deletados do disco da VPS sem passar pelo git — provavelmente durante intervenção manual em uma sessão de SSH ao tentar destravar falhas de deploy. A divergência ficou invisível por 5 dias, até que a build da v1.5.2 tentou importá-los e quebrou a produção com HTTP 500.
+
+Se as regras acima tivessem sido seguidas, o incidente não teria acontecido. Essas regras são mandatárias, não sugestões.
+
+---
+
 ## STACK TECNOLÓGICA
 
 | Camada | Tecnologia | Versão |
