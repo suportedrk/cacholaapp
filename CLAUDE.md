@@ -163,6 +163,16 @@ pos_vendas  → Módulo Vendas (Upsell/Recompra), Eventos (read), Atas — visã
 - Verificação via `user_permissions` (não role direto)
 - `get_user_unit_ids()` e `is_global_viewer()` — funções SQL reutilizadas nas policies
 
+### Gotcha — INSERT direto em `auth.users` (Supabase self-hosted GoTrue)
+
+> **Descoberto em 24/04/2026** ao criar usuários de teste (`freelancer`, `entregador`) para validação de redirect pós-login.
+
+Campos de token (`confirmation_token`, `recovery_token`, `email_change_token_new`, `email_change_token_current`, `email_change`, `phone_change`, `phone_change_token`, `reauthentication_token`) devem ser preenchidos com `''` (string vazia), **NUNCA `NULL`**.
+
+- **Sintoma de NULL:** login retorna HTTP 500 ("Serviço indisponível") mesmo com credenciais corretas — GoTrue falha silenciosamente ao ler o token
+- **Correção:** sempre usar `INSERT ... confirmation_token = '', recovery_token = '', ...` ou usar `SELECT extensions.crypt(...)` conforme o padrão dos scripts de criação de usuários
+- Referência: `scripts/create-prod-test-users-v151.sql` (gitignored) — usa o padrão correto com tokens `''`
+
 ---
 
 ## VARIÁVEIS DE AMBIENTE
@@ -212,10 +222,12 @@ git checkout develop
 cd /opt/cacholaapp
 git pull origin main
 NODE_OPTIONS=--max-old-space-size=4096 npm run build
-pm2 restart cacholaos
+pm2 restart cacholaos --update-env
 ```
 
 > **CI DEPLOY CONCORRENTE RESOLVIDO (20/04/2026):** a hipótese original (SSH timeout) estava errada — `command_timeout: 12m` e `timeout-minutes: 15` já estavam corretos. Causa raiz real: dois commits quase simultâneos em `main` disparavam runs paralelos; ambos tentavam rodar `next build` na VPS e o segundo falhava em `.next/cache/.lock` com `"Another next build process is already running"`. Fix: `concurrency` group `deploy-production` com `cancel-in-progress: false` no workflow — segundo run fica enfileirado até o primeiro terminar. Bruno não precisa mais fazer deploy manual após merges rápidos.
+
+> **INCIDENTE DE DISCO DA VPS (24/04/2026 — v1.5.2 / commit 883a956):** após o deploy da v1.5.2, toda a produção retornou HTTP 500 por ~30 min. Causa direta: 4 arquivos do módulo Automações do Checklist Comercial (`automation-card.tsx`, `automation-form.tsx`, `use-commercial-automations.ts`, `use-ploomes-stages.ts`) estavam deletados do disco da VPS mas presentes no git — estado inconsistente acumulado entre 19–23/abr durante debugging de falhas de `package-lock.json`. `npm run build` falhou com `Module not found`; `set -e` abortou antes do `pm2 restart`; PM2 continuou servindo a versão anterior mas `.next/static/` havia sido sobrescrito pelo build parcial. Fix: `git checkout HEAD -- <4 arquivos>`, `npm run build`, `pm2 restart --update-env`. Diagnóstico: `bash_history` congelado em 17/abr impossibilitou prova direta da deleção manual. Prevenção: v1.5.3 introduziu portão de working tree no `deploy.yml` (`grep -v '^??'` aborta o deploy se qualquer arquivo tracked divergir do git antes do `git pull`).
 
 ### Migrations no deploy
 ```bash
@@ -312,7 +324,10 @@ R2_BUCKET=cacholaos-backups
 - `upload-to-r2.sh` — chama `log_r2_rows()` após cada `rclone copy` por folder
 - `backfill-backup-log.sh` — popula dados históricos (executado uma vez em 20/04/2026; 16 rows inseridas)
 
-**Workflow deploy:** `.github/workflows/deploy.yml` agora inclui `npm install` após `git pull` para garantir que novas dependências sejam instaladas na VPS antes do build.
+**Workflow deploy (`.github/workflows/deploy.yml`) — estado atual (v1.5.3):**
+- Usa `npm ci` (não `npm install`) — garante lockfile estrito e evita corrupção do `package-lock.json` na VPS (fix v1.5.1 / commit `26adc05`)
+- **Portão de working tree (v1.5.3):** antes do `git pull`, executa `git status --porcelain | grep -v '^??'` — aborta com mensagem clara se houver arquivos tracked modificados ou deletados na VPS. Ignora untracked legítimos (`scripts/ops/` etc.)
+- **PM2 `--update-env` (v1.5.3):** `pm2 restart cacholaos --update-env` força releitura de variáveis do `.env.local` a cada deploy. Sem essa flag, PM2 mantém silenciosamente o ambiente da última inicialização a frio.
 
 ---
 
@@ -333,6 +348,19 @@ docker compose up -d --force-recreate auth
 # PostgreSQL local
 docker compose exec supabase-db psql -U postgres -d postgres
 ```
+
+### Pipeline de versão
+
+```bash
+npx tsx scripts/bump-version.ts patch   # atualiza package.json + package-lock.json (não toca src/lib/version.ts)
+```
+
+**Como a versão propaga automaticamente (sem variável extra na VPS):**
+1. `bump-version.ts` escreve a nova versão em `package.json`
+2. Em build time, `next.config.ts` lê `package.json` via `readFileSync` e injeta `NEXT_PUBLIC_APP_VERSION` no bloco `env:`
+3. A versão fica "baked" nos chunks JS — nenhuma variável de ambiente adicional é necessária na VPS
+4. `src/lib/version.ts` apenas lê `process.env.NEXT_PUBLIC_APP_VERSION` (fallback `'1.0.0'` só em dev sem build)
+5. Sidebar e outros componentes consomem via `APP_VERSION` de `src/lib/version.ts`
 
 ---
 
@@ -643,7 +671,7 @@ export const GLOBAL_VIEWER_ROLES = ['super_admin', 'diretor'] as const satisfies
 - Campo `is_system_account BOOLEAN` (default false): marca contas Ploomes que não são vendedoras reais (bots/automações). `Contador de negócios` (owner_id=10045234) seedado com `is_system_account=true`. BI filtra `is_system_account=false` no ranking.
 - Types em `src/types/seller.ts`: `Seller`, `SellerFormInput`, `SellerStatus`
 - Trigger `trg_auto_insert_seller` (Migration 054): AFTER INSERT em `ploomes_orders` → chama `auto_insert_seller_from_order()` SECURITY DEFINER (owner: `supabase_admin`) → ON CONFLICT DO NOTHING
-- Tela `/configuracoes/vendedoras`: CRUD de edição (sem criação manual); sidebar grupo Administração, restrita a `ADMIN_ROLES`; filtros Todas/Ativas/Inativas/Sistema; sheet lateral com `termination_date` condicional (só quando inativo) e `is_system_account` só para `super_admin`
+- Tela `/configuracoes/vendedoras`: CRUD de edição (sem criação manual); sidebar grupo Administração, restrita a `ADMIN_ACCESS_ROLES`; filtros Todas/Ativas/Inativas/Sistema; sheet lateral com `termination_date` condicional (só quando inativo) e `is_system_account` só para `super_admin`
 - Hooks: `useSellers()` + `useUpdateSeller()` em `src/hooks/use-sellers.ts`
 - Migration 055 + aba **"Vendas Realizadas (Orders)"** no BI: 3 RPCs guardados (super_admin+diretor+gerente+financeiro): `get_bi_sales_kpi`, `get_bi_sales_ranking` (avg_monthly_revenue normalizado por meses trabalhados respeitando hire_date/termination_date), `get_bi_seller_orders` (drill-down). Aba "Responsáveis por Deal" renomeada para **"Atendimento (Deals)"** — conteúdo intocado. Período default 12M, pills 3M/6M/12M/Tudo. Default filtra `status=active AND is_system_account=false`; toggle "Incluir histórico" expõe todas. Rodapé "Dados a partir de outubro/2024" apenas quando período=Tudo. Drill-down via sheet (sem página dedicada). `canSeeVendas = BI_VENDAS_ROLES` (inclui gerente + financeiro).
 
@@ -764,7 +792,7 @@ export const GLOBAL_VIEWER_ROLES = ['super_admin', 'diretor'] as const satisfies
 - Migration 064: 4 tabelas (`commercial_task_templates`, `commercial_template_items`, `commercial_tasks`, `commercial_task_completions`) + triggers + `can_view_commercial_template` + `can_view_commercial_task` + `apply_commercial_template` SECURITY DEFINER + dedup index atualizado para incluir `commercial_task_overdue`; 14 RLS policies
 - Hooks em `src/hooks/commercial-checklist/`: `use-commercial-templates.ts`, `use-commercial-template-items.ts`, `use-commercial-tasks.ts`, `use-apply-template.ts`
 - Rotas: `/vendas/checklist` (Minhas Tarefas), `/vendas/checklist/equipe` (Equipe Comercial), `/vendas/checklist/templates`, `/vendas/checklist/templates/[id]`
-- Todas as 4 páginas têm guard `hasRole` com `COMMERCIAL_CHECKLIST_ACCESS_ROLES` (Minhas Tarefas) ou `COMMERCIAL_CHECKLIST_MANAGE_ROLES` (demais)
+- Guards migrados para server-side na v1.5.2 via `requireRoleServer`: raiz `/vendas/checklist` usa `COMMERCIAL_CHECKLIST_ACCESS_ROLES`; sub-rotas `/automacoes`, `/equipe`, `/templates` usam `COMMERCIAL_CHECKLIST_MANAGE_ROLES` — 4 `layout.tsx` criados, `hasRole` client-side removido das `page.tsx`
 - Sidebar: "Checklist Comercial" com 4 sub-itens via `children` em `nav-items.ts`; badge sidebar consolidado Upsell+Recompra (não alterado)
 - Cron `check-alerts`: seção 4 notifica `commercial_task_overdue` para tarefas em atraso
 - `src/config/roles.ts`: `COMMERCIAL_CHECKLIST_MANAGE_ROLES` + `COMMERCIAL_CHECKLIST_ACCESS_ROLES` (super_admin, diretor, vendedora, pos_vendas — gerente removido em v1.5.0)
@@ -989,6 +1017,10 @@ Arquivo: `src/lib/auth/require-role.ts`
 | `src/app/(auth)/prestadores/layout.tsx` | `PRESTADORES_ACCESS_ROLES` | BUG8 |
 | `src/app/(auth)/relatorios/layout.tsx` | `BI_ACCESS_ROLES` | — |
 | `src/app/(auth)/checklists/layout.tsx` | `OPERATIONAL_CHECKLIST_ROLES` | v1.5.0 |
+| `src/app/(auth)/vendas/checklist/layout.tsx` | `COMMERCIAL_CHECKLIST_ACCESS_ROLES` | v1.5.2 |
+| `src/app/(auth)/vendas/checklist/automacoes/layout.tsx` | `COMMERCIAL_CHECKLIST_MANAGE_ROLES` | v1.5.2 |
+| `src/app/(auth)/vendas/checklist/equipe/layout.tsx` | `COMMERCIAL_CHECKLIST_MANAGE_ROLES` | v1.5.2 |
+| `src/app/(auth)/vendas/checklist/templates/layout.tsx` | `COMMERCIAL_CHECKLIST_MANAGE_ROLES` | v1.5.2 |
 | `src/app/(auth)/dashboard/layout.tsx` | `DASHBOARD_ACCESS_ROLES` | v1.5.1 |
 | `src/app/(auth)/eventos/layout.tsx` | `EVENTOS_ACCESS_ROLES` | v1.5.1 |
 | `src/app/(auth)/atas/layout.tsx` | `ATAS_ACCESS_ROLES` | v1.5.1 |
