@@ -5,11 +5,7 @@ import { useRouter } from 'next/navigation'
 import { ArrowLeft, Play, Pencil, ClipboardCheck, Archive, ArchiveRestore, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/hooks/use-auth'
-import {
-  hasRole,
-  COMMERCIAL_CHECKLIST_MANAGE_ROLES,
-  COMMERCIAL_CHECKLIST_ARCHIVE_ROLES,
-} from '@/config/roles'
+import { hasRole, COMMERCIAL_CHECKLIST_ARCHIVE_ROLES } from '@/config/roles'
 import {
   useCommercialTemplate,
   useSoftDeleteCommercialTemplate,
@@ -39,16 +35,6 @@ interface PageProps {
 
 export default function EditTemplatePage({ params }: PageProps) {
   const { id } = use(params)
-  const { profile } = useAuth()
-
-  if (!hasRole(profile?.role, COMMERCIAL_CHECKLIST_MANAGE_ROLES)) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <p className="text-text-secondary">Sem permissão para acessar esta página.</p>
-      </div>
-    )
-  }
-
   return <EditTemplateContent id={id} />
 }
 

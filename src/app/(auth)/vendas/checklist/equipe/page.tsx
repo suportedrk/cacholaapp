@@ -3,24 +3,12 @@
 import { useState, useMemo } from 'react'
 import { Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { useAuth } from '@/hooks/use-auth'
-import { hasRole, COMMERCIAL_CHECKLIST_MANAGE_ROLES } from '@/config/roles'
 import { useTeamCommercialTasks, type TeamTaskFilters } from '@/hooks/commercial-checklist/use-commercial-tasks'
 import { useLoadingTimeout } from '@/hooks/use-loading-timeout'
 import { TaskCard } from '../_components/task-card'
 import { TeamTaskFiltersBar } from '../_components/task-filters'
 
 export default function EquipeComercialPage() {
-  const { profile } = useAuth()
-
-  if (!hasRole(profile?.role, COMMERCIAL_CHECKLIST_MANAGE_ROLES)) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <p className="text-text-secondary">Sem permissão para acessar esta página.</p>
-      </div>
-    )
-  }
-
   return <EquipeComercialContent />
 }
 
