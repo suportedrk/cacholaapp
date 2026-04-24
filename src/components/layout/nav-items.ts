@@ -34,6 +34,7 @@ import {
   MAINTENANCE_ADMIN_ROLES,
   PRESTADORES_ACCESS_ROLES,
   BACKUP_VIEW_ROLES,
+  ADMIN_ACCESS_ROLES,
   ADMIN_USERS_MANAGE_ROLES,
   OPERATIONAL_CHECKLIST_ROLES,
   TEAM_TASKS_ROLES,
@@ -67,15 +68,8 @@ export interface NavGroup {
   items: NavItem[]
 }
 
-// ── Grupos de roles reutilizáveis ──────────────────────────────────────────────
-
-// TEAM_TASKS_ROLES, SETTINGS_ROLES importados de @/config/roles
-
-// USER_ADMIN_ROLES removida — consolidada em ADMIN_USERS_MANAGE_ROLES (src/config/roles.ts)
-
-/** Roles com acesso a configurações avançadas e logs */
-const ADMIN_ROLES: Role[] = ['super_admin', 'diretor']
-
+// ─────────────────────────────────────────────────────────────────────────────
+// Todas as constantes de roles são importadas de @/config/roles — fonte única.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const NAV_GROUPS: NavGroup[] = [
@@ -144,9 +138,9 @@ export const NAV_GROUPS: NavGroup[] = [
     label: 'Administração',
     items: [
       { label: 'Usuários',          href: ROUTES.users,          icon: Users,      module: 'users',      allowedRoles: [...ADMIN_USERS_MANAGE_ROLES] },
-      { label: 'Unidades',          href: ROUTES.units,          icon: Building2,  module: 'users',      allowedRoles: ADMIN_ROLES      },
-      { label: 'Vendedoras',        href: '/configuracoes/vendedoras', icon: UserCog, module: 'settings', allowedRoles: ADMIN_ROLES    },
-      { label: 'Logs',              href: ROUTES.auditLogs,      icon: ScrollText, module: 'audit_logs', allowedRoles: ADMIN_ROLES      },
+      { label: 'Unidades',          href: ROUTES.units,          icon: Building2,  module: 'users',      allowedRoles: [...ADMIN_ACCESS_ROLES]      },
+      { label: 'Vendedoras',        href: '/configuracoes/vendedoras', icon: UserCog, module: 'settings', allowedRoles: [...ADMIN_ACCESS_ROLES]    },
+      { label: 'Logs',              href: ROUTES.auditLogs,      icon: ScrollText, module: 'audit_logs', allowedRoles: [...ADMIN_ACCESS_ROLES]      },
       { label: 'Backups',           href: ROUTES.backups,        icon: HardDrive,  module: 'settings',   allowedRoles: [...BACKUP_VIEW_ROLES] },
       { label: 'Configurações',     href: ROUTES.settings,       icon: Settings,   module: 'settings',   allowedRoles: [...SETTINGS_ROLES] },
       { label: 'Regras de Negócio', href: ROUTES.businessRules,  icon: BookOpen,   module: 'settings',   allowedRoles: [...SETTINGS_ROLES] },
