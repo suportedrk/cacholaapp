@@ -80,3 +80,10 @@ public/swe-worker-*.js.map
 # ============================================================
 tmp/
 tmp/cachola-dump-*.sql.gz
+
+# ============================================================
+# SCRIPTS DE OPERAÇÕES PONTUAIS EM PRODUÇÃO
+# Contêm credenciais/senhas em texto claro — NUNCA commitar.
+# ============================================================
+scripts/create-prod-test-users-*.sql
+scripts/delete-prod-test-users-*.sql
