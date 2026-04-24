@@ -30,8 +30,18 @@ jobs:
           script: |
             set -e
 
-            echo "Atualizando codigo..."
+            echo "Verificando working tree da VPS..."
             cd /opt/cacholaapp
+            DIVERGED=$(git status --porcelain | grep -v '^??' || true)
+            if [ -n "$DIVERGED" ]; then
+              echo "ERRO: Working tree da VPS tem arquivos rastreados modificados ou deletados:"
+              echo "$DIVERGED"
+              echo "Corrija manualmente na VPS antes de fazer novo deploy."
+              exit 1
+            fi
+            echo "Working tree OK."
+
+            echo "Atualizando codigo..."
             git pull origin main
 
             echo "Instalando dependencias..."
@@ -41,7 +51,7 @@ jobs:
             NODE_OPTIONS=--max-old-space-size=4096 npm run build
 
             echo "Reiniciando PM2..."
-            pm2 restart cacholaos
+            pm2 restart cacholaos --update-env
 
             echo "Deploy concluido!"
             pm2 status cacholaos
