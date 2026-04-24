@@ -8,11 +8,7 @@ import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/hooks/use-auth'
-import {
-  hasRole,
-  COMMERCIAL_CHECKLIST_MANAGE_ROLES,
-  COMMERCIAL_CHECKLIST_ARCHIVE_ROLES,
-} from '@/config/roles'
+import { hasRole, COMMERCIAL_CHECKLIST_ARCHIVE_ROLES } from '@/config/roles'
 import {
   useCommercialTemplates,
   useSoftDeleteCommercialTemplate,
@@ -23,16 +19,6 @@ import { ConfirmDialog } from '@/components/shared/confirm-dialog'
 import { TemplateForm } from '../_components/template-form'
 
 export default function TemplatesPage() {
-  const { profile } = useAuth()
-
-  if (!hasRole(profile?.role, COMMERCIAL_CHECKLIST_MANAGE_ROLES)) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <p className="text-text-secondary">Sem permissão para acessar esta página.</p>
-      </div>
-    )
-  }
-
   return <TemplatesContent />
 }
 

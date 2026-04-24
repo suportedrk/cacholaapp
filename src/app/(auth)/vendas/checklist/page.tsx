@@ -3,8 +3,6 @@
 import { useState } from 'react'
 import { Plus, ClipboardCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { useAuth } from '@/hooks/use-auth'
-import { hasRole, COMMERCIAL_CHECKLIST_ACCESS_ROLES } from '@/config/roles'
 import { useMyCommercialTasks } from '@/hooks/commercial-checklist/use-commercial-tasks'
 import { useLoadingTimeout } from '@/hooks/use-loading-timeout'
 import { TaskCard } from './_components/task-card'
@@ -14,16 +12,6 @@ import { MyTaskFilterPills, type MyFilter } from './_components/task-filters'
 import type { CommercialTask } from '@/hooks/commercial-checklist/use-commercial-tasks'
 
 export default function MinhasTarefasPage() {
-  const { profile } = useAuth()
-
-  if (!hasRole(profile?.role, COMMERCIAL_CHECKLIST_ACCESS_ROLES)) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <p className="text-text-secondary">Sem permissão para acessar esta página.</p>
-      </div>
-    )
-  }
-
   return <MinhasTarefasContent />
 }
 

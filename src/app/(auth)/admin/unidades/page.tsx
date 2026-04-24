@@ -10,9 +10,8 @@ import { useUnits } from '@/hooks/use-units'
 import { useAuth } from '@/hooks/use-auth'
 import { ROUTES } from '@/lib/constants'
 import { cn } from '@/lib/utils'
+import { ADMIN_ACCESS_ROLES } from '@/config/roles'
 import type { Unit } from '@/types/database.types'
-
-const SETUP_ROLES = ['super_admin', 'diretor'] as const
 
 export default function UnidadesPage() {
   const router = useRouter()
@@ -20,7 +19,7 @@ export default function UnidadesPage() {
   const { data: units, isLoading, isError } = useUnits()
   const { profile } = useAuth()
 
-  const canSetup = profile?.role && (SETUP_ROLES as readonly string[]).includes(profile.role)
+  const canSetup = profile?.role && (ADMIN_ACCESS_ROLES as readonly string[]).includes(profile.role)
 
   const filtered = units?.filter((u) =>
     !search.trim() || u.name.toLowerCase().includes(search.toLowerCase())
