@@ -15,9 +15,8 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { ROUTES, ROLE_LABELS } from '@/lib/constants'
+import { useRoles } from '@/hooks/use-rbac-catalogs'
 import type { UserRole } from '@/types/database.types'
-
-const AVAILABLE_ROLES: UserRole[] = ['super_admin', 'diretor', 'gerente', 'vendedora', 'decoracao', 'manutencao', 'financeiro', 'rh', 'freelancer', 'entregador']
 
 function toSlug(name: string) {
   return name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
@@ -34,6 +33,7 @@ export default function EditarUnidadePage() {
   const { mutate: addUser, isPending: addingUser } = useAddUserToUnit()
   const { mutate: removeUser } = useRemoveUserFromUnit()
   const { mutate: updateRole } = useUpdateUserUnitRole()
+  const { data: roles, isLoading: rolesLoading } = useRoles()
 
   const [name, setName] = useState('')
   const [slug, setSlug] = useState('')
@@ -84,7 +84,7 @@ export default function EditarUnidadePage() {
   const unitUserIds = new Set(unitUsers?.map((uu) => uu.user_id) ?? [])
   const availableUsers = allUsers?.filter((u) => !unitUserIds.has(u.id)) ?? []
 
-  if (isLoading) {
+  if (isLoading || rolesLoading) {
     return (
       <div className="flex items-center justify-center py-20">
         <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
@@ -194,8 +194,8 @@ export default function EditarUnidadePage() {
                 </span>
               </SelectTrigger>
               <SelectContent>
-                {AVAILABLE_ROLES.map((r) => (
-                  <SelectItem key={r} value={r}>{ROLE_LABELS[r] ?? r}</SelectItem>
+                {(roles ?? []).map((r) => (
+                  <SelectItem key={r.code} value={r.code}>{r.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -232,8 +232,8 @@ export default function EditarUnidadePage() {
                       </span>
                     </SelectTrigger>
                     <SelectContent>
-                      {AVAILABLE_ROLES.map((r) => (
-                        <SelectItem key={r} value={r}>{ROLE_LABELS[r] ?? r}</SelectItem>
+                      {(roles ?? []).map((r) => (
+                        <SelectItem key={r.code} value={r.code}>{r.label}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>

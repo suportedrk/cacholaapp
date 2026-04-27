@@ -8,6 +8,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger,
 } from '@/components/ui/select'
 import { useSystemUsers, useUnitTeam } from '@/hooks/use-unit-setup'
+import { useRoles } from '@/hooks/use-rbac-catalogs'
 import type { UserRole } from '@/types/database.types'
 import { ROLE_LABELS } from '@/lib/constants'
 
@@ -31,20 +32,12 @@ interface Props {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Role options (excluindo super_admin — já tem acesso global)
-// ─────────────────────────────────────────────────────────────
-
-const ROLE_OPTIONS: UserRole[] = [
-  'diretor', 'gerente', 'vendedora', 'decoracao',
-  'manutencao', 'financeiro', 'rh', 'freelancer', 'entregador',
-]
-
-// ─────────────────────────────────────────────────────────────
 // Component
 // ─────────────────────────────────────────────────────────────
 
 export function Step4Equipe({ targetUnitId, data, onChange }: Props) {
   const [search, setSearch] = useState('')
+  const { data: roles } = useRoles()
   const { data: allUsers, isLoading: loadingUsers, isError: errorUsers } = useSystemUsers()
   const { data: existingTeam } = useUnitTeam(targetUnitId)
 
@@ -201,9 +194,11 @@ export function Step4Equipe({ targetUnitId, data, onChange }: Props) {
                           </span>
                         </SelectTrigger>
                         <SelectContent>
-                          {ROLE_OPTIONS.map((role) => (
-                            <SelectItem key={role} value={role}>{ROLE_LABELS[role] ?? role}</SelectItem>
-                          ))}
+                          {(roles ?? [])
+                            .filter((r) => r.code !== 'super_admin')
+                            .map((r) => (
+                              <SelectItem key={r.code} value={r.code}>{r.label}</SelectItem>
+                            ))}
                         </SelectContent>
                       </Select>
                     </div>
