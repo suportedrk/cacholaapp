@@ -1,19 +1,28 @@
 'use client'
 
 import { useParams } from 'next/navigation'
-
-import { Loader2, Shield } from 'lucide-react'
+import { Loader2, Shield, AlertCircle } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 import { useUser } from '@/hooks/use-users'
 import { useUserPermissions, useUpdatePermission } from '@/hooks/use-permissions'
+import { useModules } from '@/hooks/use-rbac-catalogs'
 import { UserAvatar } from '@/components/shared/user-avatar'
-import { MODULE_LABELS, ACTION_LABELS } from '@/lib/constants'
+import { ACTION_LABELS } from '@/lib/constants'
 import type { Module, Action } from '@/types/permissions'
 
-const MODULES: Module[] = [
-  'events', 'maintenance', 'checklists', 'users',
-  'reports', 'audit_logs', 'notifications', 'settings'
-]
+// Mapeia codes PT-BR do catálogo para EN legacy (user_permissions CHECK constraint v001).
+// Módulos sem entrada têm toggles desabilitados até reconciliação em PR 3.
+const LEGACY_MODULE_MAP: Record<string, Module | undefined> = {
+  eventos:       'events',
+  manutencao:    'maintenance',
+  checklists:    'checklists',
+  usuarios:      'users',
+  relatorios:    'reports',
+  logs:          'audit_logs',
+  notificacoes:  'notifications',
+  configuracoes: 'settings',
+}
+
 const ACTIONS: Action[] = ['view', 'create', 'edit', 'delete', 'export']
 
 export default function PermissoesUsuarioPage() {
@@ -22,9 +31,10 @@ export default function PermissoesUsuarioPage() {
 
   const { data: user, isLoading: userLoading } = useUser(id)
   const { data: permissions, isLoading: permsLoading } = useUserPermissions(id)
+  const { data: modules, isLoading: modulesLoading, isError: modulesError } = useModules()
   const updatePerm = useUpdatePermission()
 
-  const isLoading = userLoading || permsLoading
+  const isLoading = userLoading || permsLoading || modulesLoading
 
   if (isLoading) {
     return (
@@ -43,19 +53,27 @@ export default function PermissoesUsuarioPage() {
     )
   }
 
+  if (modulesError || !modules?.length) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[300px] gap-3">
+        <AlertCircle className="w-8 h-8 text-destructive" />
+        <p className="text-sm text-muted-foreground">
+          Erro ao carregar catálogo de módulos. Tente novamente.
+        </p>
+      </div>
+    )
+  }
+
   function getPermission(module: Module, action: Action): boolean {
     return permissions?.[module]?.[action] ?? false
   }
 
   async function handleToggle(module: Module, action: Action) {
     const current = getPermission(module, action)
-    await updatePerm.mutateAsync({
-      userId: id,
-      module,
-      action,
-      granted: !current,
-    })
+    await updatePerm.mutateAsync({ userId: id, module, action, granted: !current })
   }
+
+  const newModulesCount = modules.filter((m) => !LEGACY_MODULE_MAP[m.code]).length
 
   return (
     <div className="max-w-4xl space-y-6">
@@ -89,45 +107,71 @@ export default function PermissoesUsuarioPage() {
       <div className="bg-card rounded-2xl border border-border overflow-hidden">
         {/* Header */}
         <div className="grid grid-cols-[1fr_repeat(5,_minmax(0,_1fr))] gap-2 px-4 py-3 border-b border-border bg-muted/30">
-          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Módulo</span>
+          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            Módulo
+          </span>
           {ACTIONS.map((action) => (
-            <span key={action} className="text-xs font-medium text-muted-foreground uppercase tracking-wider text-center">
+            <span
+              key={action}
+              className="text-xs font-medium text-muted-foreground uppercase tracking-wider text-center"
+            >
               {ACTION_LABELS[action]}
             </span>
           ))}
         </div>
 
         {/* Linhas */}
-        {MODULES.map((module, i) => (
-          <div
-            key={module}
-            className={`grid grid-cols-[1fr_repeat(5,_minmax(0,_1fr))] gap-2 px-4 py-3 items-center ${
-              i % 2 === 0 ? '' : 'bg-muted/10'
-            }`}
-          >
-            <span className="text-sm font-medium text-foreground">{MODULE_LABELS[module]}</span>
-            {ACTIONS.map((action) => {
-              const granted = getPermission(module, action)
-              const isUpdating = updatePerm.isPending
+        {modules.map((module, i) => {
+          const legacyCode = LEGACY_MODULE_MAP[module.code]
+          const isLegacy = legacyCode !== undefined
 
-              return (
-                <div key={action} className="flex justify-center">
-                  <Switch
-                    checked={granted}
-                    onCheckedChange={() => handleToggle(module, action)}
-                    disabled={isUpdating || user.role === 'super_admin'}
-                    aria-label={`${MODULE_LABELS[module]} — ${ACTION_LABELS[action]}`}
-                  />
-                </div>
-              )
-            })}
-          </div>
-        ))}
+          return (
+            <div
+              key={module.code}
+              className={`grid grid-cols-[1fr_repeat(5,_minmax(0,_1fr))] gap-2 px-4 py-3 items-center ${
+                i % 2 === 0 ? '' : 'bg-muted/10'
+              } ${!isLegacy ? 'opacity-60' : ''}`}
+            >
+              <span className="text-sm font-medium text-foreground">{module.label}</span>
+              {ACTIONS.map((action) => {
+                const granted = isLegacy ? getPermission(legacyCode, action) : false
+                const isUpdating = updatePerm.isPending
+
+                return (
+                  <div
+                    key={action}
+                    className="flex justify-center"
+                    title={
+                      !isLegacy ? 'Disponível após reconciliação (PR 3)' : undefined
+                    }
+                  >
+                    <Switch
+                      checked={granted}
+                      onCheckedChange={
+                        isLegacy ? () => handleToggle(legacyCode, action) : undefined
+                      }
+                      disabled={!isLegacy || isUpdating || user.role === 'super_admin'}
+                      aria-label={`${module.label} — ${ACTION_LABELS[action]}`}
+                    />
+                  </div>
+                )
+              })}
+            </div>
+          )
+        })}
       </div>
 
-      <p className="text-xs text-muted-foreground text-center">
-        Alterações são salvas imediatamente. As permissões entram em vigor no próximo acesso do usuário.
-      </p>
+      <div className="space-y-1 text-center">
+        <p className="text-xs text-muted-foreground">
+          Alterações são salvas imediatamente. As permissões entram em vigor no próximo acesso do usuário.
+        </p>
+        {newModulesCount > 0 && (
+          <p className="text-xs text-muted-foreground">
+            {newModulesCount} módulo{newModulesCount !== 1 ? 's' : ''} exibidos com toggles desabilitados
+            aguardam reconciliação do catálogo (PR 3).
+          </p>
+        )}
+      </div>
     </div>
   )
 }
