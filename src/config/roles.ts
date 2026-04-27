@@ -265,6 +265,11 @@ export const SETTINGS_ROLES = [
   'diretor',
 ] as const satisfies readonly Role[]
 
+/** Gestão de templates de permissão em /admin/cargos. Restrito a super_admin. */
+export const TEMPLATE_MANAGE_ROLES = [
+  'super_admin',
+] as const satisfies readonly Role[]
+
 export type CommercialChecklistManageRole =
   (typeof COMMERCIAL_CHECKLIST_MANAGE_ROLES)[number]
 
