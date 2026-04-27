@@ -1169,6 +1169,28 @@ Três tabelas de catálogo criadas como base para o motor de RBAC com herança r
 
 **RLS:** SELECT para `authenticated`; escrita somente via `service_role` (sem política de escrita para usuários até PR 3).
 
+### PR 2 — v1.5.5 — UI consome catálogos
+
+Hook `src/hooks/use-rbac-catalogs.ts`: `useModules()` e `useRoles()` com `staleTime: 5min`.
+
+**Mudanças cirúrgicas (sem alteração no motor de autorização):**
+
+| Arquivo | Antes | Depois |
+|---------|-------|--------|
+| `/admin/usuarios/[id]/permissoes/page.tsx` | 8 módulos EN hardcoded | 20 módulos do catálogo; 12 sem mapeamento EN = toggles desabilitados |
+| `/admin/unidades/[id]/page.tsx` | `AVAILABLE_ROLES` (10 roles, sem `pos_vendas`) | `useRoles()` (11 roles, inclui `pos_vendas`) |
+| `Step4Equipe.tsx` | `ROLE_OPTIONS` (9 roles, sem `pos_vendas`) | `useRoles().filter(r => r.code !== 'super_admin')` |
+
+**`LEGACY_MODULE_MAP`** em `permissoes/page.tsx` — mapeia code PT-BR → EN para os 8 módulos funcionais:
+```ts
+{ eventos: 'events', manutencao: 'maintenance', checklists: 'checklists',
+  usuarios: 'users', relatorios: 'reports', logs: 'audit_logs',
+  notificacoes: 'notifications', configuracoes: 'settings' }
+```
+Os 12 módulos sem mapeamento (dashboard, bi, vendas, etc.) exibem toggles desabilitados com `title="Disponível após reconciliação (PR 3)"` e `opacity-60` na linha.
+
+**`database.types.ts` não regenerado** — `.from('modules')` e `.from('roles')` aceitam qualquer string sem `@ts-expect-error`. Regeneração agendada para PR 3 junto com a reconciliação do CHECK constraint.
+
 ---
 
 ## ROLE `pos_vendas` — Migration 068
