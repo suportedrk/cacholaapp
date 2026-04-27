@@ -231,11 +231,20 @@ export function useAddUserToUnit() {
           is_default: data.isDefault ?? false,
         })
       if (error) throw error
+      return data
     },
-    onSuccess: (_, { userId }) => {
+    onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ['user-units'] })
-      qc.invalidateQueries({ queryKey: ['user-units', 'user', userId] })
-      toast.success('Usuário vinculado à unidade!')
+      qc.invalidateQueries({ queryKey: ['user-units', 'user', data.userId] })
+
+      // Aplica template do cargo silenciosamente (fire-and-forget) — Ajuste 2 PR 3
+      fetch(`/api/admin/users/${data.userId}/apply-role-template`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: data.role }),
+      }).catch(() => {})
+
+      toast.success('Usuário vinculado à unidade.')
     },
     onError: () => toast.error('Erro ao vincular usuário.'),
   })
@@ -317,5 +326,40 @@ export function useSetDefaultUnit() {
       toast.success('Unidade padrão definida!')
     },
     onError: () => toast.error('Erro ao definir unidade padrão.'),
+  })
+}
+
+// ─────────────────────────────────────────────────────────────
+// MUDAR CARGO DO USUÁRIO — atualiza users.role + user_units.role + template
+// Fase 8 PR 3: chamado pelo modal de confirmação na página de unidades.
+// ─────────────────────────────────────────────────────────────
+export function useChangeUserRole() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      userId,
+      userUnitId,
+      role,
+    }: {
+      userId: string
+      userUnitId: string
+      role: UserRole
+    }) => {
+      const res = await fetch(`/api/admin/users/${userId}/change-role`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role, user_unit_id: userUnitId }),
+      })
+      if (!res.ok) throw new Error(await res.text())
+      return res.json() as Promise<{ ok: boolean; applied: number; role: string }>
+    },
+    onSuccess: (_, { userId }) => {
+      qc.invalidateQueries({ queryKey: ['user-units'] })
+      qc.invalidateQueries({ queryKey: ['users', userId] })
+      qc.invalidateQueries({ queryKey: ['permissions', userId] })
+      qc.invalidateQueries({ queryKey: ['role-template-diff', userId] })
+      toast.success('Cargo atualizado e permissões sincronizadas.')
+    },
+    onError: () => toast.error('Erro ao atualizar cargo.'),
   })
 }

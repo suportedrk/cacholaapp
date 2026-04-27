@@ -8,6 +8,22 @@ import { toast } from 'sonner'
 import { useAuthReadyStore } from '@/stores/auth-store'
 import { useImpersonateStore } from '@/stores/impersonate-store'
 
+export interface PermDiff {
+  module: string
+  module_label: string
+  action: Action
+  current: boolean | null
+  template: boolean
+  has_diff: boolean
+}
+
+export interface RoleTemplateDiffResult {
+  user_role: string
+  applied_role: string
+  diffs: PermDiff[]
+  changed_count: number
+}
+
 const supabase = createClient()
 
 export function useUserPermissions(userId: string | null | undefined) {
@@ -79,12 +95,14 @@ export function useUpdatePermission() {
       action: Action
       granted: boolean
     }) => {
+      // Upsert global (unit_id=null) para suportar módulos sem linhas pré-existentes.
+      // Para módulos já populados (unit_id=null), o ON CONFLICT atualiza a linha existente.
       const { error } = await supabase
         .from('user_permissions')
-        .update({ granted })
-        .eq('user_id', userId)
-        .eq('module', module)
-        .eq('action', action)
+        .upsert(
+          { user_id: userId, unit_id: null, module, action, granted },
+          { onConflict: 'user_id,unit_id,module,action' }
+        )
 
       if (error) throw error
     },
@@ -93,6 +111,45 @@ export function useUpdatePermission() {
     },
     onError: () => {
       toast.error('Erro ao atualizar permissão.')
+    },
+  })
+}
+
+export function useRoleTemplateDiff(userId: string, simulateRole?: string) {
+  const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
+  const params = simulateRole ? `?role=${encodeURIComponent(simulateRole)}` : ''
+
+  return useQuery({
+    queryKey: ['role-template-diff', userId, simulateRole ?? null],
+    enabled: !!userId && isSessionReady,
+    staleTime: 2 * 60 * 1000,
+    queryFn: async (): Promise<RoleTemplateDiffResult> => {
+      const res = await fetch(`/api/admin/users/${userId}/role-template-diff${params}`)
+      if (!res.ok) throw new Error(await res.text())
+      return res.json()
+    },
+  })
+}
+
+export function useApplyRoleTemplate() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ userId, role }: { userId: string; role?: string }) => {
+      const res = await fetch(`/api/admin/users/${userId}/apply-role-template`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(role ? { role } : {}),
+      })
+      if (!res.ok) throw new Error(await res.text())
+      return res.json() as Promise<{ applied: number; role: string }>
+    },
+    onSuccess: (_data, { userId }) => {
+      queryClient.invalidateQueries({ queryKey: ['permissions', userId] })
+      queryClient.invalidateQueries({ queryKey: ['role-template-diff', userId] })
+    },
+    onError: () => {
+      toast.error('Erro ao aplicar template de permissões.')
     },
   })
 }
