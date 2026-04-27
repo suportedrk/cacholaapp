@@ -22,6 +22,7 @@ import {
   ClipboardCheck,
   Zap,
   HardDrive,
+  Shield,
 } from 'lucide-react'
 import { ROUTES } from '@/lib/constants'
 import type { Module, Role } from '@/types/permissions'
@@ -42,6 +43,7 @@ import {
   ATAS_ACCESS_ROLES,
   DASHBOARD_ACCESS_ROLES,
   SETTINGS_ROLES,
+  TEMPLATE_MANAGE_ROLES,
 } from '@/config/roles'
 
 export interface NavItem {
@@ -140,6 +142,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: 'Usuários',          href: ROUTES.users,          icon: Users,      module: 'usuarios',     allowedRoles: [...ADMIN_USERS_MANAGE_ROLES] },
       { label: 'Unidades',          href: ROUTES.units,          icon: Building2,  module: 'unidades',     allowedRoles: [...ADMIN_ACCESS_ROLES]      },
       { label: 'Vendedoras',        href: '/configuracoes/vendedoras', icon: UserCog, module: 'vendedoras', allowedRoles: [...ADMIN_ACCESS_ROLES]    },
+      { label: 'Cargos',            href: '/admin/cargos',       icon: Shield,                               allowedRoles: [...TEMPLATE_MANAGE_ROLES]   },
       { label: 'Logs',              href: ROUTES.auditLogs,      icon: ScrollText, module: 'logs',         allowedRoles: [...ADMIN_ACCESS_ROLES]      },
       { label: 'Backups',           href: ROUTES.backups,        icon: HardDrive,  module: 'backups',      allowedRoles: [...BACKUP_VIEW_ROLES] },
       { label: 'Configurações',     href: ROUTES.settings,       icon: Settings,   module: 'configuracoes', allowedRoles: [...SETTINGS_ROLES] },
