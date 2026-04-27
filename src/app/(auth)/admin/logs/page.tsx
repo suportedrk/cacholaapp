@@ -15,7 +15,7 @@ export default function LogsPage() {
   const { data: permMap } = useUserPermissions(profile?.id)
   const [filters, setFilters] = useState<AuditLogFilters>({})
 
-  const canView = permMap?.audit_logs?.view === true
+  const canView = permMap?.logs?.view === true
 
   const {
     data,

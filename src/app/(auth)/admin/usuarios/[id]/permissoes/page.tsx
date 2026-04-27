@@ -10,19 +10,6 @@ import { UserAvatar } from '@/components/shared/user-avatar'
 import { ACTION_LABELS } from '@/lib/constants'
 import type { Module, Action } from '@/types/permissions'
 
-// Mapeia codes PT-BR do catálogo para EN legacy (user_permissions CHECK constraint v001).
-// Módulos sem entrada têm toggles desabilitados até reconciliação em PR 3.
-const LEGACY_MODULE_MAP: Record<string, Module | undefined> = {
-  eventos:       'events',
-  manutencao:    'maintenance',
-  checklists:    'checklists',
-  usuarios:      'users',
-  relatorios:    'reports',
-  logs:          'audit_logs',
-  notificacoes:  'notifications',
-  configuracoes: 'settings',
-}
-
 const ACTIONS: Action[] = ['view', 'create', 'edit', 'delete', 'export']
 
 export default function PermissoesUsuarioPage() {
@@ -73,8 +60,6 @@ export default function PermissoesUsuarioPage() {
     await updatePerm.mutateAsync({ userId: id, module, action, granted: !current })
   }
 
-  const newModulesCount = modules.filter((m) => !LEGACY_MODULE_MAP[m.code]).length
-
   return (
     <div className="max-w-4xl space-y-6">
       {/* Cabeçalho */}
@@ -121,57 +106,36 @@ export default function PermissoesUsuarioPage() {
         </div>
 
         {/* Linhas */}
-        {modules.map((module, i) => {
-          const legacyCode = LEGACY_MODULE_MAP[module.code]
-          const isLegacy = legacyCode !== undefined
+        {modules.map((module, i) => (
+          <div
+            key={module.code}
+            className={`grid grid-cols-[1fr_repeat(5,_minmax(0,_1fr))] gap-2 px-4 py-3 items-center ${
+              i % 2 === 0 ? '' : 'bg-muted/10'
+            }`}
+          >
+            <span className="text-sm font-medium text-foreground">{module.label}</span>
+            {ACTIONS.map((action) => {
+              const granted = getPermission(module.code as Module, action)
+              const isUpdating = updatePerm.isPending
 
-          return (
-            <div
-              key={module.code}
-              className={`grid grid-cols-[1fr_repeat(5,_minmax(0,_1fr))] gap-2 px-4 py-3 items-center ${
-                i % 2 === 0 ? '' : 'bg-muted/10'
-              } ${!isLegacy ? 'opacity-60' : ''}`}
-            >
-              <span className="text-sm font-medium text-foreground">{module.label}</span>
-              {ACTIONS.map((action) => {
-                const granted = isLegacy ? getPermission(legacyCode, action) : false
-                const isUpdating = updatePerm.isPending
-
-                return (
-                  <div
-                    key={action}
-                    className="flex justify-center"
-                    title={
-                      !isLegacy ? 'Disponível após reconciliação (PR 3)' : undefined
-                    }
-                  >
-                    <Switch
-                      checked={granted}
-                      onCheckedChange={
-                        isLegacy ? () => handleToggle(legacyCode, action) : undefined
-                      }
-                      disabled={!isLegacy || isUpdating || user.role === 'super_admin'}
-                      aria-label={`${module.label} — ${ACTION_LABELS[action]}`}
-                    />
-                  </div>
-                )
-              })}
-            </div>
-          )
-        })}
+              return (
+                <div key={action} className="flex justify-center">
+                  <Switch
+                    checked={granted}
+                    onCheckedChange={() => handleToggle(module.code as Module, action)}
+                    disabled={isUpdating || user.role === 'super_admin'}
+                    aria-label={`${module.label} — ${ACTION_LABELS[action]}`}
+                  />
+                </div>
+              )
+            })}
+          </div>
+        ))}
       </div>
 
-      <div className="space-y-1 text-center">
-        <p className="text-xs text-muted-foreground">
-          Alterações são salvas imediatamente. As permissões entram em vigor no próximo acesso do usuário.
-        </p>
-        {newModulesCount > 0 && (
-          <p className="text-xs text-muted-foreground">
-            {newModulesCount} módulo{newModulesCount !== 1 ? 's' : ''} exibidos com toggles desabilitados
-            aguardam reconciliação do catálogo (PR 3).
-          </p>
-        )}
-      </div>
+      <p className="text-xs text-muted-foreground text-center">
+        Alterações são salvas imediatamente. As permissões entram em vigor no próximo acesso do usuário.
+      </p>
     </div>
   )
 }

@@ -79,12 +79,14 @@ export function useUpdatePermission() {
       action: Action
       granted: boolean
     }) => {
+      // Upsert global (unit_id=null) para suportar módulos sem linhas pré-existentes.
+      // Para módulos já populados (unit_id=null), o ON CONFLICT atualiza a linha existente.
       const { error } = await supabase
         .from('user_permissions')
-        .update({ granted })
-        .eq('user_id', userId)
-        .eq('module', module)
-        .eq('action', action)
+        .upsert(
+          { user_id: userId, unit_id: null, module, action, granted },
+          { onConflict: 'user_id,unit_id,module,action' }
+        )
 
       if (error) throw error
     },
