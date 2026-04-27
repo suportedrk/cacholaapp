@@ -1,3 +1,27 @@
+-- =============================================================================
+-- DEPRECATED — NÃO APLICAR ESTA MIGRATION
+-- =============================================================================
+-- Esta migration tem ordem incorreta de operações:
+-- UPDATE com codes PT-BR roda ANTES do DROP CONSTRAINT do CHECK,
+-- causando violação de CHECK constraint e rollback completo.
+-- Adicionalmente, NÃO cobre a tabela role_default_perms.
+--
+-- Substituída pela migration 073_reconcile_user_permissions_pt_br_v2.sql
+-- que tem ordem correta e cobertura completa.
+--
+-- Manter este arquivo no histórico para rastreabilidade.
+-- NÃO executar em nenhum ambiente.
+-- =============================================================================
+
+-- Bloco de aborto: se alguém tentar executar, falha imediatamente
+DO $$
+BEGIN
+  RAISE EXCEPTION 'Migration 072 está deprecated. Use 073 (073_reconcile_user_permissions_pt_br_v2.sql) em vez disso.';
+END $$;
+
+-- =============================================================================
+-- CONTEÚDO ORIGINAL (mantido apenas para rastreabilidade histórica)
+-- =============================================================================
 -- ============================================================
 -- Migration 072 — Reconciliação user_permissions + role_default_perms
 --                 EN → PT-BR + constraint CHECK → FK
