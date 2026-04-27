@@ -1191,6 +1191,53 @@ Os 12 módulos sem mapeamento (dashboard, bi, vendas, etc.) exibem toggles desab
 
 **`database.types.ts` não regenerado** — `.from('modules')` e `.from('roles')` aceitam qualquer string sem `@ts-expect-error`. Regeneração agendada para PR 3 junto com a reconciliação do CHECK constraint.
 
+### PR 3 — v1.5.6 — Herança rígida + reconciliação user_permissions
+
+**Migration 072:** renomeia 10 module codes EN→PT-BR em `user_permissions` e `role_default_perms`; substitui CHECK constraint por FK → `modules(code) ON DELETE CASCADE ON UPDATE CASCADE`. Bloco DO de verificação pós-migração aborta com EXCEPTION se restar qualquer code órfão.
+
+**Mapeamento EN→PT-BR (10 codes):**
+```
+events→eventos, maintenance→manutencao, users→usuarios, reports→relatorios,
+audit_logs→logs, notifications→notificacoes, settings→configuracoes,
+providers→prestadores, minutes→atas
+(checklists→checklists: no-op, code já era igual)
+```
+
+**Mudanças na camada TypeScript (sem migration):**
+
+| Arquivo | Mudança |
+|---------|---------|
+| `src/types/permissions.ts` | `Module` expandido de 10 EN para 20 PT-BR (todos os módulos do catálogo) |
+| `src/components/layout/nav-items.ts` | 15 valores `module:` atualizados EN→PT-BR (dead metadata para tipagem) |
+| `permissoes/page.tsx` | `LEGACY_MODULE_MAP` removido; todos os 20 módulos funcionais; `useUpdatePermission` UPDATE→UPSERT |
+| `logs/page.tsx` | `permMap?.audit_logs?.view` → `permMap?.logs?.view` |
+
+**Novos endpoints e hooks (motor de herança):**
+
+| Arquivo | Descrição |
+|---------|-----------|
+| `src/lib/rbac/apply-template.ts` | `applyRoleTemplate(supabase, userId, role, unitId)` — lê `role_permissions`, faz upsert em `user_permissions` |
+| `GET /api/admin/users/[id]/role-template-diff` | Diff permissões atuais × template do cargo; `?role=` simula cargo diferente |
+| `POST /api/admin/users/[id]/apply-role-template` | Aplica template; body `{ role? }` opcional |
+| `POST /api/admin/users/[id]/change-role` | Atualiza `user_units.role` + `users.role` (Decision 4) + aplica template |
+| `useRoleTemplateDiff(userId, simulateRole?)` | Hook lazy (disabled quando userId=''); staleTime 2min |
+| `useApplyRoleTemplate()` | Mutation com invalidação de permissions + diff |
+| `useChangeUserRole()` | Mutation para modal de mudança de cargo em unidades |
+
+**UX adicionada:**
+- `permissoes/page.tsx`: botão "Aplicar template do cargo" → Dialog com tabela de diff (colunas: Módulo / Ação / Atual / Template); botão desabilitado se 0 alterações ou super_admin
+- `unidades/[id]/page.tsx`: dropdown de cargo interceptado → Modal "Mudar cargo" mostrando diff atual→novo antes de confirmar; `useAddUserToUnit.onSuccess` aplica template silenciosamente (fire-and-forget)
+
+**Decisões arquiteturais:**
+- **Decision 4:** `users.role` é a fonte de verdade; `user_units.role` é redundante mas mantido para visibilidade por unidade. PR 4 futura depreciará `user_units.role`.
+- **Ajuste 2:** Template aplicado no `addUserToUnit` (não no invite — invite não cria `user_units`).
+- **Ajuste 3:** Dois fluxos distintos: `addUserToUnit` (silent, sem modal) vs `change-role` (modal com diff).
+
+**Sequência de deploy v1.5.6:**
+1. Deploy do código (CI/CD automático após merge main)
+2. Após deploy verde: `docker exec -i supabase-db psql -U postgres -d postgres < /opt/cacholaapp/supabase/migrations/072_reconcile_user_permissions_pt_br.sql`
+3. Validar: botão "Aplicar template do cargo" em `/admin/usuarios/[id]/permissoes`, modal "Mudar cargo" em `/admin/unidades/[id]`
+
 ---
 
 ## ROLE `pos_vendas` — Migration 068
