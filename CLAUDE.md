@@ -1266,6 +1266,55 @@ providers→prestadores, minutes→atas
 > Todo arquivo `.sql` novo que altera constraints E dados deve ser testado localmente
 > com `docker exec -i supabase-db psql … < migration.sql` antes de qualquer merge.
 
+### PR 4b — v1.5.8 — UI de Gestão de Templates (/admin/cargos)
+
+**Commits:** `01db080` (feat) | **Deploy:** 27/abr/2026 | **Migration:** 074
+
+#### Arquivos criados
+
+| Arquivo | Descrição |
+|---------|-----------|
+| `supabase/migrations/074_role_template_audit.sql` | Tabela `role_template_audit` com RLS SELECT para super_admin |
+| `src/app/(auth)/admin/cargos/layout.tsx` | Guard `TEMPLATE_MANAGE_ROLES` (super_admin) |
+| `src/app/(auth)/admin/cargos/page.tsx` | Listagem de 11 cargos com contagem granted/total |
+| `src/app/(auth)/admin/cargos/[code]/page.tsx` | Matrix editável 20×5 + dialog "Aplicar a todos" |
+| `src/app/api/admin/role-permissions/route.ts` | `POST` upsert em `role_permissions` + INSERT em `role_template_audit` |
+| `src/app/api/admin/roles/[code]/apply-to-all/route.ts` | `POST` propaga template a todos os usuários do cargo |
+
+#### Hooks adicionados em `use-rbac-catalogs.ts`
+
+- `useRolePermissions(roleCode)` — lê `role_permissions` filtrado por cargo
+- `useUpdateRolePermission()` — mutation para `POST /api/admin/role-permissions`
+- `useApplyTemplateToAllUsers()` — mutation para `POST /api/admin/roles/[code]/apply-to-all`
+
+#### Sidebar
+
+Item "Cargos" (ícone `Shield`) no grupo Administração, sem campo `module` (meta RBAC, não módulo do catálogo), restrito a `TEMPLATE_MANAGE_ROLES`.
+
+#### Endpoint apply-to-all — comportamento
+
+- Loop resiliente: try/catch por usuário
+- Status 200 se todos os usuários tiveram sucesso
+- Status 207 (Multi-Status) se houver falhas parciais
+- Retorna `{ succeeded[], failed[], total_users, total_succeeded, total_failed }`
+- UI: dialog mostra resultado com cartões verde/vermelho + lista de erros quando 207
+
+#### `role_template_audit`
+
+Registra toda alteração individual de toggle. Escrita explícita pelo endpoint (sem trigger automático). `changed_by` = UUID do usuário autenticado via `auth.getUser()` no service_role client.
+
+#### AJUSTES aprovados
+
+- **AJUSTE 1:** NAV item "Cargos" sem `module` — não é módulo do catálogo, é meta-RBAC
+- **AJUSTE 2:** Loop resiliente com 207 em falha parcial
+- **AJUSTE 3:** Mutations invalidam todo o prefixo `['rbac']` para consistência cross-screen com modal diff do PR 3
+
+#### Rota de prod para validação
+
+Após deploy: abrir `/admin/cargos` como super_admin → ver 11 cards → clicar "gerente" → matriz 20×5 carrega → toggle "eventos | create" → verifica em `role_template_audit` e `role_permissions`.
+
+---
+
 ### super_admin — bypass de user_permissions
 
 `isSuperAdmin = user.role === 'super_admin'` no código desabilita os toggles de permissão na UI e bypassa toda checagem de `user_permissions`. Por isso:
