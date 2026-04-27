@@ -1151,6 +1151,26 @@ Link "Voltar" é role-aware (v1.5.1): freelancer/entregador → `/checklists/min
 
 ---
 
+## RBAC Catalogs (v1.5.4+) — Migration 071
+
+Três tabelas de catálogo criadas como base para o motor de RBAC com herança rígida planejada nos PRs 2–4:
+
+| Tabela | Conteúdo | Linhas (seed) |
+|--------|----------|---------------|
+| `modules` | 20 módulos com code PT-BR (slug da rota), label, icon Lucide, sort_order | 20 |
+| `roles` | 11 cargos; `super_admin` marcado `is_system=true` | 11 |
+| `role_permissions` | Template canônico cargo × módulo × ação; `granted=true` = permissão padrão | 197 |
+
+**Modelo de herança rígida (PR 2+):** cargo dita permissões; override individual é exceção rara. Ainda não implementado — PR 1 é somente backend.
+
+**Motor de autorização atual:** continua lendo `user_permissions` normalmente. `role_permissions` será a fonte de verdade para popular `user_permissions` ao convidar usuários (PR 2) e para a UI de gestão de templates (PR 3).
+
+**Drift conhecido:** `user_permissions.module` tem CHECK constraint com 8 valores em inglês do schema v001 (`events/maintenance/…`). Catálogo usa codes PT-BR. Reconciliação programada para PR 3.
+
+**RLS:** SELECT para `authenticated`; escrita somente via `service_role` (sem política de escrita para usuários até PR 3).
+
+---
+
 ## ROLE `pos_vendas` — Migration 068
 
 Role transversal para equipe de pós-venda: acessa Vendas (Upsell + Recompra) + Eventos + Atas.
