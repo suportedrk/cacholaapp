@@ -1266,6 +1266,14 @@ providers→prestadores, minutes→atas
 > Todo arquivo `.sql` novo que altera constraints E dados deve ser testado localmente
 > com `docker exec -i supabase-db psql … < migration.sql` antes de qualquer merge.
 
+### super_admin — bypass de user_permissions
+
+`isSuperAdmin = user.role === 'super_admin'` no código desabilita os toggles de permissão na UI e bypassa toda checagem de `user_permissions`. Por isso:
+
+- Linhas faltantes em `user_permissions` para `super_admin` são **esperadas e cosméticas** — não afetam nenhuma funcionalidade.
+- **Não fazer backfill** para usuários super_admin.
+- Diagnóstico de gap (como o da auditoria PR 4a) deve excluir super_admin da lista de "impactados".
+
 ---
 
 ## ROLE `pos_vendas` — Migration 068
