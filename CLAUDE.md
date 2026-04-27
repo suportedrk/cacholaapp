@@ -1315,6 +1315,24 @@ Após deploy: abrir `/admin/cargos` como super_admin → ver 11 cards → clicar
 
 ---
 
+### Hotfix v1.5.9 — RLS em role_permissions e role_template_audit (27/abr/2026)
+
+**Problema:** `POST /api/admin/role-permissions` retornava `42501 (violação de RLS)` em produção ao tentar fazer upsert em `role_permissions`. Todos os toggles da matriz `/admin/cargos/[code]` falhavam com "Erro ao atualizar template".
+
+**Causa raiz:** `createAdminClient()` usa `@supabase/ssr` com cookies. PostgREST recebe o JWT do cookie do usuário (claim `role: authenticated`), não a service_role key — RLS aplica mesmo com admin client. Migration 071 criou `role_permissions` com RLS ativo mas sem policy de escrita. Migration 074 criou `role_template_audit` com policy SELECT usando `auth.jwt() ->> 'role'` (padrão inconsistente com o projeto).
+
+**Correção — Migration 075:**
+- `is_super_admin()` SECURITY DEFINER: padrão consistente com `is_global_viewer()` e `can_view_meeting()`. Usa subquery em `public.users`, não `auth.jwt()`.
+- Policy `ALL` em `role_permissions` usando `is_super_admin()`.
+- Substitui policy SELECT (auth.jwt()) de `role_template_audit` por policy `ALL` usando `is_super_admin()`.
+- `roles` e `modules` permanecem read-only (sem policy de escrita).
+
+**Arquivo:** `supabase/migrations/075_fix_rls_role_permissions_write.sql`
+
+**Smoke test local:** UPSERT em `role_permissions` ✅ | INSERT em `role_template_audit` ✅ | non-super_admin bloqueado com 42501 ✅
+
+---
+
 ### super_admin — bypass de user_permissions
 
 `isSuperAdmin = user.role === 'super_admin'` no código desabilita os toggles de permissão na UI e bypassa toda checagem de `user_permissions`. Por isso:
