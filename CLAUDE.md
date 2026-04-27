@@ -87,6 +87,8 @@ No incidente de 24/abr/2026, 4 arquivos de código foram deletados do disco da V
 
 Se as regras acima tivessem sido seguidas, o incidente não teria acontecido. Essas regras são mandatárias, não sugestões.
 
+No hotfix v1.5.7 (27/abr/2026), a migration 072 foi mergeada sem smoke test local. Ela tinha UPDATE antes do DROP CONSTRAINT, causando violação e ROLLBACK silencioso. A migration nunca se aplicou em produção — foi detectada somente em auditoria pós-merge. Correção exigiu hotfix (migration 073) com nova versão e novo deploy. Regra adicional: **toda migration que mistura DDL + DML deve ser testada localmente com `docker exec -i supabase-db psql … < arquivo.sql` antes do merge.** Ver seção "Regra DDL em migrations" detalhada nos PRs 3/v1.5.7.
+
 ---
 
 ## STACK TECNOLÓGICA
@@ -1193,7 +1195,9 @@ Os 12 módulos sem mapeamento (dashboard, bi, vendas, etc.) exibem toggles desab
 
 ### PR 3 — v1.5.6 — Herança rígida + reconciliação user_permissions
 
-**Migration 072:** renomeia 10 module codes EN→PT-BR em `user_permissions` e `role_default_perms`; substitui CHECK constraint por FK → `modules(code) ON DELETE CASCADE ON UPDATE CASCADE`. Bloco DO de verificação pós-migração aborta com EXCEPTION se restar qualquer code órfão.
+**Migration 072 — DEPRECATED:** tinha ordem incorreta de DDL (UPDATE antes do DROP CONSTRAINT → violação de CHECK → ROLLBACK completo). Substituída pela 073. Ver seção Hotfix v1.5.7 abaixo.
+
+**Migration 073 (Hotfix v1.5.7):** renomeia 10 module codes EN→PT-BR em `user_permissions` e `role_default_perms`; substitui CHECK constraint por FK → `modules(code) ON UPDATE CASCADE ON DELETE CASCADE`. Ordem correta: DROP constraints → UPDATE dados → validar orphans → ADD FK. Idempotente.
 
 **Mapeamento EN→PT-BR (10 codes):**
 ```
@@ -1233,10 +1237,34 @@ providers→prestadores, minutes→atas
 - **Ajuste 2:** Template aplicado no `addUserToUnit` (não no invite — invite não cria `user_units`).
 - **Ajuste 3:** Dois fluxos distintos: `addUserToUnit` (silent, sem modal) vs `change-role` (modal com diff).
 
-**Sequência de deploy v1.5.6:**
+**Sequência de deploy v1.5.6/v1.5.7:**
 1. Deploy do código (CI/CD automático após merge main)
-2. Após deploy verde: `docker exec -i supabase-db psql -U postgres -d postgres < /opt/cacholaapp/supabase/migrations/072_reconcile_user_permissions_pt_br.sql`
+2. Após deploy verde: `docker exec -i supabase-db psql -U postgres -d postgres < /opt/cacholaapp/supabase/migrations/073_reconcile_user_permissions_pt_br_v2.sql`
+   - ⚠️ NÃO usar 072 — está deprecated e vai falhar com EXCEPTION imediatamente
 3. Validar: botão "Aplicar template do cargo" em `/admin/usuarios/[id]/permissoes`, modal "Mudar cargo" em `/admin/unidades/[id]`
+
+### Hotfix v1.5.7 — Correção da migration 072 (27/abr/2026)
+
+**Problema:** Migration 072 tinha UPDATE EN→PT-BR *antes* do DROP CONSTRAINT CHECK, causando violação e ROLLBACK. Nunca foi aplicada em produção.
+
+**Solução:** Migration 073 com ordem correta:
+1. DROP CHECK constraints (libera os UPDATEs)
+2. UPDATE codes EN→PT-BR
+3. Validar orphans (aborta com EXCEPTION se sobrar algum)
+4. ADD FK → modules(code)
+
+**Estado pós-hotfix em produção (27/abr/2026):**
+- `user_permissions`: 168 linhas com codes PT-BR; FK `user_permissions_module_fk` ativa
+- `role_default_perms`: 116 linhas com codes PT-BR; FK `role_default_perms_module_fk` ativa
+- Zero orphans confirmados
+- Smoke test: toggle `eventos | view` para usuário gerente — write+read confirmados via SQL
+
+**Regra aprendida — DDL em migrations:**
+> Migrations que combinam DDL (ALTER TABLE) e DML (UPDATE) devem seguir ordem estrita:
+> DROP constraints → UPDATE dados → ADD constraints.
+> Ordem inversa viola a constraint ativa e faz o UPDATE falhar dentro do BEGIN/COMMIT.
+> Todo arquivo `.sql` novo que altera constraints E dados deve ser testado localmente
+> com `docker exec -i supabase-db psql … < migration.sql` antes de qualquer merge.
 
 ---
 
