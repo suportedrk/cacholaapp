@@ -8,18 +8,35 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
-import { useUnit, useUpdateUnit, useUnitUsers, useAddUserToUnit, useRemoveUserFromUnit, useUpdateUserUnitRole } from '@/hooks/use-units'
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+  DialogDescription, DialogFooter,
+} from '@/components/ui/dialog'
+import {
+  useUnit, useUpdateUnit, useUnitUsers, useAddUserToUnit,
+  useRemoveUserFromUnit, useChangeUserRole,
+} from '@/hooks/use-units'
 import { useUsers } from '@/hooks/use-users'
+import { useRoleTemplateDiff } from '@/hooks/use-permissions'
 import { ConfirmDialog } from '@/components/shared/confirm-dialog'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
-import { ROUTES, ROLE_LABELS } from '@/lib/constants'
+import { ROUTES, ROLE_LABELS, ACTION_LABELS } from '@/lib/constants'
 import { useRoles } from '@/hooks/use-rbac-catalogs'
 import type { UserRole } from '@/types/database.types'
+import type { Action } from '@/types/permissions'
 
 function toSlug(name: string) {
-  return name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+  return name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+}
+
+interface PendingRoleChange {
+  userUnitId: string
+  userId: string
+  userName: string
+  currentRole: UserRole
+  newRole: UserRole
 }
 
 export default function EditarUnidadePage() {
@@ -32,7 +49,7 @@ export default function EditarUnidadePage() {
   const { mutate: updateUnit, isPending: saving } = useUpdateUnit()
   const { mutate: addUser, isPending: addingUser } = useAddUserToUnit()
   const { mutate: removeUser } = useRemoveUserFromUnit()
-  const { mutate: updateRole } = useUpdateUserUnitRole()
+  const changeRole = useChangeUserRole()
   const { data: roles, isLoading: rolesLoading } = useRoles()
 
   const [name, setName] = useState('')
@@ -45,6 +62,15 @@ export default function EditarUnidadePage() {
   // Add user state
   const [addUserId, setAddUserId] = useState('')
   const [addRole, setAddRole] = useState<UserRole>('gerente')
+
+  // Pending role change (Phase 8 modal)
+  const [pending, setPending] = useState<PendingRoleChange | null>(null)
+
+  // Diff para o cargo pendente (carrega apenas quando o modal está aberto)
+  const { data: diff, isLoading: diffLoading } = useRoleTemplateDiff(
+    pending ? pending.userId : '',
+    pending?.newRole,
+  )
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
@@ -78,6 +104,28 @@ export default function EditarUnidadePage() {
       { userId: addUserId, unitId: id, role: addRole },
       { onSuccess: () => setAddUserId('') }
     )
+  }
+
+  function handleRoleSelect(uu: { id: string; user_id: string; role: string }, newRole: string) {
+    if (newRole === uu.role) return
+    const userName = unitUsers?.find((u) => u.user_id === uu.user_id)?.user?.name ?? 'usuário'
+    setPending({
+      userUnitId: uu.id,
+      userId: uu.user_id,
+      userName,
+      currentRole: uu.role as UserRole,
+      newRole: newRole as UserRole,
+    })
+  }
+
+  async function handleConfirmRoleChange() {
+    if (!pending) return
+    await changeRole.mutateAsync({
+      userId: pending.userId,
+      userUnitId: pending.userUnitId,
+      role: pending.newRole,
+    })
+    setPending(null)
   }
 
   // Users already in this unit
@@ -224,7 +272,7 @@ export default function EditarUnidadePage() {
                   </div>
                   <Select
                     value={uu.role}
-                    onValueChange={(v) => v && updateRole({ id: uu.id, userId: uu.user_id, role: v as UserRole })}
+                    onValueChange={(v) => v && handleRoleSelect(uu, v)}
                   >
                     <SelectTrigger size="sm" className="min-w-[120px]">
                       <span data-slot="select-value" className="flex flex-1 text-left text-xs">
@@ -254,6 +302,94 @@ export default function EditarUnidadePage() {
           </div>
         )}
       </div>
+
+      {/* Modal — Mudar cargo */}
+      <Dialog open={!!pending} onOpenChange={(open) => { if (!open) setPending(null) }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Mudar cargo</DialogTitle>
+            <DialogDescription>
+              {pending && (
+                <>
+                  Cargo de <strong>{pending.userName}</strong>:{' '}
+                  <strong>{ROLE_LABELS[pending.currentRole] ?? pending.currentRole}</strong>
+                  {' '}→{' '}
+                  <strong>{ROLE_LABELS[pending.newRole] ?? pending.newRole}</strong>
+                  {diff && !diffLoading && (
+                    diff.changed_count > 0
+                      ? `. ${diff.changed_count} permissão(ões) serão ajustadas.`
+                      : '. As permissões já estão alinhadas com o novo cargo.'
+                  )}
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          {diffLoading && (
+            <div className="flex justify-center py-6">
+              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+            </div>
+          )}
+
+          {!diffLoading && diff && diff.changed_count === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              Nenhuma alteração nas permissões necessária para este cargo.
+            </p>
+          )}
+
+          {!diffLoading && diff && diff.changed_count > 0 && (
+            <div className="max-h-56 overflow-y-auto rounded-lg border border-border">
+              <table className="w-full text-xs">
+                <thead className="sticky top-0 bg-muted/80 backdrop-blur-sm">
+                  <tr className="border-b border-border">
+                    <th className="px-3 py-2 text-left font-medium text-muted-foreground">Módulo</th>
+                    <th className="px-3 py-2 text-left font-medium text-muted-foreground">Ação</th>
+                    <th className="px-3 py-2 text-center font-medium text-muted-foreground">Atual</th>
+                    <th className="px-3 py-2 text-center font-medium text-muted-foreground">Novo cargo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {diff.diffs.filter((d) => d.has_diff).map((d) => (
+                    <tr key={`${d.module}:${d.action}`} className="border-b border-border/50 last:border-0">
+                      <td className="px-3 py-2 font-medium text-foreground">{d.module_label}</td>
+                      <td className="px-3 py-2 text-muted-foreground">{ACTION_LABELS[d.action as Action]}</td>
+                      <td className="px-3 py-2 text-center">
+                        {d.current === null ? (
+                          <span className="text-muted-foreground text-xs">sem reg.</span>
+                        ) : d.current ? (
+                          <span className="text-green-600 font-semibold">✓</span>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2 text-center">
+                        {d.template ? (
+                          <span className="text-green-600 font-semibold">✓</span>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPending(null)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleConfirmRoleChange}
+              disabled={changeRole.isPending || diffLoading}
+            >
+              {changeRole.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
+              Confirmar mudança de cargo
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
