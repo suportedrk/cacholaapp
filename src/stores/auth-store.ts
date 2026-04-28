@@ -37,5 +37,5 @@ export const useAuthReadyStore = create<AuthReadyStore>((set) => ({
   profile: null,
 
   setAuthState: (user, session, profile) => set({ user, session, profile }),
-  resetAuth: () => set({ user: null, session: null, profile: null }),
+  resetAuth: () => set({ user: null, session: null, profile: null, isSessionReady: false }),
 }))

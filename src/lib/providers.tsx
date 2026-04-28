@@ -9,6 +9,7 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { createClient } from '@/lib/supabase/client'
 import { useAuthReadyStore } from '@/stores/auth-store'
 import { useUnitStore } from '@/stores/unit-store'
+import { useImpersonateStore } from '@/stores/impersonate-store'
 import type { User as AppUser, UserUnitWithUnit } from '@/types/database.types'
 
 /**
@@ -117,10 +118,13 @@ function AuthBootstrap() {
         }
         qc.invalidateQueries()
       } else if (event === 'SIGNED_OUT') {
+        // Limpa impersonate ANTES do resetAuth para evitar contexto fantasma do usuario-alvo
+        useImpersonateStore.getState().stopImpersonating()
         resetAuth()
         resetUnit()
         qc.clear()
-        routerRef.current.push('/login')
+        // Hard reset garante que todos os stores em memoria sejam destruidos
+        window.location.href = '/login'
       } else if (event === 'TOKEN_REFRESHED' && session) {
         // Apenas atualiza o token — não recarrega profile ou units
         setAuthState(
