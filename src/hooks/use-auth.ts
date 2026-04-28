@@ -1,7 +1,6 @@
 'use client'
 
 import { useCallback } from 'react'
-import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { User } from '@supabase/supabase-js'
 import type { User as AppUser, UserUnitWithUnit } from '@/types/database.types'
@@ -25,7 +24,6 @@ import { useImpersonateStore } from '@/stores/impersonate-store'
  * - activeUnitId é gerenciado pelo UnitStore (já substituído ao iniciar impersonate)
  */
 export function useAuth() {
-  const router = useRouter()
   const supabase = createClient()
 
   const { activeUnitId, userUnits } = useUnitStore()
@@ -52,10 +50,9 @@ export function useAuth() {
 
   const signOut = useCallback(async () => {
     await supabase.auth.signOut()
-    // O AuthBootstrap detecta SIGNED_OUT e faz router.push('/login').
-    // Chamamos explicitamente aqui também para garantir redirect imediato.
-    router.push('/login')
-  }, [supabase, router])
+    // Nao chamar router.push aqui — o handler SIGNED_OUT em providers.tsx
+    // faz window.location.href = '/login' apos limpar todos os stores.
+  }, [supabase])
 
   const resetPassword = useCallback(
     async (email: string) => {

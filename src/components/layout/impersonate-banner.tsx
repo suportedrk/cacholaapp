@@ -43,6 +43,9 @@ export function ImpersonateBanner() {
             {unitName ? ` — ${unitName}` : ''})
           </span>
         </p>
+        <p className="sm:hidden text-xs text-white/80 mt-0.5 truncate">
+          ⚠️ Modo visualização: apenas menus e permissões. Dados são do seu acesso.
+        </p>
         <p className="hidden sm:block text-xs text-white/80 mt-0.5 truncate">
           ⚠️ Simulação visual apenas — os menus e botões refletem o que este usuário vê, mas os dados mostrados continuam sendo os seus.
         </p>
