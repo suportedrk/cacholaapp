@@ -87,3 +87,4 @@ tmp/cachola-dump-*.sql.gz
 # ============================================================
 scripts/create-prod-test-users-*.sql
 scripts/delete-prod-test-users-*.sql
+.local-refs/

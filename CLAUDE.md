@@ -1333,6 +1333,18 @@ Após deploy: abrir `/admin/cargos` como super_admin → ver 11 cards → clicar
 
 ---
 
+### Hotfix v1.5.10 — check_permission EN→PT-BR + logout cleanup (28/abr/2026)
+
+**GOTCHA migration 073 — mismatch RLS × user_permissions:** migration 073 renomeou `user_permissions.module` de EN para PT-BR (`events→eventos`, `providers→prestadores`, etc.), mas as **51 policies RLS** continuam chamando `check_permission()` com os códigos EN antigos. Resultado: `check_permission('events', 'view')` retornava FALSE para todos os não-super-admin, pois não existe mais nenhuma linha com `module='events'`. Usuários só viam eventos que ELES criaram (fallback `created_by = auth.uid()`). `/prestadores` ficou 100% vazio para todos. Migration **076** (28/abr) adiciona mapeamento CASE EN→PT-BR dentro de `check_permission()` — fix cirúrgico, sem tocar nas 51 policies. Quando as policies forem atualizadas para PT-BR, o CASE pode ser removido.
+
+**LOGOUT seguro — regras obrigatórias (v1.5.10):**
+1. `resetAuth()` em `auth-store.ts` deve resetar `isSessionReady: false` — sem isso, `AppReadyGate` continua liberando o layout autenticado e a navbar mostra `profile?.name ?? 'Usuário'` como flash.
+2. Handler `SIGNED_OUT` em `providers.tsx` deve chamar `useImpersonateStore.getState().stopImpersonating()` **ANTES** de `resetAuth()` — sem isso, se o admin estava em modo "Ver como" ao deslogar, o `isImpersonating=true` sobrevive à soft navigation e o layout continua mostrando o contexto do usuário-alvo.
+3. Navegação pós-logout deve ser `window.location.href = '/login'` (hard reset) — `router.push` é soft navigation e os stores Zustand sobrevivem. Hard reset destrói tudo.
+4. Não chamar `router.push('/login')` dentro do `signOut` callback — o handler `SIGNED_OUT` já faz o `window.location.href`. Dois redirects causam inconsistência.
+
+---
+
 ### super_admin — bypass de user_permissions
 
 `isSuperAdmin = user.role === 'super_admin'` no código desabilita os toggles de permissão na UI e bypassa toda checagem de `user_permissions`. Por isso:
