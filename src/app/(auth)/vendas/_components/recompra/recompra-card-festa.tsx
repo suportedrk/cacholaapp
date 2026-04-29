@@ -32,16 +32,50 @@ export function RecompraCardFesta({ opportunity: opp, canRegister }: Props) {
     day: '2-digit', month: '2-digit', year: 'numeric',
   })
 
+  function handleCardClick() {
+    if (!opp.deal_id) {
+      console.warn('[RecompraCardFesta] deal_id ausente — não foi possível abrir o Ploomes.')
+      return
+    }
+    window.open(`https://app10.ploomes.com/deal/${opp.deal_id}`, '_blank', 'noopener,noreferrer')
+  }
+
+  function handleCardKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+    if (e.key === 'Enter') {
+      handleCardClick()
+    } else if (e.key === ' ') {
+      e.preventDefault()
+      handleCardClick()
+    }
+  }
+
+  const ariaLabel = isContacted
+    ? `Abrir negócio ${opp.contact_name} no Ploomes (já contatado)`
+    : `Abrir negócio ${opp.contact_name} no Ploomes`
+
   return (
     <>
-      <div className={cn(
-        'rounded-lg border bg-card p-4 space-y-3 transition-all',
-        isContacted ? 'opacity-70 border-border' : 'border-border card-interactive',
-      )}>
+      <div
+        role="link"
+        tabIndex={0}
+        aria-label={ariaLabel}
+        onClick={handleCardClick}
+        onKeyDown={handleCardKeyDown}
+        className={cn(
+          'rounded-lg border bg-card p-4 space-y-3 transition-all focus-ring',
+          isContacted
+            ? 'opacity-70 border-border cursor-pointer hover:opacity-90'
+            : 'border-border card-interactive',
+        )}
+      >
         {/* Header */}
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 space-y-1">
-            <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full border bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/40 dark:text-blue-400 dark:border-blue-800">
+            <span
+              onClick={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full border bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/40 dark:text-blue-400 dark:border-blue-800"
+            >
               <Clock className="w-3 h-3" />
               Há {opp.months_since_event} meses
             </span>
@@ -101,7 +135,7 @@ export function RecompraCardFesta({ opportunity: opp, canRegister }: Props) {
             <Button
               size="sm"
               className="h-7 text-xs flex-1"
-              onClick={() => setContactOpen(true)}
+              onClick={(e) => { e.stopPropagation(); setContactOpen(true) }}
               disabled={!canRegister}
             >
               <CheckCircle className="w-3 h-3 mr-1" />
@@ -120,7 +154,7 @@ export function RecompraCardFesta({ opportunity: opp, canRegister }: Props) {
                   size="sm"
                   variant="outline"
                   className="h-7 text-xs"
-                  onClick={() => setReopenLogId(opp.log_id)}
+                  onClick={(e) => { e.stopPropagation(); setReopenLogId(opp.log_id) }}
                 >
                   <RotateCcw className="w-3 h-3 mr-1" /> Reabrir
                 </Button>
