@@ -66,22 +66,23 @@ export function RecompraCardAniversario({ opportunity: opp, canRegister }: Props
   const [contactOpen, setContactOpen] = useState(false)
   const [reopenLogId, setReopenLogId] = useState<string | null>(null)
 
-  const urgency     = getUrgency(opp.days_until_birthday)
-  const UrgencyIcon = urgency.icon
-  const isContacted = !!opp.log_id
-  const phone       = opp.contact_phones?.[0]?.PhoneNumber ?? null
-  const outcome     = opp.log_outcome ? OUTCOME_LABELS[opp.log_outcome] : null
+  const urgency          = getUrgency(opp.days_until_birthday)
+  const UrgencyIcon      = urgency.icon
+  const isContacted      = !!opp.log_id
+  const hasPloomesContact = opp.ploomes_contact_id != null
+  const phone            = opp.contact_phones?.[0]?.PhoneNumber ?? null
+  const outcome          = opp.log_outcome ? OUTCOME_LABELS[opp.log_outcome] : null
 
   const nextBdayFormatted = new Date(opp.next_birthday + 'T00:00:00').toLocaleDateString('pt-BR', {
     day: '2-digit', month: '2-digit', year: 'numeric',
   })
 
   function handleCardClick() {
-    if (!opp.deal_id) {
-      console.warn('[RecompraCardAniversario] deal_id ausente — não foi possível abrir o Ploomes.')
+    if (!hasPloomesContact) {
+      console.warn('[RecompraCardAniversario] ploomes_contact_id ausente — não foi possível abrir o Ploomes.')
       return
     }
-    window.open(`https://app10.ploomes.com/deal/${opp.deal_id}`, '_blank', 'noopener,noreferrer')
+    window.open(`https://app10.ploomes.com/contact/${opp.ploomes_contact_id}`, '_blank', 'noopener,noreferrer')
   }
 
   function handleCardKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
@@ -93,23 +94,30 @@ export function RecompraCardAniversario({ opportunity: opp, canRegister }: Props
     }
   }
 
-  const ariaLabel = isContacted
-    ? `Abrir negócio ${opp.contact_name} no Ploomes (já contatado)`
-    : `Abrir negócio ${opp.contact_name} no Ploomes`
+  const ariaLabel = !hasPloomesContact
+    ? `${opp.contact_name} — contato sem vínculo no Ploomes`
+    : isContacted
+      ? `Abrir contato ${opp.contact_name} no Ploomes (já contatado)`
+      : `Abrir contato ${opp.contact_name} no Ploomes`
 
   return (
     <>
       <div
-        role="link"
-        tabIndex={0}
+        role={hasPloomesContact ? 'link' : undefined}
+        tabIndex={hasPloomesContact ? 0 : -1}
         aria-label={ariaLabel}
         onClick={handleCardClick}
         onKeyDown={handleCardKeyDown}
         className={cn(
-          'rounded-lg border bg-card p-4 space-y-3 transition-all focus-ring',
-          isContacted
-            ? 'opacity-70 border-border cursor-pointer hover:opacity-90'
-            : 'border-border card-interactive',
+          'rounded-lg border bg-card p-4 space-y-3 transition-all',
+          hasPloomesContact && 'focus-ring',
+          hasPloomesContact
+            ? isContacted
+              ? 'opacity-70 border-border cursor-pointer hover:opacity-90'
+              : 'border-border card-interactive'
+            : isContacted
+              ? 'opacity-70 border-border'
+              : 'border-border',
         )}
       >
         {/* Header */}
