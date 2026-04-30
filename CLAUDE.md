@@ -12,6 +12,7 @@
 
 - **Metodologia:** Vibe Coding — Claude planeja + implementa, Bruno testa + valida
 - **Problema resolvido:** Informações espalhadas em WhatsApp, planilhas e cadernos
+- **Versão atual:** v1.5.13 (prod, PR #2 mergeado 30/abr/2026). v1.5.12 introduziu cards clicáveis em Vendas/Upsell e Vendas/Recompra; v1.5.13 corrigiu o destino do clique no Recompra (de `/deal/` para `/contact/`).
 
 ---
 
@@ -187,6 +188,41 @@ src/
 - **Status:** `bg-status-error-bg`, `text-status-error-text` (+ success/warning/info)
 - **Z-index:** `z-dropdown`(10) `z-sticky`(20) `z-overlay`(30) `z-modal`(40) `z-toast`(50) `z-tooltip`(60)
 - **Sombras:** `shadow-xs/sm/md/lg/xl`
+
+### Padrão de card clicável (v1.5.12+)
+
+Padrão estabelecido para cards do módulo Vendas (Upsell, Recompra Aniversário, Recompra Festa Passada). Replicar em qualquer novo card que precise abrir destino externo.
+
+**Estrutura do componente:**
+
+- `handleCardClick`: guard de campo nullable + `window.open(url, '_blank', 'noopener,noreferrer')` + `console.warn` discreto se inválido
+- `handleCardKeyDown`: dispara em `Enter` e `Space` (com `preventDefault()` no Space para não rolar a página)
+- `aria-label` condicional por estado (não-contatado / contatado / sem vínculo)
+
+**Atributos do div raiz do card:**
+
+- `role="link"` e `tabIndex={0}` condicionais à validade do destino (ambos `undefined`/`-1` se o destino é null)
+- Classe `focus-ring` (de `globals.css`) condicional à validade do destino
+- Classe `card-interactive` quando não-contatado e clicável
+- Classes `cursor-pointer hover:opacity-90` quando contatado e clicável (não usar hover lift no estado contatado, para preservar a hierarquia visual de "já feito")
+
+**Elementos interativos internos (proteção contra bubble):**
+
+- Botões: `e.stopPropagation()` antes da lógica original do handler
+- Chips decorativos (`<span>`): `onClick={(e) => e.stopPropagation()}` E `onMouseDown={(e) => e.stopPropagation()}` no próprio elemento — `onMouseDown` previne navegação prematura em alguns navegadores
+
+**Destinos atuais por módulo:**
+
+- Vendas/Upsell aponta para `https://app10.ploomes.com/deal/{deal_id}`
+- Vendas/Recompra aponta para `https://app10.ploomes.com/contact/{ploomes_contact_id}`
+
+**Tratamento de campo nullable:** quando o campo de destino é nullable (ex: `ploomes_contact_id: number | null`), o card NÃO é clicável: `tabIndex={-1}`, sem `role="link"`, sem `focus-ring`, sem `cursor-pointer`. Os botões internos continuam funcionando normalmente. O `aria-label` informa "sem vínculo no Ploomes".
+
+**Referências de implementação:**
+
+- `src/app/(auth)/vendas/_components/upsell/upsell-card.tsx`
+- `src/app/(auth)/vendas/_components/recompra/recompra-card-aniversario.tsx`
+- `src/app/(auth)/vendas/_components/recompra/recompra-card-festa.tsx`
 
 ---
 
