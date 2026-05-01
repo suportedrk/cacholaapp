@@ -16,6 +16,36 @@
 
 ---
 
+## Skills — Verificação Obrigatória
+
+**Antes de responder qualquer pedido** (incluindo perguntas simples como "o que faz esse arquivo?"), siga este protocolo em 3 passos:
+
+1. **Liste** as skills disponíveis em `.claude/skills/` (basta `ls .claude/skills/` ou inspecionar mentalmente se já viu na sessão).
+2. **Decida** quais skills se aplicam ao pedido atual lendo o `description` do `SKILL.md` de cada uma.
+3. **Anuncie no chat** uma das duas formas, antes de qualquer código ou análise:
+
+   - Se aplica skill(s):
+     ```
+     📚 Skills consultadas: ploomes-cachola-api (references/odata-cheatsheet.md, references/gotchas-cachola.md)
+     ```
+
+   - Se nenhuma se aplica:
+     ```
+     📚 Skills consultadas: nenhuma se aplica a este pedido
+     ```
+
+4. Só depois disso, prossiga com o trabalho normalmente.
+
+### Regras
+
+- Esta verificação é **sempre obrigatória**, mesmo em perguntas exploratórias ou triviais.
+- Quando uma skill se aplica, **leia o(s) arquivo(s) relevante(s)** dentro dela antes de escrever código — não apenas o `SKILL.md`. Cada skill tem uma tabela "Quando consultar cada referência" no `SKILL.md` indicando qual arquivo `references/` ler para qual tipo de tarefa.
+- Se múltiplas skills se aplicam, anuncie todas.
+- Se a skill cobre só parte do pedido, anuncie a skill + diga qual parte ainda fica fora dela.
+- **Nunca** invente conteúdo que está numa skill — sempre leia o arquivo, mesmo que pareça lembrar.
+
+---
+
 ## PROTOCOLO DE DESENVOLVIMENTO — SEQUÊNCIA OBRIGATÓRIA
 
 > Esta seção existe porque a falta de validação local em dev foi fator contribuinte no incidente de 24/abr/2026 (v1.5.2). Leia antes de cada sessão.
