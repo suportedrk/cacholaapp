@@ -804,6 +804,17 @@ export const GLOBAL_VIEWER_ROLES = ['super_admin', 'diretor'] as const satisfies
 - `/inicio` (calendar): dropdown "Vendedora" acima do calendário, filtra `calEvents` e `calPreReservas`
 - Backfill executado em produção: 7218 ploomes_deals com owner_name + 13 events propagados via `scripts/backfill-owner.ts`
 
+**Campo "Origem" (lead source) — Migration 078 — COMPLETO:**
+- Colunas: `ploomes_deals.origin_id BIGINT` + `ploomes_deals.origin_name TEXT` com índices `(origin_id)` e `(unit_id, origin_id, ploomes_create_date)`
+- `sync.ts` + `sync-deals.ts`: `$select=…,OriginId` + `$expand=…,Origin($select=Id,Name)` — extrai `deal.OriginId` e `deal.Origin?.Name`; upsert preenche `origin_id` e `origin_name` em `syncDealsForBI` e `syncSingleDealToBI`
+- `types.ts`: tipo `PloomesOrigin` + campos `OriginId?: number` / `Origin?: PloomesOrigin` em `PloomesDeal`
+- 13 origens ativas no Ploomes da Cachola: Instagram, Indicação, Já foi em festa no Cachola, Whatsapp LP, Whatsapp, Formulário LP, Já fez festa no Cachola, Internet, Passando em frente, TikTok, E-mail (fora do formulário), ChatGPT, Telefone
+- Origens arquivadas (caso apareçam no futuro): `origin_id` preenchido, `origin_name = NULL`
+- Backfill executado em produção: `scripts/backfill-deal-origin.ts` (últimos 12 meses, 5.392 deals atualizados, cobertura 100%, delay 100ms, idempotente)
+- Pinheiros: 4.911 deals em 13 origens. Moema: 481 deals em 10 origens
+- Webhook (Update/Win/Lose deal) atualiza automaticamente via `syncSingleDealToBI`
+- Fundação para painel BI "Origem dos Leads" separado por unidade com filtro de período (Fase C futura)
+
 **Tabela `sellers` — Migrations 053 + 054 — COMPLETO:**
 - Tabela: `sellers` — cadastro mestre de vendedoras; fonte da verdade para filtros ativo/inativo no BI
 - Campos-chave: `owner_id INT UNIQUE` (FK Ploomes), `name`, `status` (`active`|`inactive`), `hire_date`, `termination_date`, `primary_unit_id`, `notes`, `photo_url`, `is_system_account`

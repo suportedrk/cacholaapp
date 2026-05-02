@@ -198,8 +198,8 @@ export async function syncDeals(
 
     // ── 3. Buscar deals do Ploomes ────────────────────────────────
     const allDeals: PloomesDeal[] = []
-    const EXPAND = `$expand=OtherProperties,Contact($select=Id,Name,Email,Phones),Owner($select=Id,Name,Email)`
-    const SELECT = `$select=Id,Title,ContactId,OwnerId,Amount,StageId,StatusId,CreateDate,LastUpdateDate,OtherProperties`
+    const EXPAND = `$expand=OtherProperties,Contact($select=Id,Name,Email,Phones),Owner($select=Id,Name,Email),Origin($select=Id,Name)`
+    const SELECT = `$select=Id,Title,ContactId,OwnerId,OriginId,Amount,StageId,StatusId,CreateDate,LastUpdateDate,OtherProperties`
 
     if (options.dealId) {
       // ── Sync cirúrgico: apenas um deal específico (ex: disparado por webhook) ──
