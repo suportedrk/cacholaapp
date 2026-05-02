@@ -982,6 +982,7 @@ export const GLOBAL_VIEWER_ROLES = ['super_admin', 'diretor'] as const satisfies
 - **Regra dura:** `CalendarExportView` usa APENAS inline styles com hex — html2canvas não suporta `oklch()` que o Tailwind v4 gera
 - **Regra dura:** `EventBadge` usa `display: block + lineHeight px fixo (22px) + chip inline-block com position: relative top: 2`. Flex+alignItems:center quebra o render do texto no html2canvas
 - **Regra dura:** `onclone` remove todos os `<style>` e `<link rel="stylesheet">` do documento clonado antes da captura
+- Timestamp de geração: cabeçalho + rodapé do PNG exibem "Gerado em DD/MM/AAAA às HHhMM (Horário de Brasília)". Formatação via `Intl.DateTimeFormat` com `timeZone:'America/Sao_Paulo'` (compatível com VPS UTC). Gerado uma única vez no `calendar-export-button.tsx` e propagado como prop `generatedAtFormatted`. Motivação: evidência temporal caso cliente conteste disponibilidade de datas.
 
 ---
 
