@@ -984,6 +984,10 @@ export const GLOBAL_VIEWER_ROLES = ['super_admin', 'diretor'] as const satisfies
 - **Regra dura:** `onclone` remove todos os `<style>` e `<link rel="stylesheet">` do documento clonado antes da captura
 - Timestamp de geração: cabeçalho + rodapé do PNG exibem "Gerado em DD/MM/AAAA às HHhMM (Horário de Brasília)". Formatação via `Intl.DateTimeFormat` com `timeZone:'America/Sao_Paulo'` (compatível com VPS UTC). Gerado uma única vez no `calendar-export-button.tsx` e propagado como prop `generatedAtFormatted`. Motivação: evidência temporal caso cliente conteste disponibilidade de datas.
 
+**Calendário /dashboard — Cards e Quick-view:**
+- Cards de evento na view Mês exibem nome do cliente em cima e horário embaixo (`text-[9px]`, formato `HH:MM – HH:MM` com travessão en-dash). Sem horário no banco: mostra só o nome (layout não quebra). Views Semana e Dia inalteradas (evento já posicionado na grade horária). Helpers `formatHHMM` e `formatEventTimeRange` definidos inline em `calendar-view.tsx` antes de `MonthView`.
+- Quick-view do evento (`event-quick-view.tsx`) é Dialog modal centralizado via `@/components/ui/dialog` (anteriormente Sheet/drawer `side="bottom"`). `sm:max-w-[480px]` desktop, `max-w-[calc(100%-2rem)]` mobile, sempre centralizado em ambos. Backdrop preto/10 + blur, animação fade + scale 95→100, botão X automático (`showCloseButton` default). Fecha com ESC, clique no backdrop ou botão X. Trigger (clique no card em `calendar-view.tsx`) inalterado. `DialogDescription` com `sr-only` presente para acessibilidade.
+
 ---
 
 ## REGRA DE PROCESSO (aprendizado Fase C.2)

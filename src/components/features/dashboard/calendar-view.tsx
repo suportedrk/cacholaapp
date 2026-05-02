@@ -803,6 +803,19 @@ interface ViewProps {
   onDayClick: (day: Date) => void
 }
 
+function formatHHMM(t: string | null | undefined): string | null {
+  if (!t) return null
+  return t.slice(0, 5)
+}
+
+function formatEventTimeRange(ev: CalendarEvent): string | null {
+  const s = formatHHMM(ev.start_time)
+  const e = formatHHMM(ev.end_time)
+  if (!s && !e) return null
+  if (s && e) return `${s} – ${e}`
+  return s ?? e
+}
+
 function MonthView({
   navDir,
   currentDate,
@@ -934,12 +947,18 @@ function MonthView({
                     key={ev.id}
                     onClick={() => onEventClick(ev)}
                     className={cn(
-                      'w-full text-left text-[10px] leading-tight px-1 py-0.5 rounded-sm truncate font-medium transition-opacity hover:opacity-80',
+                      'w-full text-left text-[10px] leading-tight px-1 py-0.5 rounded-sm font-medium transition-opacity hover:opacity-80',
                       EVENT_PILL[ev.status]
                     )}
                     title={[ev.client_name || ev.title, ev.owner_name].filter(Boolean).join(' · ')}
                   >
-                    {ev.client_name || ev.title}
+                    <span className="truncate block">{ev.client_name || ev.title}</span>
+                    {(() => {
+                      const timeRange = formatEventTimeRange(ev)
+                      return timeRange ? (
+                        <span className="block text-[9px] opacity-70 leading-tight truncate">{timeRange}</span>
+                      ) : null
+                    })()}
                   </button>
                 ))}
                 {/* Lost events: visual distinto */}
@@ -953,7 +972,13 @@ function MonthView({
                     )}
                     title={[ev.client_name || ev.title, ev.owner_name].filter(Boolean).join(' · ')}
                   >
-                    {ev.client_name || ev.title}
+                    <span className="truncate block">{ev.client_name || ev.title}</span>
+                    {(() => {
+                      const timeRange = formatEventTimeRange(ev)
+                      return timeRange ? (
+                        <span className="block text-[9px] opacity-70 leading-tight truncate">{timeRange}</span>
+                      ) : null
+                    })()}
                   </button>
                 ))}
                 {/* Manutenções */}

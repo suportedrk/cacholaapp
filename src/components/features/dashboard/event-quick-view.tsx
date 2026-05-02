@@ -5,12 +5,13 @@ import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { ArrowRight, Calendar, Clock, Tag } from 'lucide-react'
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetFooter,
-} from '@/components/ui/sheet'
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog'
 import { EventStatusBadge } from '@/components/shared/event-status-badge'
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -25,21 +26,24 @@ export function EventQuickView({ event, onClose }: EventQuickViewProps) {
   const formatTime = (t: string) => t.slice(0, 5)
 
   return (
-    <Sheet open={!!event} onOpenChange={(open) => { if (!open) onClose() }}>
-      <SheetContent side="bottom" className="rounded-t-2xl max-h-[85dvh] overflow-y-auto sm:max-w-sm sm:rounded-xl">
+    <Dialog open={!!event} onOpenChange={(open) => { if (!open) onClose() }}>
+      <DialogContent className="sm:max-w-[480px] max-h-[90vh] overflow-y-auto">
+        <DialogDescription className="sr-only">
+          Resumo rápido do evento selecionado
+        </DialogDescription>
         {event && (
           <>
-            <SheetHeader className="pb-0">
+            <DialogHeader className="pb-0">
               <div className="flex items-start gap-2 pr-8">
-                <SheetTitle className="text-left text-base font-semibold leading-tight flex-1">
+                <DialogTitle className="text-left text-base font-semibold leading-tight flex-1">
                   {event.title}
-                </SheetTitle>
+                </DialogTitle>
                 <EventStatusBadge status={event.status} size="sm" className="shrink-0 mt-0.5" />
               </div>
               <p className="text-sm text-muted-foreground text-left">{event.client_name}</p>
-            </SheetHeader>
+            </DialogHeader>
 
-            <div className="px-4 py-3 space-y-2.5">
+            <div className="space-y-2.5">
               <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
                 <Calendar className="w-4 h-4 shrink-0" />
                 <span className="capitalize">
@@ -64,7 +68,7 @@ export function EventQuickView({ event, onClose }: EventQuickViewProps) {
               )}
             </div>
 
-            <SheetFooter className="flex-row gap-2">
+            <DialogFooter className="flex-row gap-2">
               <Link
                 href={`/eventos/${event.id}`}
                 className={cn(
@@ -75,10 +79,10 @@ export function EventQuickView({ event, onClose }: EventQuickViewProps) {
                 Ver evento completo
                 <ArrowRight className="w-4 h-4" />
               </Link>
-            </SheetFooter>
+            </DialogFooter>
           </>
         )}
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   )
 }
