@@ -3,9 +3,8 @@
 import { useParams, useRouter } from 'next/navigation'
 import { useAuthReadyStore } from '@/stores/auth-store'
 import { useMeetingMinuteDetail } from '@/hooks/use-meeting-minute-detail'
+import { ATAS_MANAGE_ROLES, hasRole } from '@/config/roles'
 import { MeetingMinuteDetailView } from '../components/MeetingMinuteDetailView'
-
-const ELEVATED_ROLES = ['super_admin', 'diretor', 'gerente']
 
 export default function AtaDetailPage() {
   const router = useRouter()
@@ -47,7 +46,7 @@ export default function AtaDetailPage() {
 
   if (!user || !profile) return null
 
-  const isElevated = ELEVATED_ROLES.includes(profile.role)
+  const isElevated = hasRole(profile.role, ATAS_MANAGE_ROLES)
   const isCreator  = minute.created_by === user.id
   const canEdit    = isElevated || isCreator
   const canDelete  = isElevated || isCreator

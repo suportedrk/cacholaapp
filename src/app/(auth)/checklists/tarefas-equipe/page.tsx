@@ -24,6 +24,7 @@ import { useTeamTasks, useTeamCompletedCount, type TeamTaskItem } from '@/hooks/
 import { cn } from '@/lib/utils'
 import { PRIORITY_LABELS } from '@/types/database.types'
 import type { Priority } from '@/types/database.types'
+import { hasRole, TEAM_TASKS_ROLES } from '@/config/roles'
 
 // ─────────────────────────────────────────────────────────────
 // PRIORITY PILL
@@ -277,7 +278,7 @@ export default function TarefasEquipePage() {
   const search = useDebounce(searchRaw, 200)
 
   // ── Verificação de permissão ────────────────────────────────
-  const canAccess = ['super_admin', 'diretor', 'gerente'].includes(profile?.role ?? '')
+  const canAccess = hasRole(profile?.role, TEAM_TASKS_ROLES)
 
   // ── Data fetching ───────────────────────────────────────────
   const { data: unitUsers = [], isLoading: usersLoading } = useUnitUsers(activeUnitId ?? undefined)

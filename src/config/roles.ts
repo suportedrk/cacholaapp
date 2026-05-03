@@ -237,6 +237,16 @@ export const ATAS_ACCESS_ROLES = [
 ] as const satisfies readonly Role[]
 
 /**
+ * Roles que podem criar, editar e excluir atas.
+ * Subset de ATAS_ACCESS_ROLES — quem gerencia é também quem acessa.
+ */
+export const ATAS_MANAGE_ROLES = [
+  'super_admin',
+  'diretor',
+  'gerente',
+] as const satisfies readonly Role[]
+
+/**
  * Acesso ao Dashboard principal (/dashboard).
  * Exclui freelancer e entregador — redirecionados para /checklists/minhas-tarefas.
  */

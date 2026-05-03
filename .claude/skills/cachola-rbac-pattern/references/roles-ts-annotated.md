@@ -1,6 +1,6 @@
 # roles-ts-annotated — Constantes exportadas de src/config/roles.ts
 
-> Arquivo gerado com base no estado real de `src/config/roles.ts` (293 linhas, 26 constantes).
+> Arquivo gerado com base no estado real de `src/config/roles.ts` (27 constantes).
 > Padrão canônico: `as const satisfies readonly Role[]`
 
 ## Tabela de constantes
@@ -30,6 +30,7 @@
 | `TEAM_TASKS_ROLES` | super_admin, diretor, gerente | "Tarefas da Equipe" no Checklist Operacional |
 | `EVENTOS_ACCESS_ROLES` | super_admin, diretor, gerente, financeiro, vendedora, pos_vendas, decoracao, rh | `/eventos` — layout guard |
 | `ATAS_ACCESS_ROLES` | super_admin, diretor, gerente, financeiro, vendedora, pos_vendas, decoracao, rh | `/atas` — layout guard |
+| `ATAS_MANAGE_ROLES` | super_admin, diretor, gerente | `/atas/nova`, `/atas/[id]/editar` — gate client-side de criação/edição/exclusão |
 | `DASHBOARD_ACCESS_ROLES` | super_admin, diretor, gerente, financeiro, manutencao, vendedora, pos_vendas, decoracao, rh | `/dashboard` — layout guard |
 | `SETTINGS_ROLES` | super_admin, diretor | `/configuracoes` — layout guard |
 | `TEMPLATE_MANAGE_ROLES` | super_admin | `/admin/cargos` — layout guard + API `role-permissions` |

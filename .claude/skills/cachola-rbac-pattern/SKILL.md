@@ -54,7 +54,7 @@ seção "Dívida técnica". A quitação é Fase 2 do projeto de dívida técnic
 
 ## Fonte única de verdade: src/config/roles.ts
 
-Todas as 26 constantes usam o padrão canônico:
+Todas as 27 constantes usam o padrão canônico:
 
 ```typescript
 export const MINHA_CONSTANTE_ROLES = [

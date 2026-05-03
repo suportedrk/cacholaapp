@@ -7,9 +7,8 @@ import { useUnitStore } from '@/stores/unit-store'
 import { useUnitUsers } from '@/hooks/use-units'
 import { useCreateMeetingMinute } from '@/hooks/use-meeting-minute-mutations'
 import { MeetingMinuteForm } from '../components/MeetingMinuteForm'
+import { ATAS_MANAGE_ROLES, hasRole } from '@/config/roles'
 import type { MeetingMinuteFormData } from '@/types/minutes'
-
-const CREATE_ROLES = ['super_admin', 'diretor', 'gerente']
 
 export default function NovaAtaPage() {
   const router   = useRouter()
@@ -19,7 +18,7 @@ export default function NovaAtaPage() {
 
   // ── Permission gate ────────────────────────────────────────
   useEffect(() => {
-    if (profile && !CREATE_ROLES.includes(profile.role)) {
+    if (profile && !hasRole(profile.role, ATAS_MANAGE_ROLES)) {
       router.replace('/atas')
     }
   }, [profile, router])
