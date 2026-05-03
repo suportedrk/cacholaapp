@@ -38,6 +38,7 @@ import { BIUnitComparison } from '@/components/features/bi/bi-unit-comparison'
 import { BITrendCharts } from '@/components/features/bi/bi-trend-charts'
 import { SellersTab } from '@/components/features/bi/sellers-tab'
 import { VendasRealizadasTab } from '@/components/features/bi/vendas-realizadas-tab'
+import { LeadOriginSection } from '@/components/features/bi/lead-origin-section'
 import { exportBIReport } from '@/lib/bi/export-bi-report'
 import { BI_ATENDIMENTO_ROLES, BI_VENDAS_ROLES, hasRole } from '@/config/roles'
 
@@ -662,6 +663,10 @@ export default function BIPage() {
           </div>
         )}
         </div>
+
+        {/* ── Origem dos Leads ── */}
+        <LeadOriginSection units={units} months={selectedMonths} />
+
         </TabsContent>
 
         {/* ── Atendimento (Deals) ── */}

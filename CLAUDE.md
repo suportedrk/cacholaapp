@@ -813,7 +813,19 @@ export const GLOBAL_VIEWER_ROLES = ['super_admin', 'diretor'] as const satisfies
 - Backfill executado em produção: `scripts/backfill-deal-origin.ts` (últimos 12 meses, 5.392 deals atualizados, cobertura 100%, delay 100ms, idempotente)
 - Pinheiros: 4.911 deals em 13 origens. Moema: 481 deals em 10 origens
 - Webhook (Update/Win/Lose deal) atualiza automaticamente via `syncSingleDealToBI`
-- Fundação para painel BI "Origem dos Leads" separado por unidade com filtro de período (Fase C futura)
+- Fundação para painel BI "Origem dos Leads" — implementado na Fase C (ver próximo bullet)
+
+**Painel BI "Origem dos Leads" — Migrations 079 + 080 — COMPLETO:**
+- RPC `get_bi_lead_origin_breakdown(p_unit_id UUID, p_period_months INT DEFAULT 6)` — agrega leads por mês × 8 categorias derivadas das 13 origens cruas do Ploomes
+- Mapeamento 13→8 via `CASE origin_id` na própria RPC (única fonte da verdade no banco): Instagram, Indicação, Cliente recorrente (60001628+60001690), WhatsApp (10046775+60001461), Site/Web (10046776+60029935), TikTok, Outros canais, (sem origem)
+- Migration 079: RPC inicial. Migration 080: adiciona filtro `ploomes_create_date >= '2025-05-01'` — deals anteriores têm `origin_id = NULL` (fora da janela do backfill) e poluiriam o gráfico com barras 100% cinzas nos pills 12M/Tudo
+- Frontend: `src/lib/bi/origin-categories.ts` (8 categorias com cor hex e ordem fixa), `src/hooks/use-lead-origin-breakdown.ts` (queryKey `['bi','lead-origin', unitId, months]`, enabled `isSessionReady && !!unitId`, `(supabase as any).rpc()` — padrão do projeto para RPCs fora do `database.types.ts`)
+- Componentes: `src/components/features/bi/lead-origin-panel.tsx` + `lead-origin-section.tsx`
+- Visualização: barras empilhadas em PERCENTUAL (`stackOffset="expand"`), padrão `recharts-fixed-pixels` (`useChartWidth` + ResizeObserver, **NUNCA** `ResponsiveContainer`). Tooltip com nome + % + absoluto + total do mês. Rodapé: total no período + top 3 categorias com bullet colorido
+- Layout: 1 painel por unidade lado a lado (`md:grid-cols-2`), mobile coluna única. `LeadOriginSection` recebe `selectedMonths` como prop da `page.tsx` (sem state próprio)
+- Disclaimer no rodapé da seção: "Dados de origem disponíveis a partir de mai/2025. Negócios anteriores podem aparecer em (sem origem) caso o campo não tenha sido preenchido no Ploomes"
+- Roles: `super_admin` + `diretor` (mesmo gating de `BI_ACCESS_ROLES`, sem regressão)
+- Validação produção: 0% `(sem origem)` em meses completos (Nov/25–Abr/26), Instagram dominante (54–62%), 8 categorias visíveis com cores distintas
 
 **Tabela `sellers` — Migrations 053 + 054 — COMPLETO:**
 - Tabela: `sellers` — cadastro mestre de vendedoras; fonte da verdade para filtros ativo/inativo no BI
