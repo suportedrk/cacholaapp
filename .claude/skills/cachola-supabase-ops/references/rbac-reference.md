@@ -159,14 +159,34 @@ hasRole<T extends readonly string[]>(role, allowed): boolean
 
 ## ⚠️ Dívida técnica conhecida — roles inline
 
-**6 lugares no código** usam role inline em vez de constante:
+> Atualizado em 03/mai/2026: 9 arquivos / 13 ocorrências confirmadas (ver Fase 2 da quitação de dívidas).
 
-| Lugar | Como | Migrar para |
+**13 ocorrências em 9 arquivos** usam role inline em vez de constante:
+
+**Frontend (atas, checklists, manutenção, onboarding):**
+
+| Arquivo | Padrão inline | Migrar para |
 |---|---|---|
-| `src/app/(protegido)/atas/...` (5 ocorrências) | `['super_admin','diretor','gerente'].includes(profile.role)` | constante (provável `ATAS_MANAGE`, criar) |
-| `src/components/maintenance/chamados/...` (1) | mesmo padrão inline | constante (provável `MAINTENANCE_TICKETS_MANAGE`) |
+| `src/app/(auth)/atas/nova/page.tsx` | `const CREATE_ROLES = ['super_admin','diretor','gerente']` | constante nova `ATAS_ELEVATED_ROLES` em `roles.ts` |
+| `src/app/(auth)/atas/page.tsx` | `const ELEVATED_ROLES = ['super_admin','diretor','gerente']` | mesma constante nova acima |
+| `src/app/(auth)/atas/[id]/editar/page.tsx` | `const EDIT_ROLES = ['super_admin','diretor','gerente']` | mesma constante nova acima |
+| `src/app/(auth)/atas/[id]/page.tsx` | `const ELEVATED_ROLES = ['super_admin','diretor','gerente']` | mesma constante nova acima |
+| `src/app/(auth)/checklists/tarefas-equipe/page.tsx` | `['super_admin','diretor','gerente'].includes(...)` | `TEAM_TASKS_ROLES` (já existe) |
+| `src/app/(auth)/manutencao/chamados/[id]/page.tsx` | `const MANAGER_ROLES = ['super_admin','diretor','gerente']` | `MAINTENANCE_ADMIN_ROLES` (já existe) |
+| `src/components/features/onboarding/setup-checklist-card.tsx` | `['super_admin','diretor','gerente'].includes(...)` | constante a decidir (gerente vê onboarding?) |
+| `src/hooks/use-onboarding.ts` | `['super_admin','diretor','gerente'].includes(...)` | mesma constante do item acima |
 
-**Por que ainda não foi corrigido:** decisão pendente sobre o nome canônico das constantes (Bruno precisa decidir).
+**Backend (API routes, lib/notifications) — 5 ocorrências em 5 arquivos, mais 4 extras em notifications.ts:**
+
+| Arquivo | Padrão inline | Migrar para |
+|---|---|---|
+| `src/app/api/ploomes/config/route.ts` | `['super_admin','diretor','gerente'].includes(profile.role)` | `SETTINGS_ROLES` ou nova `PLOOMES_MANAGE_ROLES` |
+| `src/app/api/ploomes/sync/route.ts` | mesmo padrão | mesma constante acima |
+| `src/app/api/cron/check-provider-alerts/route.ts` | `.in('role', [...])` × 3 | `[...MAINTENANCE_MODULE_ROLES]` ou `PRESTADORES_ACCESS_ROLES` |
+| `src/app/api/email/maintenance-emergency/route.ts` | `.in('role', [...])` | `[...MAINTENANCE_MODULE_ROLES]` |
+| `src/lib/notifications.ts` | `.in('role', [...])` × 4 | constantes por contexto (ver Fase 2) |
+
+**Por que ainda não foi corrigido:** quitação programada para Fase 2 do projeto de dívida técnica.
 
 **Quando mexer nessas áreas:** pegar a oportunidade para migrar. Não criar mais inline em código novo.
 
@@ -218,3 +238,72 @@ Em vez do genérico "Acesso negado". Usuários respondem muito melhor.
 - [ ] Testado com 2 roles diferentes (super_admin + role real)?
 - [ ] Mensagem `/403` faz sentido se for negado?
 - [ ] Não introduziu role inline (`['super_admin', 'diretor']`)?
+
+## Paridade de GRANTs entre dev-local e produção
+
+### O problema
+
+As catalog tables criadas na Migration 071 (`modules`, `roles`, `role_permissions`,
+`role_template_audit`) podem ter GRANTs diferentes entre dev-local e produção. A divergência
+não causa erro imediato — o Docker local tem defaults mais restritivos que o Supabase
+self-hosted da VPS — e só aparece quando alguém recria o banco local do zero.
+
+### Estado verificado (2026-05-03)
+
+Comparação real via `\dp` em ambos os ambientes:
+
+| Tabela | Role | Produção (VPS) | Dev-local |
+|--------|------|----------------|-----------|
+| `modules` | anon | `arwdDxt` (ALL) | `r` (SELECT) |
+| `modules` | authenticated | `arwdDxt` (ALL) | `r` (SELECT) |
+| `modules` | service_role | `arwdDxt` (ALL) | `r` (SELECT) |
+| `roles` | anon | `arwdDxt` (ALL) | `r` (SELECT) |
+| `roles` | authenticated | `arwdDxt` (ALL) | `r` (SELECT) |
+| `roles` | service_role | `arwdDxt` (ALL) | `r` (SELECT) |
+| `role_permissions` | anon | `arwdDxt` (ALL) | `arwd` |
+| `role_permissions` | authenticated | `arwdDxt` (ALL) | `arwd` |
+| `role_permissions` | service_role | `arwdDxt` (ALL) | `arwd` |
+| `role_template_audit` | anon | `arwdDxt` (ALL) | `arwd` |
+| `role_template_audit` | authenticated | `arwdDxt` (ALL) | `arwd` |
+| `role_template_audit` | service_role | `arwdDxt` (ALL) | `arwd` |
+
+Legenda: `a`=INSERT `r`=SELECT `w`=UPDATE `d`=DELETE `D`=TRUNCATE `x`=REFERENCES `t`=TRIGGER
+
+**Produção usa o padrão Supabase ("GRANT ALL + RLS enforces").** Dev-local tem grants mais
+restritivos provenientes das migrations. Ambos são seguros — RLS em `role_permissions` e
+`role_template_audit` garante que apenas `is_super_admin()` pode escrever. A diferença
+prática para `modules`/`roles` (read-only intencionalmente) não causa bugs.
+
+### Quando verificar
+
+Após `docker compose down -v` + sync de produção em dev-local, especialmente se a
+UI `/admin/cargos` começar a retornar 42501 (violação de RLS) ao tentar salvar templates.
+
+### Comando de diagnóstico
+
+```bash
+# Rodar nos dois ambientes e comparar
+docker exec cacholaos-db psql -U postgres -d postgres -c "\dp public.modules"
+docker exec cacholaos-db psql -U postgres -d postgres -c "\dp public.roles"
+docker exec cacholaos-db psql -U postgres -d postgres -c "\dp public.role_permissions"
+docker exec cacholaos-db psql -U postgres -d postgres -c "\dp public.role_template_audit"
+
+# Produção
+ssh cacholaos-vps "docker exec supabase-db psql -U postgres -d postgres -c '\dp public.role_permissions'"
+```
+
+### Fix idempotente para alinhar dev-local com produção
+
+```sql
+-- Executar no banco local se os GRANTs estiverem insuficientes
+-- GRANT é idempotente: re-executar não causa erro
+GRANT ALL ON public.modules           TO anon, authenticated, service_role;
+GRANT ALL ON public.roles             TO anon, authenticated, service_role;
+GRANT ALL ON public.role_permissions  TO anon, authenticated, service_role;
+GRANT ALL ON public.role_template_audit TO anon, authenticated, service_role;
+```
+
+> **Nota:** ampliar grants não enfraquece a segurança — RLS em `role_permissions` e
+> `role_template_audit` continua exigindo `is_super_admin()` para qualquer escrita.
+> `modules` e `roles` não têm policy de escrita, logo são efetivamente read-only
+> mesmo com `arwdDxt` concedido.
