@@ -337,7 +337,7 @@ function Legend() {
 
 // ─── Componente principal ─────────────────────────────────────
 
-export function CalendarExportView({ sanitizedEvents, unitName, period }: ExportData) {
+export function CalendarExportView({ sanitizedEvents, unitName, period, generatedAtFormatted }: ExportData) {
   const eventsByDate: Record<string, SanitizedEvent[]> = {}
   for (const ev of sanitizedEvents) {
     if (!eventsByDate[ev.date]) eventsByDate[ev.date] = []
@@ -374,6 +374,9 @@ export function CalendarExportView({ sanitizedEvents, unitName, period }: Export
         <p style={{ fontSize: 15, color: C.gray500, marginTop: 4, marginBottom: 0, lineHeight: 1.45, fontFamily: FONT }}>
           Unidade {unitName} · {periodLabelCap}
         </p>
+        <p style={{ fontSize: 11, color: C.gray400, marginTop: 4, marginBottom: 0, lineHeight: 1.45, fontFamily: FONT }}>
+          Gerado em {generatedAtFormatted}
+        </p>
       </div>
 
       {period.viewType === 'month' && <MonthGrid period={period} eventsByDate={eventsByDate} />}
@@ -396,7 +399,7 @@ export function CalendarExportView({ sanitizedEvents, unitName, period }: Export
         }}
       >
         <span>cachola.cloud</span>
-        <span>Gerado em {format(new Date(), 'dd/MM/yyyy')}</span>
+        <span>Gerado em {generatedAtFormatted}</span>
       </div>
     </div>
   )

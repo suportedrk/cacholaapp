@@ -53,6 +53,12 @@ export type PloomesOwner = {
   Email?: string
 }
 
+/** Origem do deal (canal de captação) */
+export type PloomesOrigin = {
+  Id: number
+  Name: string
+}
+
 /** Deal completo do Ploomes */
 export type PloomesDeal = {
   Id: number
@@ -61,6 +67,8 @@ export type PloomesDeal = {
   Contact?: PloomesContact
   OwnerId?: number
   Owner?: PloomesOwner
+  OriginId?: number
+  Origin?: PloomesOrigin
   Amount?: number
   StageId?: number
   Stage?: { Id: number; Name: string }

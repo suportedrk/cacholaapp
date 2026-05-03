@@ -71,9 +71,10 @@ public/workbox-*.js.map
 public/swe-worker-*.js
 public/swe-worker-*.js.map
 
-# Claude worktrees
+# Claude — ignorar apenas o que é pessoal/local
 .claude/worktrees/
-.claude/
+.claude/settings.local.json
+.claude/memory/
 
 # ============================================================
 # SYNC LOCAL — dumps temporários (contêm dados reais anonimizados)

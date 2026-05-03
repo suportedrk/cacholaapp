@@ -81,8 +81,8 @@ export async function syncDealsForBI(
     while (true) {
       const queryParts = [
         `$filter=PipelineId eq ${pipelineId}`,
-        `$select=Id,Title,ContactId,OwnerId,Amount,StageId,StatusId,CreateDate,LastUpdateDate`,
-        `$expand=OtherProperties,Contact($select=Id,Name,Email,Phones),Stage($select=Id,Name),Owner($select=Id,Name,Email)`,
+        `$select=Id,Title,ContactId,OwnerId,OriginId,Amount,StageId,StatusId,CreateDate,LastUpdateDate`,
+        `$expand=OtherProperties,Contact($select=Id,Name,Email,Phones),Stage($select=Id,Name),Owner($select=Id,Name,Email),Origin($select=Id,Name)`,
         `$top=${pageSize}`,
         `$skip=${skip}`,
         `$orderby=CreateDate desc`,
@@ -145,6 +145,8 @@ export async function syncDealsForBI(
               end_time,
               owner_id:            deal.OwnerId ?? null,
               owner_name:          deal.Owner?.Name ?? null,
+              origin_id:           deal.OriginId ?? null,
+              origin_name:         deal.Origin?.Name ?? null,
               event_id:            existingEvent?.id ?? null,
               aniversariante_birthday,
             },
@@ -197,8 +199,8 @@ export async function syncSingleDealToBI(
     // 2. Buscar o deal específico
     const queryParts = [
       `$filter=PipelineId eq ${pipelineId} and Id eq ${dealId}`,
-      `$select=Id,Title,ContactId,OwnerId,Amount,StageId,StatusId,CreateDate,LastUpdateDate`,
-      `$expand=OtherProperties,Contact($select=Id,Name,Email,Phones),Stage($select=Id,Name),Owner($select=Id,Name,Email)`,
+      `$select=Id,Title,ContactId,OwnerId,OriginId,Amount,StageId,StatusId,CreateDate,LastUpdateDate`,
+      `$expand=OtherProperties,Contact($select=Id,Name,Email,Phones),Stage($select=Id,Name),Owner($select=Id,Name,Email),Origin($select=Id,Name)`,
     ].join('&')
 
     const response = await ploomesGet<PloomesDeal>(`Deals?${queryParts}`, userKey)
@@ -251,6 +253,8 @@ export async function syncSingleDealToBI(
           end_time,
           owner_id:               deal.OwnerId ?? null,
           owner_name:             deal.Owner?.Name ?? null,
+          origin_id:              deal.OriginId ?? null,
+          origin_name:            deal.Origin?.Name ?? null,
           event_id:               existingEvent?.id ?? null,
           aniversariante_birthday,
         },

@@ -12,6 +12,21 @@ import type { CalendarEvent } from '@/hooks/use-dashboard'
 import type { CalendarPreReserva } from '@/types/pre-reservas'
 import type { ExportPeriod } from './types'
 
+function formatGeneratedAt(date: Date): string {
+  const fmt = new Intl.DateTimeFormat('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })
+  const parts = fmt.formatToParts(date)
+  const get = (t: Intl.DateTimeFormatPartTypes) => parts.find(p => p.type === t)?.value ?? ''
+  return `${get('day')}/${get('month')}/${get('year')} às ${get('hour')}h${get('minute')} (Horário de Brasília)`
+}
+
 type Props = {
   events: CalendarEvent[]
   preReservas: CalendarPreReserva[]
@@ -30,9 +45,11 @@ export function CalendarExportButton({
   const [generating, setGenerating] = useState(false)
   const [mounted, setMounted] = useState(false)
   const exportRef = useRef<HTMLDivElement>(null)
+  const generatedAtRef = useRef<string>('')
 
   const handleExport = async () => {
     try {
+      generatedAtRef.current = formatGeneratedAt(new Date())
       setGenerating(true)
       setMounted(true)
 
@@ -115,6 +132,7 @@ export function CalendarExportButton({
                 sanitizedEvents={sanitizedEvents}
                 unitName={unitName}
                 period={period}
+                generatedAtFormatted={generatedAtRef.current}
               />
             </div>
           </div>,

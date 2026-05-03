@@ -12,6 +12,37 @@
 
 - **Metodologia:** Vibe Coding — Claude planeja + implementa, Bruno testa + valida
 - **Problema resolvido:** Informações espalhadas em WhatsApp, planilhas e cadernos
+- **Versão atual:** v1.5.13 (prod, PR #2 mergeado 30/abr/2026). v1.5.12 introduziu cards clicáveis em Vendas/Upsell e Vendas/Recompra; v1.5.13 corrigiu o destino do clique no Recompra (de `/deal/` para `/contact/`).
+
+---
+
+## Skills — Verificação Obrigatória
+
+**Antes de responder qualquer pedido** (incluindo perguntas simples como "o que faz esse arquivo?"), siga este protocolo em 3 passos:
+
+1. **Liste** as skills disponíveis em `.claude/skills/` (basta `ls .claude/skills/` ou inspecionar mentalmente se já viu na sessão).
+2. **Decida** quais skills se aplicam ao pedido atual lendo o `description` do `SKILL.md` de cada uma.
+3. **Anuncie no chat** uma das duas formas, antes de qualquer código ou análise:
+
+   - Se aplica skill(s):
+     ```
+     📚 Skills consultadas: ploomes-cachola-api (references/odata-cheatsheet.md, references/gotchas-cachola.md)
+     ```
+
+   - Se nenhuma se aplica:
+     ```
+     📚 Skills consultadas: nenhuma se aplica a este pedido
+     ```
+
+4. Só depois disso, prossiga com o trabalho normalmente.
+
+### Regras
+
+- Esta verificação é **sempre obrigatória**, mesmo em perguntas exploratórias ou triviais.
+- Quando uma skill se aplica, **leia o(s) arquivo(s) relevante(s)** dentro dela antes de escrever código — não apenas o `SKILL.md`. Cada skill tem uma tabela "Quando consultar cada referência" no `SKILL.md` indicando qual arquivo `references/` ler para qual tipo de tarefa.
+- Se múltiplas skills se aplicam, anuncie todas.
+- Se a skill cobre só parte do pedido, anuncie a skill + diga qual parte ainda fica fora dela.
+- **Nunca** invente conteúdo que está numa skill — sempre leia o arquivo, mesmo que pareça lembrar.
 
 ---
 
@@ -187,6 +218,41 @@ src/
 - **Status:** `bg-status-error-bg`, `text-status-error-text` (+ success/warning/info)
 - **Z-index:** `z-dropdown`(10) `z-sticky`(20) `z-overlay`(30) `z-modal`(40) `z-toast`(50) `z-tooltip`(60)
 - **Sombras:** `shadow-xs/sm/md/lg/xl`
+
+### Padrão de card clicável (v1.5.12+)
+
+Padrão estabelecido para cards do módulo Vendas (Upsell, Recompra Aniversário, Recompra Festa Passada). Replicar em qualquer novo card que precise abrir destino externo.
+
+**Estrutura do componente:**
+
+- `handleCardClick`: guard de campo nullable + `window.open(url, '_blank', 'noopener,noreferrer')` + `console.warn` discreto se inválido
+- `handleCardKeyDown`: dispara em `Enter` e `Space` (com `preventDefault()` no Space para não rolar a página)
+- `aria-label` condicional por estado (não-contatado / contatado / sem vínculo)
+
+**Atributos do div raiz do card:**
+
+- `role="link"` e `tabIndex={0}` condicionais à validade do destino (ambos `undefined`/`-1` se o destino é null)
+- Classe `focus-ring` (de `globals.css`) condicional à validade do destino
+- Classe `card-interactive` quando não-contatado e clicável
+- Classes `cursor-pointer hover:opacity-90` quando contatado e clicável (não usar hover lift no estado contatado, para preservar a hierarquia visual de "já feito")
+
+**Elementos interativos internos (proteção contra bubble):**
+
+- Botões: `e.stopPropagation()` antes da lógica original do handler
+- Chips decorativos (`<span>`): `onClick={(e) => e.stopPropagation()}` E `onMouseDown={(e) => e.stopPropagation()}` no próprio elemento — `onMouseDown` previne navegação prematura em alguns navegadores
+
+**Destinos atuais por módulo:**
+
+- Vendas/Upsell aponta para `https://app10.ploomes.com/deal/{deal_id}`
+- Vendas/Recompra aponta para `https://app10.ploomes.com/contact/{ploomes_contact_id}`
+
+**Tratamento de campo nullable:** quando o campo de destino é nullable (ex: `ploomes_contact_id: number | null`), o card NÃO é clicável: `tabIndex={-1}`, sem `role="link"`, sem `focus-ring`, sem `cursor-pointer`. Os botões internos continuam funcionando normalmente. O `aria-label` informa "sem vínculo no Ploomes".
+
+**Referências de implementação:**
+
+- `src/app/(auth)/vendas/_components/upsell/upsell-card.tsx`
+- `src/app/(auth)/vendas/_components/recompra/recompra-card-aniversario.tsx`
+- `src/app/(auth)/vendas/_components/recompra/recompra-card-festa.tsx`
 
 ---
 
@@ -738,6 +804,29 @@ export const GLOBAL_VIEWER_ROLES = ['super_admin', 'diretor'] as const satisfies
 - `/inicio` (calendar): dropdown "Vendedora" acima do calendário, filtra `calEvents` e `calPreReservas`
 - Backfill executado em produção: 7218 ploomes_deals com owner_name + 13 events propagados via `scripts/backfill-owner.ts`
 
+**Campo "Origem" (lead source) — Migration 078 — COMPLETO:**
+- Colunas: `ploomes_deals.origin_id BIGINT` + `ploomes_deals.origin_name TEXT` com índices `(origin_id)` e `(unit_id, origin_id, ploomes_create_date)`
+- `sync.ts` + `sync-deals.ts`: `$select=…,OriginId` + `$expand=…,Origin($select=Id,Name)` — extrai `deal.OriginId` e `deal.Origin?.Name`; upsert preenche `origin_id` e `origin_name` em `syncDealsForBI` e `syncSingleDealToBI`
+- `types.ts`: tipo `PloomesOrigin` + campos `OriginId?: number` / `Origin?: PloomesOrigin` em `PloomesDeal`
+- 13 origens ativas no Ploomes da Cachola: Instagram, Indicação, Já foi em festa no Cachola, Whatsapp LP, Whatsapp, Formulário LP, Já fez festa no Cachola, Internet, Passando em frente, TikTok, E-mail (fora do formulário), ChatGPT, Telefone
+- Origens arquivadas (caso apareçam no futuro): `origin_id` preenchido, `origin_name = NULL`
+- Backfill executado em produção: `scripts/backfill-deal-origin.ts` (últimos 12 meses, 5.392 deals atualizados, cobertura 100%, delay 100ms, idempotente)
+- Pinheiros: 4.911 deals em 13 origens. Moema: 481 deals em 10 origens
+- Webhook (Update/Win/Lose deal) atualiza automaticamente via `syncSingleDealToBI`
+- Fundação para painel BI "Origem dos Leads" — implementado na Fase C (ver próximo bullet)
+
+**Painel BI "Origem dos Leads" — Migrations 079 + 080 — COMPLETO:**
+- RPC `get_bi_lead_origin_breakdown(p_unit_id UUID, p_period_months INT DEFAULT 6)` — agrega leads por mês × 8 categorias derivadas das 13 origens cruas do Ploomes
+- Mapeamento 13→8 via `CASE origin_id` na própria RPC (única fonte da verdade no banco): Instagram, Indicação, Cliente recorrente (60001628+60001690), WhatsApp (10046775+60001461), Site/Web (10046776+60029935), TikTok, Outros canais, (sem origem)
+- Migration 079: RPC inicial. Migration 080: adiciona filtro `ploomes_create_date >= '2025-05-01'` — deals anteriores têm `origin_id = NULL` (fora da janela do backfill) e poluiriam o gráfico com barras 100% cinzas nos pills 12M/Tudo
+- Frontend: `src/lib/bi/origin-categories.ts` (8 categorias com cor hex e ordem fixa), `src/hooks/use-lead-origin-breakdown.ts` (queryKey `['bi','lead-origin', unitId, months]`, enabled `isSessionReady && !!unitId`, `(supabase as any).rpc()` — padrão do projeto para RPCs fora do `database.types.ts`)
+- Componentes: `src/components/features/bi/lead-origin-panel.tsx` + `lead-origin-section.tsx`
+- Visualização: barras empilhadas em PERCENTUAL (`stackOffset="expand"`), padrão `recharts-fixed-pixels` (`useChartWidth` + ResizeObserver, **NUNCA** `ResponsiveContainer`). Tooltip com nome + % + absoluto + total do mês. Rodapé: total no período + top 3 categorias com bullet colorido
+- Layout: 1 painel por unidade lado a lado (`md:grid-cols-2`), mobile coluna única. `LeadOriginSection` recebe `selectedMonths` como prop da `page.tsx` (sem state próprio)
+- Disclaimer no rodapé da seção: "Dados de origem disponíveis a partir de mai/2025. Negócios anteriores podem aparecer em (sem origem) caso o campo não tenha sido preenchido no Ploomes"
+- Roles: `super_admin` + `diretor` (mesmo gating de `BI_ACCESS_ROLES`, sem regressão)
+- Validação produção: 0% `(sem origem)` em meses completos (Nov/25–Abr/26), Instagram dominante (54–62%), 8 categorias visíveis com cores distintas
+
 **Tabela `sellers` — Migrations 053 + 054 — COMPLETO:**
 - Tabela: `sellers` — cadastro mestre de vendedoras; fonte da verdade para filtros ativo/inativo no BI
 - Campos-chave: `owner_id INT UNIQUE` (FK Ploomes), `name`, `status` (`active`|`inactive`), `hire_date`, `termination_date`, `primary_unit_id`, `notes`, `photo_url`, `is_system_account`
@@ -916,6 +1005,11 @@ export const GLOBAL_VIEWER_ROLES = ['super_admin', 'diretor'] as const satisfies
 - **Regra dura:** `CalendarExportView` usa APENAS inline styles com hex — html2canvas não suporta `oklch()` que o Tailwind v4 gera
 - **Regra dura:** `EventBadge` usa `display: block + lineHeight px fixo (22px) + chip inline-block com position: relative top: 2`. Flex+alignItems:center quebra o render do texto no html2canvas
 - **Regra dura:** `onclone` remove todos os `<style>` e `<link rel="stylesheet">` do documento clonado antes da captura
+- Timestamp de geração: cabeçalho + rodapé do PNG exibem "Gerado em DD/MM/AAAA às HHhMM (Horário de Brasília)". Formatação via `Intl.DateTimeFormat` com `timeZone:'America/Sao_Paulo'` (compatível com VPS UTC). Gerado uma única vez no `calendar-export-button.tsx` e propagado como prop `generatedAtFormatted`. Motivação: evidência temporal caso cliente conteste disponibilidade de datas.
+
+**Calendário /dashboard — Cards e Quick-view:**
+- Cards de evento na view Mês exibem nome do cliente em cima e horário embaixo (`text-[9px]`, formato `HH:MM – HH:MM` com travessão en-dash). Sem horário no banco: mostra só o nome (layout não quebra). Views Semana e Dia inalteradas (evento já posicionado na grade horária). Helpers `formatHHMM` e `formatEventTimeRange` definidos inline em `calendar-view.tsx` antes de `MonthView`.
+- Quick-view do evento (`event-quick-view.tsx`) é Dialog modal centralizado via `@/components/ui/dialog` (anteriormente Sheet/drawer `side="bottom"`). `sm:max-w-[480px]` desktop, `max-w-[calc(100%-2rem)]` mobile, sempre centralizado em ambos. Backdrop preto/10 + blur, animação fade + scale 95→100, botão X automático (`showCloseButton` default). Fecha com ESC, clique no backdrop ou botão X. Trigger (clique no card em `calendar-view.tsx`) inalterado. `DialogDescription` com `sr-only` presente para acessibilidade.
 
 ---
 

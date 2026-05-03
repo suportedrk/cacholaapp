@@ -17,4 +17,5 @@ export type ExportData = {
   sanitizedEvents: SanitizedEvent[]
   unitName: string
   period: ExportPeriod
+  generatedAtFormatted: string
 }
