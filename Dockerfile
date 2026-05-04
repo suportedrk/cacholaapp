@@ -4,13 +4,13 @@
 # ============================================================
 
 # Estágio 1 — dependências
-FROM node:20-alpine AS deps
+FROM node:22-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --only=production
 
 # Estágio 2 — build
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
@@ -20,7 +20,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
 # Estágio 3 — runner (imagem final mínima)
-FROM node:20-alpine AS runner
+FROM node:22-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
