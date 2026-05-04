@@ -20,6 +20,7 @@ import { UserAvatar } from '@/components/shared/user-avatar'
 import { ACTION_LABELS, ROLE_LABELS } from '@/lib/constants'
 import type { Module, Action } from '@/types/permissions'
 import type { UserRole } from '@/types/database.types'
+import { hasRole, TEMPLATE_MANAGE_ROLES } from '@/config/roles'
 
 const ACTIONS: Action[] = ['view', 'create', 'edit', 'delete', 'export']
 
@@ -83,7 +84,7 @@ export default function PermissoesUsuarioPage() {
     toast.success('Template de permissões aplicado com sucesso.')
   }
 
-  const isSuperAdmin = user.role === 'super_admin'
+  const isSuperAdmin = hasRole(user.role, TEMPLATE_MANAGE_ROLES)
   const roleLabel = ROLE_LABELS[user.role as UserRole] ?? user.role
 
   return (

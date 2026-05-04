@@ -17,6 +17,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { createClient } from '@/lib/supabase/server'
 import { loadPloomesConfig } from '@/lib/ploomes/sync'
+import { hasRole, TEMPLATE_MANAGE_ROLES } from '@/config/roles'
 
 const APP_URL      = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
 const PLOOMES_API  = 'https://api2.ploomes.com'
@@ -113,7 +114,7 @@ export async function POST(req: NextRequest) {
     .eq('id', user.id)
     .single()
 
-  if (profile?.role !== 'super_admin') {
+  if (!hasRole(profile?.role, TEMPLATE_MANAGE_ROLES)) {
     return NextResponse.json({ error: 'Apenas super_admin pode registrar webhooks.' }, { status: 403 })
   }
 

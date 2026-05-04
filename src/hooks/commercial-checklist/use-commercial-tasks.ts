@@ -4,6 +4,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useAuthReadyStore } from '@/stores/auth-store'
 import { useAuth } from '@/hooks/use-auth'
+import { hasRole, VENDEDORA_ROLES } from '@/config/roles'
+import type { Role } from '@/types/permissions'
 
 // ── Types ─────────────────────────────────────────────────────
 
@@ -300,7 +302,7 @@ export function useCommercialChecklistAssignees(unitId: string | null | undefine
 
         return (data as unknown as Array<{ users: { id: string; name: string; role: string } }>)
           .map((row) => row.users)
-          .filter((u) => u.role === 'vendedora')
+          .filter((u) => hasRole(u.role as Role, VENDEDORA_ROLES))
           .map(({ id, name }) => ({ id, name })) as AssignableUser[]
       } else {
         // Template global: listar todas as vendedoras

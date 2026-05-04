@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { createAdminClient } from '@/lib/supabase/server'
 import { UnitSetupWizard } from '../../setup/components/UnitSetupWizard'
 import type { UnitSetupStatus } from '@/hooks/use-unit-setup'
+import { hasRole, ADMIN_UNITS_MANAGE_ROLES } from '@/config/roles'
 
 // ─────────────────────────────────────────────────────────────
 // Page
@@ -27,7 +28,7 @@ export default async function UnitSetupPage({
   const { data: profile } = await supabase
     .from('users').select('role').eq('id', user.id).single()
 
-  if (!profile || !['super_admin', 'diretor'].includes(profile.role)) {
+  if (!profile || !hasRole(profile.role, ADMIN_UNITS_MANAGE_ROLES)) {
     redirect('/dashboard')
   }
 

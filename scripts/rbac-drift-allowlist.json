@@ -1,0 +1,5 @@
+{
+  "_comment": "Ocorrências de role literal aprovadas caso-a-caso. Cada entrada exige justificativa clara.",
+  "_policy": "Mais de 3 entradas é sinal de alerta — preferir criar nova constante em src/config/roles.ts.",
+  "exceptions": []
+}

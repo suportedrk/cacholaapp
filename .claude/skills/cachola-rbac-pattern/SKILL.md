@@ -26,6 +26,7 @@ Consultar **obrigatoriamente** ao escrever qualquer gating de role em qualquer c
 | "Qual constante usar para este módulo?" | `references/roles-ts-annotated.md` |
 | "Como escrever o guard na camada X?" | `references/patterns-by-layer.md` |
 | Arquitetura RBAC / `user_permissions` / `check_permission()` | `../cachola-supabase-ops/references/rbac-reference.md` |
+| Drift detection — script, CI, allowlist, como funciona | `references/drift-detection.md` |
 
 ---
 
@@ -47,8 +48,10 @@ const canEdit = hasRole(profile?.role, VENDAS_MANAGE_ROLES)
 Quando um conjunto de roles muda (ex.: `pos_vendas` adicionado, `gerente` removido), o
 literal inline não é localizado pelo grep e o acesso diverge silenciosamente da intenção.
 
-**Dívida em aberto:** existem 13 hardcodes residuais em 9 arquivos — ver `rbac-reference.md`
-seção "Dívida técnica". A quitação é Fase 2 do projeto de dívida técnica.
+**Dívida quitada (v1.6.1):** 26 hardcodes residuais corrigidos via PR `feat/rbac-drift-detection`.
+O codebase agora tem **zero** role literals inline fora de `src/config/roles.ts`,
+monitorado automaticamente por `npm run rbac:check` (CI bloqueia regressões).
+Ver `references/drift-detection.md` para detalhes.
 
 ---
 

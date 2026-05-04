@@ -42,6 +42,7 @@ import type { CalendarPreReserva } from '@/types/pre-reservas'
 import type { FilterChipColor } from '@/components/shared/filter-chip'
 import { Search, X, Sparkles, Shield } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { hasRole, ADMIN_ACCESS_ROLES } from '@/config/roles'
 
 // ─────────────────────────────────────────────────────────────
 // Tipos
@@ -130,7 +131,7 @@ function EventosContent() {
   const searchParams = useSearchParams()
   const activeUnitId = useUnitStore((s) => s.activeUnitId)
   const { profile } = useAuth()
-  const canManagePreReservas = profile?.role === 'super_admin' || profile?.role === 'diretor'
+  const canManagePreReservas = hasRole(profile?.role, ADMIN_ACCESS_ROLES)
 
   // Aba ativa (persistida na URL)
   const tab = (searchParams.get('tab') as TabKey) ?? 'all'

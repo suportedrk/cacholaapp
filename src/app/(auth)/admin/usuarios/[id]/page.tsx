@@ -17,6 +17,7 @@ import { useAuth } from '@/hooks/use-auth'
 import { useStartImpersonate } from '@/hooks/use-impersonate'
 import { ROLE_LABELS, ROUTES } from '@/lib/constants'
 import type { UserRole } from '@/types/database.types'
+import { hasRole, IMPERSONATION_ROLES } from '@/config/roles'
 
 export default function EditarUsuarioPage() {
   const params = useParams()
@@ -35,10 +36,10 @@ export default function EditarUsuarioPage() {
   const { realProfile } = useAuth()
   const startImpersonate = useStartImpersonate()
   const canViewAs =
-    realProfile?.role === 'super_admin' &&
+    hasRole(realProfile?.role, IMPERSONATION_ROLES) &&
     !!user &&
     user.id !== realProfile.id &&
-    (user.role as UserRole) !== 'super_admin'
+    !hasRole(user.role as UserRole, IMPERSONATION_ROLES)
 
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
