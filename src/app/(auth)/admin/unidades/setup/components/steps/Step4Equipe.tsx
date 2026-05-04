@@ -10,7 +10,9 @@ import {
 import { useSystemUsers, useUnitTeam } from '@/hooks/use-unit-setup'
 import { useRoles } from '@/hooks/use-rbac-catalogs'
 import type { UserRole } from '@/types/database.types'
+import type { Role } from '@/types/permissions'
 import { ROLE_LABELS } from '@/lib/constants'
+import { hasRole, SYSTEM_ONLY_ROLES } from '@/config/roles'
 
 // ─────────────────────────────────────────────────────────────
 // Types
@@ -195,7 +197,7 @@ export function Step4Equipe({ targetUnitId, data, onChange }: Props) {
                         </SelectTrigger>
                         <SelectContent>
                           {(roles ?? [])
-                            .filter((r) => r.code !== 'super_admin')
+                            .filter((r) => !hasRole(r.code as Role, SYSTEM_ONLY_ROLES))
                             .map((r) => (
                               <SelectItem key={r.code} value={r.code}>{r.label}</SelectItem>
                             ))}

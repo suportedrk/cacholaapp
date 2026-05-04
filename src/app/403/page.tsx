@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { ShieldX } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
+import { hasRole, OPERATIONAL_MOBILE_ROLES } from '@/config/roles'
 
 /**
  * Página 403 — Acesso Negado
@@ -26,7 +27,7 @@ export default async function ForbiddenPage() {
         .select('role')
         .eq('id', user.id)
         .single()
-      if (profile?.role === 'freelancer' || profile?.role === 'entregador') {
+      if (hasRole(profile?.role, OPERATIONAL_MOBILE_ROLES)) {
         backHref = '/checklists/minhas-tarefas'
         backLabel = 'Ir para Minhas Tarefas'
       }

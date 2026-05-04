@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { requireRoleApi } from '@/lib/auth/require-role'
-import { ADMIN_USERS_MANAGE_ROLES } from '@/config/roles'
+import { hasRole, ADMIN_USERS_MANAGE_ROLES, VENDEDORA_ROLES } from '@/config/roles'
 import type { UserRole } from '@/types/database.types'
 
 export async function POST(request: Request) {
@@ -24,14 +24,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Campos obrigatórios ausentes.' }, { status: 400 })
     }
 
-    if (role === 'vendedora' && !seller_id) {
+    if (hasRole(role, VENDEDORA_ROLES) && !seller_id) {
       return NextResponse.json(
         { error: 'Campo "Vincular à vendedora" é obrigatório para o cargo Vendedora.' },
         { status: 400 }
       )
     }
 
-    if (role === 'vendedora' && seller_id) {
+    if (hasRole(role, VENDEDORA_ROLES) && seller_id) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: sellerCheck } = await (adminSupabase as any)
         .from('sellers')

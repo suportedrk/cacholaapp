@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { useAuth } from '@/hooks/use-auth'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
+import { hasRole, OPERATIONAL_MOBILE_ROLES } from '@/config/roles'
 
 // ─────────────────────────────────────────────────────────────
 // ERROR CLASSIFICATION
@@ -259,7 +260,7 @@ function LoginForm() {
               .select('role')
               .eq('id', authUser.id)
               .single()
-            if (profile?.role === 'freelancer' || profile?.role === 'entregador') {
+            if (hasRole(profile?.role, OPERATIONAL_MOBILE_ROLES)) {
               destination = '/checklists/minhas-tarefas'
             }
           }

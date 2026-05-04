@@ -1,6 +1,6 @@
 {
   "name": "cacholaos",
-  "version": "1.6.1",
+  "version": "1.6.2",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -12,7 +12,9 @@
     "version:patch": "tsx scripts/bump-version.ts patch",
     "version:minor": "tsx scripts/bump-version.ts minor",
     "version:major": "tsx scripts/bump-version.ts major",
-    "icons:generate": "tsx scripts/generate-icons.ts"
+    "icons:generate": "tsx scripts/generate-icons.ts",
+    "rbac:check": "tsx scripts/check-rbac-drift.ts",
+    "rbac:check:report": "tsx scripts/check-rbac-drift.ts --report-only"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1033.0",
@@ -63,6 +65,7 @@
     "prettier-plugin-tailwindcss": "^0.7.2",
     "satori": "^0.26.0",
     "tailwindcss": "^4",
+    "tsx": "^4.21.0",
     "typescript": "^5"
   }
 }

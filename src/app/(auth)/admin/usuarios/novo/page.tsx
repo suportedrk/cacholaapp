@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/select'
 import { ROLE_LABELS, ROUTES } from '@/lib/constants'
 import type { UserRole } from '@/types/database.types'
+import { hasRole, VENDEDORA_ROLES } from '@/config/roles'
 import { toast } from 'sonner'
 
 const ROLES = Object.keys(ROLE_LABELS) as UserRole[]
@@ -32,7 +33,7 @@ export default function NovoUsuarioPage() {
   const queryClient = useQueryClient()
   const { data: availableSellers = [], isLoading: loadingSellers } = useAvailableSellersForInvite()
 
-  const isVendedora = role === 'vendedora'
+  const isVendedora = hasRole(role, VENDEDORA_ROLES)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()

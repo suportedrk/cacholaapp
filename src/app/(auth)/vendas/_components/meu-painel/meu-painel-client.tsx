@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { useAuth } from '@/hooks/use-auth'
 import { useUnitStore } from '@/stores/unit-store'
 import { useLoadingTimeout } from '@/hooks/use-loading-timeout'
-import { hasRole, VENDAS_MANAGE_ROLES } from '@/config/roles'
+import { hasRole, VENDAS_MANAGE_ROLES, VENDEDORA_ROLES } from '@/config/roles'
 import { useVendasMyKpis, useVendasDailyRevenue, useVendasRanking } from '@/hooks/use-vendas'
 import { buildVendasPeriods } from '../shared/period-types'
 import type { VendasPeriodKey } from '../shared/period-types'
@@ -22,7 +22,7 @@ export function MeuPainelClient() {
   const activeUnitId = useUnitStore((s) => s.activeUnitId)
 
   const isManager   = hasRole(profile?.role, VENDAS_MANAGE_ROLES)
-  const isVendedora = profile?.role === 'vendedora'
+  const isVendedora = hasRole(profile?.role, VENDEDORA_ROLES)
 
   const [periods] = useState(() => buildVendasPeriods())
   const [periodKey, setPeriodKey] = useState<VendasPeriodKey>('mes_atual')

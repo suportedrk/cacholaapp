@@ -3,6 +3,7 @@
 
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
+import { hasRole, ADMIN_UNITS_MANAGE_ROLES } from '@/config/roles'
 
 type Params = { params: Promise<{ id: string }> }
 
@@ -17,7 +18,7 @@ export async function GET(_req: Request, { params }: Params) {
 
     const { data: profile } = await supabase
       .from('users').select('role').eq('id', user.id).single()
-    if (!profile || !['super_admin', 'diretor'].includes(profile.role)) {
+    if (!profile || !hasRole(profile.role, ADMIN_UNITS_MANAGE_ROLES)) {
       return NextResponse.json({ error: 'Acesso restrito a super_admin e diretor.' }, { status: 403 })
     }
 

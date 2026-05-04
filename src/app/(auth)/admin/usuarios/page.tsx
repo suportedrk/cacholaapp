@@ -13,7 +13,7 @@ import { useAuth } from '@/hooks/use-auth'
 import { useStartImpersonate } from '@/hooks/use-impersonate'
 import { ROLE_LABELS, ROUTES } from '@/lib/constants'
 import { cn } from '@/lib/utils'
-import { hasRole, ADMIN_USERS_MANAGE_ROLES } from '@/config/roles'
+import { hasRole, ADMIN_USERS_MANAGE_ROLES, IMPERSONATION_ROLES } from '@/config/roles'
 import type { UserRole } from '@/types/database.types'
 
 export default function UsuariosPage() {
@@ -28,7 +28,7 @@ export default function UsuariosPage() {
 
   // realProfile = quem está realmente logado (não muda com impersonate)
   const { realProfile } = useAuth()
-  const isSuperAdmin = realProfile?.role === 'super_admin'
+  const canImpersonate = hasRole(realProfile?.role, IMPERSONATION_ROLES)
   // Pode gerenciar usuários (criar, editar, reenviar convite)
   const canManageUsers = hasRole(realProfile?.role, ADMIN_USERS_MANAGE_ROLES)
 
@@ -150,9 +150,9 @@ export default function UsuariosPage() {
           <ul className="divide-y divide-border">
             {users.map((user) => {
               const canViewAs =
-                isSuperAdmin &&
+                canImpersonate &&
                 user.id !== realProfile?.id &&
-                (user.role as UserRole) !== 'super_admin'
+                !hasRole(user.role as UserRole, IMPERSONATION_ROLES)
               const isLoadingThis = loadingUserId === user.id
 
               const hasPendingInvite = pendingInviteIds?.has(user.id) ?? false
