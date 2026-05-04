@@ -177,6 +177,20 @@ export const PRESTADORES_ACCESS_ROLES = [
 ] as const satisfies readonly Role[]
 
 /**
+ * Roles que recebem notificações sobre prestadores (adições, mudanças de status,
+ * documentos vencendo/vencidos, avaliações pendentes).
+ *
+ * Coincide hoje com MAINTENANCE_ADMIN_ROLES, mas é intencionalmente uma constante
+ * separada: prestadores e manutenção são módulos com evolução independente.
+ * NÃO consolidar com MAINTENANCE_ADMIN_ROLES sem revisão de produto.
+ */
+export const PROVIDER_NOTIFY_ROLES = [
+  'super_admin',
+  'diretor',
+  'gerente',
+] as const satisfies readonly Role[]
+
+/**
  * Roles com acesso ao módulo de Checklist Operacional
  * (/checklists e /checklists/minhas-tarefas).
  * v1.5.0 reduziu para 4 roles. v1.5.1 restaurou freelancer e entregador porque o

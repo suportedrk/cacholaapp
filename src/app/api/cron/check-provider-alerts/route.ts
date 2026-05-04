@@ -6,6 +6,7 @@ import {
   notifyProviderDocExpired,
   notifyProviderRatingPending,
 } from '@/lib/notifications'
+import { PROVIDER_NOTIFY_ROLES } from '@/config/roles'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -66,7 +67,7 @@ export async function GET(req: Request) {
         .from('user_units')
         .select('user_id')
         .eq('unit_id', provider.unit_id)
-        .in('role', ['super_admin', 'diretor', 'gerente'])
+        .in('role', [...PROVIDER_NOTIFY_ROLES])
 
       for (const { user_id } of unitUsers ?? []) {
         try {
@@ -105,7 +106,7 @@ export async function GET(req: Request) {
         .from('user_units')
         .select('user_id')
         .eq('unit_id', provider.unit_id)
-        .in('role', ['super_admin', 'diretor', 'gerente'])
+        .in('role', [...PROVIDER_NOTIFY_ROLES])
 
       for (const { user_id } of unitUsers ?? []) {
         try {
@@ -167,7 +168,7 @@ export async function GET(req: Request) {
           .from('user_units')
           .select('user_id')
           .eq('unit_id', ep.unit_id)
-          .in('role', ['super_admin', 'diretor', 'gerente'])
+          .in('role', [...PROVIDER_NOTIFY_ROLES])
 
         for (const { user_id } of unitUsers ?? []) {
           try {
