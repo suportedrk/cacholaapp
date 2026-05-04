@@ -1,6 +1,6 @@
 # roles-ts-annotated — Constantes exportadas de src/config/roles.ts
 
-> Arquivo gerado com base no estado real de `src/config/roles.ts` (28 constantes).
+> Arquivo gerado com base no estado real de `src/config/roles.ts` (29 constantes).
 > Padrão canônico: `as const satisfies readonly Role[]`
 
 ## Tabela de constantes
@@ -34,6 +34,7 @@
 | `ATAS_MANAGE_ROLES` | super_admin, diretor, gerente | `/atas/nova`, `/atas/[id]/editar` — gate client-side de criação/edição/exclusão |
 | `DASHBOARD_ACCESS_ROLES` | super_admin, diretor, gerente, financeiro, manutencao, vendedora, pos_vendas, decoracao, rh | `/dashboard` — layout guard |
 | `SETTINGS_ROLES` | super_admin, diretor | `/configuracoes` — layout guard |
+| `ONBOARDING_VIEW_ROLES` | super_admin, diretor, gerente | Card "Setup Inicial" no `/inicio` (`use-onboarding.ts`, `setup-checklist-card.tsx`) |
 | `TEMPLATE_MANAGE_ROLES` | super_admin | `/admin/cargos` — layout guard + API `role-permissions` |
 
 ## Helper hasRole

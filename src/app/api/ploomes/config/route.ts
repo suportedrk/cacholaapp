@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { createClient } from '@/lib/supabase/server'
+import { hasRole, SETTINGS_ROLES } from '@/config/roles'
 
 async function requireRole(_req: NextRequest) {
   const supabase = await createClient()
@@ -18,7 +19,7 @@ async function requireRole(_req: NextRequest) {
     .eq('id', user.id)
     .single()
 
-  if (!profile || !['super_admin', 'diretor', 'gerente'].includes(profile.role)) {
+  if (!profile || !hasRole(profile.role, SETTINGS_ROLES)) {
     return null
   }
   return user

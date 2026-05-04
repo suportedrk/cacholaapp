@@ -289,6 +289,19 @@ export const SETTINGS_ROLES = [
   'diretor',
 ] as const satisfies readonly Role[]
 
+/**
+ * Roles que veem o card de onboarding "Setup Inicial" no Início e têm acesso
+ * aos checks de progresso de configuração da unidade.
+ *
+ * Conjunto coincide hoje com MAINTENANCE_ADMIN_ROLES, mas é intencionalmente
+ * separado: onboarding evolui independente do módulo de manutenção.
+ */
+export const ONBOARDING_VIEW_ROLES = [
+  'super_admin',
+  'diretor',
+  'gerente',
+] as const satisfies readonly Role[]
+
 /** Gestão de templates de permissão em /admin/cargos. Restrito a super_admin. */
 export const TEMPLATE_MANAGE_ROLES = [
   'super_admin',

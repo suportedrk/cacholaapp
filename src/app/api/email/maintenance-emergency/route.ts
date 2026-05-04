@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database.types'
 import { sendEmail, tplMaintenanceEmergency } from '@/lib/email'
 import { requireRoleApi } from '@/lib/auth/require-role'
-import { MAINTENANCE_MODULE_ROLES } from '@/config/roles'
+import { MAINTENANCE_MODULE_ROLES, MAINTENANCE_ADMIN_ROLES } from '@/config/roles'
 
 /**
  * POST /api/email/maintenance-emergency
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     const { data: managers } = await supabase
       .from('users')
       .select('id, email, preferences')
-      .in('role', ['super_admin', 'diretor', 'gerente'])
+      .in('role', [...MAINTENANCE_ADMIN_ROLES])
       .eq('is_active', true)
 
     const recipientIds = new Set<string>(

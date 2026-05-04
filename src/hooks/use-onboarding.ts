@@ -4,6 +4,7 @@ import { useEffect } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
+import { hasRole, ONBOARDING_VIEW_ROLES } from '@/config/roles'
 import { useOnboardingStore } from '@/stores/onboarding-store'
 import { useUnitStore } from '@/stores/unit-store'
 
@@ -70,8 +71,7 @@ export function useSetupChecklist() {
   const { profile } = useAuth()
   const activeUnitId = useUnitStore((s) => s.activeUnitId)
 
-  const isAdmin =
-    !!profile?.role && ['super_admin', 'diretor', 'gerente'].includes(profile.role)
+  const isAdmin = hasRole(profile?.role, ONBOARDING_VIEW_ROLES)
 
   return useQuery({
     queryKey: ['setup-checklist', activeUnitId, profile?.id],
