@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { syncDeals } from '@/lib/ploomes/sync'
 import { logAudit } from '@/lib/audit'
+import { hasRole, SETTINGS_ROLES } from '@/config/roles'
 
 const DEBOUNCE_MS = 2 * 60 * 1000 // 2 minutos
 
@@ -23,7 +24,7 @@ export async function POST(req: NextRequest) {
       .eq('id', user.id)
       .single()
 
-    if (!profile || !['super_admin', 'diretor', 'gerente'].includes(profile.role)) {
+    if (!profile || !hasRole(profile.role, SETTINGS_ROLES)) {
       return NextResponse.json({ error: 'Sem permissão para disparar sync.' }, { status: 403 })
     }
 

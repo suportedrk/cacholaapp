@@ -8,9 +8,8 @@ import { useUnitUsers } from '@/hooks/use-units'
 import { useMeetingMinuteDetail } from '@/hooks/use-meeting-minute-detail'
 import { useUpdateMeetingMinute } from '@/hooks/use-meeting-minute-mutations'
 import { MeetingMinuteForm, buildOriginalLists } from '../../components/MeetingMinuteForm'
+import { ATAS_MANAGE_ROLES, hasRole } from '@/config/roles'
 import type { MeetingMinuteFormData } from '@/types/minutes'
-
-const EDIT_ROLES = ['super_admin', 'diretor', 'gerente']
 
 export default function EditarAtaPage() {
   const router   = useRouter()
@@ -42,7 +41,7 @@ export default function EditarAtaPage() {
   //  - is the creator of the minute
   useEffect(() => {
     if (!profile || !user || !minute) return
-    const isElevated = EDIT_ROLES.includes(profile.role)
+    const isElevated = hasRole(profile.role, ATAS_MANAGE_ROLES)
     const isCreator  = minute.created_by === user.id
     if (!isElevated && !isCreator) {
       router.replace('/atas')

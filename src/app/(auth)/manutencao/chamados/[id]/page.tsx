@@ -47,6 +47,7 @@ import type {
   TicketStatus,
   ExecutionStatus,
 } from '@/types/database.types'
+import { hasRole, MAINTENANCE_ADMIN_ROLES } from '@/config/roles'
 
 // ─────────────────────────────────────────────────────────────
 // HELPERS
@@ -84,8 +85,6 @@ const EXEC_STATUS_BADGE: Record<ExecutionStatus, string> = {
   in_progress: 'badge-amber border',
   concluded:   'badge-green border',
 }
-
-const MANAGER_ROLES = ['super_admin', 'diretor', 'gerente']
 
 function formatDate(d?: string | null) {
   if (!d) return null
@@ -588,7 +587,7 @@ export default function ChamadoDetailPage() {
 
   // ─── Permissions ───
   const canEdit    = !!ticket && ticket.status !== 'concluded' && ticket.status !== 'cancelled'
-  const canApprove = MANAGER_ROLES.includes(profile?.role ?? '')
+  const canApprove = hasRole(profile?.role, MAINTENANCE_ADMIN_ROLES)
 
   // ─── File upload handler ───
   const fileInputRef = useRef<HTMLInputElement>(null)

@@ -10,8 +10,7 @@ import { MeetingMinuteCard } from './components/MeetingMinuteCard'
 import { MeetingMinuteCardSkeleton } from './components/MeetingMinuteCardSkeleton'
 import { MeetingMinutesFiltersBar } from './components/MeetingMinutesFilters'
 import { MeetingMinutesEmptyState } from './components/MeetingMinutesEmptyState'
-
-const ELEVATED_ROLES = ['super_admin', 'diretor', 'gerente']
+import { ATAS_MANAGE_ROLES, hasRole } from '@/config/roles'
 
 export default function AtasPage() {
   const router = useRouter()
@@ -33,7 +32,7 @@ export default function AtasPage() {
 
   const { isTimedOut, retry } = useLoadingTimeout(isLoading)
 
-  const showOnlyMine = ELEVATED_ROLES.includes(profile?.role ?? '')
+  const showOnlyMine = hasRole(profile?.role, ATAS_MANAGE_ROLES)
 
   // ── Handlers ───────────────────────────────────────────────
   function handleCreate() {

@@ -8,6 +8,7 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { MAINTENANCE_ADMIN_ROLES, PROVIDER_NOTIFY_ROLES } from '@/config/roles'
 
 // ─────────────────────────────────────────────────────────────
 // HELPER INTERNO
@@ -207,7 +208,7 @@ export async function notifyMaintenanceEmergency(
   const { data: managers } = await (supabase as any)
     .from('users')
     .select('id')
-    .in('role', ['super_admin', 'diretor', 'gerente'])
+    .in('role', [...MAINTENANCE_ADMIN_ROLES])
     .eq('is_active', true)
 
   const recipients = new Set<string>(
@@ -306,7 +307,7 @@ export async function notifyCostSubmitted(
     .from('user_units')
     .select('user_id')
     .eq('unit_id', unitId)
-    .in('role', ['gerente', 'diretor', 'super_admin'])
+    .in('role', [...MAINTENANCE_ADMIN_ROLES])
 
   if (!managers?.length) return
 
@@ -510,7 +511,7 @@ export async function notifyProviderAddedToEvent(
     .from('user_units')
     .select('user_id')
     .eq('unit_id', ep.unit_id)
-    .in('role', ['gerente', 'diretor', 'super_admin'])
+    .in('role', [...PROVIDER_NOTIFY_ROLES])
 
   if (!managers?.length) return
 
@@ -553,7 +554,7 @@ export async function notifyProviderStatusChanged(
     .from('user_units')
     .select('user_id')
     .eq('unit_id', ep.unit_id)
-    .in('role', ['gerente', 'diretor', 'super_admin'])
+    .in('role', [...PROVIDER_NOTIFY_ROLES])
 
   const label = STATUS_LABELS[newStatus] ?? newStatus
   const recipients = new Set<string>((managers ?? []).map((m: { user_id: string }) => m.user_id))

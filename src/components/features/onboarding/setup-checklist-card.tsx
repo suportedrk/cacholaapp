@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { CheckCircle2, Circle, X, ChevronRight } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
+import { hasRole, ONBOARDING_VIEW_ROLES } from '@/config/roles'
 import { useSetupChecklist } from '@/hooks/use-onboarding'
 import { cn } from '@/lib/utils'
 
@@ -20,8 +21,7 @@ export function SetupChecklistCard() {
     return localStorage.getItem(DISMISS_KEY) === 'true'
   })
 
-  const isAdmin =
-    !!profile?.role && ['super_admin', 'diretor', 'gerente'].includes(profile.role)
+  const isAdmin = hasRole(profile?.role, ONBOARDING_VIEW_ROLES)
 
   const { data: status, isLoading } = useSetupChecklist()
 
