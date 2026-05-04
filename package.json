@@ -65,6 +65,7 @@
     "prettier-plugin-tailwindcss": "^0.7.2",
     "satori": "^0.26.0",
     "tailwindcss": "^4",
+    "tsx": "^4.21.0",
     "typescript": "^5"
   }
 }
