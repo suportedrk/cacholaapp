@@ -307,6 +307,38 @@ export const TEMPLATE_MANAGE_ROLES = [
   'super_admin',
 ] as const satisfies readonly Role[]
 
+// ──────────────────────────────────────────────────────────────
+// Constantes de uso especializado
+// ──────────────────────────────────────────────────────────────
+
+/**
+ * Roles autorizadas a impersonar outros usuários ("Ver como") para suporte e auditoria.
+ * Hoje só super_admin; pode crescer no futuro (ex: diretor para auditoria).
+ * Semanticamente diferente de SYSTEM_ONLY_ROLES — não consolidar sem revisão de produto.
+ */
+export const IMPERSONATION_ROLES = [
+  'super_admin',
+] as const satisfies readonly Role[]
+
+/**
+ * Roles que operam via app mobile dedicado, fora do dashboard interno.
+ * Usadas para roteamento pós-login (redirect para /checklists/minhas-tarefas)
+ * e back-link em /403.
+ */
+export const OPERATIONAL_MOBILE_ROLES = [
+  'freelancer',
+  'entregador',
+] as const satisfies readonly Role[]
+
+/**
+ * Roles que existem no catálogo mas NÃO podem ser atribuídas via UI de gestão
+ * de equipe (singleton técnico do sistema).
+ * Semanticamente diferente de IMPERSONATION_ROLES — não consolidar sem revisão.
+ */
+export const SYSTEM_ONLY_ROLES = [
+  'super_admin',
+] as const satisfies readonly Role[]
+
 export type CommercialChecklistManageRole =
   (typeof COMMERCIAL_CHECKLIST_MANAGE_ROLES)[number]
 

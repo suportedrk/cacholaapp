@@ -29,6 +29,7 @@ import {
   useRegisterWebhook,
 } from '@/hooks/use-ploomes-integration'
 import type { PloomesSyncLog, PloomesWebhookLog } from '@/types/database.types'
+import { hasRole, TEMPLATE_MANAGE_ROLES } from '@/config/roles'
 
 // ── Helpers ───────────────────────────────────────────────────
 
@@ -105,7 +106,7 @@ function ActionBadge({ action }: { action: string | null }) {
 
 function WebhookStatusCard() {
   const { profile } = useAuth()
-  const isSuperAdmin = profile?.role === 'super_admin'
+  const isSuperAdmin = hasRole(profile?.role, TEMPLATE_MANAGE_ROLES)
 
   const { data: config } = usePloomesConfig()
   const { data: webhookLogs, isLoading: logsLoading } = useWebhookLogs()

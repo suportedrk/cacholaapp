@@ -3,6 +3,7 @@ import { createAdminClient, createClient } from '@/lib/supabase/server'
 import { logAudit } from '@/lib/audit'
 import type { Module, Action, PermissionMap } from '@/types/permissions'
 import type { UserRole } from '@/types/database.types'
+import { hasRole, IMPERSONATION_ROLES } from '@/config/roles'
 
 /**
  * GET /api/admin/impersonate?userId=<uuid>
@@ -43,7 +44,7 @@ export async function GET(request: Request) {
       .eq('id', caller.id)
       .single()
 
-    if (!callerProfile || callerProfile.role !== 'super_admin') {
+    if (!callerProfile || !hasRole(callerProfile.role, IMPERSONATION_ROLES)) {
       return NextResponse.json(
         { message: 'Apenas super_admin pode usar a funcionalidade "Ver como".' },
         { status: 403 }
@@ -65,7 +66,7 @@ export async function GET(request: Request) {
     }
 
     // Não permitir impersonar outro super_admin (segurança)
-    if ((profile.role as UserRole) === 'super_admin' && targetUserId !== caller.id) {
+    if (hasRole(profile.role as UserRole, IMPERSONATION_ROLES) && targetUserId !== caller.id) {
       return NextResponse.json(
         { message: 'Não é possível visualizar como outro super_admin.' },
         { status: 403 }

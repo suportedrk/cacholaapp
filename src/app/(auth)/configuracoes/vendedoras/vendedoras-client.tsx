@@ -18,6 +18,7 @@ import type { Seller } from '@/types/seller'
 import { cn } from '@/lib/utils'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import { hasRole, TEMPLATE_MANAGE_ROLES } from '@/config/roles'
 
 type FilterKey = 'all' | 'active' | 'inactive' | 'system'
 
@@ -39,7 +40,7 @@ function formatDate(iso: string | null): string {
 
 export function VendedorasClient() {
   const { realProfile } = useAuth()
-  const isSuperAdmin = realProfile?.role === 'super_admin'
+  const isSuperAdmin = hasRole(realProfile?.role, TEMPLATE_MANAGE_ROLES)
 
   const { data: sellers = [], isLoading, isError } = useSellers()
   const { data: units = [] } = useUnits()

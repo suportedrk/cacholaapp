@@ -32,6 +32,7 @@ import { useAuth } from '@/hooks/use-auth'
 import { useUnitStore } from '@/stores/unit-store'
 import { BRAND_GREEN } from '@/lib/constants/brand-colors'
 import type { CalendarPreReserva } from '@/types/pre-reservas'
+import { hasRole, ADMIN_ACCESS_ROLES } from '@/config/roles'
 
 // ── Stroke colors for sparklines (Recharts requires hex, not CSS vars) ──
 const STROKE = {
@@ -58,8 +59,7 @@ export default function DashboardPage() {
   const [showSelectUnit, setShowSelectUnit]             = useState(false)
   const [pendingPreReservaUnitId, setPendingPreReservaUnitId] = useState<string | null>(null)
 
-  const canManagePreReservas =
-    profile?.role === 'super_admin' || profile?.role === 'diretor'
+  const canManagePreReservas = hasRole(profile?.role, ADMIN_ACCESS_ROLES)
 
   // Filtro por vendedora
   const [selectedOwner, setSelectedOwner] = useState<string | null>(null)

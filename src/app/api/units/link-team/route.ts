@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import type { UserRole } from '@/types/database.types'
+import { hasRole, ADMIN_UNITS_MANAGE_ROLES } from '@/config/roles'
 
 interface LinkTeamPayload {
   unitId: string
@@ -24,7 +25,7 @@ export async function POST(req: NextRequest) {
 
     const { data: profile } = await supabase
       .from('users').select('role').eq('id', user.id).single()
-    if (!profile || !['super_admin', 'diretor'].includes(profile.role)) {
+    if (!profile || !hasRole(profile.role, ADMIN_UNITS_MANAGE_ROLES)) {
       return NextResponse.json({ error: 'Acesso restrito a super_admin e diretor.' }, { status: 403 })
     }
 

@@ -11,6 +11,7 @@ import { useAuthReadyStore } from '@/stores/auth-store'
 import { useUnitStore } from '@/stores/unit-store'
 import { useImpersonateStore } from '@/stores/impersonate-store'
 import type { User as AppUser, UserUnitWithUnit } from '@/types/database.types'
+import { hasRole, VENDEDORA_ROLES } from '@/config/roles'
 
 /**
  * AuthBootstrap — monta UMA única vez na árvore inteira.
@@ -86,7 +87,7 @@ function AuthBootstrap() {
       if (session?.user) {
         const profile = await loadProfile(session.user.id)
         await loadUserUnits(session.user.id)
-        if (profile?.role === 'vendedora' && !profile.seller_id) {
+        if (hasRole(profile?.role, VENDEDORA_ROLES) && !profile.seller_id) {
           console.warn('[AuthBootstrap] vendedora sem seller_id vinculado — user:', session.user.id)
         }
         setAuthState(session.user, session, profile)

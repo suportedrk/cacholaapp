@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { TrendingUp, AlertCircle } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAuth } from '@/hooks/use-auth'
+import { hasRole, VENDEDORA_ROLES } from '@/config/roles'
 import { MeuPainelClient } from './_components/meu-painel/meu-painel-client'
 import { UpsellTab } from './_components/upsell'
 import { RecompraTab } from './_components/recompra'
@@ -26,7 +27,7 @@ function VendasPageInner() {
     }
   }, [searchParams])
 
-  const isVendedora      = profile?.role === 'vendedora'
+  const isVendedora      = hasRole(profile?.role, VENDEDORA_ROLES)
   const vendedoraSemLink = isVendedora && !profile?.seller_id
 
   return (
