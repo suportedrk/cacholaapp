@@ -130,13 +130,14 @@ export function useRecompraFestaPassada(params: {
   })
 }
 
-export function useRecompraCount() {
+export function useRecompraCount(params?: { excludeRecentMonths?: number }) {
   const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
   const { profile }    = useAuth()
   const hasAccess      = VENDAS_MODULE_ROLES.includes((profile?.role ?? '') as typeof VENDAS_MODULE_ROLES[number])
+  const excludeRecentMonths = params?.excludeRecentMonths ?? 6
 
   return useQuery({
-    queryKey:    ['recompra-count'],
+    queryKey:    ['recompra-count', excludeRecentMonths],
     enabled:     isSessionReady && hasAccess,
     staleTime:   3 * 60 * 1000,
     networkMode: 'always',
@@ -144,7 +145,9 @@ export function useRecompraCount() {
     queryFn: async () => {
       const supabase = createClient()
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as any).rpc('get_recompra_count_for_user')
+      const { data, error } = await (supabase as any).rpc('get_recompra_count_for_user', {
+        p_exclude_recent_months: excludeRecentMonths,
+      })
       if (error) throw error
       const rows = (data ?? []) as RecompraCount[]
       return rows[0] ?? { aniversario_count: 0, festa_passada_count: 0, total: 0 }
