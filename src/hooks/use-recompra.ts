@@ -71,16 +71,17 @@ function recompraRetry(count: number, err: unknown): boolean {
 // ── Hooks ─────────────────────────────────────────────────────
 
 export function useRecompraAniversario(params: {
-  sellerId:      string | null
-  showContacted: boolean
-  source:        RecompraSource
-  daysAhead?:    number
+  sellerId:             string | null
+  showContacted:        boolean
+  source:               RecompraSource
+  daysAhead?:           number
+  excludeRecentMonths?: number
 }) {
   const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
-  const { sellerId, showContacted, source, daysAhead = 90 } = params
+  const { sellerId, showContacted, source, daysAhead = 90, excludeRecentMonths = 6 } = params
 
   return useQuery({
-    queryKey:    ['recompra-aniversario', sellerId, showContacted, source, daysAhead],
+    queryKey:    ['recompra-aniversario', sellerId, showContacted, source, daysAhead, excludeRecentMonths],
     enabled:     isSessionReady,
     staleTime:   3 * 60 * 1000,
     networkMode: 'always',
@@ -89,10 +90,11 @@ export function useRecompraAniversario(params: {
       const supabase = createClient()
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error } = await (supabase as any).rpc('get_recompra_aniversario_proximo', {
-        p_seller_id:      sellerId,
-        p_show_contacted: showContacted,
-        p_source:         source,
-        p_days_ahead:     daysAhead,
+        p_seller_id:             sellerId,
+        p_show_contacted:        showContacted,
+        p_source:                source,
+        p_days_ahead:            daysAhead,
+        p_exclude_recent_months: excludeRecentMonths,
       })
       if (error) throw error
       return (data ?? []) as RecompraAniversarioOpp[]

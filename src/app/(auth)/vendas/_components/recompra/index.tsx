@@ -11,6 +11,7 @@ import {
 } from '@/hooks/use-recompra'
 import { useLoadingTimeout } from '@/hooks/use-loading-timeout'
 import { Button } from '@/components/ui/button'
+import { InfoPopover } from '@/components/ui/info-popover'
 import { UpsellSourceTabs } from '../upsell/upsell-source-tabs'
 import { RecompraTypeTabs } from './recompra-type-tabs'
 import { RecompraCardAniversario } from './recompra-card-aniversario'
@@ -75,12 +76,63 @@ export function RecompraTab() {
   const items      = isActive ? anivItems : festaItems
 
   const typeTabs = (
-    <RecompraTypeTabs
-      activeType={recompraType}
-      onTypeChange={(t) => { setRecompraType(t); setSource('mine'); setShowContacted(false) }}
-      aniversarioCount={counts?.aniversario_count ?? 0}
-      festaPassadaCount={counts?.festa_passada_count ?? 0}
-    />
+    <div className="flex items-center gap-2">
+      <RecompraTypeTabs
+        activeType={recompraType}
+        onTypeChange={(t) => { setRecompraType(t); setSource('mine'); setShowContacted(false) }}
+        aniversarioCount={counts?.aniversario_count ?? 0}
+        festaPassadaCount={counts?.festa_passada_count ?? 0}
+      />
+      {recompraType === 'aniversario' && (
+        <InfoPopover ariaLabel="Informações sobre Recompra Aniversário">
+          <div className="space-y-3 text-sm">
+            <div>
+              <h4 className="font-semibold text-text-primary">Recompra &gt; Aniversário</h4>
+            </div>
+            <div className="space-y-1">
+              <h5 className="font-medium text-text-primary text-xs">O que você está vendo aqui</h5>
+              <p className="text-text-secondary text-xs leading-relaxed">
+                Clientes que já fecharam festa com a gente em algum momento, e cujo aniversariante
+                está completando idade nos próximos 90 dias. A ideia é abordar essas pessoas antes
+                da concorrência, aproveitando que elas já conhecem o nosso serviço.
+              </p>
+            </div>
+            <div className="space-y-1">
+              <h5 className="font-medium text-text-primary text-xs">Quem não aparece nessa lista (e por quê)</h5>
+              <ul className="text-text-secondary text-xs leading-relaxed space-y-1 list-disc list-inside">
+                <li>
+                  Quem fechou festa nos últimos 6 meses — provavelmente acabou de festejar e ainda
+                  não está pensando na próxima.
+                </li>
+                <li>
+                  Quem nunca fechou festa com a gente — esses são leads novos, não recompra. Eles
+                  entram em outros funis.
+                </li>
+                <li>
+                  Quem você já marcou como contatado — some por padrão, mas dá para voltar a ver
+                  ativando o filtro &ldquo;mostrar contatadas&rdquo;.
+                </li>
+              </ul>
+            </div>
+            <div className="space-y-1">
+              <h5 className="font-medium text-text-primary text-xs">De onde vêm os dados</h5>
+              <p className="text-text-secondary text-xs leading-relaxed">
+                Tudo vem do Ploomes (apenas vendas com status Ganho) e é atualizado a cada
+                15 minutos. Se você fechou uma venda agora, ela aparece na próxima sincronização.
+              </p>
+            </div>
+            <div className="space-y-1">
+              <h5 className="font-medium text-text-primary text-xs">Filtros das abas</h5>
+              <ul className="text-text-secondary text-xs leading-relaxed space-y-1 list-disc list-inside">
+                <li><strong>Minhas:</strong> oportunidades em que você é a responsável no Ploomes.</li>
+                <li><strong>Carteira Livre:</strong> oportunidades sem vendedora ativa atribuída (qualquer um pode pegar).</li>
+                <li><strong>Todas:</strong> tudo junto, sem filtro de responsável.</li>
+              </ul>
+            </div>
+          </div>
+        </InfoPopover>
+      )}
+    </div>
   )
 
   const sourceTabs = (
