@@ -20,6 +20,7 @@ Esta skill cobre toda a camada **abaixo do código de aplicação**: banco de da
 | Tarefa | Leia |
 |---|---|
 | Criar nova migration, alterar schema, adicionar RPC | `references/migrations.md` |
+| Modificar RPC existente — verificar se há funções gêmeas no mesmo módulo | `references/rpc-data-source-mapping.md` (VERIFICAR PRIMEIRO) |
 | Escrever política RLS, helpers, SECURITY DEFINER | `references/rls-policies.md` |
 | Mexer no `deploy.yml`, GitHub Actions, PM2 | `references/deploy-pipeline.md` |
 | Algo quebrou em prod e preciso reagir | `references/incidents-playbook.md` (LEIA PRIMEIRO) |
@@ -50,6 +51,8 @@ Os mandamentos do Cachola para banco/infra. Cada um foi pago com sangue ou tempo
 9. **`pm2 restart` não recarrega env vars.** Use `pm2 restart --update-env` ou `pm2 reload --update-env`.
 
 10. **Mudou env do Docker compose? `docker compose up -d --force-recreate <serviço>`.** Restart sozinho não recarrega `.env`.
+
+11. **Antes de modificar qualquer RPC, consultar `references/rpc-data-source-mapping.md`** para verificar se a função tem gêmeas servindo o mesmo módulo que precisam ser alteradas em conjunto. Ignorar isso causa inconsistência visual (badge ≠ lista), como ocorreu na entrega 081 e foi corrigido na 082.
 
 ## Anti-padrões (NUNCA fazer)
 
