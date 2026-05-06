@@ -261,7 +261,7 @@ export type DashboardKpis = {
   conversion:  KpiMetric  // confirmed / (confirmed + lost) by event date month
   leads:       KpiMetric  // leads created this month in Ploomes (all status_id, by ploomes_create_date)
   maintenance: KpiMetric  // currently open orders (trend vs 30 days ago)
-  undecided:   KpiMetric  // leads this month with unit_option_name = 'Cliente não sabe' (always absolute)
+  undecided:   KpiMetric  // leads this month with unit_option_name = 'Cliente ainda não sabe' (always absolute)
 }
 
 /** Returns array of 'yyyy-MM' strings for the last `count` months (oldest first) */
@@ -307,9 +307,9 @@ export function useDashboardKpis() {
         return q
       })()
 
-      // ── Q2: deals dos últimos 6 meses (para Leads do Mês + Cliente não sabe)
+      // ── Q2: deals dos últimos 6 meses (para Leads do Mês + Cliente ainda não sabe)
       // Sem filtro de unidade — filtramos client-side via unit_option_name.
-      // RLS permite ver deals da unidade do usuário + "Cliente não sabe" (migration 083).
+      // RLS permite ver deals da unidade do usuário + "Cliente ainda não sabe" (migrations 083+084).
       // `unit_option_name` adicionado em migration 083 — database.types.ts ainda não regenerado.
       const dealsQ = (supabase as any)
         .from('ploomes_deals')
@@ -379,14 +379,14 @@ export function useDashboardKpis() {
       // ── Leads do Mês — deals criados no mês (por ploomes_create_date) ──
       // Filtro por unidade: usa unit_option_name em vez de unit_id para não perder
       // o valor semântico original do Ploomes (ex: "Cachola PINHEIROS").
-      // Quando activeUnitId=null (todas as unidades), inclui "Cliente não sabe".
+      // Quando activeUnitId=null (todas as unidades), inclui "Cliente ainda não sabe".
       const unitOptFilter = (mappingRes as { data: { ploomes_value: string } | null }).data?.ploomes_value ?? null
       const leadsDeals = unitOptFilter
         ? allDeals.filter((d) => d.unit_option_name === unitOptFilter)
         : allDeals
 
-      // ── Cliente não sabe — sempre absoluto, sem filtro de unidade ──
-      const undecidedDeals = allDeals.filter((d) => d.unit_option_name === 'Cliente não sabe')
+      // ── Cliente ainda não sabe — sempre absoluto, sem filtro de unidade ──
+      const undecidedDeals = allDeals.filter((d) => d.unit_option_name === 'Cliente ainda não sabe')
 
       // Buckets por mês (ploomes_create_date)
       const leadsByMo: Record<string, number>     = {}
