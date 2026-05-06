@@ -230,7 +230,7 @@ export default function DashboardPage() {
                 Clientes que entraram em contato este mês, independente do status do negócio (em aberto, ganho ou perdido). Filtrado pela unidade selecionada.
               </p>
               <p className="text-text-tertiary text-xs leading-snug">
-                Fonte: tabela <code className="font-mono">ploomes_deals</code>, filtrado por <code className="font-mono">ploomes_create_date</code> e pelo campo <strong>Unidade da festa pretendida</strong> do Ploomes.
+                Fonte: tabela <code className="font-mono">ploomes_deals</code>, filtrado por <code className="font-mono">ploomes_create_date</code> e pelo campo <strong>Unidade da festa pretendida</strong> do Ploomes. Leads com valor <em>&quot;Cliente ainda não sabe&quot;</em> não entram neste total.
               </p>
             </div>
           }
@@ -250,7 +250,7 @@ export default function DashboardPage() {
           className="animate-fade-up [animation-delay:150ms]"
         /> */}
         <KpiCard
-          label="Cliente Não Sabe"
+          label="Cliente ainda não sabe"
           value={kpis?.undecided.value ?? 0}
           icon={HelpCircle}
           iconClass="icon-amber"
@@ -270,7 +270,7 @@ export default function DashboardPage() {
                 Acompanhe estes contatos no módulo Vendas para direcioná-los para a unidade certa.
               </p>
               <p className="text-text-tertiary text-xs leading-snug">
-                Fonte: campo <strong>Unidade da festa pretendida</strong> no Ploomes com valor <em>&quot;Cliente não sabe&quot;</em>.
+                Fonte: campo <strong>Unidade da festa pretendida</strong> no Ploomes com valor <em>&quot;Cliente ainda não sabe&quot;</em>.
               </p>
             </div>
           }

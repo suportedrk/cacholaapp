@@ -16,8 +16,10 @@ import type { PloomesDeal, DealsBISyncResult } from './types'
 
 type AdminClient = SupabaseClient<Database>
 
-// FieldKeys dos campos básicos não cobertos por parseDeal
-const FIELD_KEY_UNIT = 'deal_A583075F-D19C-4034-A479-36625C621660'
+// Campo "Unidade da festa pretendida" (preenchido na entrada do lead).
+// Trocado de 'Unidade Escolhida da Festa' (deal_A583075F, só preenchida em estágios avançados)
+// para 'Unidade da festa pretendida' (deal_BD9C4B07) em mai/2026 após investigação de bug nos KPIs.
+const FIELD_KEY_UNIT = 'deal_BD9C4B07-20E5-458A-8273-6BA271A6DEBD'
 
 // Status IDs do Ploomes
 const STATUS_NAMES: Record<number, string> = {
