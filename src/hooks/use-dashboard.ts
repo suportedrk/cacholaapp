@@ -314,7 +314,9 @@ export function useDashboardKpis() {
       const dealsQ = (supabase as any)
         .from('ploomes_deals')
         .select('ploomes_create_date, unit_option_name')
-        .gte('ploomes_create_date', format(rangeStart, 'yyyy-MM-dd')) as
+        .gte('ploomes_create_date', format(rangeStart, 'yyyy-MM-dd'))
+        .order('ploomes_create_date', { ascending: false })
+        .limit(5000) as
         Promise<{ data: { ploomes_create_date: string; unit_option_name: string | null }[] | null; error: unknown }>
 
       // ── Q3: mapeamento unit_id → ploomes_value (para filtrar Leads por unidade)
