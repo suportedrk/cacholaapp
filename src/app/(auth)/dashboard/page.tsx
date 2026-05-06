@@ -4,8 +4,8 @@ import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek } from 'date-fns'
 import {
-  Calendar, UserPlus, ClipboardList, WifiOff,
-  // TrendingUp, AlertTriangle — Movidos para módulo BI (Fase 3)
+  Calendar, UserPlus, HelpCircle, WifiOff,
+  // TrendingUp, AlertTriangle, ClipboardList — Movidos para módulo BI (Fase 3)
 } from 'lucide-react'
 import {
   Select, SelectContent, SelectItem, SelectTrigger,
@@ -187,6 +187,17 @@ export default function DashboardPage() {
           href="/eventos"
           isLoading={loadingKpis}
           className="animate-fade-up [animation-delay:0ms]"
+          infoContent={
+            <div className="space-y-1.5 text-sm">
+              <h4 className="font-semibold text-text-primary">Festas do Mês</h4>
+              <p className="text-text-secondary leading-snug">
+                Quantidade de festas com data marcada neste mês calendário, independente do status (confirmadas e perdidas ficam fora, só confirmadas contam).
+              </p>
+              <p className="text-text-tertiary text-xs leading-snug">
+                Fonte: tabela <code className="font-mono">events</code>, filtrado por <code className="font-mono">date</code> (data da festa).
+              </p>
+            </div>
+          }
         />
         {/* Taxa de Conversão — Movido para módulo BI (Fase 3)
         <KpiCard
@@ -212,6 +223,17 @@ export default function DashboardPage() {
           href="/eventos"
           isLoading={loadingKpis}
           className="animate-fade-up [animation-delay:100ms]"
+          infoContent={
+            <div className="space-y-1.5 text-sm">
+              <h4 className="font-semibold text-text-primary">Leads Captados no Mês</h4>
+              <p className="text-text-secondary leading-snug">
+                Clientes que entraram em contato este mês, independente do status do negócio (em aberto, ganho ou perdido). Filtrado pela unidade selecionada.
+              </p>
+              <p className="text-text-tertiary text-xs leading-snug">
+                Fonte: tabela <code className="font-mono">ploomes_deals</code>, filtrado por <code className="font-mono">ploomes_create_date</code> e pelo campo <strong>Unidade da festa pretendida</strong> do Ploomes.
+              </p>
+            </div>
+          }
         />
         {/* Manutenções Abertas — Movido para módulo BI (Fase 3)
         <KpiCard
@@ -228,17 +250,30 @@ export default function DashboardPage() {
           className="animate-fade-up [animation-delay:150ms]"
         /> */}
         <KpiCard
-          label="Checklists Pendentes"
-          value={kpis?.checklists.value ?? 0}
-          icon={ClipboardList}
+          label="Cliente Não Sabe"
+          value={kpis?.undecided.value ?? 0}
+          icon={HelpCircle}
           iconClass="icon-amber"
           strokeColor={STROKE.amber}
-          spark={kpis?.checklists.spark ?? []}
-          trend={kpis?.checklists.trend}
-          invertTrend
-          href="/checklists"
+          spark={kpis?.undecided.spark ?? []}
+          trend={kpis?.undecided.trend}
+          href="/vendas"
           isLoading={loadingKpis}
           className="animate-fade-up [animation-delay:200ms]"
+          infoContent={
+            <div className="space-y-1.5 text-sm">
+              <h4 className="font-semibold text-text-primary">Leads Sem Unidade Definida</h4>
+              <p className="text-text-secondary leading-snug">
+                Clientes que entraram em contato este mês e ainda não escolheram entre Pinheiros e Moema. Estes leads aparecem independente da unidade selecionada.
+              </p>
+              <p className="text-text-secondary leading-snug">
+                Acompanhe estes contatos no módulo Vendas para direcioná-los para a unidade certa.
+              </p>
+              <p className="text-text-tertiary text-xs leading-snug">
+                Fonte: campo <strong>Unidade da festa pretendida</strong> no Ploomes com valor <em>&quot;Cliente não sabe&quot;</em>.
+              </p>
+            </div>
+          }
         />
       </div>
 

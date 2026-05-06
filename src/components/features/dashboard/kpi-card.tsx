@@ -6,6 +6,7 @@ import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { AreaChart, Area } from 'recharts'
 import { Skeleton } from '@/components/ui/skeleton'
+import { InfoPopover } from '@/components/ui/info-popover'
 import { cn } from '@/lib/utils'
 import type { SparkPoint } from '@/hooks/use-dashboard'
 
@@ -110,9 +111,11 @@ interface KpiCardProps {
   spark: SparkPoint[]
   trend?: number | null
   /** Inverte a semântica das cores: queda = verde (melhor), alta = vermelho (pior).
-   *  Use para KPIs onde menos é desejável (ex: manutenções abertas, checklists pendentes). */
+   *  Use para KPIs onde menos é desejável (ex: manutenções abertas). */
   invertTrend?: boolean
   href: string
+  /** Conteúdo do popover de informação exibido ao lado do label. */
+  infoContent?: React.ReactNode
   isLoading?: boolean
   className?: string
 }
@@ -127,6 +130,7 @@ export function KpiCard({
   trend,
   invertTrend = false,
   href,
+  infoContent,
   isLoading,
   className,
 }: KpiCardProps) {
@@ -180,6 +184,14 @@ export function KpiCard({
           <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider leading-tight break-words">
             {label}
           </span>
+          {infoContent && (
+            <span
+              onClick={(e) => { e.preventDefault(); e.stopPropagation() }}
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              <InfoPopover ariaLabel={`Informações sobre ${label}`}>{infoContent}</InfoPopover>
+            </span>
+          )}
         </div>
         <TrendBadge trend={trend} invertTrend={invertTrend} />
       </div>

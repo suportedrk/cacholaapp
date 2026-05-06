@@ -258,10 +258,10 @@ export type KpiMetric = {
 
 export type DashboardKpis = {
   events:      KpiMetric  // confirmed events by event date this month
-  conversion:  KpiMetric  // confirmed / (confirmed + lost) by created_at month
-  leads:       KpiMetric  // all events created this month (any status)
+  conversion:  KpiMetric  // confirmed / (confirmed + lost) by event date month
+  leads:       KpiMetric  // leads created this month in Ploomes (all status_id, by ploomes_create_date)
   maintenance: KpiMetric  // currently open orders (trend vs 30 days ago)
-  checklists:  KpiMetric  // currently pending (trend vs 30 days ago)
+  undecided:   KpiMetric  // leads this month with unit_option_name = 'Cliente não sabe' (always absolute)
 }
 
 /** Returns array of 'yyyy-MM' strings for the last `count` months (oldest first) */
@@ -295,8 +295,7 @@ export function useDashboardKpis() {
       const prevMo     = months[4]   // mês anterior
       const thirtyDaysAgo = subDays(now, 30)
 
-      // ── Query 1: todos os eventos por data da festa (incluindo lost)
-      // Usado para: Eventos do Mês, Leads do Mês e Taxa de Conversão.
+      // ── Q1: eventos por data da festa (para Eventos do Mês + Taxa de Conversão)
       // NÃO usar created_at — todos os eventos foram sincronizados do Ploomes em batch
       // (created_at = data do sync, não data de criação do deal).
       const evQ = (() => {
@@ -308,8 +307,28 @@ export function useDashboardKpis() {
         return q
       })()
 
-      // ── Query 2: todos os chamados de manutenção (sem filtro de data)
-      // Inclui concluded_at para calcular "estava aberto há 30 dias"
+      // ── Q2: deals dos últimos 6 meses (para Leads do Mês + Cliente não sabe)
+      // Sem filtro de unidade — filtramos client-side via unit_option_name.
+      // RLS permite ver deals da unidade do usuário + "Cliente não sabe" (migration 083).
+      // `unit_option_name` adicionado em migration 083 — database.types.ts ainda não regenerado.
+      const dealsQ = (supabase as any)
+        .from('ploomes_deals')
+        .select('ploomes_create_date, unit_option_name')
+        .gte('ploomes_create_date', format(rangeStart, 'yyyy-MM-dd')) as
+        Promise<{ data: { ploomes_create_date: string; unit_option_name: string | null }[] | null; error: unknown }>
+
+      // ── Q3: mapeamento unit_id → ploomes_value (para filtrar Leads por unidade)
+      // Necessário para traduzir activeUnitId (UUID) → unit_option_name (string do Ploomes).
+      const mappingQ = activeUnitId
+        ? (supabase as ReturnType<typeof createClient>)
+            .from('ploomes_unit_mapping')
+            .select('ploomes_value')
+            .eq('unit_id', activeUnitId)
+            .eq('is_active', true)
+            .maybeSingle()
+        : Promise.resolve({ data: null, error: null })
+
+      // ── Q4: chamados de manutenção (sem filtro de data, para KPI maintenance)
       const mnQ = (() => {
         let q = supabase
           .from('maintenance_tickets')
@@ -318,23 +337,15 @@ export function useDashboardKpis() {
         return q
       })()
 
-      // ── Query 3: todos os checklists (sem filtro de data)
-      // Inclui completed_at para calcular "estava pendente há 30 dias"
-      const clQ = (() => {
-        let q = supabase
-          .from('checklists')
-          .select('created_at, status, completed_at')
-        if (activeUnitId) q = q.eq('unit_id', activeUnitId)
-        return q
-      })()
+      const [evRes, dealsRes, mappingRes, mnRes] = await Promise.all([
+        evQ, dealsQ, mappingQ, mnQ,
+      ])
 
-      const [evRes, mnRes, clRes] = await Promise.all([evQ, mnQ, clQ])
+      const evAll    = evRes.data    ?? []
+      const allDeals = dealsRes.data ?? []
+      const mnOrders = mnRes.data    ?? []
 
-      const evAll    = evRes.data  ?? []
-      const mnOrders = mnRes.data  ?? []
-      const clItems  = clRes.data  ?? []
-
-      // ── Buckets por mês (data da festa) ─────────────────────
+      // ── Buckets por mês (data da festa) — para Eventos e Conversão ──
       type EvBucket = { confirmed: number; lost: number }
       const evByMo: Record<string, EvBucket> = {}
       months.forEach((m) => { evByMo[m] = { confirmed: 0, lost: 0 } })
@@ -345,31 +356,62 @@ export function useDashboardKpis() {
         else if (e.status === 'lost') evByMo[m].lost++
       })
 
-      // ── Eventos do Mês — só confirmados ──────────────────────
+      // ── Eventos do Mês — festas confirmadas com data da festa no mês ──
       const eventsKpi: KpiMetric = {
         value: evByMo[curMo]?.confirmed ?? 0,
         trend: trendPct(evByMo[curMo]?.confirmed ?? 0, evByMo[prevMo]?.confirmed ?? 0),
         spark: months.map((m) => ({ v: evByMo[m]?.confirmed ?? 0 })),
       }
 
-      // ── Leads do Mês — confirmados + perdidos ────────────────
-      const totalForMo = (m: string) =>
+      // ── Taxa de Conversão — confirmed / (confirmed + lost) por data da festa ──
+      const totalEvForMo = (m: string) =>
         (evByMo[m]?.confirmed ?? 0) + (evByMo[m]?.lost ?? 0)
-      const leadsKpi: KpiMetric = {
-        value: totalForMo(curMo),
-        trend: trendPct(totalForMo(curMo), totalForMo(prevMo)),
-        spark: months.map((m) => ({ v: totalForMo(m) })),
-      }
-
-      // ── Taxa de Conversão — confirmed / (confirmed + lost) ───
       const toCvt = (m: string): number => {
-        const total = totalForMo(m)
+        const total = totalEvForMo(m)
         return total > 0 ? Math.round(((evByMo[m]?.confirmed ?? 0) / total) * 100) : 0
       }
       const conversionKpi: KpiMetric = {
         value: toCvt(curMo),
-        trend: totalForMo(curMo) > 0 ? trendPct(toCvt(curMo), toCvt(prevMo)) : null,
+        trend: totalEvForMo(curMo) > 0 ? trendPct(toCvt(curMo), toCvt(prevMo)) : null,
         spark: months.map((m) => ({ v: toCvt(m) })),
+      }
+
+      // ── Leads do Mês — deals criados no mês (por ploomes_create_date) ──
+      // Filtro por unidade: usa unit_option_name em vez de unit_id para não perder
+      // o valor semântico original do Ploomes (ex: "Cachola PINHEIROS").
+      // Quando activeUnitId=null (todas as unidades), inclui "Cliente não sabe".
+      const unitOptFilter = (mappingRes as { data: { ploomes_value: string } | null }).data?.ploomes_value ?? null
+      const leadsDeals = unitOptFilter
+        ? allDeals.filter((d) => d.unit_option_name === unitOptFilter)
+        : allDeals
+
+      // ── Cliente não sabe — sempre absoluto, sem filtro de unidade ──
+      const undecidedDeals = allDeals.filter((d) => d.unit_option_name === 'Cliente não sabe')
+
+      // Buckets por mês (ploomes_create_date)
+      const leadsByMo: Record<string, number>     = {}
+      const undecidedByMo: Record<string, number> = {}
+      months.forEach((m) => { leadsByMo[m] = 0; undecidedByMo[m] = 0 })
+
+      leadsDeals.forEach((d) => {
+        const m = (d.ploomes_create_date as string).substring(0, 7)
+        if (leadsByMo[m] !== undefined) leadsByMo[m]++
+      })
+      undecidedDeals.forEach((d) => {
+        const m = (d.ploomes_create_date as string).substring(0, 7)
+        if (undecidedByMo[m] !== undefined) undecidedByMo[m]++
+      })
+
+      const leadsKpi: KpiMetric = {
+        value: leadsByMo[curMo] ?? 0,
+        trend: trendPct(leadsByMo[curMo] ?? 0, leadsByMo[prevMo] ?? 0),
+        spark: months.map((m) => ({ v: leadsByMo[m] ?? 0 })),
+      }
+
+      const undecidedKpi: KpiMetric = {
+        value: undecidedByMo[curMo] ?? 0,
+        trend: trendPct(undecidedByMo[curMo] ?? 0, undecidedByMo[prevMo] ?? 0),
+        spark: months.map((m) => ({ v: undecidedByMo[m] ?? 0 })),
       }
 
       // ── Manutenções Abertas — trend vs 30 dias atrás ─────────
@@ -377,17 +419,14 @@ export function useDashboardKpis() {
         (o) => o.status !== 'concluded' && o.status !== 'cancelled',
       ).length
 
-      // Estava aberto há 30 dias = criado antes do corte E não concluído antes do corte
       const mnOpen30 = mnOrders.filter((o) => {
         if (o.status === 'cancelled') return false
         if (new Date(o.created_at) > thirtyDaysAgo) return false
         if (o.concluded_at) return new Date(o.concluded_at) > thirtyDaysAgo
-        // status=concluded sem concluded_at: assume concluído antes do corte
         if (o.status === 'concluded') return false
         return true
       }).length
 
-      // Sparkline: novas ordens abertas por mês (proxy de atividade)
       const mnByMo: Record<string, number> = {}
       months.forEach((m) => { mnByMo[m] = 0 })
       mnOrders.forEach((o) => {
@@ -402,39 +441,12 @@ export function useDashboardKpis() {
         spark: months.map((m) => ({ v: mnByMo[m] ?? 0 })),
       }
 
-      // ── Checklists Pendentes — trend vs 30 dias atrás ────────
-      const clPendingNow = clItems.filter(
-        (c) => c.status !== 'completed' && c.status !== 'cancelled',
-      ).length
-
-      const clPending30 = clItems.filter((c) => {
-        if (c.status === 'cancelled') return false
-        if (new Date(c.created_at) > thirtyDaysAgo) return false
-        if (c.completed_at) return new Date(c.completed_at) > thirtyDaysAgo
-        if (c.status === 'completed') return false
-        return true
-      }).length
-
-      const clByMo: Record<string, number> = {}
-      months.forEach((m) => { clByMo[m] = 0 })
-      clItems.forEach((c) => {
-        const m = (c.created_at ?? '').substring(0, 7)
-        if (clByMo[m] !== undefined) clByMo[m]++
-      })
-      const checklistsKpi: KpiMetric = {
-        value: clPendingNow,
-        trend: clPending30 === 0 && clPendingNow === 0 ? 0
-             : clPending30 === 0 ? null
-             : trendPct(clPendingNow, clPending30),
-        spark: months.map((m) => ({ v: clByMo[m] ?? 0 })),
-      }
-
       return {
         events:      eventsKpi,
         conversion:  conversionKpi,
         leads:       leadsKpi,
         maintenance: maintenanceKpi,
-        checklists:  checklistsKpi,
+        undecided:   undecidedKpi,
       }
     },
   })
