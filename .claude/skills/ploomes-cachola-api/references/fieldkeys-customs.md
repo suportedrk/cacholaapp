@@ -124,6 +124,31 @@ Content-Type: application/json
 
 Para **um TypeId específico**, preencha apenas o campo de valor correspondente; deixe os outros como `null` ou ausentes.
 
+## Campos customizados de UNIDADE em ploomes_deals
+
+Existem **DOIS** campos customizados parecidos no Ploomes para representar unidade. Eles têm semânticas **diferentes** e usar o errado é um bug histórico (descoberto em mai/2026 durante investigação de KPIs incorretos).
+
+| FieldKey | Nome no Ploomes | Quando é preenchido | Uso correto |
+|---|---|---|---|
+| `deal_BD9C4B07-20E5-458A-8273-6BA271A6DEBD` | "Unidade da festa pretendida" | **Obrigatório** ao criar lead (ponta do funil) | ✅ Use este para qualquer KPI/métrica de unidade |
+| `deal_A583075F-D19C-4034-A479-36625C621660` | "Unidade Escolhida da Festa" | Apenas em estágios avançados (após contrato) | ⚠️ Use apenas se especificamente quiser saber a unidade já fechada |
+
+Valores possíveis no campo "Pretendida" (string **exata** armazenada pelo Ploomes):
+
+- `Cachola PINHEIROS`
+- `Cachola MOEMA`
+- `Cliente ainda não sabe` (com acento em "não", exatamente assim — sem "ainda" vai 0 matches)
+
+### Implementação no código
+
+A constante `FIELD_KEY_UNIT` em `src/lib/ploomes/sync-deals.ts` **deve** ser o FieldKey da "Pretendida". Validar antes de qualquer alteração.
+
+### Histórico
+
+Até v1.6.5 o sync lia o FieldKey "Escolhida" em vez de "Pretendida", causando ~78% de NULLs em `unit_option_name`. Corrigido em PR #12 (v1.6.6, mai/2026). Aprendizado: quando há dois campos parecidos no Ploomes, sempre conferir documentação com Bruno antes de assumir qual usar.
+
+---
+
 ## FieldKeys conhecidas no Cachola
 
 > Mantenha esta tabela atualizada. Toda nova FieldKey custom descoberta entra aqui.
@@ -135,6 +160,8 @@ Para **um TypeId específico**, preencha apenas o campo de valor correspondente;
 | `deal_title` | Título | string | 100% | padrão |
 | `deal_amount` | Valor | decimal | ~95% | padrão |
 | `deal_status` | Status (1/2/3) | int | 100% | padrão |
+| `deal_BD9C4B07-20E5-458A-8273-6BA271A6DEBD` | Unidade da festa **pretendida** | ObjectValueName | ~100% | custom — use para KPIs de unidade |
+| `deal_A583075F-D19C-4034-A479-36625C621660` | Unidade **escolhida** da festa | ObjectValueName | ~22% (só pós-contrato) | custom — não usar para métricas gerais |
 | `deal_13506031-C53E-48A0-A92B-686F76AC77ED` | Aniversariante (data) | DateTimeValue | ~70% | custom — usado em Recompra Fase D |
 
 > 🔄 Quando achar nova FieldKey custom, descobrir o nome via `GET /Fields?$filter=Key eq 'deal_<UUID>'` e adicionar aqui.

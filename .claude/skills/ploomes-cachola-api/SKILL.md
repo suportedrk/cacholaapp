@@ -45,6 +45,14 @@ Estes são os 7 mandamentos do Ploomes no Cachola. Se um deles for violado, algo
 
 7. **Mutations:** Ploomes aceita `POST` (criar) e `PATCH` (atualizar parcial). `PUT` não é suportado para a maioria das entidades.
 
+## REGRA: Cachola OS trabalha apenas com o funil 'CACHOLA'
+
+Toda interação do Cachola OS com o Ploomes deve ser **limitada ao funil 'CACHOLA'** (`PipelineId = 60000636`). A conta Ploomes da Cachola tem outros funis (Vendas, Pré-venda/Qualificação, Pós-Venda) que **não devem** ser sincronizados, consultados ou referenciados.
+
+O `PipelineId` vem de `ploomes_config.pipeline_id = 60000636`. O sync já aplica o filtro `$filter=PipelineId eq ${pipelineId}` em `sync-deals.ts`. Ao adicionar novas integrações com a API do Ploomes, **sempre incluir o filtro de `PipelineId`**. Confirmado por Bruno em mai/2026 durante investigação de bug nos KPIs da home.
+
+---
+
 ## Anti-padrões (NUNCA fazer)
 
 - ❌ Hardcodar `User-Key` no código ou em variável de ambiente.
@@ -53,6 +61,7 @@ Estes são os 7 mandamentos do Ploomes no Cachola. Se um deles for violado, algo
 - ❌ Fazer sync sem bloqueio (lock) — duas execuções simultâneas vão duplicar dados.
 - ❌ Ler o arquivo `ploomesapi.md` da raiz — é uma collection Postman bruta, ilegível para LLM.
 - ❌ Confiar em totais retornados pelo Ploomes na primeira página — sempre paginar até `[]`.
+- ❌ Fazer query no Ploomes sem filtrar por `PipelineId` — trará deals de outros funis da conta.
 
 ## Escopo desta skill
 

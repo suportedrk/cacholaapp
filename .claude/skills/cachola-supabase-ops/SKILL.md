@@ -27,6 +27,7 @@ Esta skill cobre toda a camada **abaixo do código de aplicação**: banco de da
 | Mudar env do GoTrue, Nginx, ou S3 | `references/infra-config.md` |
 | Adicionar/editar role, lembrar de constantes | `references/rbac-reference.md` |
 | Criar MODULO NOVO do zero (do banco a UI) — passo a passo de permissoes | `references/novo-modulo-permissoes.md` |
+| Query em tabela grande sem `ORDER BY` + `limit` — risco de truncamento silencioso | `references/postgrest-pagination.md` |
 
 ## Padrões críticos (decorar)
 
