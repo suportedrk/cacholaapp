@@ -39,8 +39,10 @@ import { BITrendCharts } from '@/components/features/bi/bi-trend-charts'
 import { SellersTab } from '@/components/features/bi/sellers-tab'
 import { VendasRealizadasTab } from '@/components/features/bi/vendas-realizadas-tab'
 import { LeadOriginSection } from '@/components/features/bi/lead-origin-section'
+import { BIBreakdownByUnit } from '@/components/features/bi/bi-breakdown-by-unit'
 import { exportBIReport } from '@/lib/bi/export-bi-report'
 import { BI_ATENDIMENTO_ROLES, BI_VENDAS_ROLES, hasRole } from '@/config/roles'
+import { InfoPopover } from '@/components/ui/info-popover'
 
 // ── Formatting helpers ────────────────────────────────────────
 
@@ -124,22 +126,35 @@ export default function BIPage() {
 
   const currentMonth = getCurrentMonth()
 
-  // ── Derived values ────────────────────────────────────────
-  const convValue = conversion.data?.currentRate != null
-    ? `${conversion.data.currentRate.toFixed(1)}%`
-    : '—'
+  // ── Period aggregate KPIs ─────────────────────────────────
+  // hooks request selectedMonths+1 months; rows[0] is the extra "delta" month.
+  // slice(1) gives the actual selected period for aggregation.
+  const convRows  = conversion.data?.rows.slice(1)   ?? []
+  const salesRows = salesMetrics.data?.rows.slice(1) ?? []
 
-  const closingValue = salesMetrics.data?.currentMonth?.avg_closing_days != null
-    ? `${Math.round(salesMetrics.data.currentMonth.avg_closing_days)} dias`
-    : '—'
+  const periodTotalLeads = convRows.reduce((s, r) => s + r.total_leads, 0)
+  const periodWonLeads   = convRows.reduce((s, r) => s + r.won_leads,   0)
+  const periodConvRate   = periodTotalLeads > 0
+    ? (periodWonLeads / periodTotalLeads) * 100
+    : null
 
-  const ticketValue = salesMetrics.data?.currentMonth?.avg_ticket != null
-    ? formatCurrency(salesMetrics.data.currentMonth.avg_ticket)
-    : '—'
+  const periodRevenue  = salesRows.reduce((s, r) => s + r.total_revenue, 0)
+  const periodWonDeals = salesRows.reduce((s, r) => s + r.won_deals,     0)
+  const periodTicket   = periodWonDeals > 0 ? periodRevenue / periodWonDeals : null
+  const periodClosing  = (() => {
+    const weight = salesRows.reduce((s, r) => s + r.won_deals, 0)
+    if (weight === 0) return null
+    const wSum = salesRows.reduce(
+      (s, r) => (r.avg_closing_days != null ? s + r.avg_closing_days * r.won_deals : s),
+      0,
+    )
+    return wSum / weight
+  })()
 
-  const revenueValue = salesMetrics.data?.currentMonth?.total_revenue != null
-    ? formatCurrencyCompact(salesMetrics.data.currentMonth.total_revenue)
-    : '—'
+  const convValue    = periodConvRate != null ? `${periodConvRate.toFixed(1)}%` : '—'
+  const closingValue = periodClosing  != null ? `${Math.round(periodClosing)} dias` : '—'
+  const ticketValue  = formatCurrency(periodTicket != null && periodTicket > 0 ? periodTicket : null)
+  const revenueValue = formatCurrencyCompact(periodRevenue > 0 ? periodRevenue : null)
 
   const maintenance = kpis.data?.maintenance
 
@@ -327,8 +342,15 @@ export default function BIPage() {
               iconClass="icon-brand"
               strokeColor={CHART_COLORS.primary}
               spark={conversion.data?.spark ?? []}
-              trend={conversion.data?.trend ?? null}
               href="/bi"
+              infoContent={
+                <div className="space-y-2 text-sm text-text-secondary">
+                  <p className="font-semibold text-text-primary">Taxa de Conversão</p>
+                  <p>Percentual de leads que se tornaram festas fechadas no período selecionado.</p>
+                  <p>Um lead é considerado <span className="font-medium text-text-primary">convertido</span> quando o deal no Ploomes está com status &quot;Ganho&quot; ou na etapa &quot;Festa Fechada&quot;.</p>
+                  <p className="text-text-tertiary text-xs">Referência: data de criação do deal no Ploomes.</p>
+                </div>
+              }
             />
 
             {/* 2. Tempo Médio de Fechamento */}
@@ -339,9 +361,16 @@ export default function BIPage() {
               iconClass="icon-blue"
               strokeColor="#6B9E8B"
               spark={salesMetrics.data?.sparkClosing ?? []}
-              trend={salesMetrics.data?.trendClosing ?? null}
               invertTrend
               href="/bi"
+              infoContent={
+                <div className="space-y-2 text-sm text-text-secondary">
+                  <p className="font-semibold text-text-primary">Tempo Médio de Fechamento</p>
+                  <p>Média de dias entre a criação do lead no Ploomes e a data do último update do deal (proxy para data de fechamento).</p>
+                  <p>Calculado apenas sobre deals <span className="font-medium text-text-primary">ganhos</span> no período. Quanto menor, mais ágil é o ciclo de vendas.</p>
+                  <p className="text-text-tertiary text-xs">⚠️ Como usamos a data de última atualização, deals editados após o fechamento podem distorcer levemente este número.</p>
+                </div>
+              }
             />
 
             {/* 3. Ticket Médio */}
@@ -352,24 +381,43 @@ export default function BIPage() {
               iconClass="icon-green"
               strokeColor={CHART_COLORS.eventConfirmed}
               spark={salesMetrics.data?.sparkTicket ?? []}
-              trend={salesMetrics.data?.trendTicket ?? null}
               href="/bi"
+              infoContent={
+                <div className="space-y-2 text-sm text-text-secondary">
+                  <p className="font-semibold text-text-primary">Ticket Médio</p>
+                  <p>Valor médio por festa fechada: receita total ÷ número de deals ganhos no período.</p>
+                  <p>Baseado no <span className="font-medium text-text-primary">valor negociado</span> registrado no Ploomes (campo &quot;Valor do Deal&quot;), que pode incluir descontos aplicados.</p>
+                  <p className="text-text-tertiary text-xs">Diferente do ticket médio de pedidos (Vendas Realizadas), que usa os produtos efetivamente comprados.</p>
+                </div>
+              }
             />
 
-            {/* 4. Receita do Mês */}
+            {/* 4. Receita do Período */}
             <KpiCard
-              label="Receita do Mês"
+              label="Receita do Período"
               value={revenueValue}
               icon={TrendingUp}
               iconClass="icon-amber"
               strokeColor="#D4A858"
               spark={salesMetrics.data?.sparkRevenue ?? []}
-              trend={salesMetrics.data?.trendRevenue ?? null}
               href="/bi"
+              infoContent={
+                <div className="space-y-2 text-sm text-text-secondary">
+                  <p className="font-semibold text-text-primary">Receita do Período</p>
+                  <p>Soma dos valores negociados de todos os deals <span className="font-medium text-text-primary">ganhos</span> cujo lead foi criado no período selecionado.</p>
+                  <p>Usa o valor do deal no Ploomes (valor negociado com o cliente). Deals sem valor preenchido não entram na soma.</p>
+                  <p className="text-text-tertiary text-xs">Para ver a receita por produto (preço de tabela), consulte a aba Vendas Realizadas.</p>
+                </div>
+              }
             />
           </>
         )}
       </div>
+
+      {/* ── Breakdown by unit (only when "Todas as unidades" is selected) ── */}
+      {!activeUnit && units.length > 1 && !isLoading && (
+        <BIBreakdownByUnit units={units} months={selectedMonths} />
+      )}
 
       {/* ── Insight: Antecedência de Reserva ── */}
       {!isLoading && (
@@ -378,9 +426,19 @@ export default function BIPage() {
             <CalendarClock className="w-4 h-4" />
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-text-primary">
-              Antecedência Média de Reserva
-            </p>
+            <div className="flex items-center gap-1.5">
+              <p className="text-sm font-semibold text-text-primary">
+                Antecedência Média de Reserva
+              </p>
+              <InfoPopover ariaLabel="Informações sobre Antecedência Média de Reserva">
+                <div className="space-y-2 text-sm text-text-secondary">
+                  <p className="font-semibold text-text-primary">Antecedência Média de Reserva</p>
+                  <p>Média de dias entre a criação do lead no Ploomes e a data da festa — indica com quanto tempo de antecedência os clientes costumam reservar.</p>
+                  <p>Calculado apenas sobre deals <span className="font-medium text-text-primary">ganhos</span> que têm data de festa preenchida.</p>
+                  <p className="text-text-tertiary text-xs">⚠️ Deals sem data de festa cadastrada no Ploomes são excluídos deste cálculo.</p>
+                </div>
+              </InfoPopover>
+            </div>
             {advanceCurrent != null ? (
               <p className="text-sm text-text-secondary mt-0.5">
                 Clientes fecham em média{' '}
@@ -434,8 +492,18 @@ export default function BIPage() {
       <div className="rounded-xl border border-border-default bg-card overflow-hidden">
         <div className="px-4 py-3 border-b border-border-default flex items-center gap-2">
           <Filter className="w-4 h-4 text-text-tertiary" />
-          <div>
-            <h2 className="text-sm font-semibold text-text-primary">Funil do Pipeline</h2>
+          <div className="flex-1">
+            <div className="flex items-center gap-1.5">
+              <h2 className="text-sm font-semibold text-text-primary">Funil do Pipeline</h2>
+              <InfoPopover ariaLabel="Informações sobre Funil do Pipeline">
+                <div className="space-y-2 text-sm text-text-secondary">
+                  <p className="font-semibold text-text-primary">Funil do Pipeline</p>
+                  <p>Distribuição <span className="font-medium text-text-primary">acumulada</span> de todos os deals por etapa do pipeline no Ploomes — independente do período selecionado.</p>
+                  <p>A barra mostra a proporção de deals em cada etapa em relação ao total. Etapas finais (Ganho, Festa Fechada) representam os negócios convertidos.</p>
+                  <p className="text-text-tertiary text-xs">Clique em qualquer etapa para ver a lista de deals nela.</p>
+                </div>
+              </InfoPopover>
+            </div>
             <p className="text-xs text-text-secondary mt-0.5">
               Distribuição acumulada de todos os deals por stage
             </p>
@@ -475,8 +543,17 @@ export default function BIPage() {
       <div className="rounded-xl border border-border-default bg-card overflow-hidden">
         <div className="px-4 py-3 border-b border-border-default flex items-center gap-2">
           <Building2 className="w-4 h-4 text-text-tertiary" />
-          <div>
-            <h2 className="text-sm font-semibold text-text-primary">Comparativo entre Unidades</h2>
+          <div className="flex-1">
+            <div className="flex items-center gap-1.5">
+              <h2 className="text-sm font-semibold text-text-primary">Comparativo entre Unidades</h2>
+              <InfoPopover ariaLabel="Informações sobre Comparativo entre Unidades">
+                <div className="space-y-2 text-sm text-text-secondary">
+                  <p className="font-semibold text-text-primary">Comparativo entre Unidades</p>
+                  <p>Tabela lado a lado com as métricas de cada unidade no período selecionado: leads, conversão, ticket médio, receita e tempo de fechamento.</p>
+                  <p>Disponível somente para usuários com acesso a múltiplas unidades. Selecionar uma unidade específica no seletor superior oculta esta tabela.</p>
+                </div>
+              </InfoPopover>
+            </div>
             <p className="text-xs text-text-secondary mt-0.5">
               Métricas dos últimos {selectedMonths} meses por unidade
             </p>
@@ -513,9 +590,19 @@ export default function BIPage() {
       {/* ── Monthly Table ── */}
       <div className="rounded-xl border border-border-default bg-card overflow-hidden">
         <div className="px-4 py-3 border-b border-border-default">
-          <h2 className="text-sm font-semibold text-text-primary">
-            Desempenho por Mês
-          </h2>
+          <div className="flex items-center gap-1.5">
+            <h2 className="text-sm font-semibold text-text-primary">
+              Desempenho por Mês
+            </h2>
+            <InfoPopover ariaLabel="Informações sobre Desempenho por Mês">
+              <div className="space-y-2 text-sm text-text-secondary">
+                <p className="font-semibold text-text-primary">Desempenho por Mês</p>
+                <p>Série histórica mensal com leads, conversão, receita, ticket médio, tempo de fechamento e antecedência de reserva.</p>
+                <p>Cada linha representa os deals cujo lead foi <span className="font-medium text-text-primary">criado naquele mês</span> no Ploomes — não a data da festa.</p>
+                <p className="text-text-tertiary text-xs">O mês atual pode estar incompleto. Os dados são atualizados a cada 30 minutos via sync com o Ploomes.</p>
+              </div>
+            </InfoPopover>
+          </div>
           <p className="text-xs text-text-secondary mt-0.5">
             Baseado na data de criação do lead no Ploomes
           </p>
@@ -672,20 +759,14 @@ export default function BIPage() {
         {/* ── Atendimento (Deals) ── */}
         {canSeeSellers && (
           <TabsContent value="vendedoras" className="mt-6">
-            <SellersTab
-              units={units}
-              activeUnitId={activeUnit?.id ?? null}
-              activeUnitName={activeUnit?.name ?? 'Todas as unidades'}
-            />
+            <SellersTab units={units} />
           </TabsContent>
         )}
 
         {/* ── Vendas Realizadas (Orders) ── */}
         {canSeeVendas && (
           <TabsContent value="vendas-realizadas" className="mt-6">
-            <VendasRealizadasTab
-              activeUnitId={activeUnit?.id ?? null}
-            />
+            <VendasRealizadasTab />
           </TabsContent>
         )}
       </Tabs>

@@ -49,9 +49,11 @@ function trendPct(curr: number | null, prev: number | null): number | null {
  * Fetches sales metrics from the BI module.
  * Metrics: revenue, avg ticket, avg closing days, avg booking advance days.
  * Won = status_id=2 (Ganho) OR stage_id=60004787 (Festa Fechada).
+ * Pass unitIdOverride to query a specific unit (e.g. in per-unit breakdown).
  */
-export function useBISalesMetrics(months = 7) {
-  const { activeUnitId } = useUnitStore()
+export function useBISalesMetrics(months = 7, unitIdOverride?: string | null) {
+  const { activeUnitId: storeUnitId } = useUnitStore()
+  const activeUnitId = unitIdOverride !== undefined ? unitIdOverride : storeUnitId
   const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
 
   return useQuery({

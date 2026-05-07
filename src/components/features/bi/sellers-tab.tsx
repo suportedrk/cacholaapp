@@ -4,9 +4,10 @@
 
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { Download, Info, Loader2, Users2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { InfoPopover } from '@/components/ui/info-popover'
 import { cn } from '@/lib/utils'
 import { SellersRankingTable } from './sellers-ranking-table'
 import { SellersCharts } from './sellers-charts'
@@ -14,6 +15,7 @@ import { SellerDrilldownSheet } from './seller-drilldown-sheet'
 import { useBISellersRanking } from '@/hooks/use-bi-sellers-ranking'
 import { exportSellersReport } from '@/lib/bi/export-sellers-report'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useUnitStore } from '@/stores/unit-store'
 
 // ── Period options ────────────────────────────────────────────
 
@@ -33,21 +35,23 @@ interface UnitOption { id: string; name: string }
 // ── Props ─────────────────────────────────────────────────────
 
 interface Props {
-  /** Available units for the unit toggle (from UnitStore) */
+  /** Available units for the unit toggle */
   units: UnitOption[]
-  /** Currently active unit ID (null = all) */
-  activeUnitId: string | null
-  /** Unit name for export filename */
-  activeUnitName: string
 }
 
 // ── Component ─────────────────────────────────────────────────
 
-export function SellersTab({ units, activeUnitId, activeUnitName }: Props) {
+export function SellersTab({ units }: Props) {
+  const { activeUnit } = useUnitStore()
   const [selectedMonths, setSelectedMonths] = useState<PeriodValue>(6)
-  const [selectedUnitId, setSelectedUnitId] = useState<string | null>(activeUnitId)
+  const [selectedUnitId, setSelectedUnitId] = useState<string | null>(activeUnit?.id ?? null)
   const [selectedSeller, setSelectedSeller] = useState<string | null>(null)
   const [isExporting, setIsExporting]       = useState(false)
+
+  // Sync local unit selection when the global UnitSwitcher changes
+  useEffect(() => {
+    setSelectedUnitId(activeUnit?.id ?? null)
+  }, [activeUnit?.id])
 
   const ranking = useBISellersRanking(selectedUnitId, selectedMonths)
 
@@ -78,14 +82,14 @@ export function SellersTab({ units, activeUnitId, activeUnitName }: Props) {
       await exportSellersReport({
         ranking: rows,
         historyMap,
-        unitName:     activeUnitName,
+        unitName:     activeUnit?.name ?? 'Todas',
         periodMonths: selectedMonths,
         exportDate:   new Date(),
       })
     } finally {
       setIsExporting(false)
     }
-  }, [ranking.data, selectedUnitId, selectedMonths, activeUnitName])
+  }, [ranking.data, selectedUnitId, selectedMonths, activeUnit?.name])
 
   const selectedSellerRow = ranking.data?.find((r) => r.owner_name === selectedSeller) ?? null
 
@@ -182,8 +186,18 @@ export function SellersTab({ units, activeUnitId, activeUnitName }: Props) {
       <div className="rounded-xl border border-border-default bg-card overflow-hidden">
         <div className="px-4 py-3 border-b border-border-default flex items-center gap-2">
           <Users2 className="w-4 h-4 text-text-tertiary" />
-          <div>
-            <h2 className="text-sm font-semibold text-text-primary">Ranking de Responsáveis</h2>
+          <div className="flex-1">
+            <div className="flex items-center gap-1.5">
+              <h2 className="text-sm font-semibold text-text-primary">Ranking de Responsáveis</h2>
+              <InfoPopover ariaLabel="Informações sobre Ranking de Responsáveis">
+                <div className="space-y-2 text-sm text-text-secondary">
+                  <p className="font-semibold text-text-primary">Ranking de Responsáveis</p>
+                  <p>Classifica os responsáveis por deal (campo &quot;Owner&quot; do Ploomes) pela quantidade de leads atendidos, conversão e receita gerada no período.</p>
+                  <p>O responsável é quem está <span className="font-medium text-text-primary">vinculado ao deal no Ploomes</span> — não necessariamente quem fechou o contrato.</p>
+                  <p className="text-text-tertiary text-xs">⭐ Destaque amarelo = melhor da unidade nesta métrica. Clique em uma linha para ver detalhes individuais.</p>
+                </div>
+              </InfoPopover>
+            </div>
             <p className="text-xs text-text-secondary mt-0.5">
               Clique em uma linha para ver o detalhe individual
             </p>

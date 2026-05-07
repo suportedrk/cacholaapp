@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { ShoppingCart, TrendingUp, Banknote, Info, AlertCircle, RefreshCw } from 'lucide-react'
+import { InfoPopover } from '@/components/ui/info-popover'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
@@ -10,6 +11,7 @@ import { useBiSalesKpi, useBiSalesRanking } from '@/hooks/use-bi-sales'
 import type { BISalesRankingRow } from '@/hooks/use-bi-sales'
 import { SellerOrdersDrilldownSheet } from './seller-orders-drilldown-sheet'
 import { VendasPorCategoriaSection } from './vendas-por-categoria-section'
+import { useUnitStore } from '@/stores/unit-store'
 
 // ── Period options ────────────────────────────────────────────
 
@@ -53,15 +55,10 @@ function formatCurrencyCompact(v: number | null | undefined): string {
   return formatCurrency(v)
 }
 
-// ── Props ─────────────────────────────────────────────────────
-
-interface Props {
-  activeUnitId: string | null
-}
-
 // ── Component ─────────────────────────────────────────────────
 
-export function VendasRealizadasTab({ activeUnitId }: Props) {
+export function VendasRealizadasTab() {
+  const { activeUnitId } = useUnitStore()
   const [selectedMonths,   setSelectedMonths]   = useState<PeriodValue>(12)
   const [includeInactive,  setIncludeInactive]  = useState(false)
   const [drillSeller,      setDrillSeller]      = useState<BISalesRankingRow | null>(null)
@@ -166,6 +163,17 @@ export function VendasRealizadasTab({ activeUnitId }: Props) {
         )}
 
         {/* ── KPI cards ────────────────────────────────────── */}
+        <div className="flex items-center gap-1.5">
+          <p className="text-xs font-semibold text-text-secondary uppercase tracking-wide">Resumo do período</p>
+          <InfoPopover ariaLabel="Informações sobre Resumo do período de vendas realizadas">
+            <div className="space-y-2 text-sm text-text-secondary">
+              <p className="font-semibold text-text-primary">Vendas Realizadas (Orders)</p>
+              <p>Resumo das <span className="font-medium text-text-primary">orders</span> registradas no Ploomes no período selecionado — independente de o deal estar ganho ou em aberto.</p>
+              <p>Faturamento = soma dos valores negociados das orders. Ticket médio = faturamento ÷ nº de orders. Cada order corresponde a uma festa com produtos comprados.</p>
+              <p className="text-text-tertiary text-xs">Diferente dos KPIs de Leads (aba Visão Geral), que usam o valor do deal no Ploomes. Aqui os dados vêm dos produtos efetivamente adicionados ao pedido.</p>
+            </div>
+          </InfoPopover>
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="rounded-xl border border-border-default bg-card p-4 space-y-1">
             <div className="flex items-center gap-2 text-text-secondary">
