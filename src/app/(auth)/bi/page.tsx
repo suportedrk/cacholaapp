@@ -347,7 +347,7 @@ export default function BIPage() {
                 <div className="space-y-2 text-sm text-text-secondary">
                   <p className="font-semibold text-text-primary">Taxa de Conversão</p>
                   <p>Percentual de leads que se tornaram festas fechadas no período selecionado.</p>
-                  <p>Um lead é considerado <span className="font-medium text-text-primary">convertido</span> quando o deal no Ploomes está com status "Ganho" ou na etapa "Festa Fechada".</p>
+                  <p>Um lead é considerado <span className="font-medium text-text-primary">convertido</span> quando o deal no Ploomes está com status &quot;Ganho&quot; ou na etapa &quot;Festa Fechada&quot;.</p>
                   <p className="text-text-tertiary text-xs">Referência: data de criação do deal no Ploomes.</p>
                 </div>
               }
@@ -386,7 +386,7 @@ export default function BIPage() {
                 <div className="space-y-2 text-sm text-text-secondary">
                   <p className="font-semibold text-text-primary">Ticket Médio</p>
                   <p>Valor médio por festa fechada: receita total ÷ número de deals ganhos no período.</p>
-                  <p>Baseado no <span className="font-medium text-text-primary">valor negociado</span> registrado no Ploomes (campo "Valor do Deal"), que pode incluir descontos aplicados.</p>
+                  <p>Baseado no <span className="font-medium text-text-primary">valor negociado</span> registrado no Ploomes (campo &quot;Valor do Deal&quot;), que pode incluir descontos aplicados.</p>
                   <p className="text-text-tertiary text-xs">Diferente do ticket médio de pedidos (Vendas Realizadas), que usa os produtos efetivamente comprados.</p>
                 </div>
               }

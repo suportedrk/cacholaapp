@@ -192,7 +192,7 @@ export function SellersTab({ units }: Props) {
               <InfoPopover ariaLabel="Informações sobre Ranking de Responsáveis">
                 <div className="space-y-2 text-sm text-text-secondary">
                   <p className="font-semibold text-text-primary">Ranking de Responsáveis</p>
-                  <p>Classifica os responsáveis por deal (campo "Owner" do Ploomes) pela quantidade de leads atendidos, conversão e receita gerada no período.</p>
+                  <p>Classifica os responsáveis por deal (campo &quot;Owner&quot; do Ploomes) pela quantidade de leads atendidos, conversão e receita gerada no período.</p>
                   <p>O responsável é quem está <span className="font-medium text-text-primary">vinculado ao deal no Ploomes</span> — não necessariamente quem fechou o contrato.</p>
                   <p className="text-text-tertiary text-xs">⭐ Destaque amarelo = melhor da unidade nesta métrica. Clique em uma linha para ver detalhes individuais.</p>
                 </div>

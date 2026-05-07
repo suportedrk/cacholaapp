@@ -183,7 +183,7 @@ export function LeadOriginPanel({ unitId, unitName, months }: Props) {
             <p className="font-semibold text-text-primary">Origem dos Leads</p>
             <p>Distribuição mensal de leads por canal de origem, em <span className="font-medium text-text-primary">percentual</span> — cada barra soma 100% para facilitar comparação entre meses de volumes diferentes.</p>
             <p>As 13 origens cadastradas no Ploomes são agrupadas em 8 categorias: Instagram, Indicação, Cliente recorrente, WhatsApp, Site/Web, TikTok, Outros canais e (sem origem).</p>
-            <p className="text-text-tertiary text-xs">Dados disponíveis a partir de mai/2025. Leads anteriores podem aparecer em "(sem origem)".</p>
+            <p className="text-text-tertiary text-xs">Dados disponíveis a partir de mai/2025. Leads anteriores podem aparecer em &quot;(sem origem)&quot;.</p>
           </div>
         </InfoPopover>
       </div>

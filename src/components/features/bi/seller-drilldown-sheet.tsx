@@ -239,7 +239,7 @@ export function SellerDrilldownSheet({ isOpen, onClose, seller, unitId, periodMo
                 <p className="font-semibold text-text-primary">Tempo Médio de Fechamento</p>
                 <p>Média de dias entre a criação do lead no Ploomes e a data do último update do deal — proxy para o tempo real de fechamento.</p>
                 <p>O valor exibido aqui é do <span className="font-medium text-text-primary">último mês</span> do período selecionado.</p>
-                <p className="text-text-tertiary text-xs">⚠️ Deals editados após o fechamento podem distorcer este número. Ver o histórico mensal na aba "Histórico" para a série completa.</p>
+                <p className="text-text-tertiary text-xs">⚠️ Deals editados após o fechamento podem distorcer este número. Ver o histórico mensal na aba &quot;Histórico&quot; para a série completa.</p>
               </div>
             </InfoPopover>
           </span>

@@ -137,7 +137,7 @@ export function BIBreakdownByUnit({ units, months }: Props) {
         <InfoPopover ariaLabel="Informações sobre Detalhe por unidade">
           <div className="space-y-2 text-sm text-text-secondary">
             <p className="font-semibold text-text-primary">Detalhe por unidade</p>
-            <p>Quebra os 4 KPIs principais por unidade, usando o mesmo período selecionado acima. Visível apenas quando "Todas as unidades" está selecionado.</p>
+            <p>Quebra os 4 KPIs principais por unidade, usando o mesmo período selecionado acima. Visível apenas quando &quot;Todas as unidades&quot; está selecionado.</p>
             <p>Permite comparar o desempenho de cada unidade de forma rápida: <span className="font-medium text-text-primary">conversão, tempo médio de fechamento, ticket médio e receita total</span>.</p>
           </div>
         </InfoPopover>
