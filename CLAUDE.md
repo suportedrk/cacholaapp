@@ -12,7 +12,7 @@
 
 - **Metodologia:** Vibe Coding — Claude planeja + implementa, Bruno testa + valida
 - **Problema resolvido:** Informações espalhadas em WhatsApp, planilhas e cadernos
-- **Versão atual:** v1.5.13 (prod, PR #2 mergeado 30/abr/2026). v1.5.12 introduziu cards clicáveis em Vendas/Upsell e Vendas/Recompra; v1.5.13 corrigiu o destino do clique no Recompra (de `/deal/` para `/contact/`).
+- **Versão atual:** v1.7.0 (prod, PR #16 mergeado 07/mai/2026). v1.7.0 corrigiu filtros de período no BI, adicionou 16 tooltips informativos e novo componente BIBreakdownByUnit. v1.5.13 corrigiu destino do clique no Recompra (de `/deal/` para `/contact/`).
 
 ---
 
@@ -692,7 +692,7 @@ export const GLOBAL_VIEWER_ROLES = ['super_admin', 'diretor'] as const satisfies
 
 **Módulo BI — `/bi` (Migrations 041 + 042):**
 - Sidebar: item BI ativo, restrito a `REPORT_ROLES` (super_admin, diretor, gerente, financeiro)
-- 4 KPI cards (grid 2×2 desktop / 1-col mobile): Taxa de Conversão, Tempo de Fechamento, Ticket Médio, Receita do Mês
+- 4 KPI cards (grid 2×2 desktop / 1-col mobile): Taxa de Conversão, Tempo de Fechamento, Ticket Médio, Receita do Período — agregam o período selecionado (3M/6M/12M/Tudo): Receita = soma; Ticket/Conversão/Tempo = médias ponderadas. Trend badges removidos temporariamente (v1.7.0); serão reintroduzidos como "período atual vs período anterior" em rodada futura
 - Card insight: Antecedência Média de Reserva (dias entre criação do lead e data da festa)
 - Banner compacto: manutenções abertas (link → /manutencao)
 - Tabela mensal expandida: Leads, Ganhos, Conversão, Receita, Ticket Médio, Fechamento, Antecedência
@@ -703,6 +703,15 @@ export const GLOBAL_VIEWER_ROLES = ['super_admin', 'diretor'] as const satisfies
 - Ganho = status_id=2 OU stage_id=60004787 (Festa Fechada) — consistente em todos os RPCs
 - avg_closing_days = ploomes_last_update − ploomes_create_date (proxy aproximado, não data exata do fechamento)
 - avg_booking_advance_days = event_date − ploomes_create_date (dias antes da festa)
+- **v1.7.0 (07/mai/2026) — Correções e melhorias:**
+  - Filtros 3M/6M/12M/Tudo agregam corretamente nos 4 KPI cards (Bug A corrigido)
+  - Seletor global de unidade controla todo o BI, incluindo abas Vendedoras e Vendas Realizadas (Bug B corrigido)
+  - Modo "Todas as unidades" mostra consolidado + breakdown por unidade via componente novo `BIBreakdownByUnit` (Bug C corrigido)
+  - Critério de ganho padronizado entre todas as RPCs: status_id = 2 OR stage_id = 60004787 (Migration 086)
+  - Hard-code `ploomes_create_date >= '2025-05-01'` removido de `get_bi_lead_origin_breakdown` (Migration 085)
+  - 16 tooltips informativos (InfoPopover) cobrindo KPIs, gráficos, tabelas, funil, comparativo, ranking, vendas realizadas, categorias e breakdown
+  - Disclaimer "Dados disponíveis a partir de mai/2025" removido do painel de Origem de Leads (info movida para o tooltip)
+  - `useBIConversionData` e `useBISalesMetrics` aceitam `unitIdOverride` opcional para uso em `BIBreakdownByUnit` sem ler o store
 
 **Módulo BI — Drill-down no Funil:**
 - Clicar em qualquer stage do funil abre slide-over com lista de deals
@@ -712,6 +721,7 @@ export const GLOBAL_VIEWER_ROLES = ['super_admin', 'diretor'] as const satisfies
 - Filtros: pills Todos/Em aberto/Ganhos/Perdidos + busca por nome (debounce 300ms)
 - Link externo: `https://app10.ploomes.com/deal/{ploomes_deal_id}`
 - Estado no `BIFunnel`: `selectedStage` controla qual stage está aberto no slide-over
+- Migration 086: alinha critério de ganho em `get_bi_funnel_data` com demais RPCs (status_id = 2 OR stage_id = 60004787) — antes usava apenas `status_id IN (2,3)`
 
 **Módulo BI — Filtro de Período + Gráficos de Tendência:**
 - Filtro de período: pills [3M] [6M] [12M] [Tudo] no header, `selectedMonths` state (default 6)
@@ -818,12 +828,13 @@ export const GLOBAL_VIEWER_ROLES = ['super_admin', 'diretor'] as const satisfies
 **Painel BI "Origem dos Leads" — Migrations 079 + 080 — COMPLETO:**
 - RPC `get_bi_lead_origin_breakdown(p_unit_id UUID, p_period_months INT DEFAULT 6)` — agrega leads por mês × 8 categorias derivadas das 13 origens cruas do Ploomes
 - Mapeamento 13→8 via `CASE origin_id` na própria RPC (única fonte da verdade no banco): Instagram, Indicação, Cliente recorrente (60001628+60001690), WhatsApp (10046775+60001461), Site/Web (10046776+60029935), TikTok, Outros canais, (sem origem)
-- Migration 079: RPC inicial. Migration 080: adiciona filtro `ploomes_create_date >= '2025-05-01'` — deals anteriores têm `origin_id = NULL` (fora da janela do backfill) e poluiriam o gráfico com barras 100% cinzas nos pills 12M/Tudo
+- Migration 079: RPC inicial. Migration 080: adicionou filtro `ploomes_create_date >= '2025-05-01'` — deals anteriores têm `origin_id = NULL` (fora da janela do backfill) e poluiriam o gráfico com barras 100% cinzas nos pills 12M/Tudo
+- Migration 085: remove o hard-code `AND d.ploomes_create_date >= '2025-05-01'::DATE` da RPC — o filtro dinâmico `p_period_months` passa a ser a única fonte de verdade
 - Frontend: `src/lib/bi/origin-categories.ts` (8 categorias com cor hex e ordem fixa), `src/hooks/use-lead-origin-breakdown.ts` (queryKey `['bi','lead-origin', unitId, months]`, enabled `isSessionReady && !!unitId`, `(supabase as any).rpc()` — padrão do projeto para RPCs fora do `database.types.ts`)
 - Componentes: `src/components/features/bi/lead-origin-panel.tsx` + `lead-origin-section.tsx`
 - Visualização: barras empilhadas em PERCENTUAL (`stackOffset="expand"`), padrão `recharts-fixed-pixels` (`useChartWidth` + ResizeObserver, **NUNCA** `ResponsiveContainer`). Tooltip com nome + % + absoluto + total do mês. Rodapé: total no período + top 3 categorias com bullet colorido
 - Layout: 1 painel por unidade lado a lado (`md:grid-cols-2`), mobile coluna única. `LeadOriginSection` recebe `selectedMonths` como prop da `page.tsx` (sem state próprio)
-- Disclaimer no rodapé da seção: "Dados de origem disponíveis a partir de mai/2025. Negócios anteriores podem aparecer em (sem origem) caso o campo não tenha sido preenchido no Ploomes"
+- Disclaimer no rodapé da seção removido em v1.7.0 — informação movida para o tooltip (InfoPopover) do painel
 - Roles: `super_admin` + `diretor` (mesmo gating de `BI_ACCESS_ROLES`, sem regressão)
 - Validação produção: 0% `(sem origem)` em meses completos (Nov/25–Abr/26), Instagram dominante (54–62%), 8 categorias visíveis com cores distintas
 
@@ -1105,6 +1116,12 @@ export default async function Layout({ children }: { children: React.ReactNode }
   puxar clientes de 10–13 meses atrás com owners antigos.
 - **`ploomes_order_products_backup_20260417`** pode ser dropada após validação do primeiro cron
   pós-deploy do fix de ghost rows (commit 8b8c589).
+- **BI — Pendentes da v1.7.0 (a retomar em rodada futura):**
+  - Antecedência Média de Reserva: card ainda mostra apenas mês corrente; deveria respeitar o filtro de período (variante do Bug A não resolvida)
+  - Delta dos 4 KPI cards principais: reintroduzir como "período atual vs período anterior" (removido temporariamente em v1.7.0)
+  - Tempo médio no drilldown de vendedora: considera apenas o último mês; alinhar com filtro de período
+  - Fase C — trocar fonte do valor da festa: substituir Amount do Deal pela soma dos produtos vendidos do Deal, em todo o BI (mudança estrutural)
+  - Filtro CACHOLA defensivo nas RPCs do BI: adicionar AND pipeline_id = 60000636 explícito como hardening (hoje proteção depende do sync)
 - **Backup hardening — On the horizon (não urgente):**
   - `backup_log` só registra `_db.sql.gz`. `_storage.tar.gz` e `_config.tar.gz` não têm
     registro → a página `/admin/backups` e o cron `backup-check` não detectam falha nesses dois.
