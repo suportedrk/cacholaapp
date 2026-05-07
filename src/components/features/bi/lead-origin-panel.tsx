@@ -15,6 +15,7 @@ import {
   Tooltip, Legend,
 } from 'recharts'
 import { Skeleton } from '@/components/ui/skeleton'
+import { InfoPopover } from '@/components/ui/info-popover'
 import { useLeadOriginBreakdown, type LeadOriginRow } from '@/hooks/use-lead-origin-breakdown'
 import { ORIGIN_CATEGORIES, ORIGIN_COLOR_MAP } from '@/lib/bi/origin-categories'
 
@@ -175,7 +176,17 @@ export function LeadOriginPanel({ unitId, unitName, months }: Props) {
   return (
     <div className="rounded-xl border border-border-default bg-card p-4 space-y-3">
       {/* Cabeçalho da unidade */}
-      <h3 className="text-sm font-semibold text-text-primary">{unitName}</h3>
+      <div className="flex items-center gap-1.5">
+        <h3 className="text-sm font-semibold text-text-primary">{unitName}</h3>
+        <InfoPopover ariaLabel="Informações sobre Origem dos Leads">
+          <div className="space-y-2 text-sm text-text-secondary">
+            <p className="font-semibold text-text-primary">Origem dos Leads</p>
+            <p>Distribuição mensal de leads por canal de origem, em <span className="font-medium text-text-primary">percentual</span> — cada barra soma 100% para facilitar comparação entre meses de volumes diferentes.</p>
+            <p>As 13 origens cadastradas no Ploomes são agrupadas em 8 categorias: Instagram, Indicação, Cliente recorrente, WhatsApp, Site/Web, TikTok, Outros canais e (sem origem).</p>
+            <p className="text-text-tertiary text-xs">Dados disponíveis a partir de mai/2025. Leads anteriores podem aparecer em "(sem origem)".</p>
+          </div>
+        </InfoPopover>
+      </div>
 
       {/* Área do gráfico */}
       <div ref={chartRef} className="w-full">

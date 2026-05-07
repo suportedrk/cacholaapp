@@ -32,9 +32,11 @@ export type BIConversionData = {
  * Fetches conversion rate data from the BI module.
  * Uses ploomes_deals.ploomes_create_date (real CRM creation date).
  * Won = status_id=2 (Ganho) OR stage_id=60004787 (Festa Fechada).
+ * Pass unitIdOverride to query a specific unit (e.g. in per-unit breakdown).
  */
-export function useBIConversionData(months = 7) {
-  const { activeUnitId } = useUnitStore()
+export function useBIConversionData(months = 7, unitIdOverride?: string | null) {
+  const { activeUnitId: storeUnitId } = useUnitStore()
+  const activeUnitId = unitIdOverride !== undefined ? unitIdOverride : storeUnitId
   const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
 
   return useQuery({

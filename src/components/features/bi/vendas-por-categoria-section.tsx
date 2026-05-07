@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { Tag, ShoppingBag, TrendingUp, AlertCircle, RefreshCw, AlertTriangle } from 'lucide-react'
+import { InfoPopover } from '@/components/ui/info-popover'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Cell } from 'recharts'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
@@ -193,6 +194,13 @@ export function VendasPorCategoriaSection({
             <div className="flex items-center gap-2 text-text-secondary">
               <Tag className="h-4 w-4" />
               <span className="text-xs font-medium">Categorias ativas</span>
+              <InfoPopover ariaLabel="Informações sobre Categorias ativas">
+                <div className="space-y-2 text-sm text-text-secondary">
+                  <p className="font-semibold text-text-primary">Categorias ativas</p>
+                  <p>Número de categorias de produto distintas com pelo menos uma venda no período.</p>
+                  <p>As categorias são derivadas dos grupos de produtos do Ploomes: <span className="font-medium text-text-primary">Pacotes, Adicionais e Upgrades</span> (por unidade).</p>
+                </div>
+              </InfoPopover>
             </div>
             <div className="text-2xl font-bold text-text-primary">
               {kpiData.total_categories}
@@ -204,6 +212,13 @@ export function VendasPorCategoriaSection({
             <div className="flex items-center gap-2 text-text-secondary">
               <TrendingUp className="h-4 w-4" />
               <span className="text-xs font-medium">Categoria líder</span>
+              <InfoPopover ariaLabel="Informações sobre Categoria líder">
+                <div className="space-y-2 text-sm text-text-secondary">
+                  <p className="font-semibold text-text-primary">Categoria líder</p>
+                  <p>A categoria de produto com <span className="font-medium text-text-primary">maior receita total</span> no período, com o valor acumulado exibido abaixo.</p>
+                  <p>Usa o preço de tabela dos produtos (antes de descontos). Clique em qualquer categoria no ranking para ver os produtos individuais.</p>
+                </div>
+              </InfoPopover>
             </div>
             <div className="text-xl font-bold text-text-primary leading-snug">
               {formatCurrencyCompact(kpiData.top_category_revenue)}
@@ -220,6 +235,13 @@ export function VendasPorCategoriaSection({
             <div className="flex items-center gap-2 text-text-secondary">
               <ShoppingBag className="h-4 w-4" />
               <span className="text-xs font-medium">Itens vendidos</span>
+              <InfoPopover ariaLabel="Informações sobre Itens vendidos">
+                <div className="space-y-2 text-sm text-text-secondary">
+                  <p className="font-semibold text-text-primary">Itens vendidos</p>
+                  <p>Total de linhas de produto nas orders do período — cada item de pacote, adicional ou upgrade conta como 1.</p>
+                  <p>Reflete o volume de itens contratados, não o número de festas. Uma festa pode ter vários itens.</p>
+                </div>
+              </InfoPopover>
             </div>
             <div className="text-2xl font-bold text-text-primary">
               {kpiData.total_items.toLocaleString('pt-BR')}

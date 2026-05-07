@@ -6,6 +6,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip,
 } from 'recharts'
 import { Skeleton } from '@/components/ui/skeleton'
+import { InfoPopover } from '@/components/ui/info-popover'
 import type { BIConversionRow } from '@/hooks/use-bi-conversion'
 import type { SalesMetricsDataPoint } from '@/hooks/use-bi-sales-metrics'
 
@@ -91,9 +92,19 @@ export function BITrendCharts({ conversionRows, salesRows, isLoading }: Props) {
 
       {/* ── Conversão ao longo do tempo ────────────────── */}
       <div className="rounded-xl border border-border-default bg-card p-4 space-y-3">
-        <h3 className="text-sm font-semibold text-text-primary">
-          Conversão ao longo do tempo
-        </h3>
+        <div className="flex items-center gap-1.5">
+          <h3 className="text-sm font-semibold text-text-primary">
+            Conversão ao longo do tempo
+          </h3>
+          <InfoPopover ariaLabel="Informações sobre Conversão ao longo do tempo">
+            <div className="space-y-2 text-sm text-text-secondary">
+              <p className="font-semibold text-text-primary">Conversão ao longo do tempo</p>
+              <p>Gráfico de área com a taxa de conversão mensal: percentual de leads criados em cada mês que se tornaram festas fechadas.</p>
+              <p>Útil para identificar sazonalidade e tendências no desempenho comercial.</p>
+              <p className="text-text-tertiary text-xs">O mês atual pode estar incompleto — leads criados nele ainda podem fechar nos próximos dias.</p>
+            </div>
+          </InfoPopover>
+        </div>
         <div ref={convRef} className="w-full">
           {isLoading ? <ChartSkeleton /> : convData.length === 0 ? (
             <div className="h-[280px] flex items-center justify-center text-sm text-text-tertiary">
@@ -152,9 +163,19 @@ export function BITrendCharts({ conversionRows, salesRows, isLoading }: Props) {
 
       {/* ── Receita ao longo do tempo ──────────────────── */}
       <div className="rounded-xl border border-border-default bg-card p-4 space-y-3">
-        <h3 className="text-sm font-semibold text-text-primary">
-          Receita ao longo do tempo
-        </h3>
+        <div className="flex items-center gap-1.5">
+          <h3 className="text-sm font-semibold text-text-primary">
+            Receita ao longo do tempo
+          </h3>
+          <InfoPopover ariaLabel="Informações sobre Receita ao longo do tempo">
+            <div className="space-y-2 text-sm text-text-secondary">
+              <p className="font-semibold text-text-primary">Receita ao longo do tempo</p>
+              <p>Gráfico de barras com a receita total mensal dos deals <span className="font-medium text-text-primary">ganhos</span> cujo lead foi criado em cada mês.</p>
+              <p>Usa o valor negociado registrado no Ploomes. Permite identificar meses de maior faturamento e tendências de crescimento.</p>
+              <p className="text-text-tertiary text-xs">Diferente da receita por produto (Vendas Realizadas), que usa preço de tabela dos pedidos.</p>
+            </div>
+          </InfoPopover>
+        </div>
         <div ref={revRef} className="w-full">
           {isLoading ? <ChartSkeleton /> : revData.length === 0 ? (
             <div className="h-[280px] flex items-center justify-center text-sm text-text-tertiary">

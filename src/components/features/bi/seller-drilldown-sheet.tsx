@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/tabs'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
+import { InfoPopover } from '@/components/ui/info-popover'
 import { DrilldownDealCard } from './drilldown-deal-card'
 import { cn } from '@/lib/utils'
 import { useBISellerHistory } from '@/hooks/use-bi-seller-history'
@@ -222,7 +223,7 @@ export function SellerDrilldownSheet({ isOpen, onClose, seller, unitId, periodMo
 
         {/* Extras */}
         <div className="px-4 py-2 flex items-center gap-4 text-xs text-text-tertiary border-b border-border-default shrink-0">
-          <span>
+          <span className="flex items-center gap-1">
             <Clock className="w-3.5 h-3.5 inline mr-1" />
             Tempo médio:{' '}
             {seller.won_count > 0 ? (
@@ -233,6 +234,14 @@ export function SellerDrilldownSheet({ isOpen, onClose, seller, unitId, periodMo
                   : '—'}
               </span>
             ) : '—'}
+            <InfoPopover ariaLabel="Informações sobre Tempo médio de fechamento">
+              <div className="space-y-2 text-sm text-text-secondary">
+                <p className="font-semibold text-text-primary">Tempo Médio de Fechamento</p>
+                <p>Média de dias entre a criação do lead no Ploomes e a data do último update do deal — proxy para o tempo real de fechamento.</p>
+                <p>O valor exibido aqui é do <span className="font-medium text-text-primary">último mês</span> do período selecionado.</p>
+                <p className="text-text-tertiary text-xs">⚠️ Deals editados após o fechamento podem distorcer este número. Ver o histórico mensal na aba "Histórico" para a série completa.</p>
+              </div>
+            </InfoPopover>
           </span>
           <span>
             Em aberto:{' '}

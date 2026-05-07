@@ -58,11 +58,7 @@ export function LeadOriginSection({ units, months }: Props) {
           ))}
         </div>
 
-        {/* Disclaimer */}
-        <p className="text-xs text-text-tertiary mt-2">
-          Dados de origem disponíveis a partir de mai/2025. Negócios anteriores podem aparecer
-          em &ldquo;(sem origem)&rdquo; caso o campo não tenha sido preenchido no Ploomes.
-        </p>
+
       </div>
     </div>
   )
