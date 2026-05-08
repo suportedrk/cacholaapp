@@ -1112,6 +1112,35 @@ export default async function Layout({ children }: { children: React.ReactNode }
 
 ---
 
+## KEY LEARNINGS & PRINCIPLES
+
+Decisões técnicas e descobertas que devem guiar implementações futuras. Complementam as REGRAS INVIOLÁVEIS — estas são específicas de domínio (banco, integrações, padrões de query).
+
+---
+
+**pipeline_id NÃO existe em ploomes_deals (Mai/2026 — Fase C)**
+
+`pipeline_id` não existe como coluna em `ploomes_deals`. O sync já filtra deals do funil CACHOLA (id 60000636) na origem, antes de inserir no banco. Por isso não adicionar filtros defensivos por `pipeline_id` em RPCs nem em queries — a coluna não existe e a tentativa de hardening foi descoberta como impossível durante o diagnóstico da Fase C (Mai/2026).
+
+---
+
+**Fonte de verdade para valor de festa: SUM(ploomes_order_products.total) (v1.8.0 — Fase C)**
+
+Divergência sistêmica histórica entre 3 fontes de valor para festa: `deal_amount` (campo manual no Deal), `po.amount` (campo manual no Order) e `SUM(ploomes_order_products.total)` (calculado a partir dos produtos lançados). Fonte de verdade única adotada na Fase C (v1.8.0): `SUM(pop.total)`. Limitação conhecida: Order só existe em deals Ganhos — para deals em aberto/perdidos a única fonte possível continua sendo `deal_amount`, sabidamente subestimado e zerado em ~118 deals ganhos pré-Fase C. Pipeline ativo (em aberto) ainda usa `deal_amount` com cautela; backlog futuro pode endereçar isso.
+
+---
+
+**JOIN canônico Deal → Order → OrderProducts (Migration 070 + 087)**
+
+Padrão de JOIN canônico para qualquer RPC nova que agregar valor de festa, definido em `get_event_sales_summary` (migration 070) e replicado em todas as 11 RPCs da Fase C (migration 087):
+1. `ploomes_deals JOIN ploomes_orders ON po.deal_id = pd.ploomes_deal_id`
+2. `LEFT JOIN ploomes_order_products ON pop.order_id = po.ploomes_order_id`
+3. Somar `SUM(pop.total)`
+
+Quando agregar produtos por deal, usar CTE pré-agregada (`prods`) para evitar explosão cartesiana entre orders e produtos. Quando partir de orders e contar, usar `COUNT(DISTINCT po.ploomes_order_id)` para não inflar contagem pelo LEFT JOIN com produtos. Esse padrão deve ser seguido em qualquer RPC futura que toque BI/Vendas.
+
+---
+
 ## DÉBITOS TÉCNICOS
 
 - **Sellers órfãos:** sync de sellers deve garantir que todo `owner_id` que aparece em
