@@ -12,7 +12,7 @@
 
 - **Metodologia:** Vibe Coding — Claude planeja + implementa, Bruno testa + valida
 - **Problema resolvido:** Informações espalhadas em WhatsApp, planilhas e cadernos
-- **Versão atual:** v1.7.0 (prod, PR #16 mergeado 07/mai/2026). v1.7.0 corrigiu filtros de período no BI, adicionou 16 tooltips informativos e novo componente BIBreakdownByUnit. v1.5.13 corrigiu destino do clique no Recompra (de `/deal/` para `/contact/`).
+- **Versão atual:** v1.8.0 (prod, PR #17 mergeado 08/mai/2026). v1.8.0 substituiu deal_amount por SUM(ploomes_order_products.total) em 11 RPCs de BI/Vendas (Fase C) — receita BI +54%, ticket médio +54%. v1.7.0 (PR #16, 07/mai/2026) corrigiu filtros de período no BI, adicionou 16 tooltips informativos e novo componente BIBreakdownByUnit. v1.5.13 corrigiu destino do clique no Recompra (de `/deal/` para `/contact/`).
 
 ---
 
@@ -703,6 +703,11 @@ export const GLOBAL_VIEWER_ROLES = ['super_admin', 'diretor'] as const satisfies
 - Ganho = status_id=2 OU stage_id=60004787 (Festa Fechada) — consistente em todos os RPCs
 - avg_closing_days = ploomes_last_update − ploomes_create_date (proxy aproximado, não data exata do fechamento)
 - avg_booking_advance_days = event_date − ploomes_create_date (dias antes da festa)
+- **v1.8.0 (08/mai/2026) — Fase C — valor da festa via SUM(produtos):**
+  - Substitui `deal_amount`/`po.amount` por `SUM(ploomes_order_products.total)` em 11 RPCs (042 sales_metrics, 043 unit_comparison, 051 trio sellers, 055 trio sales, 059 trio vendas). Opção A: soma_prod aplicada apenas a deals Ganhos; pipeline ativo mantém deal_amount. Caminho 1: inclui RPCs 055/059.
+  - Bônus: critério de ganho unificado em 051 trio (`status_id=2 OR stage_id=60004787`, igual Migration 086). `get_bi_seller_funnel` reclassifica `stage_id=60004787 AND status_id=1` para bucket ganhos (Ajuste 2).
+  - Impacto produção: receita BI +54% (R$15.3M → R$23.5M), ticket médio +54% (R$21.5k → R$33.2k). Migration 087 + rollback `087_fase_c_rollback.sql`. PR #17.
+
 - **v1.7.0 (07/mai/2026) — Correções e melhorias:**
   - Filtros 3M/6M/12M/Tudo agregam corretamente nos 4 KPI cards (Bug A corrigido)
   - Seletor global de unidade controla todo o BI, incluindo abas Vendedoras e Vendas Realizadas (Bug B corrigido)
@@ -1120,8 +1125,6 @@ export default async function Layout({ children }: { children: React.ReactNode }
   - Antecedência Média de Reserva: card ainda mostra apenas mês corrente; deveria respeitar o filtro de período (variante do Bug A não resolvida)
   - Delta dos 4 KPI cards principais: reintroduzir como "período atual vs período anterior" (removido temporariamente em v1.7.0)
   - Tempo médio no drilldown de vendedora: considera apenas o último mês; alinhar com filtro de período
-  - Fase C — trocar fonte do valor da festa: substituir Amount do Deal pela soma dos produtos vendidos do Deal, em todo o BI (mudança estrutural)
-  - Filtro CACHOLA defensivo nas RPCs do BI: adicionar AND pipeline_id = 60000636 explícito como hardening (hoje proteção depende do sync)
 - **Backup hardening — On the horizon (não urgente):**
   - `backup_log` só registra `_db.sql.gz`. `_storage.tar.gz` e `_config.tar.gz` não têm
     registro → a página `/admin/backups` e o cron `backup-check` não detectam falha nesses dois.
