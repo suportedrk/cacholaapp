@@ -151,6 +151,16 @@ export default function BIPage() {
     return wSum / weight
   })()
 
+  const periodAdvance  = (() => {
+    const weight = salesRows.reduce((s, r) => s + r.won_deals, 0)
+    if (weight === 0) return null
+    const wSum = salesRows.reduce(
+      (s, r) => (r.avg_booking_advance_days != null ? s + r.avg_booking_advance_days * r.won_deals : s),
+      0,
+    )
+    return wSum / weight
+  })()
+
   const convValue    = periodConvRate != null ? `${periodConvRate.toFixed(1)}%` : '—'
   const closingValue = periodClosing  != null ? `${Math.round(periodClosing)} dias` : '—'
   const ticketValue  = formatCurrency(periodTicket != null && periodTicket > 0 ? periodTicket : null)
@@ -248,10 +258,6 @@ export default function BIPage() {
       avg_booking_advance_days: s?.avg_booking_advance_days ?? null,
     }
   })
-
-  // ── Antecedência info ─────────────────────────────────────
-  const advanceCurrent  = salesMetrics.data?.currentMonth?.avg_booking_advance_days
-  const advancePrevious = salesMetrics.data?.previousMonth?.avg_booking_advance_days
 
   const canExport = !!conversion.data && !!salesMetrics.data
 
@@ -439,18 +445,13 @@ export default function BIPage() {
                 </div>
               </InfoPopover>
             </div>
-            {advanceCurrent != null ? (
+            {periodAdvance != null ? (
               <p className="text-sm text-text-secondary mt-0.5">
                 Clientes fecham em média{' '}
                 <span className="font-semibold text-text-primary">
-                  {Math.round(advanceCurrent)} dias
+                  {Math.round(periodAdvance)} dias
                 </span>{' '}
                 antes da festa.
-                {advancePrevious != null && (
-                  <span className="text-text-tertiary">
-                    {' '}Mês passado: {Math.round(advancePrevious)} dias.
-                  </span>
-                )}
               </p>
             ) : (
               <p className="text-sm text-text-secondary mt-0.5">
