@@ -19,7 +19,7 @@ import {
 import Link from 'next/link'
 import { useState } from 'react'
 import { PageHeader } from '@/components/shared/page-header'
-import { KpiCard } from '@/components/features/dashboard/kpi-card'
+import { KpiCard, TrendBadge } from '@/components/features/dashboard/kpi-card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
@@ -43,6 +43,7 @@ import { BIBreakdownByUnit } from '@/components/features/bi/bi-breakdown-by-unit
 import { exportBIReport } from '@/lib/bi/export-bi-report'
 import { BI_ATENDIMENTO_ROLES, BI_VENDAS_ROLES, hasRole } from '@/config/roles'
 import { InfoPopover } from '@/components/ui/info-popover'
+import { buildBIPrevRange } from '@/lib/bi/build-bi-periods'
 
 // ── Formatting helpers ────────────────────────────────────────
 
@@ -72,6 +73,11 @@ function formatCurrencyCompact(value: number | null | undefined): string {
   if (value >= 1_000_000) return `R$ ${(value / 1_000_000).toFixed(1)}M`
   if (value >= 1_000)     return `R$ ${(value / 1_000).toFixed(1)}k`
   return formatCurrency(value)
+}
+
+const calcTrendPct = (curr: number | null, prev: number | null): number | null => {
+  if (curr == null || prev == null || prev === 0) return null
+  return Math.round(((curr - prev) / prev) * 100)
 }
 
 // ── Loading skeleton ──────────────────────────────────────────
@@ -107,8 +113,9 @@ export default function BIPage() {
   const [selectedTab, setSelectedTab]       = useState('visao-geral')
 
   // +1 so we always have the previous month available for trend calculation
-  const conversion     = useBIConversionData(selectedMonths + 1)
-  const salesMetrics   = useBISalesMetrics(selectedMonths + 1)
+  const prevRange    = buildBIPrevRange(selectedMonths)
+  const conversion   = useBIConversionData(selectedMonths + 1, undefined, prevRange?.prevStart, prevRange?.prevEnd)
+  const salesMetrics = useBISalesMetrics(selectedMonths + 1, undefined, prevRange?.prevStart, prevRange?.prevEnd)
   const funnel         = useBIFunnelData()
   const unitComparison = useBIUnitComparison(selectedMonths)
   const { activeUnit } = useUnitStore()
@@ -160,6 +167,13 @@ export default function BIPage() {
     )
     return wSum / weight
   })()
+
+  // ── Period-vs-prior trends (prev_* vindos do backend) ──────────
+  const trendRevenue  = calcTrendPct(periodRevenue,  salesMetrics.data?.prevRevenue   ?? null)
+  const trendTicket   = calcTrendPct(periodTicket,   salesMetrics.data?.prevAvgTicket ?? null)
+  const trendClosing  = calcTrendPct(periodClosing,  salesMetrics.data?.prevAvgClosing ?? null)
+  const trendAdvance  = calcTrendPct(periodAdvance,  salesMetrics.data?.prevAvgAdvance ?? null)
+  const trendConvRate = calcTrendPct(periodConvRate, conversion.data?.prevConvRate    ?? null)
 
   const convValue    = periodConvRate != null ? `${periodConvRate.toFixed(1)}%` : '—'
   const closingValue = periodClosing  != null ? `${Math.round(periodClosing)} dias` : '—'
@@ -348,6 +362,7 @@ export default function BIPage() {
               iconClass="icon-brand"
               strokeColor={CHART_COLORS.primary}
               spark={conversion.data?.spark ?? []}
+              trend={trendConvRate}
               href="/bi"
               infoContent={
                 <div className="space-y-2 text-sm text-text-secondary">
@@ -367,6 +382,7 @@ export default function BIPage() {
               iconClass="icon-blue"
               strokeColor="#6B9E8B"
               spark={salesMetrics.data?.sparkClosing ?? []}
+              trend={trendClosing}
               invertTrend
               href="/bi"
               infoContent={
@@ -387,6 +403,7 @@ export default function BIPage() {
               iconClass="icon-green"
               strokeColor={CHART_COLORS.eventConfirmed}
               spark={salesMetrics.data?.sparkTicket ?? []}
+              trend={trendTicket}
               href="/bi"
               infoContent={
                 <div className="space-y-2 text-sm text-text-secondary">
@@ -406,6 +423,7 @@ export default function BIPage() {
               iconClass="icon-amber"
               strokeColor="#D4A858"
               spark={salesMetrics.data?.sparkRevenue ?? []}
+              trend={trendRevenue}
               href="/bi"
               infoContent={
                 <div className="space-y-2 text-sm text-text-secondary">
@@ -444,6 +462,7 @@ export default function BIPage() {
                   <p className="text-text-tertiary text-xs">⚠️ Deals sem data de festa cadastrada no Ploomes são excluídos deste cálculo.</p>
                 </div>
               </InfoPopover>
+              <TrendBadge trend={trendAdvance} />
             </div>
             {periodAdvance != null ? (
               <p className="text-sm text-text-secondary mt-0.5">

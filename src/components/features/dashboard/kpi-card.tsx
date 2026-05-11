@@ -12,7 +12,7 @@ import type { SparkPoint } from '@/hooks/use-dashboard'
 
 // ── Trend badge ────────────────────────────────────────────────
 
-function TrendBadge({
+export function TrendBadge({
   trend,
   invertTrend = false,
 }: {
