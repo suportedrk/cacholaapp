@@ -28,19 +28,16 @@ export type BISalesMetricsData = {
   sparkRevenue: SparkPoint[]
   sparkTicket: SparkPoint[]
   sparkClosing: SparkPoint[]
-  /** % change vs previous month (null when no prior data) */
-  trendRevenue: number | null
-  /** % change vs previous month for avg ticket */
-  trendTicket: number | null
-  /** % change vs previous month for avg closing days (invertTrend: less = better) */
-  trendClosing: number | null
-}
-
-// ── Helpers ───────────────────────────────────────────────────
-
-function trendPct(curr: number | null, prev: number | null): number | null {
-  if (curr == null || prev == null || prev === 0) return null
-  return Math.round(((curr - prev) / prev) * 100)
+  /** Aggregated prev-period revenue (null when no prev dates supplied or 'Tudo' selected) */
+  prevRevenue: number | null
+  /** Aggregated prev-period won deals */
+  prevWonDeals: number | null
+  /** Aggregated prev-period avg ticket */
+  prevAvgTicket: number | null
+  /** Aggregated prev-period avg closing days */
+  prevAvgClosing: number | null
+  /** Aggregated prev-period avg booking advance days */
+  prevAvgAdvance: number | null
 }
 
 // ── Hook ──────────────────────────────────────────────────────
@@ -50,14 +47,20 @@ function trendPct(curr: number | null, prev: number | null): number | null {
  * Metrics: revenue, avg ticket, avg closing days, avg booking advance days.
  * Won = status_id=2 (Ganho) OR stage_id=60004787 (Festa Fechada).
  * Pass unitIdOverride to query a specific unit (e.g. in per-unit breakdown).
+ * Pass prevStart/prevEnd (ISO "YYYY-MM-DD") to receive prev_* period aggregates.
  */
-export function useBISalesMetrics(months = 7, unitIdOverride?: string | null) {
+export function useBISalesMetrics(
+  months = 7,
+  unitIdOverride?: string | null,
+  prevStart?: string | null,
+  prevEnd?: string | null,
+) {
   const { activeUnitId: storeUnitId } = useUnitStore()
   const activeUnitId = unitIdOverride !== undefined ? unitIdOverride : storeUnitId
   const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
 
   return useQuery({
-    queryKey: ['bi', 'sales-metrics', activeUnitId, months],
+    queryKey: ['bi', 'sales-metrics', activeUnitId, months, prevStart, prevEnd],
     enabled: isSessionReady,
     staleTime: 5 * 60 * 1000,
     retry: (count, err: { status?: number } | null) =>
@@ -66,8 +69,10 @@ export function useBISalesMetrics(months = 7, unitIdOverride?: string | null) {
       const supabase = createClient()
 
       const { data, error } = await supabase.rpc('get_bi_sales_metrics', {
-        p_unit_id: activeUnitId ?? null,
-        p_months: months,
+        p_unit_id:    activeUnitId ?? null,
+        p_months:     months,
+        p_prev_start: prevStart ?? null,
+        p_prev_end:   prevEnd   ?? null,
       })
 
       if (error) throw { status: error.code, message: error.message }
@@ -84,6 +89,15 @@ export function useBISalesMetrics(months = 7, unitIdOverride?: string | null) {
       const sparkTicket:  SparkPoint[] = rows.map((r) => ({ v: r.avg_ticket  ?? 0 }))
       const sparkClosing: SparkPoint[] = rows.map((r) => ({ v: r.avg_closing_days ?? 0 }))
 
+      // prev_* are scalar values repeated in every row — extract from first row with data
+      const anyRow = (data as (SalesMetricsDataPoint & {
+        prev_revenue: number | null
+        prev_won_deals: number | null
+        prev_avg_ticket: number | null
+        prev_avg_closing_days: number | null
+        prev_avg_advance_days: number | null
+      })[] | null)?.[0] ?? null
+
       return {
         rows,
         currentMonth,
@@ -91,9 +105,11 @@ export function useBISalesMetrics(months = 7, unitIdOverride?: string | null) {
         sparkRevenue,
         sparkTicket,
         sparkClosing,
-        trendRevenue: trendPct(currentMonth?.total_revenue ?? null, previousMonth?.total_revenue ?? null),
-        trendTicket:  trendPct(currentMonth?.avg_ticket    ?? null, previousMonth?.avg_ticket    ?? null),
-        trendClosing: trendPct(currentMonth?.avg_closing_days ?? null, previousMonth?.avg_closing_days ?? null),
+        prevRevenue:    anyRow?.prev_revenue          ?? null,
+        prevWonDeals:   anyRow?.prev_won_deals        ?? null,
+        prevAvgTicket:  anyRow?.prev_avg_ticket       ?? null,
+        prevAvgClosing: anyRow?.prev_avg_closing_days ?? null,
+        prevAvgAdvance: anyRow?.prev_avg_advance_days ?? null,
       }
     },
   })
