@@ -107,9 +107,9 @@ export interface Database {
       get_event_conflicts:           { Args: { p_unit_id: string }; Returns: { event_id_a: string; event_id_b: string; conflict_date: string; gap_minutes: number }[] }
       get_conflicting_event_ids:     { Args: { p_unit_id: string }; Returns: { event_id: string }[] }
       // ── BI — Conversão por mês (Migration 041) ──────────────────────────────
-      get_bi_conversion_data:        { Args: { p_unit_id?: string | null; p_months?: number }; Returns: { month: string; total_leads: number; won_leads: number; conversion_rate: number | null }[] }
+      get_bi_conversion_data:        { Args: { p_unit_id?: string | null; p_months?: number; p_prev_start?: string | null; p_prev_end?: string | null }; Returns: { month: string; total_leads: number; won_leads: number; conversion_rate: number | null; prev_total_leads: number | null; prev_won_leads: number | null; prev_conversion_rate: number | null }[] }
       // ── BI — Métricas de vendas por mês (Migration 042) ─────────────────────
-      get_bi_sales_metrics:          { Args: { p_unit_id?: string | null; p_months?: number }; Returns: { month: string; won_deals: number; total_revenue: number; avg_ticket: number | null; avg_closing_days: number | null; avg_booking_advance_days: number | null }[] }
+      get_bi_sales_metrics:          { Args: { p_unit_id?: string | null; p_months?: number; p_prev_start?: string | null; p_prev_end?: string | null }; Returns: { month: string; won_deals: number; total_revenue: number; avg_ticket: number | null; avg_closing_days: number | null; avg_booking_advance_days: number | null; prev_revenue: number | null; prev_won_deals: number | null; prev_avg_ticket: number | null; prev_avg_closing_days: number | null; prev_avg_advance_days: number | null }[] }
       // ── BI — Funil por stage (Migration 043) ────────────────────────────────
       get_bi_funnel_data:            { Args: { p_unit_id?: string | null }; Returns: { stage_id: number; stage_name: string; total: number; em_aberto: number; ganhos: number; perdidos: number }[] }
       // ── BI — Comparativo entre unidades (Migration 043) ─────────────────────

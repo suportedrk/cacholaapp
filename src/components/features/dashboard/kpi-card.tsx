@@ -28,7 +28,7 @@ function TrendBadge({
   if (trend > 0) {
     return (
       <span
-        title="Comparado com o mês anterior"
+        title="Comparado com o período anterior"
         className={cn(
           'inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5',
           'text-[11px] font-semibold leading-none',
@@ -46,7 +46,7 @@ function TrendBadge({
   if (trend < 0) {
     return (
       <span
-        title="Comparado com o mês anterior"
+        title="Comparado com o período anterior"
         className={cn(
           'inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5',
           'text-[11px] font-semibold leading-none',
@@ -63,7 +63,7 @@ function TrendBadge({
 
   return (
     <span
-      title="Comparado com o mês anterior"
+      title="Comparado com o período anterior"
       className={cn(
         'inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5',
         'text-[11px] font-semibold leading-none',
