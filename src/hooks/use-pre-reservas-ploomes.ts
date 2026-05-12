@@ -61,7 +61,7 @@ export function usePreReservasPloomes(startDate: string, endDate: string) {
 
       return ((data ?? []) as PreReservaPloomesRow[]).map((r) => ({
         id:             r.id,
-        title:          r.client_name ?? r.deal_title ?? 'Sem nome',
+        title:          r.deal_title ?? r.client_name ?? 'Sem nome',
         date:           r.date,
         start_time:     r.start_time ? r.start_time.substring(0, 5) : undefined,
         end_time:       r.end_time   ? r.end_time.substring(0, 5)   : undefined,
