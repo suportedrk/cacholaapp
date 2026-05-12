@@ -71,10 +71,11 @@ public/workbox-*.js.map
 public/swe-worker-*.js
 public/swe-worker-*.js.map
 
-# Claude — ignorar apenas o que é pessoal/local
-.claude/worktrees/
-.claude/settings.local.json
-.claude/memory/
+# ============================================================
+# CLAUDE CODE — ignora tudo, mas mantém skills versionadas
+# ============================================================
+.claude/*
+!.claude/skills/
 
 # ============================================================
 # SYNC LOCAL — dumps temporários (contêm dados reais anonimizados)
@@ -89,3 +90,30 @@ tmp/cachola-dump-*.sql.gz
 scripts/create-prod-test-users-*.sql
 scripts/delete-prod-test-users-*.sql
 .local-refs/
+
+# ============================================================
+# EDITORES
+# ============================================================
+.vscode/
+
+# ============================================================
+# SCRIPTS AD-HOC NA RAIZ
+# Operações pontuais; podem conter credenciais — nunca versionar.
+# Barra inicial = só na raiz, não afeta scripts/ ou supabase/.
+# ============================================================
+/*.py
+/*.sh
+/*.log
+/*.out
+/deploy_out.txt
+/deploy_output.txt
+
+# ============================================================
+# DOCS COM CREDENCIAIS
+# ============================================================
+docs/SSH VPS.txt
+
+# ============================================================
+# IMAGENS DUPLICADAS (backups manuais de ícones)
+# ============================================================
+public/icons/*Copia*
