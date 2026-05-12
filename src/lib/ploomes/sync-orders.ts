@@ -17,7 +17,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database.types'
 import { ploomesGet } from './client'
-import { loadPloomesConfig } from './sync'
+import { loadPloomesConfig, resolveUnitId } from './sync'
 
 type AdminClient = SupabaseClient<Database>
 
@@ -45,6 +45,11 @@ interface PloomesOrderProduct {
   OrderDate?: string
 }
 
+interface PloomesOrderOtherProperty {
+  FieldKey?: string
+  ObjectValueName?: string | null
+}
+
 interface PloomesOrder {
   Id: number
   OrderNumber?: number
@@ -64,6 +69,16 @@ interface PloomesOrder {
   Owner?: PloomesOrderOwner
   Creator?: PloomesOrderOwner
   Products?: PloomesOrderProduct[]
+  OtherProperties?: PloomesOrderOtherProperty[]
+}
+
+// FieldKey da "Unidade Escolhida" no Order (fonte de verdade para pré-reservas)
+const ORDER_FIELD_KEY_CHOSEN_UNIT = 'order_EDD14E93-ECEB-4EEE-A362-80416A78E61D'
+
+function extractChosenUnitName(order: PloomesOrder): string | undefined {
+  return order.OtherProperties?.find(
+    (p) => p.FieldKey === ORDER_FIELD_KEY_CHOSEN_UNIT,
+  )?.ObjectValueName ?? undefined
 }
 
 interface ProductCatalogEntry {
@@ -226,7 +241,7 @@ export async function syncOrders(
     while (true) {
       const queryParts = [
         `$filter=${dateField} ge ${startIso} and ${dateField} lt ${endIso}`,
-        `$expand=Owner,Creator,Products`,
+        `$expand=Owner,Creator,Products,OtherProperties`,
         `$top=${pageSize}`,
         `$skip=${skip}`,
         `$orderby=${dateField} asc`,
@@ -259,6 +274,12 @@ export async function syncOrders(
           }
 
           const unitId = unitResult.unitId
+
+          // 5b. Resolver chosen_unit_id (Unidade Escolhida do Order, FieldKey EDD14E93)
+          const chosenUnitName = extractChosenUnitName(order)
+          const chosenUnitId   = chosenUnitName
+            ? await resolveUnitId(supabase, chosenUnitName)
+            : null
 
           // 6. Normalizar data do Order
           const orderDate = order.Date
@@ -295,6 +316,7 @@ export async function syncOrders(
                 document_url:        order.DocumentUrl ?? null,
                 ploomes_create_date: order.CreateDate ?? null,
                 ploomes_last_update: order.LastUpdateDate ?? null,
+                chosen_unit_id:      chosenUnitId ?? null,
               },
               { onConflict: 'ploomes_order_id' },
             )

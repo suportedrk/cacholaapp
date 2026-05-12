@@ -257,8 +257,17 @@ export async function syncDeals(
           continue
         }
 
-        const unitId = dealUnitId
+        // Preferir unidade do Order (fonte definitiva) quando disponível
+        const { data: orderUnit } = await supabase
+          .from('ploomes_orders')
+          .select('chosen_unit_id')
+          .eq('deal_id', deal.Id!)
+          .not('chosen_unit_id', 'is', null)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
 
+        const unitId = orderUnit?.chosen_unit_id ?? dealUnitId
 
         // Montar payload do evento
         const eventDate = parsed.eventDate ?? new Date().toISOString().substring(0, 10)
