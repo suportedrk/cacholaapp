@@ -74,6 +74,20 @@ pm2 restart cacholaos --update-env
 
 A v1.5.3 também tornou `--update-env` **obrigatório no deploy.yml** — sem isso, mudança de env não chegava aos processos.
 
+## Ordem de deploy com mudança de schema
+
+Quando o deploy envolve mudança de schema do banco (especialmente alteração de assinatura de RPC), a ordem das etapas é crítica. PostgREST cacheia o schema do banco em memória; se o código novo subir antes da migration rodar, a aplicação chama uma RPC com assinatura nova que ainda não existe no banco e o PostgREST responde 404 ou 500.
+
+**Sequência obrigatória:**
+
+1. Aplicar a migration no banco: `docker exec -i supabase-db psql -U postgres -d postgres -f migration.sql`
+2. Recarregar o schema cache: executar `NOTIFY pgrst, 'reload schema';` via psql. PostgREST detecta automaticamente migrations aplicadas por `supabase db push`, mas **não** detecta mudanças aplicadas via `psql` direto.
+3. `npm ci` → `npm run build` → `pm2 restart cacholaos --update-env`
+
+❌ **Anti-padrão:** rodar `npm run build` antes da migration; ou rodar migration via `psql` e esquecer o `NOTIFY pgrst`.
+
+✅ **Correto:** migration → reload schema → build → restart.
+
 ## `npm ci` vs `npm install`
 
 Desde a v1.5.1 o pipeline usa `npm ci`:
