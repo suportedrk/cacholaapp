@@ -669,8 +669,8 @@ function EventosContent() {
           <div className="flex flex-col items-center gap-3 pt-2">
             <p className="text-xs text-muted-foreground">
               {isConflictFilter
-                ? `${displayEvents.length + displayPreReservas.length} item${(displayEvents.length + displayPreReservas.length) !== 1 ? 'ns' : ''} com conflito`
-                : `Exibindo ${displayEvents.length + displayPreReservas.length} de ${total + displayPreReservas.length} item${(total + displayPreReservas.length) !== 1 ? 'ns' : ''}`
+                ? `${displayEvents.length + displayPreReservas.length} ${(displayEvents.length + displayPreReservas.length) !== 1 ? 'itens' : 'item'} com conflito`
+                : `Exibindo ${displayEvents.length + displayPreReservas.length} de ${total + displayPreReservas.length} ${(total + displayPreReservas.length) !== 1 ? 'itens' : 'item'}`
               }
             </p>
             {hasNextPage && !isConflictFilter && (
