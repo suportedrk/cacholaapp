@@ -71,10 +71,12 @@ COMMIT;
 ### Em dev local (Docker)
 
 ```bash
-docker exec -i supabase-db psql -U postgres -d postgres < supabase/migrations/NNN_descritivo.sql
+docker exec -i cacholaos-db psql -U postgres -d postgres < supabase/migrations/NNN_descritivo.sql
 ```
 
 ⚠️ **Sempre antes de `npm run build` ou `npm run dev`.** Se o build precisa de uma coluna nova e ela não existe ainda, build até passa (TS), mas runtime quebra.
+
+⚠️ **Container do banco difere entre ambientes:** em dev local (Windows + Docker Desktop) o container é `cacholaos-db`; em produção (VPS) é `supabase-db`. Copiar exemplos de um contexto para outro causa `Error: No such container`. Os blocos abaixo usam o nome correto de cada contexto — confira antes de executar.
 
 ### Em produção (VPS)
 
@@ -146,6 +148,8 @@ GRANT EXECUTE ON FUNCTION public.get_recompra_aniversario_proximo TO authenticat
 - **`SET search_path = public`** evita ataques de search_path injection.
 - **`GRANT EXECUTE ... TO authenticated`** — sem isso, usuário logado não consegue chamar. (Não conceder a `anon` exceto em casos muito específicos.)
 - **Tipos de retorno (`RETURNS TABLE`) não suportam `record`** com campos nullable bem — use `RETURNS SETOF tipo_concreto` quando possível.
+- ⚠️ **`CREATE OR REPLACE` com nova assinatura cria overload, não substitui** — se já existe `funcao_x(int)` e você faz `CREATE OR REPLACE FUNCTION funcao_x(int, text)`, o PostgreSQL cria uma SEGUNDA função em vez de substituir a primeira. Sintoma: PostgREST/aplicação chama a versão antiga e o comportamento fica não-determinístico. **Sempre `DROP FUNCTION IF EXISTS funcao_x(int);` ANTES** do `CREATE OR REPLACE` quando a assinatura muda.
+- ⚠️ **Aggregates sobre conjunto vazio retornam linha sentinela `(0, NULL)`, não 0 linhas** — `SELECT COUNT(*), SUM(x) FROM cte_vazia` sempre retorna 1 linha; aggregates sem `GROUP BY` sempre retornam exatamente uma linha. Em KPIs do BI, esse "0" aparece como se fosse o valor real e mascara "sem dados". **Padrão:** envolver as expressões agregadas com `CASE WHEN <param> IS NOT NULL THEN <expr> END` para forçar `NULL` quando o filtro/parâmetro é inaplicável, e tratar `NULL` no frontend como "indisponível".
 
 ## Helpers do Cachola já existentes
 
@@ -206,7 +210,7 @@ ON CONFLICT (unit_id) DO NOTHING;
 - [ ] Cabeçalho com objetivo nas primeiras linhas?
 - [ ] `BEGIN; ... COMMIT;` envolvendo tudo?
 - [ ] `IF NOT EXISTS` / `IF EXISTS` onde aplicável?
-- [ ] Testou aplicando em dev local? (`docker exec -i supabase-db psql ...`)
+- [ ] Testou aplicando em dev local? (`docker exec -i cacholaos-db psql ...`)
 - [ ] `tsc --noEmit | grep -v .next` passa? (se tipos no Supabase mudaram)
 - [ ] `npm run build` passa?
 - [ ] Comentários (`COMMENT ON`) em colunas/funções não-óbvias?
