@@ -35,15 +35,21 @@ async function fetchOrderOtherProperties(
   orderId: number,
   userKey: string,
 ): Promise<string | null> {
+  // A API Ploomes não suporta key-based URL Orders(id) — usar $filter
   const url =
-    `https://api2.ploomes.com/Orders(${orderId})?$expand=OtherProperties`
+    `https://api2.ploomes.com/Orders?$filter=Id eq ${orderId}&$expand=OtherProperties`
   const res = await fetch(url, { headers: { 'User-Key': userKey } })
   if (!res.ok) {
     console.warn(`[Ploomes] Order ${orderId} → HTTP ${res.status}`)
     return null
   }
   const json = await res.json()
-  const prop = (json.OtherProperties ?? []).find(
+  const order = (json.value ?? [])[0]
+  if (!order) {
+    console.warn(`[Ploomes] Order ${orderId} não encontrado`)
+    return null
+  }
+  const prop = (order.OtherProperties ?? []).find(
     (p: { FieldKey?: string }) => p.FieldKey === ORDER_FIELD_KEY_CHOSEN_UNIT,
   )
   return (prop?.ObjectValueName as string | null) ?? null
