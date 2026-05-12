@@ -11,6 +11,7 @@ type PreReservaPloomesRow = {
   id: string
   deal_id: number
   unit_id: string
+  unit_source: 'order' | 'deal'
   date: string
   start_time: string | null
   end_time: string | null
@@ -73,6 +74,7 @@ export function usePreReservasPloomes(startDate: string, endDate: string) {
         deal_amount:    r.deal_amount,
         stage_name:     r.stage_name,
         owner_name:     r.owner_name,
+        unit_source:    r.unit_source,
       }))
     },
     enabled: isSessionReady,

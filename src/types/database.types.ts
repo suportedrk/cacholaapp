@@ -981,6 +981,7 @@ export type PloomesOrderRow = {
   document_url:        string | null
   ploomes_create_date: string | null
   ploomes_last_update: string | null
+  chosen_unit_id:      string | null
   created_at:          string
   updated_at:          string
 }

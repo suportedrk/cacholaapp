@@ -57,4 +57,6 @@ export interface CalendarPreReserva {
   stage_name?:     string | null
   /** Nome da vendedora responsável — preenchido quando source === 'ploomes' */
   owner_name?:     string | null
+  /** 'order' = unidade confirmada via Order; 'deal' = unidade provisória do Deal */
+  unit_source?:    'order' | 'deal'
 }

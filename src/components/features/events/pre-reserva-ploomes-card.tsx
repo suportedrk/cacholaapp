@@ -1,8 +1,14 @@
 'use client'
 
 import { memo } from 'react'
-import { Sparkles, Clock, Phone, AlertTriangle, ExternalLink, User } from 'lucide-react'
+import { Sparkles, Clock, Phone, AlertTriangle, ExternalLink, User, LockOpen } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import type { CalendarPreReserva } from '@/types/pre-reservas'
 import type { ConflictType } from './event-card'
 
@@ -39,6 +45,7 @@ export const PreReservaPloomesCard = memo(function PreReservaPloomesCard({
   }
 
   return (
+    <TooltipProvider>
     <button
       type="button"
       onClick={openPloomes}
@@ -85,6 +92,28 @@ export const PreReservaPloomesCard = memo(function PreReservaPloomesCard({
             <Sparkles className="h-2.5 w-2.5 shrink-0" />
             Pré-reserva Ploomes
           </span>
+          {item.unit_source === 'deal' && (
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <span
+                    className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-700 border border-amber-200 dark:bg-amber-900/40 dark:text-amber-400 dark:border-amber-800 cursor-help"
+                    onClick={(e) => e.stopPropagation()}
+                    onMouseDown={(e) => e.stopPropagation()}
+                  >
+                    <LockOpen className="h-2.5 w-2.5 shrink-0" />
+                    Unidade provisória
+                  </span>
+                }
+              />
+              <TooltipContent side="top">
+                <p className="max-w-[220px] text-xs">
+                  Unidade ainda não confirmada via Order no Ploomes.
+                  Pode mudar até o contrato ser assinado.
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          )}
         </div>
       </div>
 
@@ -139,5 +168,6 @@ export const PreReservaPloomesCard = memo(function PreReservaPloomesCard({
         </div>
       )}
     </button>
+    </TooltipProvider>
   )
 })
