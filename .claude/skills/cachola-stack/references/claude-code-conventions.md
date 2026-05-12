@@ -156,7 +156,7 @@ GLOBAL_S3_BUCKET=stub
 ### Migrations em dev
 
 ```bash
-docker exec -i supabase-db psql -U postgres < supabase/migrations/NNN_descricao.sql
+docker exec -i cacholaos-db psql -U postgres < supabase/migrations/NNN_descricao.sql
 ```
 
 Sempre **antes** de `npm run build` ou `npm run dev` para evitar erro de tabela ausente.
