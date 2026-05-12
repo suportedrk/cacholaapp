@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import type { Unit, UserUnit, UserUnitWithUnit, UserRole } from '@/types/database.types'
+// UserRole mantido para hooks que ainda recebem role como parâmetro (useAddUserToUnit, useChangeUserRole)
 import { useAuthReadyStore } from '@/stores/auth-store'
 import { useUnitStore } from '@/stores/unit-store'
 
@@ -60,7 +61,7 @@ export function useMyUnits(userId: string | undefined) {
       const { data, error } = await supabase
         .from('user_units')
         .select(`
-          *,
+          id, user_id, unit_id, is_default, created_at,
           unit:units(id, name, slug, is_active)
         `)
         .eq('user_id', userId!)
@@ -83,7 +84,7 @@ export function useUserUnits(userId: string | undefined) {
       const { data, error } = await supabase
         .from('user_units')
         .select(`
-          *,
+          id, user_id, unit_id, is_default, created_at,
           unit:units(id, name, slug, is_active)
         `)
         .eq('user_id', userId!)
@@ -105,13 +106,13 @@ export function useUnitUsers(unitId: string | undefined) {
       const { data, error } = await supabase
         .from('user_units')
         .select(`
-          *,
-          user:users(id, name, email, avatar_url, is_active)
+          id, user_id, unit_id, is_default, created_at,
+          user:users(id, name, email, avatar_url, is_active, role)
         `)
         .eq('unit_id', unitId!)
         .order('created_at', { ascending: true })
       if (error) throw error
-      return (data ?? []) as unknown as (UserUnit & { user: { id: string; name: string; email: string; avatar_url: string | null; is_active: boolean } })[]
+      return (data ?? []) as unknown as (UserUnit & { user: { id: string; name: string; email: string; avatar_url: string | null; is_active: boolean; role: UserRole } })[]
     },
     enabled: !!unitId,
   })
@@ -149,7 +150,7 @@ export function useCreateUnit() {
         const supabase = createClient()
         const { data } = await supabase
           .from('user_units')
-          .select('*, unit:units(id, name, slug, is_active)')
+          .select('id, user_id, unit_id, is_default, created_at, unit:units(id, name, slug, is_active)')
           .eq('user_id', userId)
           .order('is_default', { ascending: false })
         if (data) {
@@ -227,7 +228,6 @@ export function useAddUserToUnit() {
         .insert({
           user_id:    data.userId,
           unit_id:    data.unitId,
-          role:       data.role,
           is_default: data.isDefault ?? false,
         })
       if (error) throw error
@@ -247,34 +247,6 @@ export function useAddUserToUnit() {
       toast.success('Usuário vinculado à unidade.')
     },
     onError: () => toast.error('Erro ao vincular usuário.'),
-  })
-}
-
-// ─────────────────────────────────────────────────────────────
-// ATUALIZAR ROLE DO USUÁRIO NA UNIDADE
-// ─────────────────────────────────────────────────────────────
-export function useUpdateUserUnitRole() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: async (data: {
-      id: string          // user_units.id
-      userId: string
-      role: UserRole
-      isDefault?: boolean
-    }) => {
-      const supabase = createClient()
-      const { error } = await supabase
-        .from('user_units')
-        .update({ role: data.role, ...(data.isDefault !== undefined && { is_default: data.isDefault }) })
-        .eq('id', data.id)
-      if (error) throw error
-    },
-    onSuccess: (_, { userId }) => {
-      qc.invalidateQueries({ queryKey: ['user-units'] })
-      qc.invalidateQueries({ queryKey: ['user-units', 'user', userId] })
-      toast.success('Papel atualizado!')
-    },
-    onError: () => toast.error('Erro ao atualizar papel.'),
   })
 }
 
@@ -330,7 +302,7 @@ export function useSetDefaultUnit() {
 }
 
 // ─────────────────────────────────────────────────────────────
-// MUDAR CARGO DO USUÁRIO — atualiza users.role + user_units.role + template
+// MUDAR CARGO DO USUÁRIO — atualiza users.role + template de permissões
 // Fase 8 PR 3: chamado pelo modal de confirmação na página de unidades.
 // ─────────────────────────────────────────────────────────────
 export function useChangeUserRole() {
@@ -338,17 +310,15 @@ export function useChangeUserRole() {
   return useMutation({
     mutationFn: async ({
       userId,
-      userUnitId,
       role,
     }: {
       userId: string
-      userUnitId: string
       role: UserRole
     }) => {
       const res = await fetch(`/api/admin/users/${userId}/change-role`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role, user_unit_id: userUnitId }),
+        body: JSON.stringify({ role }),
       })
       if (!res.ok) throw new Error(await res.text())
       return res.json() as Promise<{ ok: boolean; applied: number; role: string }>

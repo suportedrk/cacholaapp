@@ -202,7 +202,6 @@ export type UserUnit = {
   id: string
   user_id: string
   unit_id: string
-  role: UserRole
   is_default: boolean
   created_at: string
 }

@@ -14,11 +14,11 @@ export async function POST(
     if (!guard.ok) return guard.response
 
     const { id: userId } = await params
-    const body = await request.json() as { role: string; user_unit_id: string }
+    const body = await request.json() as { role: string; user_unit_id?: string }
 
-    if (!body.role || !body.user_unit_id) {
+    if (!body.role) {
       return NextResponse.json(
-        { error: 'Campos obrigatórios ausentes: role, user_unit_id.' },
+        { error: 'Campo obrigatório ausente: role.' },
         { status: 400 }
       )
     }
@@ -34,16 +34,6 @@ export async function POST(
 
     if (userErr || !targetUser) {
       return NextResponse.json({ error: 'Usuário não encontrado.' }, { status: 404 })
-    }
-
-    // Atualizar user_units.role (cargo na unidade)
-    const { error: unitErr } = await supabase
-      .from('user_units')
-      .update({ role: body.role as UserRole })
-      .eq('id', body.user_unit_id)
-
-    if (unitErr) {
-      return NextResponse.json({ error: 'Erro ao atualizar vínculo.' }, { status: 500 })
     }
 
     // Atualizar users.role (cargo global — fonte de verdade per Decisão 4)

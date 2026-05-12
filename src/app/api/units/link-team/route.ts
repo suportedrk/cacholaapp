@@ -3,14 +3,12 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
-import type { UserRole } from '@/types/database.types'
 import { hasRole, ADMIN_UNITS_MANAGE_ROLES } from '@/config/roles'
 
 interface LinkTeamPayload {
   unitId: string
   members: Array<{
     userId: string
-    role: UserRole
     isDefault?: boolean
   }>
 }
@@ -40,27 +38,22 @@ export async function POST(req: NextRequest) {
     let updated = 0
 
     for (const member of members) {
-      const { userId, role, isDefault = false } = member
+      const { userId, isDefault = false } = member
 
       // Verificar se já existe vínculo
       const { data: existing } = await supabase
         .from('user_units')
-        .select('id, role')
+        .select('id')
         .eq('unit_id', unitId)
         .eq('user_id', userId)
         .maybeSingle()
 
       if (existing) {
-        // Atualizar role se diferente
-        if (existing.role !== role) {
-          await supabase.from('user_units').update({ role }).eq('id', existing.id)
-          updated++
-        }
+        updated++
       } else {
         await supabase.from('user_units').insert({
           unit_id: unitId,
           user_id: userId,
-          role,
           is_default: isDefault,
         })
         linked++

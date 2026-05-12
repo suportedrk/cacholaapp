@@ -80,7 +80,6 @@ export async function GET(request: Request) {
         id,
         user_id,
         unit_id,
-        role,
         is_default,
         created_at,
         unit:units!user_units_unit_id_fkey (

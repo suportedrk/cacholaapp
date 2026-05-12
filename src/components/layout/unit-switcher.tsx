@@ -20,11 +20,11 @@ function formatSlug(slug: string) {
 
 export function UnitSwitcher() {
   const qc = useQueryClient()
-  const { userUnits, activeUnitId } = useAuth()
+  const { userUnits, activeUnitId, profile } = useAuth()
   const { setActiveUnit } = useUnitStore()
 
-  // Verificar se o usuário pode ver todas as unidades
-  const canViewAll = userUnits.some((u) => hasRole(u.role, GLOBAL_VIEWER_ROLES))
+  // Verificar se o usuário pode ver todas as unidades (usa users.role — fonte de verdade)
+  const canViewAll = hasRole(profile?.role, GLOBAL_VIEWER_ROLES)
 
   const activeUserUnit = userUnits.find((u) => u.unit_id === activeUnitId)
   const activeSlug = (activeUserUnit?.unit as { slug: string } | undefined)?.slug

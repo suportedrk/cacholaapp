@@ -32,7 +32,6 @@ function toSlug(name: string) {
 }
 
 interface PendingRoleChange {
-  userUnitId: string
   userId: string
   userName: string
   currentRole: UserRole
@@ -106,14 +105,14 @@ export default function EditarUnidadePage() {
     )
   }
 
-  function handleRoleSelect(uu: { id: string; user_id: string; role: string }, newRole: string) {
-    if (newRole === uu.role) return
+  function handleRoleSelect(uu: { user_id: string; user?: { role: UserRole } }, newRole: string) {
+    const currentRole = (uu.user?.role ?? 'gerente') as UserRole
+    if (newRole === currentRole) return
     const userName = unitUsers?.find((u) => u.user_id === uu.user_id)?.user?.name ?? 'usuário'
     setPending({
-      userUnitId: uu.id,
       userId: uu.user_id,
       userName,
-      currentRole: uu.role as UserRole,
+      currentRole,
       newRole: newRole as UserRole,
     })
   }
@@ -122,7 +121,6 @@ export default function EditarUnidadePage() {
     if (!pending) return
     await changeRole.mutateAsync({
       userId: pending.userId,
-      userUnitId: pending.userUnitId,
       role: pending.newRole,
     })
     setPending(null)
@@ -271,12 +269,12 @@ export default function EditarUnidadePage() {
                     <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
                   </div>
                   <Select
-                    value={uu.role}
+                    value={uu.user?.role ?? ''}
                     onValueChange={(v) => v && handleRoleSelect(uu, v)}
                   >
                     <SelectTrigger size="sm" className="min-w-[120px]">
                       <span data-slot="select-value" className="flex flex-1 text-left text-xs">
-                        {ROLE_LABELS[uu.role as UserRole] ?? uu.role}
+                        {ROLE_LABELS[uu.user?.role as UserRole] ?? uu.user?.role}
                       </span>
                     </SelectTrigger>
                     <SelectContent>
