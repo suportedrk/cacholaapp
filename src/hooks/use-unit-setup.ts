@@ -138,7 +138,7 @@ export function useUnitTeam(unitId: string | null) {
       const supabase = createClient()
       const { data, error } = await supabase
         .from('user_units')
-        .select('user_id, role')
+        .select('user_id')
         .eq('unit_id', unitId!)
       if (error) throw error
       return data ?? []

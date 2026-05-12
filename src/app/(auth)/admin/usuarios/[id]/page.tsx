@@ -12,7 +12,7 @@ import {
 import { StatusBadge } from '@/components/shared/status-badge'
 import { UserAvatar } from '@/components/shared/user-avatar'
 import { useUser, useUpdateUser, useDeactivateUser, useReactivateUser } from '@/hooks/use-users'
-import { useUserUnits, useRemoveUserFromUnit, useUpdateUserUnitRole } from '@/hooks/use-units'
+import { useUserUnits, useRemoveUserFromUnit, useChangeUserRole } from '@/hooks/use-units'
 import { useAuth } from '@/hooks/use-auth'
 import { useStartImpersonate } from '@/hooks/use-impersonate'
 import { ROLE_LABELS, ROUTES } from '@/lib/constants'
@@ -30,7 +30,7 @@ export default function EditarUsuarioPage() {
   const reactivateUser = useReactivateUser()
   const { data: userUnits } = useUserUnits(id)
   const { mutate: removeFromUnit } = useRemoveUserFromUnit()
-  const { mutate: updateRole } = useUpdateUserUnitRole()
+  const { mutate: changeRole } = useChangeUserRole()
 
   // "Ver como" — apenas para super_admin real
   const { realProfile } = useAuth()
@@ -229,12 +229,12 @@ export default function EditarUsuarioPage() {
                     <span className="text-xs text-primary font-medium shrink-0">Padrão</span>
                   )}
                   <Select
-                    value={uu.role}
-                    onValueChange={(v) => v && updateRole({ id: uu.id, userId: uu.user_id, role: v as UserRole })}
+                    value={user?.role ?? ''}
+                    onValueChange={(v) => v && changeRole({ userId: uu.user_id, role: v as UserRole })}
                   >
                     <SelectTrigger size="sm" className="min-w-[120px]">
                       <span data-slot="select-value" className="flex flex-1 text-left text-xs">
-                        {ROLE_LABELS[uu.role as UserRole] ?? uu.role}
+                        {ROLE_LABELS[user?.role as UserRole] ?? user?.role}
                       </span>
                     </SelectTrigger>
                     <SelectContent>
