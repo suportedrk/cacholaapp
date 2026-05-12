@@ -65,7 +65,7 @@ async function resolveUnitId(
   const { data } = await (supabase as any)
     .from('ploomes_unit_mapping')
     .select('unit_id')
-    .eq('ploomes_unit_name', unitName)
+    .eq('ploomes_value', unitName)
     .maybeSingle()
   return data?.unit_id ?? null
 }
