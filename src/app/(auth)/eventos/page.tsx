@@ -576,6 +576,20 @@ function EventosContent() {
               }
               action={{ label: 'Limpar filtro', onClick: () => setActiveFilter(null) }}
             />
+          ) : isPloomesFilter ? (
+            <EmptyState
+              icon={Sparkles}
+              title="Nenhuma pré-reserva Ploomes no período"
+              description="Não há registros para a aba e período selecionados. Tente ajustar o filtro de data ou desative o filtro exclusivo."
+              action={{ label: 'Limpar filtro', onClick: () => setActiveFilter(null) }}
+            />
+          ) : isDiretoriaFilter ? (
+            <EmptyState
+              icon={Shield}
+              title="Nenhuma pré-venda Diretoria no período"
+              description="Não há registros para a aba e período selecionados. Tente ajustar o filtro de data ou desative o filtro exclusivo."
+              action={{ label: 'Limpar filtro', onClick: () => setActiveFilter(null) }}
+            />
           ) : tab !== 'all' ? (
             <EmptyState
               icon={CalendarX}
@@ -670,10 +684,15 @@ function EventosContent() {
             <p className="text-xs text-muted-foreground">
               {isConflictFilter
                 ? `${displayEvents.length + displayPreReservas.length} ${(displayEvents.length + displayPreReservas.length) !== 1 ? 'itens' : 'item'} com conflito`
-                : `Exibindo ${displayEvents.length + displayPreReservas.length} de ${total + displayPreReservas.length} ${(total + displayPreReservas.length) !== 1 ? 'itens' : 'item'}`
+                : (() => {
+                    const isExclusive = isPloomesFilter || isDiretoriaFilter
+                    const shown      = isExclusive ? displayPreReservas.length : displayEvents.length + displayPreReservas.length
+                    const totalCount = isExclusive ? displayPreReservas.length : total + displayPreReservas.length
+                    return `Exibindo ${shown} de ${totalCount} ${totalCount !== 1 ? 'itens' : 'item'}`
+                  })()
               }
             </p>
-            {hasNextPage && !isConflictFilter && (
+            {hasNextPage && !isConflictFilter && !isPloomesFilter && !isDiretoriaFilter && (
               <Button
                 variant="outline"
                 onClick={() => fetchNextPage()}
