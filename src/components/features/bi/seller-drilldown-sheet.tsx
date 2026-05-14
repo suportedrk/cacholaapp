@@ -495,9 +495,7 @@ export function SellerDrilldownSheet({ isOpen, onClose, seller, unitId, periodMo
               ) : (
                 <div className="space-y-2">
                   {events.data!.map((ev) => {
-                    const eventTitle = ev.birthday_person
-                      ? `${ev.birthday_person}${ev.birthday_age ? ` · ${ev.birthday_age} anos` : ''}`
-                      : ev.title
+                    const eventTitle = ev.title
                     const dateLabel = format(parseISO(`${ev.date}T00:00:00`), "dd 'de' MMM yyyy", { locale: ptBR })
                     return (
                       <Link

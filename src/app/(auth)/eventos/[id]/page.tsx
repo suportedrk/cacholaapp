@@ -292,9 +292,7 @@ export default function EventoDetailPage() {
     { locale: ptBR },
   )
 
-  const displayTitle = event.birthday_person
-    ? `${event.birthday_person}${event.birthday_age ? ` · ${event.birthday_age} anos` : ''}`
-    : event.title
+  const displayTitle = event.title
 
   const completedChecklists = checklists.filter((c) => c.status === 'completed').length
 
@@ -619,7 +617,7 @@ export default function EventoDetailPage() {
         <EventSalesSection eventId={id} />
 
         {/* S4: Prestadores */}
-        <ProvidersSection eventId={id} eventDate={event.date} eventTitle={event.birthday_person || event.title || ''} />
+        <ProvidersSection eventId={id} eventDate={event.date} eventTitle={event.title ?? ''} />
 
         {/* S5: Checklists */}
         <div ref={checklistsSectionRef}>
