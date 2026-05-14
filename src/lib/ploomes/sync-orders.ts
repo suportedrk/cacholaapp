@@ -48,6 +48,7 @@ interface PloomesOrderProduct {
 interface PloomesOrderOtherProperty {
   FieldKey?: string
   ObjectValueName?: string | null
+  IntegerValue?: number | null
 }
 
 interface PloomesOrder {
@@ -75,10 +76,21 @@ interface PloomesOrder {
 // FieldKey da "Unidade Escolhida" no Order (fonte de verdade para pré-reservas)
 const ORDER_FIELD_KEY_CHOSEN_UNIT = 'order_EDD14E93-ECEB-4EEE-A362-80416A78E61D'
 
+// FieldKey de "Convidados contratados" no Order (TypeId=4, IntegerValue)
+// Fonte de verdade para events.guest_count a partir da v1.10.0.
+const ORDER_FIELD_KEY_CONTRACTED_GUESTS = 'order_3620B917-6DCD-4977-824F-F159CC196E29'
+
 function extractChosenUnitName(order: PloomesOrder): string | undefined {
   return order.OtherProperties?.find(
     (p) => p.FieldKey === ORDER_FIELD_KEY_CHOSEN_UNIT,
   )?.ObjectValueName ?? undefined
+}
+
+function extractContractedGuests(order: PloomesOrder): number | null {
+  const prop = order.OtherProperties?.find(
+    (p) => p.FieldKey === ORDER_FIELD_KEY_CONTRACTED_GUESTS,
+  )
+  return prop?.IntegerValue ?? null
 }
 
 interface ProductCatalogEntry {
@@ -317,6 +329,7 @@ export async function syncOrders(
                 ploomes_create_date: order.CreateDate ?? null,
                 ploomes_last_update: order.LastUpdateDate ?? null,
                 chosen_unit_id:      chosenUnitId ?? null,
+                contracted_guests:   extractContractedGuests(order),
               },
               { onConflict: 'ploomes_order_id' },
             )
@@ -328,6 +341,23 @@ export async function syncOrders(
           }
 
           result.ordersUpserted++
+
+          // Push absoluto de guest_count → events (v1.10.0)
+          // Escreve inclusive NULL (quando campo não preenchido no Ploomes),
+          // eliminando o valor antigo do Deal como fonte de confusão.
+          if (order.DealId) {
+            const contractedGuests = extractContractedGuests(order)
+            const { error: guestPushError } = await supabase
+              .from('events')
+              .update({ guest_count: contractedGuests })
+              .eq('ploomes_deal_id', String(order.DealId))
+            if (guestPushError) {
+              console.warn(
+                `[Orders Sync] Falha ao atualizar guest_count para deal ${order.DealId}:`,
+                guestPushError.message,
+              )
+            }
+          }
 
           // 8. Limpar produtos antigos da Order antes de re-inserir
           // Necessário porque o Ploomes reatribui IDs ao editar uma Order,
