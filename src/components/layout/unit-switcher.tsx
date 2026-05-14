@@ -1,7 +1,7 @@
 'use client'
 
 import { useQueryClient } from '@tanstack/react-query'
-import { Building2, ChevronDown, Check, Layers } from 'lucide-react'
+import { ChevronDown, Check, Layers } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,10 +15,6 @@ import { useAuth } from '@/hooks/use-auth'
 import { GLOBAL_VIEWER_ROLES, hasRole } from '@/config/roles'
 import { UnitChip } from '@/components/shared/unit-chip'
 
-function formatSlug(slug: string) {
-  return slug.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
-}
-
 export function UnitSwitcher() {
   const qc = useQueryClient()
   const { userUnits, activeUnitId, profile } = useAuth()
@@ -29,9 +25,6 @@ export function UnitSwitcher() {
 
   const activeUserUnit = userUnits.find((u) => u.unit_id === activeUnitId)
   const activeSlug = (activeUserUnit?.unit as { slug: string } | undefined)?.slug
-  const activeName = activeUnitId === null
-    ? 'Todas as unidades'
-    : activeSlug ? formatSlug(activeSlug) : 'Unidade'
 
   function switchUnit(unitId: string | null) {
     const unitObj = unitId

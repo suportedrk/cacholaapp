@@ -20,10 +20,10 @@ export function UnitChip({ slug, name, size = 'sm', className }: UnitChipProps) 
     : (name ?? slug ?? 'Sem unidade').split(' ').pop() ?? 'Sem unidade'
 
   const colorClasses = isNull
-    ? 'bg-gray-100 text-gray-600 border-gray-200'
+    ? 'bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700'
     : isMoema
-      ? 'bg-terracota-100 text-terracota-700 border-terracota-200'
-      : 'bg-brand-100 text-brand-700 border-brand-200'
+      ? 'bg-terracota-100 text-terracota-700 border-terracota-200 dark:bg-terracota-900/30 dark:text-terracota-300 dark:border-terracota-700'
+      : 'bg-brand-100 text-brand-700 border-brand-200 dark:bg-brand-900/30 dark:text-brand-300 dark:border-brand-700'
 
   const sizeClasses = size === 'md'
     ? 'px-2.5 py-1 text-sm'
