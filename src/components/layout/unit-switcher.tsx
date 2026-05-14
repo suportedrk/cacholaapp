@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils'
 import { useUnitStore } from '@/stores/unit-store'
 import { useAuth } from '@/hooks/use-auth'
 import { GLOBAL_VIEWER_ROLES, hasRole } from '@/config/roles'
+import { UnitChip } from '@/components/shared/unit-chip'
 
 function formatSlug(slug: string) {
   return slug.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
@@ -60,18 +61,25 @@ export function UnitSwitcher() {
         className={cn(
           'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm',
           'text-muted-foreground hover:text-foreground hover:bg-accent',
-          'transition-colors outline-none max-w-[180px]',
+          'transition-colors outline-none max-w-[200px]',
           'focus-visible:ring-2 focus-visible:ring-ring'
         )}
         aria-label="Selecionar unidade"
       >
-        {activeUnitId === null
-          ? <Layers className="w-4 h-4 shrink-0 text-primary" />
-          : <Building2 className="w-4 h-4 shrink-0 text-primary" />
-        }
-        <span className="hidden sm:inline truncate font-medium text-foreground text-xs sm:text-sm">
-          {activeName}
-        </span>
+        {activeUnitId === null ? (
+          <>
+            <Layers className="w-4 h-4 shrink-0 text-primary" />
+            <span className="hidden sm:inline truncate font-medium text-foreground text-xs sm:text-sm">
+              Todas as unidades
+            </span>
+          </>
+        ) : (
+          <UnitChip
+            slug={activeSlug}
+            name={(activeUserUnit?.unit as { name: string } | undefined)?.name}
+            size="sm"
+          />
+        )}
         <ChevronDown className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
       </DropdownMenuTrigger>
 
@@ -101,9 +109,8 @@ export function UnitSwitcher() {
               onClick={() => switchUnit(uu.unit_id)}
               disabled={!unit.is_active}
             >
-              <Building2 className="w-4 h-4 text-muted-foreground" />
-              <span className="flex-1 truncate">{formatSlug(unit.slug)}</span>
-              {uu.unit_id === activeUnitId && <Check className="w-3.5 h-3.5 text-primary" />}
+              <UnitChip slug={unit.slug} name={unit.name} size="sm" className="flex-1" />
+              {uu.unit_id === activeUnitId && <Check className="w-3.5 h-3.5 text-primary shrink-0" />}
             </DropdownMenuItem>
           )
         })}

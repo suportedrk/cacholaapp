@@ -13,6 +13,7 @@ import { auditLog } from '@/lib/audit-client'
 // event_types, packages e venues foram dropadas na migration 030
 const EVENT_WITH_DETAILS_SELECT = `
   *,
+  unit:units(id, name, slug),
   staff:event_staff(
     id,
     role_in_event,
@@ -22,6 +23,7 @@ const EVENT_WITH_DETAILS_SELECT = `
 
 const EVENT_FOR_LIST_SELECT = `
   *,
+  unit:units(id, name, slug),
   staff:event_staff(
     id,
     role_in_event,
