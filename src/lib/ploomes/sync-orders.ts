@@ -342,11 +342,13 @@ export async function syncOrders(
 
           result.ordersUpserted++
 
-          // Push absoluto de guest_count → events (v1.10.0)
-          // Escreve inclusive NULL (quando campo não preenchido no Ploomes),
-          // eliminando o valor antigo do Deal como fonte de confusão.
-          if (order.DealId) {
-            const contractedGuests = extractContractedGuests(order)
+          // Push condicional de guest_count → events (fix v1.10.1)
+          // Só propaga quando a Order tem o campo preenchido. Orders subsequentes
+          // (adicionais sem o campo) não devem zerar o valor de uma Order anterior.
+          // Trade-off: apagar intencionalmente o campo no Ploomes não zera guest_count
+          // automaticamente — comportamento aceito, registrado no backlog.
+          const contractedGuests = extractContractedGuests(order)
+          if (order.DealId && contractedGuests !== null) {
             const { error: guestPushError } = await supabase
               .from('events')
               .update({ guest_count: contractedGuests })
