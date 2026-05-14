@@ -125,7 +125,7 @@ export default function BIPage() {
   const { profile, userUnits } = useAuth()
   const canSeeSellers = hasRole(profile?.role, BI_ATENDIMENTO_ROLES)
   const canSeeVendas  = hasRole(profile?.role, BI_VENDAS_ROLES)
-  const units = userUnits.map((u) => ({ id: u.unit.id, name: u.unit.name }))
+  const units = userUnits.map((u) => ({ id: u.unit.id, name: u.unit.name, slug: u.unit.slug }))
 
   const isLoading = conversion.isLoading || salesMetrics.isLoading || kpis.isLoading
   const isError   = conversion.isError   || salesMetrics.isError

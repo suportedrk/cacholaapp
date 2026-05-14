@@ -1013,6 +1013,7 @@ export type PloomesOrderProductRow = {
 
 // Evento com dados completos para cards e detalhe
 export type EventWithDetails = Event & {
+  unit?: { id: string; name: string; slug: string } | null
   staff: Array<{
     id: string
     role_in_event: string
@@ -1022,6 +1023,7 @@ export type EventWithDetails = Event & {
 
 // Evento para listagem paginada — inclui progresso de checklists
 export type EventForList = Event & {
+  unit?: { id: string; name: string; slug: string } | null
   staff: Array<{
     id: string
     role_in_event: string
