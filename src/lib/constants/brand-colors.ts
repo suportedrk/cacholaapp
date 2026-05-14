@@ -36,6 +36,20 @@ export const BRAND_BEIGE = {
   900: '#665c51',
 } as const
 
+// Terracota (Moema) — para Recharts/jsPDF/e-mail
+export const BRAND_TERRACOTA = {
+  50:  '#fdf4ef',
+  100: '#fae5d6',
+  200: '#f4c9ac',
+  300: '#eca882',
+  400: '#e08b66',
+  500: '#C97B5A',   // terracota-500 (base)
+  600: '#b36441',
+  700: '#A05A3A',   // terracota-700
+  800: '#7d4329',
+  900: '#5e2f1a',
+} as const
+
 // Cores semânticas para gráficos (Recharts)
 export const CHART_COLORS = {
   // Eventos por status
