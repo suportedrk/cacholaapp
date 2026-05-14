@@ -1,6 +1,7 @@
 'use client'
 
 import { cn } from '@/lib/utils'
+import { UnitChip } from '@/components/shared/unit-chip'
 import type { UnitComparisonRow } from '@/hooks/use-bi-unit-comparison'
 
 // ── Types ─────────────────────────────────────────────────────
@@ -105,8 +106,8 @@ export function BIUnitComparison({ rows, months }: Props) {
               className="border-b border-border-default last:border-0 hover:bg-surface-secondary transition-colors"
             >
               {/* Unidade */}
-              <td className="px-4 py-3 font-medium text-text-primary whitespace-nowrap">
-                {row.unit_name}
+              <td className="px-4 py-3 whitespace-nowrap">
+                <UnitChip name={row.unit_name} size="sm" />
               </td>
 
               {/* Leads */}
@@ -179,7 +180,7 @@ export function BIUnitComparison({ rows, months }: Props) {
           key={row.unit_id}
           className="rounded-lg border border-border-default bg-surface-secondary p-3 space-y-2"
         >
-          <p className="text-sm font-semibold text-text-primary">{row.unit_name}</p>
+          <UnitChip name={row.unit_name} size="sm" />
 
           <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
             <div>

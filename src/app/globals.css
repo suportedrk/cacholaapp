@@ -132,6 +132,18 @@
   --color-brand-800: oklch(0.330 0.044 144);
   --color-brand-900: oklch(0.260 0.040 144);
 
+  /* Rampa terracota 50–900 (base: #C97B5A ≈ oklch 0.630 0.102 48) — identidade Moema */
+  --color-terracota-50:  oklch(0.970 0.012 48);
+  --color-terracota-100: oklch(0.940 0.025 48);
+  --color-terracota-200: oklch(0.880 0.050 48);
+  --color-terracota-300: oklch(0.800 0.080 48);
+  --color-terracota-400: oklch(0.720 0.095 48);
+  --color-terracota-500: oklch(0.630 0.102 48); /* ≈ #C97B5A */
+  --color-terracota-600: oklch(0.560 0.090 48);
+  --color-terracota-700: oklch(0.480 0.075 48);
+  --color-terracota-800: oklch(0.400 0.060 48);
+  --color-terracota-900: oklch(0.330 0.045 48);
+
   /* Rampa bege quente 50–900 (base: #E3DAD1 = oklch 0.876 0.026 65) */
   --color-beige-50:  oklch(0.980 0.008 65);
   --color-beige-100: oklch(0.963 0.012 65);

@@ -292,7 +292,8 @@ export async function syncDeals(
           client_email: parsed.clientEmail ?? null,
           birthday_person: parsed.birthdayPerson ?? null,
           birthday_age: parsed.age ?? null,
-          guest_count: parsed.guestCount ?? null,
+          // guest_count removido do sync de Deals (v1.10.0):
+          // fonte de verdade migrada para Order.contracted_guests via sync-orders.ts.
           theme: parsed.theme ?? null,
           notes: parsed.notes ?? null,
           unit_id: unitId,

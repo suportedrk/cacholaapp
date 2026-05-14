@@ -38,6 +38,7 @@ export const DEAL_FIELD_MAP: Record<string, FieldDef> = {
   'deal_FD135180-0186-46F1-8AB7-F0E1C02171B3': { field: 'endTime',            label: 'Horário Fim',           valueKey: 'DateTimeValue',   parser: 'time'   },
   'deal_2C5D41C4-C1AC-41AE-AAB9-CD12F0B61AAD': { field: 'birthdayPerson',     label: 'Aniversariante',        valueKey: 'StringValue',     parser: 'string' },
   'deal_36E32E61-DB58-441A-9788-E63B5C01BCEE': { field: 'age',                label: 'Idade',                 valueKey: 'IntegerValue',    parser: 'number' },
+  // @deprecated v1.10 — fonte de verdade migrada para Order.contracted_guests via sync-orders.ts. Mantido para retrocompatibilidade.
   'deal_05EE1763-7254-4C41-B419-365794B1CA06': { field: 'guestCount',         label: 'Nº Pessoas',            valueKey: 'IntegerValue',    parser: 'number' },
   'deal_A583075F-D19C-4034-A479-36625C621660': { field: 'unitName',           label: 'Unidade',               valueKey: 'ObjectValueName', parser: 'string' },
   'deal_40C1C918-85ED-4B7D-870D-FDE6A4FB5D9D': { field: 'venueName',          label: 'Casa/Espaço',           valueKey: 'ObjectValueName', parser: 'string' },

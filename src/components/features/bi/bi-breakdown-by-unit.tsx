@@ -3,12 +3,13 @@
 import { BarChart3, Clock, Banknote, TrendingUp } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { InfoPopover } from '@/components/ui/info-popover'
+import { UnitChip } from '@/components/shared/unit-chip'
 import { useBIConversionData } from '@/hooks/use-bi-conversion'
 import { useBISalesMetrics } from '@/hooks/use-bi-sales-metrics'
 
 // ── Types ─────────────────────────────────────────────────────
 
-interface UnitOption { id: string; name: string }
+interface UnitOption { id: string; name: string; slug?: string }
 
 interface Props {
   units: UnitOption[]
@@ -34,7 +35,7 @@ function formatCurrencyCompact(v: number | null | undefined): string {
 
 // ── Per-unit KPI block ─────────────────────────────────────────
 
-function UnitKpiBlock({ unitId, unitName, months }: { unitId: string; unitName: string; months: number }) {
+function UnitKpiBlock({ unitId, unitName, unitSlug, months }: { unitId: string; unitName: string; unitSlug?: string; months: number }) {
   // +1 so the hook has the extra month available (same pattern as the main page)
   const conversion   = useBIConversionData(months + 1, unitId)
   const salesMetrics = useBISalesMetrics(months + 1, unitId)
@@ -66,9 +67,9 @@ function UnitKpiBlock({ unitId, unitName, months }: { unitId: string; unitName: 
 
   return (
     <div className="rounded-xl border border-border-default bg-card p-4 space-y-3">
-      <h4 className="text-xs font-semibold text-text-secondary uppercase tracking-wide">
-        {unitName}
-      </h4>
+      <div className="flex items-center gap-2">
+        <UnitChip slug={unitSlug} name={unitName} size="sm" />
+      </div>
 
       {isLoading ? (
         <div className="grid grid-cols-2 gap-3">
@@ -144,7 +145,7 @@ export function BIBreakdownByUnit({ units, months }: Props) {
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {units.map((u) => (
-          <UnitKpiBlock key={u.id} unitId={u.id} unitName={u.name} months={months} />
+          <UnitKpiBlock key={u.id} unitId={u.id} unitName={u.name} unitSlug={u.slug} months={months} />
         ))}
       </div>
     </div>
