@@ -76,12 +76,14 @@ export function NextEventCard({ event, isLoading }: NextEventCardProps) {
           <Clock className="w-3.5 h-3.5 shrink-0" />
           <span>{formatTime(event.start_time)} – {formatTime(event.end_time)}</span>
         </div>
-        {event.guest_count && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Users className="w-3.5 h-3.5 shrink-0" />
-            <span>{event.guest_count} convidados</span>
-          </div>
-        )}
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Users className="w-3.5 h-3.5 shrink-0" />
+          <span>
+            {event.guest_count !== null && event.guest_count !== undefined
+              ? `${event.guest_count} convidados`
+              : 'não definido'}
+          </span>
+        </div>
       </div>
 
       {/* Equipe */}

@@ -25,31 +25,9 @@ import { useEventMaintenances } from '@/hooks/use-maintenance'
 import { AccordionSection } from './components/AccordionSection'
 import { ProvidersSection } from './components/sections/ProvidersSection'
 import { EventSalesSection } from './components/sections/EventSalesSection'
+import { UnitChip } from '@/components/shared/unit-chip'
 import { cn } from '@/lib/utils'
 import type { ChecklistForList } from '@/types/database.types'
-
-// ── Avatar helpers ──────────────────────────────────────────────
-const AVATAR_COLORS = [
-  'bg-primary text-white',
-  'bg-blue-500 text-white',
-  'bg-violet-500 text-white',
-  'bg-amber-600 text-white',
-  'bg-rose-500 text-white',
-  'bg-teal-600 text-white',
-  'bg-orange-500 text-white',
-  'bg-indigo-500 text-white',
-]
-
-function getAvatarColor(name: string): string {
-  const hash = name.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0)
-  return AVATAR_COLORS[hash % AVATAR_COLORS.length]
-}
-
-function getInitials(name: string): string {
-  const parts = name.trim().split(/\s+/)
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-}
 
 // AccordionSection — imported from ./components/AccordionSection
 
@@ -318,10 +296,6 @@ export default function EventoDetailPage() {
     ? `${event.birthday_person}${event.birthday_age ? ` · ${event.birthday_age} anos` : ''}`
     : event.title
 
-  const avatarName     = event.birthday_person || event.client_name || '?'
-  const avatarColor    = getAvatarColor(avatarName)
-  const avatarInitials = getInitials(avatarName)
-
   const completedChecklists = checklists.filter((c) => c.status === 'completed').length
 
   const hasPartyInfo  = !!(event.notes || event.event_category || event.cake_flavor || event.music || event.adult_count || event.kids_under4 || event.kids_over5)
@@ -383,13 +357,10 @@ export default function EventoDetailPage() {
 
           {/* Left: identidade */}
           <div className="flex items-start gap-3 sm:gap-4">
-            <div className={cn(
-              'w-16 h-16 rounded-full shrink-0 flex items-center justify-center text-lg font-bold',
-              avatarColor
-            )}>
-              {avatarInitials}
-            </div>
             <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-2">
+                <UnitChip slug={event.unit?.slug} name={event.unit?.name} size="md" />
+              </div>
               <h1 className="text-xl font-bold text-text-primary leading-tight">
                 {displayTitle}
               </h1>
@@ -427,12 +398,14 @@ export default function EventoDetailPage() {
               <Clock className="w-4 h-4 shrink-0 text-text-tertiary" />
               <span>{formatTime(event.start_time)} – {formatTime(event.end_time)}</span>
             </div>
-            {event.guest_count && (
-              <div className="flex items-center gap-2">
-                <Users className="w-4 h-4 shrink-0 text-text-tertiary" />
-                <span>{event.guest_count} convidados</span>
-              </div>
-            )}
+            <div className="flex items-center gap-2">
+              <Users className="w-4 h-4 shrink-0 text-text-tertiary" />
+              <span>
+                {event.guest_count !== null && event.guest_count !== undefined
+                  ? `${event.guest_count} convidados`
+                  : 'não definido'}
+              </span>
+            </div>
             {event.owner_name && (
               <div className="flex items-center gap-2">
                 <User className="w-4 h-4 shrink-0 text-text-tertiary" />
@@ -457,12 +430,16 @@ export default function EventoDetailPage() {
                 </div>
               )}
               {/* Convidados */}
-              {event.guest_count && (
-                <div className="flex items-start gap-3">
-                  <span className="text-xs text-text-tertiary w-28 shrink-0 pt-0.5">Convidados</span>
-                  <div>
-                    <span className="text-sm text-text-primary">{event.guest_count} pessoas</span>
-                    {!!(event.adult_count || event.kids_under4 || event.kids_over5) && (
+              <div className="flex items-start gap-3">
+                <span className="text-xs text-text-tertiary w-28 shrink-0 pt-0.5">Convidados</span>
+                <div>
+                  <span className="text-sm text-text-primary">
+                    {event.guest_count !== null && event.guest_count !== undefined
+                      ? `${event.guest_count} pessoas`
+                      : 'não definido'}
+                  </span>
+                  {event.guest_count !== null && event.guest_count !== undefined &&
+                    !!(event.adult_count || event.kids_under4 || event.kids_over5) && (
                       <p className="text-xs text-text-tertiary mt-0.5">
                         {[
                           event.adult_count ? `${event.adult_count} adultos` : null,
@@ -470,10 +447,9 @@ export default function EventoDetailPage() {
                           event.kids_under4 ? `${event.kids_under4} crianças ≤4` : null,
                         ].filter(Boolean).join(' · ')}
                       </p>
-                    )}
-                  </div>
+                  )}
                 </div>
-              )}
+              </div>
               {/* Bolo e música */}
               {event.cake_flavor && (
                 <div className="flex items-center gap-3">

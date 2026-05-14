@@ -50,7 +50,9 @@ export function PloomesEventDetails({ event, theme }: Props) {
     {
       icon: <Users className="h-3.5 w-3.5" />,
       label: 'Convidados',
-      value: event.guest_count ? `${event.guest_count} pessoas` : null,
+      value: event.guest_count !== null && event.guest_count !== undefined
+        ? `${event.guest_count} pessoas`
+        : 'não definido',
     },
     {
       icon: <Palette className="h-3.5 w-3.5" />,

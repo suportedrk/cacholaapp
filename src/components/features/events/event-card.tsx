@@ -8,6 +8,7 @@ import { Clock, Users, Phone, Mail, Tag, Handshake, AlertTriangle, User } from '
 export type ConflictType = 'overlap' | 'short_gap' | null
 import { EventStatusBadge } from '@/components/shared/event-status-badge'
 import { PloomeBadge } from '@/components/features/ploomes/ploomes-badge'
+import { UnitChip } from '@/components/shared/unit-chip'
 import { cn } from '@/lib/utils'
 import type { EventWithDetails, EventForList } from '@/types/database.types'
 
@@ -32,28 +33,6 @@ function showNoChecklistWarning(event: EventCardEvent): boolean {
   return isToday(d) || isFuture(startOfDay(d))
 }
 
-// ── Avatar: cor baseada em hash do nome ──────────────────────
-const AVATAR_COLORS = [
-  'bg-primary text-white',      // brand
-  'bg-blue-500 text-white',
-  'bg-violet-500 text-white',
-  'bg-amber-600 text-white',
-  'bg-rose-500 text-white',
-  'bg-teal-600 text-white',
-  'bg-orange-500 text-white',
-  'bg-indigo-500 text-white',
-]
-
-function getAvatarColor(name: string): string {
-  const hash = name.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0)
-  return AVATAR_COLORS[hash % AVATAR_COLORS.length]
-}
-
-function getInitials(name: string): string {
-  const parts = name.trim().split(/\s+/)
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-}
 
 interface EventCardProps {
   event: EventCardEvent
@@ -77,10 +56,7 @@ export const EventCard = memo(function EventCard({ event, conflictType = null }:
     ? (event as EventForList).providers_count?.[0]?.count ?? 0
     : 0
 
-  const avatarName     = event.birthday_person || event.client_name || '?'
-  const avatarColor    = getAvatarColor(avatarName)
-  const avatarInitials = getInitials(avatarName)
-  const hasContact     = !!(event.client_phone || event.client_email)
+  const hasContact = !!(event.client_phone || event.client_email)
 
   return (
     <Link
@@ -127,16 +103,8 @@ export const EventCard = memo(function EventCard({ event, conflictType = null }:
         </div>
       </div>
 
-      {/* Corpo: avatar + informações principais */}
+      {/* Corpo: informações principais */}
       <div className="flex items-start gap-3">
-        {/* Avatar de 48px com iniciais */}
-        <div className={cn(
-          'w-12 h-12 rounded-full shrink-0 flex items-center justify-center text-sm font-semibold',
-          avatarColor
-        )}>
-          {avatarInitials}
-        </div>
-
         {/* Bloco de texto */}
         <div className="flex-1 min-w-0">
           <h3 className={cn(
@@ -168,14 +136,15 @@ export const EventCard = memo(function EventCard({ event, conflictType = null }:
         </div>
       </div>
 
-      {/* Meta: convidados, prestadores */}
-      <div className="flex flex-wrap gap-x-3 gap-y-1 mt-3">
-        {event.guest_count && (
-          <span className="inline-flex items-center gap-1 text-xs text-text-secondary">
-            <Users className="w-3 h-3 shrink-0" />
-            {event.guest_count} convidados
-          </span>
-        )}
+      {/* Meta: unidade, convidados, prestadores */}
+      <div className="flex flex-wrap gap-x-3 gap-y-1 mt-3 items-center">
+        <UnitChip slug={event.unit?.slug} name={event.unit?.name} size="sm" />
+        <span className="inline-flex items-center gap-1 text-xs text-text-secondary">
+          <Users className="w-3 h-3 shrink-0" />
+          {event.guest_count !== null && event.guest_count !== undefined
+            ? `${event.guest_count} convidados`
+            : 'não definido'}
+        </span>
         {providerCount > 0 && (
           <span className="inline-flex items-center gap-1 text-xs text-text-secondary">
             <Handshake className="w-3 h-3 shrink-0" />
@@ -243,12 +212,9 @@ export function EventCardSkeleton() {
         <div className="h-4 w-28 skeleton-shimmer rounded" />
         <div className="h-5 w-20 skeleton-shimmer rounded-full" />
       </div>
-      <div className="flex items-start gap-3 mb-3">
-        <div className="w-12 h-12 rounded-full skeleton-shimmer shrink-0" />
-        <div className="flex-1 space-y-1.5">
-          <div className="h-5 w-3/4 skeleton-shimmer rounded" />
-          <div className="h-4 w-1/2 skeleton-shimmer rounded" />
-        </div>
+      <div className="flex-1 space-y-1.5 mb-3">
+        <div className="h-5 w-3/4 skeleton-shimmer rounded" />
+        <div className="h-4 w-1/2 skeleton-shimmer rounded" />
       </div>
       <div className="flex gap-3">
         <div className="h-3.5 w-20 skeleton-shimmer rounded" />
