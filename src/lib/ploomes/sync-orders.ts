@@ -93,6 +93,47 @@ function extractContractedGuests(order: PloomesOrder): number | null {
   return prop?.IntegerValue ?? null
 }
 
+/**
+ * Atualiza events.guest_count com base na Order MAIS RECENTE do Deal,
+ * independente de qual Order foi processada. Garante que edição em
+ * Order antiga (via webhook) não sobrescreva o valor da Order mais recente.
+ *
+ * "Última Order vence, mesmo se vazia" — pressão visual intencional para
+ * o time preencher contracted_guests em TODA Order nova (upsells, adicionais).
+ */
+async function refreshEventGuestCountFromLatestOrder(
+  dealId: number,
+  supabase: AdminClient,
+): Promise<void> {
+  // contracted_guests existe no banco mas não está em database.types.ts —
+  // padrão do projeto para colunas fora da tipagem gerada.
+  const { data: latestOrder, error: queryError } = await (
+    supabase
+      .from('ploomes_orders')
+      .select('contracted_guests')
+      .eq('deal_id', dealId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+  ) as unknown as { data: { contracted_guests: number | null } | null; error: { message: string } | null }
+
+  if (queryError) {
+    console.warn(`[Orders Sync] Falha ao buscar última order para deal ${dealId}:`, queryError.message)
+    return
+  }
+
+  if (!latestOrder) return
+
+  const { error: updateError } = await supabase
+    .from('events')
+    .update({ guest_count: latestOrder.contracted_guests })
+    .eq('ploomes_deal_id', String(dealId))
+
+  if (updateError) {
+    console.warn(`[Orders Sync] Falha ao atualizar guest_count para deal ${dealId}:`, updateError.message)
+  }
+}
+
 interface ProductCatalogEntry {
   groupName: string | null
   familyName: string | null
@@ -342,23 +383,9 @@ export async function syncOrders(
 
           result.ordersUpserted++
 
-          // Push condicional de guest_count → events (fix v1.10.1)
-          // Só propaga quando a Order tem o campo preenchido. Orders subsequentes
-          // (adicionais sem o campo) não devem zerar o valor de uma Order anterior.
-          // Trade-off: apagar intencionalmente o campo no Ploomes não zera guest_count
-          // automaticamente — comportamento aceito, registrado no backlog.
-          const contractedGuests = extractContractedGuests(order)
-          if (order.DealId && contractedGuests !== null) {
-            const { error: guestPushError } = await supabase
-              .from('events')
-              .update({ guest_count: contractedGuests })
-              .eq('ploomes_deal_id', String(order.DealId))
-            if (guestPushError) {
-              console.warn(
-                `[Orders Sync] Falha ao atualizar guest_count para deal ${order.DealId}:`,
-                guestPushError.message,
-              )
-            }
+          // Propaga guest_count → events sempre a partir da Order mais recente do Deal
+          if (order.DealId) {
+            await refreshEventGuestCountFromLatestOrder(order.DealId, supabase)
           }
 
           // 8. Limpar produtos antigos da Order antes de re-inserir
