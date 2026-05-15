@@ -149,7 +149,7 @@ export async function GET(req: Request) {
 
       const [{ data: providers }, { data: events }] = await Promise.all([
         supabase.from('service_providers').select('id, name').in('id', providerIds),
-        supabase.from('events').select('id, title, birthday_person').in('id', eventIds),
+        supabase.from('events').select('id, title').in('id', eventIds),
       ])
 
       const providerMap = new Map((providers ?? []).map((p) => [p.id, p]))
@@ -160,9 +160,7 @@ export async function GET(req: Request) {
         const event = eventMap.get(ep.event_id)
         if (!provider || !event) continue
 
-        const eventTitle = (event as { birthday_person?: string | null; title?: string | null }).birthday_person
-          || event.title
-          || 'Evento'
+        const eventTitle = event.title || 'Evento'
 
         const { data: unitUsers } = await supabase
           .from('user_units')
