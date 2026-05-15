@@ -112,9 +112,7 @@ export const EventCard = memo(function EventCard({ event, conflictType = null }:
             'group-hover:text-primary transition-colors',
             isLost && 'line-through text-text-tertiary'
           )}>
-            {event.birthday_person
-              ? `${event.birthday_person}${event.birthday_age ? ` · ${event.birthday_age} anos` : ''}`
-              : event.title}
+            {event.title}
           </h3>
           <p className="text-sm text-text-secondary mt-0.5 line-clamp-1">{event.client_name}</p>
 
