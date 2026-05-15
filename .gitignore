@@ -117,3 +117,6 @@ docs/SSH VPS.txt
 # IMAGENS DUPLICADAS (backups manuais de ícones)
 # ============================================================
 public/icons/*Copia*
+
+# MCP config (local, não rastrear)
+.mcp.json
