@@ -44,7 +44,16 @@ export async function loadPloomesConfig(
     query = query.eq('unit_id', unitId)
   }
 
-  const { data } = await query.limit(1).single()
+  const { data, error } = await query.limit(1).single()
+
+  if (error) {
+    if (error.code === 'PGRST116') {
+      console.warn('[loadPloomesConfig] No config row found in DB, falling back to env var')
+    } else {
+      console.warn('[loadPloomesConfig] Supabase query failed, falling back to env var:', error.message)
+    }
+  }
+
   return data ?? null
 }
 
