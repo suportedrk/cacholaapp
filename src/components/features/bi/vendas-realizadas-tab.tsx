@@ -11,6 +11,7 @@ import { useBiSalesKpi, useBiSalesRanking } from '@/hooks/use-bi-sales'
 import type { BISalesRankingRow } from '@/hooks/use-bi-sales'
 import { SellerOrdersDrilldownSheet } from './seller-orders-drilldown-sheet'
 import { VendasPorCategoriaSection } from './vendas-por-categoria-section'
+import { BiAdoptionCard } from './bi-adoption-card'
 import { useUnitStore } from '@/stores/unit-store'
 
 // ── Period options ────────────────────────────────────────────
@@ -326,6 +327,14 @@ export function VendasRealizadasTab() {
 
         {/* ── Vendas por Categoria de Produto ──────────── */}
         <VendasPorCategoriaSection
+          startDate={startDate}
+          endDate={endDate}
+          unitId={activeUnitId}
+          includeInactive={includeInactive}
+        />
+
+        {/* ── Adoção — Convidados Contratados ─────────── */}
+        <BiAdoptionCard
           startDate={startDate}
           endDate={endDate}
           unitId={activeUnitId}
