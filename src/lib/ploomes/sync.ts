@@ -15,6 +15,7 @@ import { ploomesGet } from './client'
 import { parseDeal } from './field-mapping'
 import type { PloomesDeal, SyncResult } from './types'
 import type { PloomesConfigRow } from '@/types/database.types'
+import { refreshEventGuestCountFromLatestOrder } from './event-guest-sync'
 
 type AdminClient = SupabaseClient<Database>
 
@@ -353,6 +354,8 @@ export async function syncDeals(
           console.error(`[Ploomes sync] Erro ao upsert deal ${deal.Id}:`, upsertError.message)
           result.dealsErrors++
         } else {
+          await refreshEventGuestCountFromLatestOrder(deal.Id, supabase)
+
           if (existing) {
             // Detectar transição para/de lost (deal ganho/perdido ou reaberto)
             if (eventStatus === 'lost' && existing.status !== 'lost') {
