@@ -5,6 +5,26 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
 ---
 
+## [1.10.3] — 2026-05-15
+
+### Added
+- **BI Adoção do campo Convidados Contratados**: novo card em `/bi` → Vendas Realizadas com KPI global de % de Orders preenchidas, ranking por vendedora com cores semafóricas (verde ≥80%, âmbar ≥50%, vermelho <50%), filtros de período (3M / 6M / 12M / Tudo) e toggle para incluir vendedoras inativas. (#34)
+
+### Fixed
+- Regra de propagação `events.guest_count` agora segue "última Order vence sempre, mesmo se vazia". Implementado via `refreshEventGuestCountFromLatestOrder`: ao processar qualquer Order, sempre busca a Order mais recente do Deal e propaga seu valor — garantindo que edições em Orders antigas (via webhook) não corrompam o estado. Cria pressão visual ("não definido") para que toda Order nova tenha o campo Convidados Contratados preenchido. (#33)
+- E-mail de alerta de prestadores passa a usar `event.title` como título do evento, alinhando com a UI do sistema. (#32)
+
+### Changed
+- `loadPloomesConfig` agora emite `console.warn` explícito quando cai no fallback de env var, em vez de silenciar o erro. (#32)
+
+### Docs
+- Adicionado `docs/analise-v1.10-convidados-e-avatar-unidade.md` — relatório de análise de impacto da família v1.10. (#32)
+
+### Migrations
+- `092_bi_adoption_rpcs.sql`
+
+---
+
 ## [1.10.2] — 2026-05-14
 
 ### Fix
