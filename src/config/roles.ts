@@ -339,6 +339,37 @@ export const SYSTEM_ONLY_ROLES = [
   'super_admin',
 ] as const satisfies readonly Role[]
 
+// ──────────────────────────────────────────────────────────────
+// Permissões de Valor (Frente Permissões de Valor v1.11.0)
+// ──────────────────────────────────────────────────────────────
+
+/**
+ * Roles que podem visualizar valores monetários de festa:
+ * deal_amount, payment_method e campos derivados em RPCs de BI/Vendas.
+ * Roles BLOQUEADAS (não listadas): manutencao, rh, freelancer, entregador.
+ * Espelha a função SQL can_view_festa_values() em migration 093.
+ * Ao alterar este conjunto, atualizar também a migration correspondente.
+ */
+export const ROLES_CAN_VIEW_FESTA_VALUES = [
+  'super_admin',
+  'diretor',
+  'gerente',
+  'vendedora',
+  'pos_vendas',
+  'decoracao',
+  'financeiro',
+] as const satisfies readonly Role[]
+
+/**
+ * Helper direto para verificar se um role pode ver valores monetários de festa.
+ * Usar em componentes React no lugar de hasRole(..., ROLES_CAN_VIEW_FESTA_VALUES)
+ * para tornar a intenção explícita nos call sites.
+ */
+export function canViewFestaValues(role: Role | null | undefined): boolean {
+  if (!role) return false
+  return (ROLES_CAN_VIEW_FESTA_VALUES as readonly string[]).includes(role)
+}
+
 export type CommercialChecklistManageRole =
   (typeof COMMERCIAL_CHECKLIST_MANAGE_ROLES)[number]
 

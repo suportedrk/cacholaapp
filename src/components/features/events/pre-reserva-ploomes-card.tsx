@@ -9,6 +9,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { useAuth } from '@/hooks/use-auth'
+import { canViewFestaValues } from '@/config/roles'
 import type { CalendarPreReserva } from '@/types/pre-reservas'
 import type { ConflictType } from './event-card'
 
@@ -37,6 +39,9 @@ export const PreReservaPloomesCard = memo(function PreReservaPloomesCard({
   item,
   conflictType = null,
 }: PreReservaPloomesCardProps) {
+  const { profile } = useAuth()
+  const canSeeValues = canViewFestaValues(profile?.role)
+
   function openPloomes(e?: React.MouseEvent) {
     e?.stopPropagation()
     if (item.ploomes_url) {
@@ -134,10 +139,14 @@ export const PreReservaPloomesCard = memo(function PreReservaPloomesCard({
             {item.stage_name && (
               <span className="text-xs text-text-secondary line-clamp-1">{item.stage_name}</span>
             )}
-            {item.deal_amount != null && item.deal_amount > 0 && (
-              <span className="text-xs font-medium text-pink-600 dark:text-pink-400">
-                {formatBRL(item.deal_amount)}
-              </span>
+            {canSeeValues ? (
+              item.deal_amount != null && item.deal_amount > 0 && (
+                <span className="text-xs font-medium text-pink-600 dark:text-pink-400">
+                  {formatBRL(item.deal_amount)}
+                </span>
+              )
+            ) : (
+              <span className="text-xs text-text-tertiary">— Restrito —</span>
             )}
             {item.owner_name && (
               <span className="inline-flex items-center gap-1 text-xs text-text-tertiary">
