@@ -22,6 +22,8 @@ import { MaintenanceStatusBadge, MaintenancePriorityBadge } from '@/components/f
 import { useEvent } from '@/hooks/use-events'
 import { useEventChecklists } from '@/hooks/use-checklists'
 import { useEventMaintenances } from '@/hooks/use-maintenance'
+import { useAuth } from '@/hooks/use-auth'
+import { canViewFestaValues } from '@/config/roles'
 import { AccordionSection } from './components/AccordionSection'
 import { ProvidersSection } from './components/sections/ProvidersSection'
 import { EventSalesSection } from './components/sections/EventSalesSection'
@@ -245,6 +247,9 @@ function EventDetailSkeleton() {
 export default function EventoDetailPage() {
   const { id } = useParams<{ id: string }>()
   const router  = useRouter()
+
+  const { profile } = useAuth()
+  const canSeeValues = canViewFestaValues(profile?.role)
 
   const { data: event, isLoading, isError } = useEvent(id)
   const { data: checklists = [], isLoading: checklistsLoading } = useEventChecklists(id)
@@ -596,20 +601,24 @@ export default function EventoDetailPage() {
         {/* S3d: Financeiro */}
         {hasFinancial && (
           <AccordionSection title="Financeiro" icon={DollarSign}>
-            <div className="space-y-2">
-              {event.deal_amount != null && (
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-text-secondary">Valor do negócio</span>
-                  <span className="text-sm font-semibold text-text-primary">{formatBRL(event.deal_amount)}</span>
-                </div>
-              )}
-              {event.payment_method && (
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-text-secondary">Forma de pagamento</span>
-                  <span className="text-sm text-text-primary">{event.payment_method}</span>
-                </div>
-              )}
-            </div>
+            {canSeeValues ? (
+              <div className="space-y-2">
+                {event.deal_amount != null && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-text-secondary">Valor do negócio</span>
+                    <span className="text-sm font-semibold text-text-primary">{formatBRL(event.deal_amount)}</span>
+                  </div>
+                )}
+                {event.payment_method && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-text-secondary">Forma de pagamento</span>
+                    <span className="text-sm text-text-primary">{event.payment_method}</span>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-text-tertiary">— Restrito —</p>
+            )}
           </AccordionSection>
         )}
 
