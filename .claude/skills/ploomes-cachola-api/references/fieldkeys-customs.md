@@ -124,7 +124,9 @@ Content-Type: application/json
 
 Para **um TypeId específico**, preencha apenas o campo de valor correspondente; deixe os outros como `null` ou ausentes.
 
-## Campos customizados de UNIDADE em ploomes_deals
+## Campos customizados de UNIDADE — nível Deal (para BI e `ploomes_deals.unit_option_name`)
+
+> **Nota:** Esta seção trata exclusivamente da coluna `ploomes_deals.unit_option_name`, usada para BI e KPIs. Para a hierarquia operacional que define `events.unit_id` (unidade da festa no CacholaOS), ver seção **"Hierarquia canônica de UNIDADE para events.unit_id"** logo abaixo.
 
 Existem **DOIS** campos customizados parecidos no Ploomes para representar unidade. Eles têm semânticas **diferentes** e usar o errado é um bug histórico (descoberto em mai/2026 durante investigação de KPIs incorretos).
 
@@ -149,6 +151,80 @@ Até v1.6.5 o sync lia o FieldKey "Escolhida" em vez de "Pretendida", causando ~
 
 ---
 
+## Hierarquia canônica de UNIDADE para `events.unit_id` (operacional)
+
+> **Nota:** Esta seção trata de `events.unit_id` — a unidade da festa no CacholaOS. É diferente de `ploomes_deals.unit_option_name` (BI), que tem regra própria na seção acima. As duas regras coexistem e não se substituem.
+
+A unidade de uma festa (`events.unit_id`) é definida por três fontes em cascata. A prioridade é rígida e ordenada:
+
+| Nível | Fonte no Ploomes | FieldKey | Coluna no banco | Quando se aplica |
+|-------|-----------------|----------|-----------------|-----------------|
+| **1 — DEFINITIVO** | OtherProperty do **Order** | `order_EDD14E93-ECEB-4EEE-A362-80416A78E61D` | `ploomes_orders.chosen_unit_id` | Sempre que existir um Order para o Deal |
+| **2 — Fallback** | OtherProperty do **Deal** | `deal_A583075F-D19C-4034-A479-36625C621660` | lido via `parseDeal().unitName` | Quando não há Order, ou Order sem unidade preenchida |
+| **3 — Último recurso** | OtherProperty do **Deal** | `deal_BD9C4B07-20E5-458A-8273-6BA271A6DEBD` | lido via `resolveUnitId()` fallback | Quando nenhum dos dois acima está disponível |
+
+### Regra absoluta
+
+**O Order vence o Deal sem exceção.** Se o campo `order_EDD14E93` do Order diz "Cachola MOEMA" e ambos os campos do Deal dizem "Cachola PINHEIROS", o evento ficará em Moema. Isso é comportamento correto, não bug.
+
+### Como corrigir a unidade de uma festa
+
+**Nunca** edite `events.unit_id` diretamente no banco do CacholaOS. O procedimento correto:
+
+1. Abrir o Order no Ploomes (`https://app10.ploomes.com/order/{id}`)
+2. Corrigir o campo "Unidade Escolhida" (`order_EDD14E93`) para o valor correto
+3. O próximo webhook de Update propagará a correção automaticamente em segundos
+
+### Ponte FieldKey → banco → código
+
+```
+order_EDD14E93-ECEB-4EEE-A362-80416A78E61D  (Ploomes — OtherProperty do Order)
+  → ploomes_orders.chosen_unit_id            (Supabase — populado por sync-orders.ts linhas 77-88)
+    → src/lib/ploomes/sync.ts linhas 270-280  (lido no sync de eventos, define events.unit_id)
+        const unitId = orderUnit?.chosen_unit_id ?? dealUnitId
+```
+
+### Implementação no código
+
+`src/lib/ploomes/sync.ts` linhas 270–280 implementa essa hierarquia:
+
+```typescript
+// Preferir unidade do Order (fonte definitiva) quando disponível
+const { data: orderUnit } = await supabase
+  .from('ploomes_orders')
+  .select('chosen_unit_id')
+  .eq('deal_id', deal.Id!)
+  .not('chosen_unit_id', 'is', null)
+  .order('created_at', { ascending: false })
+  .limit(1)
+  .maybeSingle()
+
+const unitId = orderUnit?.chosen_unit_id ?? dealUnitId  // Order > Deal
+```
+
+`src/lib/ploomes/sync-orders.ts` linhas 77–88 popula `chosen_unit_id`:
+
+```typescript
+const ORDER_FIELD_KEY_CHOSEN_UNIT = 'order_EDD14E93-ECEB-4EEE-A362-80416A78E61D'
+
+function extractChosenUnitName(order: PloomesOrder): string | undefined {
+  return order.OtherProperties?.find(
+    (p) => p.FieldKey === ORDER_FIELD_KEY_CHOSEN_UNIT,
+  )?.ObjectValueName ?? undefined
+}
+```
+
+### Caso prático documentado
+
+**Festa ISABELA 1 ANO — deal 605036102 — mai/2026:**
+- `deal_A583075F` (Escolhida do Deal) = "Cachola PINHEIROS"
+- `deal_BD9C4B07` (Pretendida do Deal) = "Cachola PINHEIROS"
+- `order_EDD14E93` (Escolhida do Order 601718795) = "Cachola MOEMA"
+- Resultado: `events.unit_id = Moema` ← Order venceu, comportamento correto
+- Diagnóstico: o campo do Order foi preenchido como Moema no Ploomes. Correção = editar o Order no Ploomes, não o banco.
+
+---
+
 ## FieldKeys conhecidas no Cachola
 
 > Mantenha esta tabela atualizada. Toda nova FieldKey custom descoberta entra aqui.
@@ -160,8 +236,8 @@ Até v1.6.5 o sync lia o FieldKey "Escolhida" em vez de "Pretendida", causando ~
 | `deal_title` | Título | string | 100% | padrão |
 | `deal_amount` | Valor | decimal | ~95% | padrão |
 | `deal_status` | Status (1/2/3) | int | 100% | padrão |
-| `deal_BD9C4B07-20E5-458A-8273-6BA271A6DEBD` | Unidade da festa **pretendida** | ObjectValueName | ~100% | custom — use para KPIs de unidade |
-| `deal_A583075F-D19C-4034-A479-36625C621660` | Unidade **escolhida** da festa | ObjectValueName | ~22% (só pós-contrato) | custom — não usar para métricas gerais |
+| `deal_BD9C4B07-20E5-458A-8273-6BA271A6DEBD` | Unidade da festa **pretendida** | ObjectValueName | ~100% | custom — **nível 1** para `ploomes_deals.unit_option_name` (BI); **nível 3** (último recurso) para `events.unit_id` |
+| `deal_A583075F-D19C-4034-A479-36625C621660` | Unidade **escolhida** da festa | ObjectValueName | ~22% (só pós-contrato) | custom — **nível 2** para `events.unit_id`; fallback quando não há Order com unidade preenchida |
 | `deal_13506031-C53E-48A0-A92B-686F76AC77ED` | Aniversariante (data) | DateTimeValue | ~70% | custom — usado em Recompra Fase D |
 
 > 🔄 Quando achar nova FieldKey custom, descobrir o nome via `GET /Fields?$filter=Key eq 'deal_<UUID>'` e adicionar aqui.
@@ -178,12 +254,13 @@ Até v1.6.5 o sync lia o FieldKey "Escolhida" em vez de "Pretendida", causando ~
 
 ### Order (EntityId = 4)
 
-| FieldKey | Nome | Tipo |
-|----------|------|------|
-| `order_number` | Número | int |
-| `order_amount` | Valor total | decimal |
-| `order_date` | Data | date |
-| `order_description` | Descrição | string |
+| FieldKey | Nome | Tipo | Notas |
+|----------|------|------|-------|
+| `order_number` | Número | int | padrão |
+| `order_amount` | Valor total | decimal | padrão |
+| `order_date` | Data | date | padrão |
+| `order_description` | Descrição | string | padrão |
+| `order_EDD14E93-ECEB-4EEE-A362-80416A78E61D` | Unidade Escolhida (Order) | ObjectValueName | **Nível 1** hierarquia `events.unit_id` — vence o Deal sem exceção. Persistido em `ploomes_orders.chosen_unit_id` via `sync-orders.ts` |
 
 ## Armadilha clássica: filtrar por OtherProperties
 

@@ -50,26 +50,32 @@ interface CalendarViewProps {
 }
 
 // ─────────────────────────────────────────────────────────────
-// CORES POR STATUS (com dark mode)
+// CORES DE EVENTO POR UNIDADE (mesmos tokens do UnitChip)
 // ─────────────────────────────────────────────────────────────
-const EVENT_PILL: Record<EventStatus, string> = {
-  pending:     'bg-amber-100 text-amber-800 border-l-2 border-l-amber-400 dark:bg-amber-950/50 dark:text-amber-300 dark:border-l-amber-600',
-  confirmed:   'bg-blue-100 text-blue-800 border-l-2 border-l-blue-500 dark:bg-blue-950/50 dark:text-blue-300 dark:border-l-blue-600',
-  preparing:   'bg-purple-100 text-purple-800 border-l-2 border-l-purple-500 dark:bg-purple-950/50 dark:text-purple-300 dark:border-l-purple-600',
-  in_progress: 'bg-green-100 text-green-800 border-l-2 border-l-green-500 dark:bg-green-950/50 dark:text-green-300 dark:border-l-green-600',
-  finished:    'bg-gray-100 text-gray-500 border-l-2 border-l-gray-300 dark:bg-gray-800/50 dark:text-gray-400 dark:border-l-gray-600',
-  post_event:  'bg-gray-50 text-gray-400 border-l-2 border-l-gray-200 dark:bg-gray-800/30 dark:text-gray-500 dark:border-l-gray-700',
-  lost:        'bg-gray-50 text-gray-400 border-l-2 border-l-gray-200 opacity-50 dark:bg-gray-800/30 dark:text-gray-500',
+const EVENT_PILL_PINHEIROS = 'bg-brand-100 text-brand-700 border-l-2 border-l-brand-500 dark:bg-brand-900/30 dark:text-brand-300 dark:border-l-brand-700'
+const EVENT_PILL_MOEMA     = 'bg-terracota-100 text-terracota-700 border-l-2 border-l-terracota-500 dark:bg-terracota-900/30 dark:text-terracota-300 dark:border-l-terracota-700'
+const EVENT_PILL_FALLBACK  = 'bg-slate-100 text-slate-600 border-l-2 border-l-slate-400 dark:bg-slate-800/50 dark:text-slate-400 dark:border-l-slate-600'
+const EVENT_PILL_LOST      = 'bg-gray-50 text-gray-400 border-l-2 border-l-gray-200 opacity-50 dark:bg-gray-800/30 dark:text-gray-500'
+
+const EVENT_DOT_PINHEIROS  = 'bg-brand-500'
+const EVENT_DOT_MOEMA      = 'bg-terracota-500'
+const EVENT_DOT_FALLBACK   = 'bg-slate-400'
+const EVENT_DOT_LOST       = 'bg-red-400 opacity-50'
+
+function eventPill(ev: CalendarEvent): string {
+  if (ev.status === 'lost') return EVENT_PILL_LOST
+  const slug = ev.unit?.slug ?? null
+  if (!slug) return EVENT_PILL_FALLBACK
+  if (slug.toLowerCase().includes('moema')) return EVENT_PILL_MOEMA
+  return EVENT_PILL_PINHEIROS
 }
 
-const EVENT_DOT: Record<EventStatus, string> = {
-  pending:     'bg-amber-400',
-  confirmed:   'bg-blue-500',
-  preparing:   'bg-purple-500',
-  in_progress: 'bg-green-500',
-  finished:    'bg-gray-400',
-  post_event:  'bg-gray-300',
-  lost:        'bg-red-400 opacity-50',
+function eventDot(ev: CalendarEvent): string {
+  if (ev.status === 'lost') return EVENT_DOT_LOST
+  const slug = ev.unit?.slug ?? null
+  if (!slug) return EVENT_DOT_FALLBACK
+  if (slug.toLowerCase().includes('moema')) return EVENT_DOT_MOEMA
+  return EVENT_DOT_PINHEIROS
 }
 
 const STATUS_LABEL: Record<EventStatus, string> = {
@@ -409,7 +415,7 @@ export function CalendarView({
           className={cn(
             'flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border transition-all',
             showEvents
-              ? 'bg-blue-500/20 border-blue-500 text-blue-600 dark:text-blue-400'
+              ? 'bg-slate-500/20 border-slate-500 text-slate-600 dark:text-slate-400'
               : 'bg-muted/50 border-border text-text-tertiary opacity-60'
           )}
         >
@@ -640,7 +646,7 @@ function DayPopoverContent({
           onClick={() => onEventClick(ev)}
           className={cn(
             'w-full text-left text-xs rounded-md px-2 py-1.5 transition-opacity hover:opacity-80',
-            EVENT_PILL[ev.status]
+            eventPill(ev)
           )}
         >
           <div className="flex items-center justify-between gap-2">
@@ -901,7 +907,7 @@ function MonthView({
                     onClick={() => onEventClick(ev)}
                     className={cn(
                       'w-1.5 h-1.5 rounded-full min-w-[6px] min-h-[6px]',
-                      EVENT_DOT[ev.status]
+                      eventDot(ev)
                     )}
                     aria-label={ev.title}
                   />
@@ -948,7 +954,7 @@ function MonthView({
                     onClick={() => onEventClick(ev)}
                     className={cn(
                       'w-full text-left text-[10px] leading-tight px-1 py-0.5 rounded-sm font-medium transition-opacity hover:opacity-80',
-                      EVENT_PILL[ev.status]
+                      eventPill(ev)
                     )}
                     title={[ev.client_name || ev.title, ev.owner_name].filter(Boolean).join(' · ')}
                   >
@@ -1099,7 +1105,7 @@ function WeekView({ currentDate, eventsByDate, maintenanceByDate, checklistByDat
                     className={cn(
                       'w-full text-left text-[10px] leading-tight px-1 py-0.5 rounded-sm font-medium transition-opacity hover:opacity-80',
                       ev.status === 'lost' && 'line-through',
-                      EVENT_PILL[ev.status]
+                      eventPill(ev)
                     )}
                     title={`${ev.start_time.slice(0, 5)} – ${ev.title}`}
                   >
@@ -1186,7 +1192,7 @@ function DayView({ currentDate, eventsByDate, maintenanceByDate, checklistByDate
           className={cn(
             'w-full text-left rounded-lg px-3 py-2.5 transition-opacity hover:opacity-80 min-h-[44px]',
             ev.status === 'lost' && 'opacity-60',
-            EVENT_PILL[ev.status]
+            eventPill(ev)
           )}
         >
           <div className="flex items-center justify-between gap-2">
@@ -1369,7 +1375,7 @@ function ListView({
                       className={cn(
                         'w-full text-left rounded-lg px-2.5 py-2 min-h-[44px] transition-opacity hover:opacity-80',
                         ev.status === 'lost' && 'opacity-60',
-                        EVENT_PILL[ev.status]
+                        eventPill(ev)
                       )}
                     >
                       <div className="flex items-start justify-between gap-2">
