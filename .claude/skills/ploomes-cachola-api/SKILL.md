@@ -24,6 +24,7 @@ Não leia tudo de uma vez. Use a referência relevante ao que está na mesa:
 | Montar query OData (filtro, expand, select) | `references/odata-cheatsheet.md` |
 | Configurar/debugar webhook | `references/webhooks.md` |
 | Trabalhar com campo customizado (deal/contact/order) | `references/fieldkeys-customs.md` |
+| Verificar/corrigir a unidade de uma festa (`events.unit_id`) | `references/fieldkeys-customs.md` — seção "Hierarquia canônica de UNIDADE" |
 | Sync de Deals, Orders, Contacts, Pipelines | `references/endpoints-cachola.md` |
 | Algo está estranho/quebrado/contradizendo a doc | `references/gotchas-cachola.md` (LEIA PRIMEIRO em caso de dúvida) |
 
@@ -44,6 +45,8 @@ Estes são os 7 mandamentos do Ploomes no Cachola. Se um deles for violado, algo
 6. **Filtros OData com data:** sempre ISO 8601 com timezone (`2026-04-30T00:00:00-03:00`), nunca data nua.
 
 7. **Mutations:** Ploomes aceita `POST` (criar) e `PATCH` (atualizar parcial). `PUT` não é suportado para a maioria das entidades.
+
+8. **Unidade de uma festa (`events.unit_id`) segue hierarquia Order > Deal escolhida > Deal pretendida.** Quando há Order com `order_EDD14E93-ECEB-4EEE-A362-80416A78E61D` preenchido, ele vence o Deal sem exceção. Nunca corrija unidade de festa no banco do CacholaOS — corrija o campo no Order do Ploomes; o webhook propagará. Detalhes e caso prático em `references/fieldkeys-customs.md`.
 
 ## REGRA: Cachola OS trabalha apenas com o funil 'CACHOLA'
 
