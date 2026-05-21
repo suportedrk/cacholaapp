@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { startOfMonth, endOfMonth, subWeeks, startOfWeek, format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { requireRoleApi } from '@/lib/auth/require-role'
+import { getEffectiveUnitIds } from '@/lib/auth/effective-unit-ids'
 import { MAINTENANCE_MODULE_ROLES } from '@/config/roles'
 
 export interface MaintenanceStatsResponse {
@@ -39,9 +40,20 @@ export async function GET(req: NextRequest) {
     const supabase = await createClient()
 
     const { searchParams } = new URL(req.url)
-    const unitId = searchParams.get('unit_id')
-    if (!unitId) {
-      return NextResponse.json({ error: 'unit_id é obrigatório.' }, { status: 400 })
+    const requestedUnitId = searchParams.get('unit_id')
+    const unitIds = await getEffectiveUnitIds(supabase, requestedUnitId)
+
+    if (unitIds.length === 0) {
+      // Sem unidade explícita E usuário sem escopo nenhum → resposta vazia coerente.
+      const empty: MaintenanceStatsResponse = {
+        kpis: {
+          open_count: 0, overdue_count: 0, completed_this_month: 0,
+          avg_resolution_hours: null, emergency_open: 0,
+          total_costs_month: 0, pending_approvals: 0,
+        },
+        charts: { weekly_completed: [], by_type: [], by_sector: [] },
+      }
+      return NextResponse.json(empty)
     }
 
     const now = new Date()
@@ -49,11 +61,11 @@ export async function GET(req: NextRequest) {
     const monthEnd      = endOfMonth(now).toISOString()
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString()
 
-    // ── Pre-fetch ticket IDs for this unit (needed for executions join) ───
+    // ── Pre-fetch ticket IDs nas unidades em escopo (needed for executions join) ───
     const { data: unitTickets } = await supabase
       .from('maintenance_tickets')
       .select('id')
-      .eq('unit_id', unitId)
+      .in('unit_id', unitIds)
     const ticketIds = (unitTickets ?? []).map((t) => t.id)
 
     // ── Run all queries in parallel ────────────────────────────────
@@ -73,14 +85,14 @@ export async function GET(req: NextRequest) {
       supabase
         .from('maintenance_tickets')
         .select('id', { count: 'exact', head: true })
-        .eq('unit_id', unitId)
+        .in('unit_id', unitIds)
         .not('status', 'in', '(concluded,cancelled)'),
 
       // 2. Overdue (open + past due_at)
       supabase
         .from('maintenance_tickets')
         .select('id', { count: 'exact', head: true })
-        .eq('unit_id', unitId)
+        .in('unit_id', unitIds)
         .not('status', 'in', '(concluded,cancelled)')
         .lt('due_at', now.toISOString())
         .not('due_at', 'is', null),
@@ -89,7 +101,7 @@ export async function GET(req: NextRequest) {
       supabase
         .from('maintenance_tickets')
         .select('id', { count: 'exact', head: true })
-        .eq('unit_id', unitId)
+        .in('unit_id', unitIds)
         .eq('status', 'concluded')
         .gte('concluded_at', monthStart)
         .lte('concluded_at', monthEnd),
@@ -98,7 +110,7 @@ export async function GET(req: NextRequest) {
       supabase
         .from('maintenance_tickets')
         .select('created_at, concluded_at')
-        .eq('unit_id', unitId)
+        .in('unit_id', unitIds)
         .eq('status', 'concluded')
         .gte('concluded_at', thirtyDaysAgo),
 
@@ -106,7 +118,7 @@ export async function GET(req: NextRequest) {
       supabase
         .from('maintenance_tickets')
         .select('id', { count: 'exact', head: true })
-        .eq('unit_id', unitId)
+        .in('unit_id', unitIds)
         .eq('nature', 'emergencial')
         .not('status', 'in', '(concluded,cancelled)'),
 
@@ -135,7 +147,7 @@ export async function GET(req: NextRequest) {
       supabase
         .from('maintenance_tickets')
         .select('concluded_at')
-        .eq('unit_id', unitId)
+        .in('unit_id', unitIds)
         .eq('status', 'concluded')
         .gte('concluded_at', subWeeks(now, 4).toISOString()),
 
@@ -143,14 +155,14 @@ export async function GET(req: NextRequest) {
       supabase
         .from('maintenance_tickets')
         .select('nature')
-        .eq('unit_id', unitId)
+        .in('unit_id', unitIds)
         .not('status', 'in', '(concluded,cancelled)'),
 
       // 10. Open tickets by sector (with join)
       supabase
         .from('maintenance_tickets')
         .select('sector_id, sector:maintenance_sectors!sector_id(name)')
-        .eq('unit_id', unitId)
+        .in('unit_id', unitIds)
         .not('status', 'in', '(concluded,cancelled)'),
     ])
 
