@@ -24,6 +24,8 @@ import {
 } from '@/hooks/use-maintenance-categories'
 import { useMaintenanceItems, useCreateMaintenanceItem, useUpdateMaintenanceItem, useDeleteMaintenanceItem } from '@/hooks/use-maintenance-items'
 import { useMaintenanceSla, useUpsertMaintenanceSla } from '@/hooks/use-maintenance-sla'
+import { useFormUnitSelection } from '@/hooks/use-form-unit-selection'
+import { UnitPickerBanner } from '@/components/features/maintenance/unit-picker-banner'
 import type { MaintenanceCategory, MaintenanceItem } from '@/types/database.types'
 import type { ConfigItem } from '@/components/features/settings/config-table'
 
@@ -82,10 +84,16 @@ const SLA_CONFIG = {
 // TAB: SETORES
 // ─────────────────────────────────────────────────────────────
 function SetoresTab() {
-  const { data: sectors = [], isLoading } = useSectors(false)
+  const [pickedUnitId, setPickedUnitId] = useState('')
+  const { requiresUnitSelection, effectiveUnitId, availableUnits } =
+    useFormUnitSelection(pickedUnitId || null)
+
+  const { data: sectors = [], isLoading } = useSectors(false, effectiveUnitId)
   const create = useCreateSector()
   const update = useUpdateSector()
   const del    = useDeleteSector()
+
+  const canCreate = !!effectiveUnitId
 
   const items: ConfigItem[] = sectors.map((s) => ({
     id: s.id,
@@ -99,11 +107,25 @@ function SetoresTab() {
       <p className="text-sm text-muted-foreground">
         Setores são as áreas físicas da sua unidade (Cozinha, Salão, Banheiros…). Cada chamado de manutenção é vinculado a um setor.
       </p>
+
+      {requiresUnitSelection && (
+        <UnitPickerBanner
+          value={pickedUnitId}
+          onChange={setPickedUnitId}
+          units={availableUnits}
+          contextLabel="criar setores"
+        />
+      )}
+
       <ConfigTable
         title="Setor"
         items={items}
         isLoading={isLoading}
-        onCreate={async (d) => { await create.mutateAsync({ name: d.name }) }}
+        canCreate={canCreate}
+        onCreate={async (d) => {
+          if (!effectiveUnitId) return
+          await create.mutateAsync({ name: d.name, unit_id: effectiveUnitId })
+        }}
         onUpdate={async (id, d) => { await update.mutateAsync({ id, data: { name: d.name, is_active: d.is_active } }) }}
         onDelete={async (id) => { await del.mutateAsync(id) }}
       />
@@ -281,7 +303,11 @@ function CategoryRow({
 }
 
 function CategoriasTab() {
-  const { data: cats = [], isLoading } = useMaintenanceCategories(false)
+  const [pickedUnitId, setPickedUnitId] = useState('')
+  const { requiresUnitSelection, effectiveUnitId, availableUnits } =
+    useFormUnitSelection(pickedUnitId || null)
+
+  const { data: cats = [], isLoading } = useMaintenanceCategories(false, effectiveUnitId)
   const create = useCreateMaintenanceCategory()
   const update = useUpdateMaintenanceCategory()
   const del    = useDeleteMaintenanceCategory()
@@ -291,13 +317,19 @@ function CategoriasTab() {
   const [savingNew, setSavingNew] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<MaintenanceCategory | null>(null)
 
+  const canCreate = !!effectiveUnitId
   const NewIcon = getIconComponent(newForm.icon)
 
   async function handleCreate() {
-    if (!newForm.name.trim()) return
+    if (!newForm.name.trim() || !effectiveUnitId) return
     setSavingNew(true)
     try {
-      await create.mutateAsync({ name: newForm.name.trim(), icon: newForm.icon, color: newForm.color })
+      await create.mutateAsync({
+        name: newForm.name.trim(),
+        icon: newForm.icon,
+        color: newForm.color,
+        unit_id: effectiveUnitId,
+      })
       setNewForm(DEFAULT_CAT_FORM)
       setAdding(false)
     } finally {
@@ -328,6 +360,15 @@ function CategoriasTab() {
       <p className="text-sm text-muted-foreground">
         Categorias classificam os chamados por tipo de problema. Cada uma tem um ícone e uma cor para facilitar a identificação visual.
       </p>
+
+      {requiresUnitSelection && (
+        <UnitPickerBanner
+          value={pickedUnitId}
+          onChange={setPickedUnitId}
+          units={availableUnits}
+          contextLabel="criar categorias"
+        />
+      )}
 
       <div className="divide-y divide-border border border-border rounded-xl overflow-hidden">
         {cats.length === 0 && !adding && (
@@ -422,7 +463,7 @@ function CategoriasTab() {
         )}
       </div>
 
-      {!adding && (
+      {!adding && canCreate && (
         <Button variant="outline" size="sm" onClick={() => setAdding(true)} className="w-full sm:w-auto">
           <Plus className="w-3.5 h-3.5 mr-1.5" />
           Adicionar categoria
@@ -448,13 +489,19 @@ function CategoriasTab() {
 // TAB: ITENS
 // ─────────────────────────────────────────────────────────────
 function ItensTab() {
-  const { data: sectors = [] } = useSectors(true)
+  const [pickedUnitId, setPickedUnitId] = useState('')
+  const { requiresUnitSelection, effectiveUnitId, availableUnits } =
+    useFormUnitSelection(pickedUnitId || null)
+
+  const { data: sectors = [] } = useSectors(true, effectiveUnitId)
   const [filterSectorId, setFilterSectorId] = useState<string>('')
 
-  const { data: items = [], isLoading } = useMaintenanceItems(false, filterSectorId || null)
+  const { data: items = [], isLoading } = useMaintenanceItems(false, filterSectorId || null, effectiveUnitId)
   const create = useCreateMaintenanceItem()
   const update = useUpdateMaintenanceItem()
   const del    = useDeleteMaintenanceItem()
+
+  const canCreate = !!effectiveUnitId
 
   const configItems: ConfigItem[] = items.map((item) => ({
     id: item.id,
@@ -469,6 +516,18 @@ function ItensTab() {
       <p className="text-sm text-muted-foreground">
         Itens são elementos específicos que podem precisar de manutenção dentro de um setor (ex: &quot;Geladeira&quot;, &quot;Torneira do Pia&quot;).
       </p>
+
+      {requiresUnitSelection && (
+        <UnitPickerBanner
+          value={pickedUnitId}
+          onChange={(v) => {
+            setPickedUnitId(v)
+            setFilterSectorId('')
+          }}
+          units={availableUnits}
+          contextLabel="criar itens"
+        />
+      )}
 
       {/* Filtro por setor */}
       <div className="flex items-center gap-2">
@@ -490,13 +549,16 @@ function ItensTab() {
         title="Item"
         items={configItems}
         isLoading={isLoading}
+        canCreate={canCreate}
         extraField={{ key: 'sector_name', label: 'Setor', type: 'text' }}
         onCreate={async (d) => {
+          if (!effectiveUnitId) return
           // Encontrar setor pelo nome (ou usar filterSectorId)
           const matchedSector = sectors.find((s) => s.name.toLowerCase() === String(d.sector_name ?? '').toLowerCase())
           await create.mutateAsync({
             name: d.name,
             sector_id: matchedSector?.id ?? (filterSectorId || null),
+            unit_id: effectiveUnitId,
           })
         }}
         onUpdate={async (id, d) => {
@@ -628,7 +690,11 @@ function SlaCard({
 }
 
 function SlaTab() {
-  const { data: slaList = [], isLoading } = useMaintenanceSla()
+  const [pickedUnitId, setPickedUnitId] = useState('')
+  const { requiresUnitSelection, effectiveUnitId, availableUnits } =
+    useFormUnitSelection(pickedUnitId || null)
+
+  const { data: slaList = [], isLoading } = useMaintenanceSla(effectiveUnitId)
   const upsert = useUpsertMaintenanceSla()
 
   const urgencies: UrgencyKey[] = ['critical', 'high', 'medium', 'low']
@@ -638,6 +704,24 @@ function SlaTab() {
     high:     { response_hours: 4,  resolution_hours: 24  },
     medium:   { response_hours: 24, resolution_hours: 72  },
     low:      { response_hours: 72, resolution_hours: 168 },
+  }
+
+  // Quando o seletor global está em "Todas", exige escolher unidade antes de renderizar cards
+  // (mostrar SLAs de múltiplas unidades misturados não tem sentido — cada unidade tem seu próprio SLA).
+  if (requiresUnitSelection && !effectiveUnitId) {
+    return (
+      <div className="space-y-4">
+        <p className="text-sm text-muted-foreground">
+          SLA (Service Level Agreement) define os prazos máximos de resposta e resolução para cada nível de urgência. O sistema alertará quando um chamado estiver próximo de vencer.
+        </p>
+        <UnitPickerBanner
+          value={pickedUnitId}
+          onChange={setPickedUnitId}
+          units={availableUnits}
+          contextLabel="visualizar e editar SLAs"
+        />
+      </div>
+    )
   }
 
   if (isLoading) {
@@ -655,6 +739,15 @@ function SlaTab() {
       <p className="text-sm text-muted-foreground">
         SLA (Service Level Agreement) define os prazos máximos de resposta e resolução para cada nível de urgência. O sistema alertará quando um chamado estiver próximo de vencer.
       </p>
+
+      {requiresUnitSelection && (
+        <UnitPickerBanner
+          value={pickedUnitId}
+          onChange={setPickedUnitId}
+          units={availableUnits}
+          contextLabel="visualizar e editar SLAs"
+        />
+      )}
 
       {slaList.length === 0 && (
         <div className="flex items-start gap-3 p-3 rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800">
@@ -676,7 +769,8 @@ function SlaTab() {
               responseHours={existing?.response_hours ?? defaults.response_hours}
               resolutionHours={existing?.resolution_hours ?? defaults.resolution_hours}
               onSave={async (data) => {
-                await upsert.mutateAsync({ urgency_level: urgency, ...data })
+                if (!effectiveUnitId) return
+                await upsert.mutateAsync({ urgency_level: urgency, ...data, unit_id: effectiveUnitId })
               }}
             />
           )

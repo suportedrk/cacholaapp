@@ -466,6 +466,131 @@ Legenda esforço: P (≤1 dia), M (1–3 dias), G (>3 dias).
 - (c) gerente em unidade única → campo Unidade NÃO aparece no modal, INSERT usa unidade do store.
 - (d) super_admin com unidade única no seletor global → campo Unidade NÃO aparece, INSERT usa unidade do store.
 
+> **✅ IMPLEMENTADO em 2026-05-21 — aguardando aprovação para commit/deploy.**
+>
+> **Arquitetura:**
+> - Hook compartilhado `src/hooks/use-form-unit-selection.ts` (`useFormUnitSelection(formUnitId)` → `{ requiresUnitSelection, effectiveUnitId, availableUnits }`)
+> - Componente UI auxiliar local ao módulo: `src/components/features/maintenance/unit-picker-banner.tsx` (usado nas 4 abas de Configurações)
+> - 4 hooks com `unitIdOverride` opcional: `useSectors`, `useMaintenanceCategories`, `useMaintenanceItems`, `useEquipment`, `useMaintenanceSla` (mesmo padrão de `useBIConversionData`)
+> - 4 mutations aceitando `unit_id` no payload: `useCreateSector`, `useCreateMaintenanceCategory`, `useCreateMaintenanceItem`, `useUpsertMaintenanceSla`
+> - `useCreateTicket` deixou de ler o store — `unit_id` obrigatório no `TicketInsert`
+> - `TicketFormModal` com reset cascade em `set('unit_id', ...)` que limpa `sector_id`/`category_id`/`item_id`/`equipment_id`
+> - `SlaTab` mostra apenas o `UnitPickerBanner` quando `requiresUnitSelection && !effectiveUnitId` — não renderiza cards de SLA misturando unidades
+>
+> **Validação browser (super_admin, banco local):**
+> - **Caso (a):** "Todas" → modal abre com campo "Unidade *" obrigatório + helper text; botão "Abrir Chamado" disabled até escolha; após escolher Moema + preencher título + setor "Recepção" → toast "Chamado aberto com sucesso", card aparece com badge "Recepção". SQL confirmou: `unit = 'Buffet Cachola Moema'`, `sector = 'Recepção'`.
+> - **Caso (b):** com Pinheiros escolhida → dropdown Setor lista 8 entradas (Salão Principal, Salão 2, Área Externa, Cozinha, Banheiros, Área de Brinquedos, Estacionamento, Depósito) — todas Pinheiros. Trocar para Moema → dropdown rerrenderiza com 8 entradas distintas (Recepção, Escritório, Playground etc.). Comparação SQL: cada unidade tem 8 setores próprios, zero overlap.
+> - **Reset cascade:** com Setor = "Cozinha" (Pinheiros), trocar Unidade → Moema fez o campo Setor voltar para "Nenhum" automaticamente — confirmado em snapshot do a11y tree.
+> - **Caso (c):** Pinheiros como unidade única no seletor global → modal abre **sem** o campo Unidade (primeiro campo é "Título"), botão "Abrir Chamado" enabled sem necessidade de escolha. Comportamento atual preservado.
+> - **Validação local:** `npx tsc --noEmit` limpo. `npm run lint`: 0 erros (348 warnings — baseline). `npm run build`: sucesso.
+>
+> **Observação técnica para Fase 3:**
+> O banco local foi seedado com `user_units` que cobre ambas as unidades para o super_admin de teste, então o INSERT em Moema passou pela RLS atual. Em produção, super_admin/diretor que não tenha `user_units` da unidade escolhida ainda receberá `42501` — esse é exatamente o cenário que a Fase 3 resolve adicionando `is_global_viewer()` à policy de `maintenance_tickets`.
+>
+> **Arquivos tocados (10):**
+> - Novos: `src/hooks/use-form-unit-selection.ts`, `src/components/features/maintenance/unit-picker-banner.tsx`
+> - Modificados: `src/hooks/use-tickets.ts`, `src/hooks/use-sectors.ts`, `src/hooks/use-maintenance-categories.ts`, `src/hooks/use-maintenance-items.ts`, `src/hooks/use-maintenance-sla.ts`, `src/hooks/use-equipment.ts`, `src/components/features/maintenance/ticket-form-modal.tsx`, `src/app/(auth)/manutencao/configuracoes/page.tsx`, `src/components/features/settings/config-table.tsx`
+
+### Fase 2 — Verificações Pré-Deploy — 2026-05-21
+
+> Executadas após implementação e antes de commit/push. Resultado: **todas passaram sem ajustes necessários.**
+
+#### Task 1 — Reset cascade completo (Categoria + Equipamento)
+
+**Objetivo:** confirmar que trocar a unidade no modal reseta todos os 4 campos dependentes, incluindo `category_id` e `equipment_id`.
+
+**Código auditado** — `ticket-form-modal.tsx:119–128`:
+```typescript
+if (key === 'unit_id') {
+  return {
+    ...prev,
+    unit_id:      value as string,
+    sector_id:    '',
+    category_id:  '',
+    item_id:      '',
+    equipment_id: '',
+  }
+}
+```
+Todos os 4 campos são zerados atomicamente no mesmo `setForm` updater. Não há caminho de troca de unidade que preserve qualquer campo dependente.
+
+**Validação browser** (super_admin local, banco dev, "Todas as unidades"):
+1. Modal aberto → unidade "Pinheiros" selecionada
+2. Categoria: **"Elétrica"** selecionada (entre 7 opções de Pinheiros)
+3. Equipamento: **"Piscina de bolinhas"** selecionado (único equipamento disponível em Pinheiros)
+4. Unidade trocada para **"Moema"**
+
+**Snapshot pós-troca:**
+```
+combobox value="Buffet Cachola Moema"   ← unidade nova
+combobox value="Nenhum"                 ← setor resetado
+combobox value="Nenhuma"                ← CATEGORIA resetada ✓
+combobox value="Nenhum"                 ← item resetado
+combobox value="Nenhum equipamento"     ← EQUIPAMENTO resetado ✓
+```
+
+**Resultado: ✅ CONFIRMADO** — todos os 4 campos resetados.
+
+---
+
+#### Task 2 — `mapPgError` usa `effectiveUnitId` do form, não o `null` do store
+
+**Objetivo:** confirmar que em modo "Todas as unidades", se ocorrer erro `42501`, a mensagem será "Você não tem permissão para realizar esta ação nesta unidade." (e não "Selecione uma unidade...").
+
+**Código auditado** — `use-tickets.ts:184–185`:
+```typescript
+onError: (err, payload) =>
+  toast.error(mapPgError(err, { activeUnitId: payload?.unit_id ?? null }, 'TICKET_CREATE')),
+```
+
+**Código auditado** — `ticket-form-modal.tsx:151–155` (`handleSubmit`):
+```typescript
+const payload: TicketInsert = {
+  ...
+  unit_id: effectiveUnitId,   // ← sempre o UUID real do form, não o null do store
+  ...
+}
+```
+
+**Código auditado** — `ticket-form-modal.tsx:170–172` (`submitDisabled`):
+```typescript
+const submitDisabled =
+  createTicket.isPending ||
+  (requiresUnitSelection && !form.unit_id)   // ← submit bloqueado sem unidade
+```
+
+**Raciocínio:** `payload.unit_id` = `effectiveUnitId` = UUID real da unidade escolhida no form. Submit só é habilitado após escolha, então quando a mutation dispara, `payload.unit_id` é **sempre não-nulo**. Portanto `mapPgError(err, { activeUnitId: <UUID real> }, ...)` vai para o branch `42501 + activeUnitId !== null` → mensagem "Você não tem permissão para realizar esta ação nesta unidade." — o cenário correto para um erro de permissão pós-Fase 3.
+
+**Resultado: ✅ CORRETO** — sem ajuste necessário.
+
+---
+
+#### Task 3 — Membros super_admin/diretor em produção (somente leitura)
+
+**Query executada:**
+```sql
+SELECT u.email, u.role, array_agg(un.slug ORDER BY un.slug) AS unit_slugs
+FROM users u
+LEFT JOIN user_units uu ON uu.user_id = u.id
+LEFT JOIN units un ON un.id = uu.unit_id
+WHERE u.role IN ('super_admin','diretor')
+GROUP BY u.email, u.role;
+```
+
+**Resultado em produção:**
+| email | role | unidades |
+|---|---|---|
+| `admin@cacholaos.com.br` | super_admin | {moema, pinheiros} |
+| `bruno.casaletti@grupodrk.com.br` | super_admin | {moema, pinheiros} |
+| `carol@festanacachola.com.br` | diretor | {moema, pinheiros} |
+| `vinicius@festanacachola.com.br` | diretor | {moema, pinheiros} |
+
+**Conclusão:** todos os 4 usuários `super_admin`/`diretor` já têm membership explícito em ambas as unidades. Após o deploy da Fase 2 (antes da Fase 3 adicionar `is_global_viewer()` à RLS de `maintenance_tickets`), **nenhum global viewer receberá `42501`** ao criar chamados — porque a RLS `unit_id = ANY(get_user_unit_ids())` já os cobre via `user_units`. O risco "global viewer com membership parcial" só existiria se algum super_admin/diretor fosse criado sem unidades; isso não acontece na produção atual.
+
+**Resultado: ✅ SEM RISCO** — nenhum ajuste necessário.
+
+---
+
 ### Fase 3 — Migration de RLS + backfill de permissões (alinha módulo ao padrão)
 **Checkpoint:** Bruno aprova plano de migration + smoke test local antes de aplicar em produção.
 

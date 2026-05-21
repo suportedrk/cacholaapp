@@ -11,8 +11,9 @@ import { mapPgError } from '@/lib/errors/map-pg-error'
 // ─────────────────────────────────────────────────────────────
 // LISTAR SETORES
 // ─────────────────────────────────────────────────────────────
-export function useSectors(onlyActive = true) {
-  const { activeUnitId } = useUnitStore()
+export function useSectors(onlyActive = true, unitIdOverride?: string | null) {
+  const storeUnitId = useUnitStore((s) => s.activeUnitId)
+  const activeUnitId = unitIdOverride !== undefined ? unitIdOverride : storeUnitId
   const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
   return useQuery({
     queryKey: ['sectors', onlyActive, activeUnitId],
@@ -35,19 +36,20 @@ export function useSectors(onlyActive = true) {
 // ─────────────────────────────────────────────────────────────
 export function useCreateSector() {
   const qc = useQueryClient()
-  const { activeUnitId } = useUnitStore()
+  const storeUnitId = useUnitStore((s) => s.activeUnitId)
   return useMutation({
-    mutationFn: async (data: { name: string }) => {
+    mutationFn: async (data: { name: string; unit_id?: string | null }) => {
       const supabase = createClient()
+      const targetUnitId = data.unit_id ?? storeUnitId
       let q = supabase.from('maintenance_sectors').select('sort_order').order('sort_order', { ascending: false }).limit(1)
-      if (activeUnitId) q = q.eq('unit_id', activeUnitId)
+      if (targetUnitId) q = q.eq('unit_id', targetUnitId)
       const { data: existing } = await q
       const nextOrder = ((existing?.[0]?.sort_order ?? 0) as number) + 1
-      const { error } = await supabase.from('maintenance_sectors').insert({ ...data, sort_order: nextOrder, unit_id: activeUnitId! })
+      const { error } = await supabase.from('maintenance_sectors').insert({ name: data.name, sort_order: nextOrder, unit_id: targetUnitId! })
       if (error) throw error
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['sectors'] }); toast.success('Setor criado.') },
-    onError: (err) => toast.error(mapPgError(err, { activeUnitId }, 'SECTOR_CREATE')),
+    onError: (err) => toast.error(mapPgError(err, { activeUnitId: storeUnitId }, 'SECTOR_CREATE')),
   })
 }
 
