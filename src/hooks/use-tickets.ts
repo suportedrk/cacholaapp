@@ -144,6 +144,7 @@ export type TicketInsert = Pick<
   MaintenanceTicket,
   'title' | 'nature' | 'urgency'
 > & {
+  unit_id:         string
   description?:    string | null
   sector_id?:      string | null
   category_id?:    string | null
@@ -155,7 +156,6 @@ export type TicketInsert = Pick<
 
 export function useCreateTicket(onSuccess?: (ticket: MaintenanceTicket) => void) {
   const qc = useQueryClient()
-  const { activeUnitId } = useUnitStore()
 
   return useMutation({
     mutationFn: async (payload: TicketInsert) => {
@@ -167,7 +167,6 @@ export function useCreateTicket(onSuccess?: (ticket: MaintenanceTicket) => void)
         .from('maintenance_tickets')
         .insert({
           ...payload,
-          unit_id:   activeUnitId ?? undefined,
           opened_by: user.id,
         })
         .select()
@@ -182,7 +181,8 @@ export function useCreateTicket(onSuccess?: (ticket: MaintenanceTicket) => void)
       auditLog({ action: 'create', module: 'maintenance', entityId: ticket.id })
       onSuccess?.(ticket)
     },
-    onError: (err) => toast.error(mapPgError(err, { activeUnitId }, 'TICKET_CREATE')),
+    onError: (err, payload) =>
+      toast.error(mapPgError(err, { activeUnitId: payload?.unit_id ?? null }, 'TICKET_CREATE')),
   })
 }
 

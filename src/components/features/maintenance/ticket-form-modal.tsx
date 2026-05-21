@@ -22,6 +22,7 @@ import { useSectors } from '@/hooks/use-sectors'
 import { useMaintenanceCategories } from '@/hooks/use-maintenance-categories'
 import { useMaintenanceItems } from '@/hooks/use-maintenance-items'
 import { useEquipment } from '@/hooks/use-equipment'
+import { useFormUnitSelection } from '@/hooks/use-form-unit-selection'
 import type { TicketNature, TicketUrgency } from '@/types/database.types'
 
 // ─────────────────────────────────────────────────────────────
@@ -47,6 +48,7 @@ const URGENCY_OPTIONS: { value: TicketUrgency; label: string }[] = [
 type FormState = {
   title:          string
   description:    string
+  unit_id:        string
   sector_id:      string
   category_id:    string
   item_id:        string
@@ -59,6 +61,7 @@ type FormState = {
 const INITIAL: FormState = {
   title:          '',
   description:    '',
+  unit_id:        '',
   sector_id:      '',
   category_id:    '',
   item_id:        '',
@@ -81,10 +84,16 @@ export function TicketFormModal({ open, onClose, onCreated }: TicketFormModalPro
   const [form, setForm]     = useState<FormState>(INITIAL)
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({})
 
-  const { data: sectors    = [] } = useSectors(true)
-  const { data: categories = [] } = useMaintenanceCategories(true)
-  const { data: items      = [] } = useMaintenanceItems(true, form.sector_id || null)
-  const { data: equipments = [] } = useEquipment({ status: ['active', 'in_repair'] })
+  const { requiresUnitSelection, effectiveUnitId, availableUnits } =
+    useFormUnitSelection(form.unit_id || null)
+
+  // Dropdowns dependentes filtram pela unidade EFETIVA (form quando "Todas", store caso contrário).
+  // Quando requiresUnitSelection && !effectiveUnitId, passamos null → hook não emite eq('unit_id')
+  // e a query depende apenas da RLS (o que é equivalente a "lista vazia" enquanto a unidade não é escolhida).
+  const { data: sectors    = [] } = useSectors(true, effectiveUnitId)
+  const { data: categories = [] } = useMaintenanceCategories(true, effectiveUnitId)
+  const { data: items      = [] } = useMaintenanceItems(true, form.sector_id || null, effectiveUnitId)
+  const { data: equipments = [] } = useEquipment({ status: ['active', 'in_repair'] }, effectiveUnitId)
 
   const createTicket = useCreateTicket((ticket) => {
     onClose()
@@ -102,7 +111,23 @@ export function TicketFormModal({ open, onClose, onCreated }: TicketFormModalPro
   }, [open])
 
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
-    setForm((prev) => ({ ...prev, [key]: value }))
+    setForm((prev) => {
+      // RESET CASCADE — quando troca a unidade, limpa todos os dropdowns dependentes
+      // (sector, category, item, equipment). Previne corrupção silenciosa: super_admin
+      // escolhe setor de Pinheiros, depois muda para Moema; sem o reset, o FK ficaria
+      // pendurado entre unidades.
+      if (key === 'unit_id') {
+        return {
+          ...prev,
+          unit_id:      value as string,
+          sector_id:    '',
+          category_id:  '',
+          item_id:      '',
+          equipment_id: '',
+        }
+      }
+      return { ...prev, [key]: value }
+    })
     if (errors[key]) setErrors((prev) => ({ ...prev, [key]: undefined }))
   }
 
@@ -111,6 +136,9 @@ export function TicketFormModal({ open, onClose, onCreated }: TicketFormModalPro
     if (!form.title.trim())   e.title  = 'Título é obrigatório'
     if (!form.nature)         e.nature  = 'Natureza é obrigatória'
     if (!form.urgency)        e.urgency = 'Urgência é obrigatória'
+    if (requiresUnitSelection && !form.unit_id) {
+      e.unit_id = 'Unidade é obrigatória'
+    }
     setErrors(e)
     return Object.keys(e).length === 0
   }
@@ -118,11 +146,13 @@ export function TicketFormModal({ open, onClose, onCreated }: TicketFormModalPro
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!validate() || createTicket.isPending) return
+    if (!effectiveUnitId) return  // guard final — submit desabilitado deveria impedir, mas defensivo
 
     const payload: TicketInsert = {
       title:        form.title.trim(),
       nature:       form.nature,
       urgency:      form.urgency,
+      unit_id:      effectiveUnitId,
       description:  form.description.trim() || null,
       sector_id:    form.sector_id    || null,
       category_id:  form.category_id  || null,
@@ -137,6 +167,10 @@ export function TicketFormModal({ open, onClose, onCreated }: TicketFormModalPro
     createTicket.mutate(payload)
   }
 
+  const submitDisabled =
+    createTicket.isPending ||
+    (requiresUnitSelection && !form.unit_id)
+
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-lg max-h-[90vh] flex flex-col">
@@ -149,6 +183,43 @@ export function TicketFormModal({ open, onClose, onCreated }: TicketFormModalPro
 
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
           <div className="overflow-y-auto flex-1 px-6 pb-4 space-y-4 pt-2">
+
+          {/* Unidade — visível somente quando seletor global está em "Todas" */}
+          {requiresUnitSelection && (
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-text-primary">
+                Unidade <span className="text-destructive">*</span>
+              </label>
+              <Select
+                value={form.unit_id || 'none'}
+                onValueChange={(v) => set('unit_id', v === 'none' ? '' : (v ?? ''))}
+              >
+                <SelectTrigger className={cn('w-full', errors.unit_id ? 'border-destructive' : '')}>
+                  <span data-slot="select-value">
+                    {form.unit_id
+                      ? (availableUnits.find((u) => u.unit_id === form.unit_id)?.unit?.name ?? 'Selecionar...')
+                      : 'Selecionar...'}
+                  </span>
+                </SelectTrigger>
+                <SelectContent>
+                  {availableUnits.length === 0 && (
+                    <SelectItem value="none" disabled>Sem unidades disponíveis</SelectItem>
+                  )}
+                  {availableUnits.map((u) => (
+                    <SelectItem key={u.unit_id} value={u.unit_id}>{u.unit?.name ?? u.unit_id}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.unit_id ? (
+                <p className="text-xs text-destructive">{errors.unit_id}</p>
+              ) : (
+                <p className="text-xs text-text-tertiary">
+                  Seletor global está em &quot;Todas as unidades&quot; — escolha a unidade do chamado.
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Título */}
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-text-primary">
@@ -367,7 +438,7 @@ export function TicketFormModal({ open, onClose, onCreated }: TicketFormModalPro
           </Button>
           <Button
             onClick={handleSubmit as any}
-            disabled={createTicket.isPending}
+            disabled={submitDisabled}
           >
             {createTicket.isPending ? 'Abrindo...' : 'Abrir Chamado'}
           </Button>

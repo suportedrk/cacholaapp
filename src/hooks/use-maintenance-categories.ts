@@ -17,15 +17,17 @@ export type CategoryInsert = {
   icon: string
   is_active?: boolean
   sort_order?: number
+  unit_id?: string | null
 }
 
-export type CategoryUpdate = Partial<CategoryInsert>
+export type CategoryUpdate = Partial<Omit<CategoryInsert, 'unit_id'>>
 
 // ─────────────────────────────────────────────────────────────
 // LIST
 // ─────────────────────────────────────────────────────────────
-export function useMaintenanceCategories(onlyActive = false) {
-  const activeUnitId = useUnitStore((s) => s.activeUnitId)
+export function useMaintenanceCategories(onlyActive = false, unitIdOverride?: string | null) {
+  const storeUnitId = useUnitStore((s) => s.activeUnitId)
+  const activeUnitId = unitIdOverride !== undefined ? unitIdOverride : storeUnitId
   const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
 
   return useQuery<MaintenanceCategory[]>({
@@ -58,15 +60,18 @@ export function useMaintenanceCategories(onlyActive = false) {
 // ─────────────────────────────────────────────────────────────
 export function useCreateMaintenanceCategory() {
   const queryClient = useQueryClient()
-  const activeUnitId = useUnitStore((s) => s.activeUnitId)
+  const storeUnitId = useUnitStore((s) => s.activeUnitId)
 
   return useMutation({
     mutationFn: async (payload: CategoryInsert) => {
       const supabase = createClient()
+      const { unit_id: payloadUnitId, ...rest } = payload
+      const targetUnitId = payloadUnitId ?? storeUnitId
+
       const { data: existing } = await supabase
         .from('maintenance_categories')
         .select('sort_order')
-        .eq('unit_id', activeUnitId ?? '')
+        .eq('unit_id', targetUnitId ?? '')
         .order('sort_order', { ascending: false })
         .limit(1)
         .maybeSingle()
@@ -75,7 +80,7 @@ export function useCreateMaintenanceCategory() {
 
       const { data, error } = await supabase
         .from('maintenance_categories')
-        .insert({ ...payload, unit_id: activeUnitId ?? undefined, sort_order })
+        .insert({ ...rest, unit_id: targetUnitId ?? undefined, sort_order })
         .select()
         .single()
 
@@ -86,7 +91,7 @@ export function useCreateMaintenanceCategory() {
       queryClient.invalidateQueries({ queryKey: ['maintenance-categories'] })
       toast.success('Categoria criada com sucesso')
     },
-    onError: (err) => toast.error(mapPgError(err, { activeUnitId }, 'CATEGORY_CREATE')),
+    onError: (err) => toast.error(mapPgError(err, { activeUnitId: storeUnitId }, 'CATEGORY_CREATE')),
   })
 }
 

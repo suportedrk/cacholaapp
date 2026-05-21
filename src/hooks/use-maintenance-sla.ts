@@ -17,8 +17,9 @@ export type UrgencyLevel = 'critical' | 'high' | 'medium' | 'low'
 // ─────────────────────────────────────────────────────────────
 // LIST (sempre os 4 níveis, ordenados)
 // ─────────────────────────────────────────────────────────────
-export function useMaintenanceSla() {
-  const activeUnitId = useUnitStore((s) => s.activeUnitId)
+export function useMaintenanceSla(unitIdOverride?: string | null) {
+  const storeUnitId = useUnitStore((s) => s.activeUnitId)
+  const activeUnitId = unitIdOverride !== undefined ? unitIdOverride : storeUnitId
   const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
 
   return useQuery<MaintenanceSla[]>({
@@ -55,20 +56,22 @@ export function useMaintenanceSla() {
 // ─────────────────────────────────────────────────────────────
 export function useUpsertMaintenanceSla() {
   const queryClient = useQueryClient()
-  const activeUnitId = useUnitStore((s) => s.activeUnitId)
+  const storeUnitId = useUnitStore((s) => s.activeUnitId)
 
   return useMutation({
     mutationFn: async (payload: {
       urgency_level: UrgencyLevel
       response_hours: number
       resolution_hours: number
+      unit_id?: string | null
     }) => {
       const supabase = createClient()
+      const targetUnitId = payload.unit_id ?? storeUnitId
       const { data, error } = await supabase
         .from('maintenance_sla')
         .upsert(
           {
-            unit_id: activeUnitId ?? undefined,
+            unit_id: targetUnitId ?? undefined,
             urgency_level: payload.urgency_level,
             response_hours: payload.response_hours,
             resolution_hours: payload.resolution_hours,
@@ -85,6 +88,6 @@ export function useUpsertMaintenanceSla() {
       queryClient.invalidateQueries({ queryKey: ['maintenance-sla'] })
       toast.success('SLA atualizado')
     },
-    onError: (err) => toast.error(mapPgError(err, { activeUnitId }, 'SLA_UPSERT')),
+    onError: (err) => toast.error(mapPgError(err, { activeUnitId: storeUnitId }, 'SLA_UPSERT')),
   })
 }

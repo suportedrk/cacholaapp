@@ -17,15 +17,21 @@ export type ItemInsert = {
   sector_id?: string | null
   is_active?: boolean
   sort_order?: number
+  unit_id?: string | null
 }
 
-export type ItemUpdate = Partial<ItemInsert>
+export type ItemUpdate = Partial<Omit<ItemInsert, 'unit_id'>>
 
 // ─────────────────────────────────────────────────────────────
 // LIST (with sector join)
 // ─────────────────────────────────────────────────────────────
-export function useMaintenanceItems(onlyActive = false, sectorId?: string | null) {
-  const activeUnitId = useUnitStore((s) => s.activeUnitId)
+export function useMaintenanceItems(
+  onlyActive = false,
+  sectorId?: string | null,
+  unitIdOverride?: string | null,
+) {
+  const storeUnitId = useUnitStore((s) => s.activeUnitId)
+  const activeUnitId = unitIdOverride !== undefined ? unitIdOverride : storeUnitId
   const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
 
   return useQuery<MaintenanceItemWithSector[]>({
@@ -59,15 +65,18 @@ export function useMaintenanceItems(onlyActive = false, sectorId?: string | null
 // ─────────────────────────────────────────────────────────────
 export function useCreateMaintenanceItem() {
   const queryClient = useQueryClient()
-  const activeUnitId = useUnitStore((s) => s.activeUnitId)
+  const storeUnitId = useUnitStore((s) => s.activeUnitId)
 
   return useMutation({
     mutationFn: async (payload: ItemInsert) => {
       const supabase = createClient()
+      const { unit_id: payloadUnitId, ...rest } = payload
+      const targetUnitId = payloadUnitId ?? storeUnitId
+
       const { data: existing } = await supabase
         .from('maintenance_items')
         .select('sort_order')
-        .eq('unit_id', activeUnitId ?? '')
+        .eq('unit_id', targetUnitId ?? '')
         .order('sort_order', { ascending: false })
         .limit(1)
         .maybeSingle()
@@ -76,7 +85,7 @@ export function useCreateMaintenanceItem() {
 
       const { data, error } = await supabase
         .from('maintenance_items')
-        .insert({ ...payload, unit_id: activeUnitId ?? undefined, sort_order })
+        .insert({ ...rest, unit_id: targetUnitId ?? undefined, sort_order })
         .select()
         .single()
 
@@ -87,7 +96,7 @@ export function useCreateMaintenanceItem() {
       queryClient.invalidateQueries({ queryKey: ['maintenance-items'] })
       toast.success('Item criado com sucesso')
     },
-    onError: (err) => toast.error(mapPgError(err, { activeUnitId }, 'ITEM_CREATE')),
+    onError: (err) => toast.error(mapPgError(err, { activeUnitId: storeUnitId }, 'ITEM_CREATE')),
   })
 }
 

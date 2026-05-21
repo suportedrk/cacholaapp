@@ -27,6 +27,8 @@ interface ConfigTableProps {
     placeholder?: string
     type?: 'text' | 'number'
   }
+  /** Quando false, esconde o botão "Adicionar". Útil quando uma unidade ainda não foi escolhida. */
+  canCreate?: boolean
   onCreate: (data: { name: string; [key: string]: unknown }) => Promise<void>
   onUpdate: (id: string, data: Partial<ConfigItem>) => Promise<void>
   onDelete: (id: string) => Promise<void>
@@ -43,6 +45,7 @@ export function ConfigTable({
   items,
   isLoading,
   extraField,
+  canCreate = true,
   onCreate,
   onUpdate,
   onDelete,
@@ -229,7 +232,7 @@ export function ConfigTable({
         )}
       </div>
 
-      {!isCreating && !isReadOnly && (
+      {!isCreating && !isReadOnly && canCreate && (
         <Button variant="outline" size="sm" onClick={() => setIsCreating(true)} className="w-full sm:w-auto">
           <Plus className="w-3.5 h-3.5 mr-1.5" />
           Adicionar {title.toLowerCase()}

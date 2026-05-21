@@ -23,9 +23,13 @@ export type EquipmentFilters = {
 // LISTAR EQUIPAMENTOS
 // ─────────────────────────────────────────────────────────────
 
-export function useEquipment(filters: EquipmentFilters = {}) {
+export function useEquipment(
+  filters: EquipmentFilters = {},
+  unitIdOverride?: string | null,
+) {
   const { search, category, status, onlyActive } = filters
-  const { activeUnitId } = useUnitStore()
+  const storeUnitId = useUnitStore((s) => s.activeUnitId)
+  const activeUnitId = unitIdOverride !== undefined ? unitIdOverride : storeUnitId
   const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
 
   return useQuery({
