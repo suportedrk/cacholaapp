@@ -704,7 +704,7 @@ END IF;
 - 4.3 Idem para `/api/maintenance/history-summary`.
 - 4.4 Validar visualmente o painel com super_admin "Todas", diretor "Todas" e gerente em unidade única.
 
-> **✅ IMPLEMENTADO em 2026-05-21 — aguardando aprovação para commit/deploy.**
+> **✅ DEPLOYED em 2026-05-21** — commit `e6d36a2` (develop), merge commit `ecbe55b` (main), PR #40, tag `v1.11.4`. Deploy to Production: success (5m24s). VPS: buildId `ecbe55b` confirmado.
 >
 > **Diagnóstico (somente leitura):**
 > - Ambas as rotas (`stats/route.ts:34–252`, `history-summary/route.ts:22–206`) usam `createClient()` SSR (sessão do usuário, RLS aplicada). Não usam `service_role`.
@@ -751,11 +751,18 @@ END IF;
 
 ## 9. Próximo passo
 
-Aguardar revisão e aprovação do Bruno. **Nenhuma alteração de código foi feita.** Para iniciar a implementação:
+**Status atual (2026-05-21):**
 
-1. Confirmar reprodução do erro em dev local (Fase 1.1).
-2. Aprovar plano da Fase 1 isoladamente para que o toast melhorado vá em PR rápido — vai ajudar a diagnosticar bugs futuros do mesmo tipo.
-3. Decidir se a Fase 3 (migration de RLS) entra junto da Fase 2 (UX) ou em PR separado — Fase 3 sem Fase 2 é inócua, Fase 2 sem Fase 3 deixa F3 (vulnerabilidade defense-in-depth) aberto.
+| Fase | Status | Versão | PR | Commit |
+|---|---|---|---|---|
+| Fase 1 — Toast melhorado + mapPgError | ✅ Deployed | v1.11.2 | #38 | `1de05f7` |
+| Fase 2 — Fix modal Novo Chamado | ✅ Deployed | v1.11.3 | #39 | `0610b8d` |
+| Fase 4 — Dashboard agrega "Todas" | ✅ Deployed | v1.11.4 | #40 | `ecbe55b` |
+| Fase 3 — Migration RLS + backfill | 🔲 Pendente aprovação Bruno | — | — | — |
+| Fase 5 — Cleanup código legado | 🔲 Pendente | — | — | — |
+| Fase 6 — Otimizações opcionais | 🔲 Pendente | — | — | — |
+
+**Próximo passo:** Bruno validar em produção `/manutencao/dashboard` como super_admin em "Todas as unidades" (v1.11.4 no footer). Se OK, aprovar Fase 3 (migration de RLS `091_maintenance_rls_alignment.sql`).
 
 ---
 
