@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { useUnitStore } from '@/stores/unit-store'
 import { useAuthReadyStore } from '@/stores/auth-store'
 import { auditLog } from '@/lib/audit-client'
+import { mapPgError } from '@/lib/errors/map-pg-error'
 import type {
   MaintenanceTicket,
   MaintenanceTicketForList,
@@ -181,7 +182,7 @@ export function useCreateTicket(onSuccess?: (ticket: MaintenanceTicket) => void)
       auditLog({ action: 'create', module: 'maintenance', entityId: ticket.id })
       onSuccess?.(ticket)
     },
-    onError: () => toast.error('Erro ao abrir chamado'),
+    onError: (err) => toast.error(mapPgError(err, { activeUnitId }, 'TICKET_CREATE')),
   })
 }
 
@@ -226,7 +227,7 @@ export function useUpdateTicketStatus() {
       qc.invalidateQueries({ queryKey: ['ticket', ticket.id] })
       auditLog({ action: 'status_change', module: 'maintenance', entityId: ticket.id, newData: { status: ticket.status } })
     },
-    onError: () => toast.error('Erro ao atualizar status'),
+    onError: (err) => toast.error(mapPgError(err, {}, 'TICKET_STATUS_UPDATE')),
   })
 }
 
@@ -249,7 +250,7 @@ export function useUpdateTicketEquipment() {
       qc.invalidateQueries({ queryKey: ['ticket', id] })
       toast.success('Equipamento atualizado')
     },
-    onError: () => toast.error('Erro ao atualizar equipamento'),
+    onError: (err) => toast.error(mapPgError(err, {}, 'TICKET_EQUIPMENT_UPDATE')),
   })
 }
 
@@ -290,7 +291,7 @@ export function useAddExecution(onSuccess?: () => void) {
       toast.success('Execução registrada')
       onSuccess?.()
     },
-    onError: () => toast.error('Erro ao registrar execução'),
+    onError: (err) => toast.error(mapPgError(err, {}, 'EXECUTION_ADD')),
   })
 }
 
@@ -317,7 +318,7 @@ export function useUpdateExecution(ticketId: string) {
       qc.invalidateQueries({ queryKey: ['ticket', ticketId] })
       qc.invalidateQueries({ queryKey: ['tickets'] })
     },
-    onError: () => toast.error('Erro ao atualizar execução'),
+    onError: (err) => toast.error(mapPgError(err, {}, 'EXECUTION_UPDATE')),
   })
 }
 
@@ -365,7 +366,7 @@ export function useUploadTicketPhoto() {
       qc.invalidateQueries({ queryKey: ['ticket', vars.ticketId] })
       toast.success('Foto adicionada')
     },
-    onError: () => toast.error('Erro ao adicionar foto'),
+    onError: (err) => toast.error(mapPgError(err, {}, 'TICKET_PHOTO_UPLOAD')),
   })
 }
 
@@ -395,6 +396,6 @@ export function useApproveCost(ticketId: string) {
       qc.invalidateQueries({ queryKey: ['ticket', ticketId] })
       toast.success('Custo aprovado')
     },
-    onError: () => toast.error('Erro ao aprovar custo'),
+    onError: (err) => toast.error(mapPgError(err, {}, 'TICKET_COST_APPROVE')),
   })
 }

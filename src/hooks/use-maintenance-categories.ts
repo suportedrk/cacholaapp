@@ -6,6 +6,7 @@ import { useUnitStore } from '@/stores/unit-store'
 import { useAuthReadyStore } from '@/stores/auth-store'
 import { toast } from 'sonner'
 import type { MaintenanceCategory } from '@/types/database.types'
+import { mapPgError } from '@/lib/errors/map-pg-error'
 
 // ─────────────────────────────────────────────────────────────
 // TYPES
@@ -85,7 +86,7 @@ export function useCreateMaintenanceCategory() {
       queryClient.invalidateQueries({ queryKey: ['maintenance-categories'] })
       toast.success('Categoria criada com sucesso')
     },
-    onError: () => toast.error('Erro ao criar categoria'),
+    onError: (err) => toast.error(mapPgError(err, { activeUnitId }, 'CATEGORY_CREATE')),
   })
 }
 
@@ -111,7 +112,7 @@ export function useUpdateMaintenanceCategory() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['maintenance-categories'] })
     },
-    onError: () => toast.error('Erro ao atualizar categoria'),
+    onError: (err) => toast.error(mapPgError(err, {}, 'CATEGORY_UPDATE')),
   })
 }
 
@@ -135,6 +136,6 @@ export function useDeleteMaintenanceCategory() {
       queryClient.invalidateQueries({ queryKey: ['maintenance-categories'] })
       toast.success('Categoria removida')
     },
-    onError: () => toast.error('Erro ao remover categoria'),
+    onError: (err) => toast.error(mapPgError(err, {}, 'CATEGORY_DELETE')),
   })
 }

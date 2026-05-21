@@ -12,6 +12,7 @@ import type {
   CreateProviderInput,
   UpdateProviderInput,
 } from '@/types/providers'
+import { mapPgError } from '@/lib/errors/map-pg-error'
 
 // ─────────────────────────────────────────────────────────────
 // SELECT strings
@@ -179,14 +180,7 @@ export function useCreateProvider() {
       qc.invalidateQueries({ queryKey: ['providers', activeUnitId] })
       toast.success('Prestador cadastrado com sucesso.')
     },
-    onError: (error: unknown) => {
-      const msg = (error as { message?: string })?.message ?? ''
-      if (msg.includes('unique') || msg.includes('duplicate')) {
-        toast.error('Já existe um prestador com este documento nesta unidade.')
-      } else {
-        toast.error('Erro ao cadastrar prestador.')
-      }
-    },
+    onError: (err) => toast.error(mapPgError(err, { activeUnitId }, 'PROVIDER_CREATE')),
   })
 }
 
@@ -214,7 +208,7 @@ export function useUpdateProvider() {
       qc.invalidateQueries({ queryKey: ['provider', data.id, activeUnitId] })
       toast.success('Prestador atualizado.')
     },
-    onError: () => toast.error('Erro ao atualizar prestador.'),
+    onError: (err) => toast.error(mapPgError(err, {}, 'PROVIDER_UPDATE')),
   })
 }
 
@@ -239,7 +233,7 @@ export function useDeleteProvider() {
       qc.invalidateQueries({ queryKey: ['providers', activeUnitId] })
       toast.success('Prestador removido com sucesso.')
     },
-    onError: () => toast.error('Erro ao remover prestador.'),
+    onError: (err) => toast.error(mapPgError(err, {}, 'PROVIDER_DELETE')),
   })
 }
 

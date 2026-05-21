@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { useUnitStore } from '@/stores/unit-store'
 import { useAuthReadyStore } from '@/stores/auth-store'
 import type { Equipment, EquipmentStatus } from '@/types/database.types'
+import { mapPgError } from '@/lib/errors/map-pg-error'
 
 // ─────────────────────────────────────────────────────────────
 // FILTROS
@@ -121,9 +122,7 @@ export function useCreateEquipment() {
       qc.invalidateQueries({ queryKey: ['equipment'] })
       toast.success('Equipamento cadastrado com sucesso')
     },
-    onError: (err: Error) => {
-      toast.error(`Erro ao cadastrar equipamento: ${err.message}`)
-    },
+    onError: (err) => toast.error(mapPgError(err, { activeUnitId }, 'EQUIPMENT_CREATE')),
   })
 }
 
@@ -152,9 +151,7 @@ export function useUpdateEquipment() {
       qc.invalidateQueries({ queryKey: ['equipment', id] })
       toast.success('Equipamento atualizado com sucesso')
     },
-    onError: (err: Error) => {
-      toast.error(`Erro ao atualizar equipamento: ${err.message}`)
-    },
+    onError: (err) => toast.error(mapPgError(err, {}, 'EQUIPMENT_UPDATE')),
   })
 }
 
@@ -181,9 +178,7 @@ export function useChangeEquipmentStatus() {
       qc.invalidateQueries({ queryKey: ['equipment', updated.id] })
       toast.success('Status do equipamento atualizado')
     },
-    onError: (err: Error) => {
-      toast.error(`Erro ao atualizar status: ${err.message}`)
-    },
+    onError: (err) => toast.error(mapPgError(err, {}, 'EQUIPMENT_STATUS_UPDATE')),
   })
 }
 
