@@ -448,6 +448,8 @@ Legenda esforço: P (≤1 dia), M (1–3 dias), G (>3 dias).
 
 > Esta fase **não corrige** o bug funcional. Apenas torna o erro visível para validar a hipótese e ajudar diagnóstico futuro. Pode ser entregue isoladamente.
 
+> **✅ DEPLOYED em 2026-05-21** — merge commit `1de05f7`, PR #38, tag `v1.11.2`. Deploy to Production: success (4m52s). VPS: pm2 online, `package.json v1.11.2` confirmado. **Aguardando validação visual do Bruno em produção.**
+
 ### Fase 2 — Fix do modal "Novo Chamado" (resolve o bug funcional)
 **Checkpoint:** Bruno aprova após Bruno testar como super_admin em "Todas" e como gerente em uma unidade só.
 
