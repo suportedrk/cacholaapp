@@ -3,7 +3,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
-import { useUnitStore } from '@/stores/unit-store'
 import { useAuthReadyStore } from '@/stores/auth-store'
 import {
   notifyProviderAddedToEvent,
@@ -31,12 +30,13 @@ const EVENT_PROVIDER_WITH_EVENT_SELECT = `
 // ─────────────────────────────────────────────────────────────
 // useEventProviders — Prestadores de um evento
 // ─────────────────────────────────────────────────────────────
+// Fase 4b (ampliada): sub-leitura por eventId. Não filtra por activeUnitId
+// (RLS de event_providers protege e o vínculo com a unidade é via evento).
 export function useEventProviders(eventId: string | null) {
-  const { activeUnitId } = useUnitStore()
   const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
 
   return useQuery({
-    queryKey: ['event-providers', eventId, activeUnitId],
+    queryKey: ['event-providers', eventId],
     enabled: !!eventId && isSessionReady,
     staleTime: 30 * 1000,
     retry: (count, error: unknown) => {
@@ -47,13 +47,11 @@ export function useEventProviders(eventId: string | null) {
     },
     queryFn: async (): Promise<EventProvider[]> => {
       const supabase = createClient()
-      let q = supabase
+      const { data, error } = await supabase
         .from('event_providers')
         .select(EVENT_PROVIDER_SELECT)
         .eq('event_id', eventId!)
         .order('created_at', { ascending: true })
-      if (activeUnitId) q = q.eq('unit_id', activeUnitId)
-      const { data, error } = await q
       if (error) throw error
       return data as unknown as EventProvider[]
     },
@@ -63,12 +61,12 @@ export function useEventProviders(eventId: string | null) {
 // ─────────────────────────────────────────────────────────────
 // useProviderEvents — Histórico de festas de um prestador
 // ─────────────────────────────────────────────────────────────
+// Fase 4b (ampliada): sub-leitura por providerId. Não filtra por activeUnitId.
 export function useProviderEvents(providerId: string | null) {
-  const { activeUnitId } = useUnitStore()
   const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
 
   return useQuery({
-    queryKey: ['provider-events', providerId, activeUnitId],
+    queryKey: ['provider-events', providerId],
     enabled: !!providerId && isSessionReady,
     staleTime: 60 * 1000,
     retry: (count, error: unknown) => {
@@ -79,13 +77,11 @@ export function useProviderEvents(providerId: string | null) {
     },
     queryFn: async (): Promise<EventProvider[]> => {
       const supabase = createClient()
-      let q = supabase
+      const { data, error } = await supabase
         .from('event_providers')
         .select(EVENT_PROVIDER_WITH_EVENT_SELECT)
         .eq('provider_id', providerId!)
         .order('created_at', { ascending: false })
-      if (activeUnitId) q = q.eq('unit_id', activeUnitId)
-      const { data, error } = await q
       if (error) throw error
       return data as unknown as EventProvider[]
     },
@@ -100,11 +96,11 @@ export function useProviderScheduleConflicts(
   eventDate: string | null,         // 'YYYY-MM-DD'
   excludeEventId?: string | null    // current event to exclude from check
 ) {
-  const { activeUnitId } = useUnitStore()
   const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
 
   return useQuery({
-    queryKey: ['provider-conflicts', providerId, eventDate, excludeEventId, activeUnitId],
+    // Fase 4b (ampliada): scoped por providerId — não precisa de activeUnitId na key
+    queryKey: ['provider-conflicts', providerId, eventDate, excludeEventId],
     enabled: !!providerId && !!eventDate && isSessionReady,
     staleTime: 30 * 1000, // needs to be fresh
     retry: false,
@@ -141,7 +137,6 @@ export function useProviderScheduleConflicts(
 // ─────────────────────────────────────────────────────────────
 export function useAddProviderToEvent() {
   const qc = useQueryClient()
-  const { activeUnitId } = useUnitStore()
 
   return useMutation({
     mutationFn: async (input: CreateEventProviderInput) => {
@@ -156,10 +151,10 @@ export function useAddProviderToEvent() {
       return data as unknown as EventProvider
     },
     onSuccess: (data) => {
-      qc.invalidateQueries({ queryKey: ['event-providers', data.event_id, activeUnitId] })
-      qc.invalidateQueries({ queryKey: ['provider-events', data.provider_id, activeUnitId] })
-      qc.invalidateQueries({ queryKey: ['provider', data.provider_id, activeUnitId] })
-      qc.invalidateQueries({ queryKey: ['providers', activeUnitId] })
+      qc.invalidateQueries({ queryKey: ['event-providers', data.event_id] })
+      qc.invalidateQueries({ queryKey: ['provider-events', data.provider_id] })
+      qc.invalidateQueries({ queryKey: ['provider', data.provider_id] })
+      qc.invalidateQueries({ queryKey: ['providers'] })
       toast.success('Prestador adicionado ao evento.')
       ;(async () => {
         try {
@@ -185,7 +180,6 @@ export function useAddProviderToEvent() {
 // ─────────────────────────────────────────────────────────────
 export function useUpdateEventProvider() {
   const qc = useQueryClient()
-  const { activeUnitId } = useUnitStore()
 
   return useMutation({
     mutationFn: async ({ id, event_id, provider_id, ...patch }: UpdateEventProviderInput) => {
@@ -210,8 +204,8 @@ export function useUpdateEventProvider() {
       return { ...data, event_id, provider_id }
     },
     onSuccess: (data) => {
-      qc.invalidateQueries({ queryKey: ['event-providers', data.event_id, activeUnitId] })
-      qc.invalidateQueries({ queryKey: ['provider-events', data.provider_id, activeUnitId] })
+      qc.invalidateQueries({ queryKey: ['event-providers', data.event_id] })
+      qc.invalidateQueries({ queryKey: ['provider-events', data.provider_id] })
       toast.success('Prestador atualizado.')
       if (data.status) {
         ;(async () => {
@@ -232,7 +226,6 @@ export function useUpdateEventProvider() {
 // ─────────────────────────────────────────────────────────────
 export function useRemoveProviderFromEvent() {
   const qc = useQueryClient()
-  const { activeUnitId } = useUnitStore()
 
   return useMutation({
     mutationFn: async ({
@@ -249,10 +242,10 @@ export function useRemoveProviderFromEvent() {
       return { id, event_id, provider_id }
     },
     onSuccess: ({ event_id, provider_id }) => {
-      qc.invalidateQueries({ queryKey: ['event-providers', event_id, activeUnitId] })
-      qc.invalidateQueries({ queryKey: ['provider-events', provider_id, activeUnitId] })
-      qc.invalidateQueries({ queryKey: ['provider', provider_id, activeUnitId] })
-      qc.invalidateQueries({ queryKey: ['providers', activeUnitId] })
+      qc.invalidateQueries({ queryKey: ['event-providers', event_id] })
+      qc.invalidateQueries({ queryKey: ['provider-events', provider_id] })
+      qc.invalidateQueries({ queryKey: ['provider', provider_id] })
+      qc.invalidateQueries({ queryKey: ['providers'] })
       toast.success('Prestador removido do evento.')
     },
     onError: () => toast.error('Erro ao remover prestador do evento.'),

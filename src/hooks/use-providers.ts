@@ -37,8 +37,12 @@ const PROVIDER_DETAIL_SELECT = `
 // ─────────────────────────────────────────────────────────────
 // useProviders — Lista com filtros (categoria client-side)
 // ─────────────────────────────────────────────────────────────
-export function useProviders(filters?: Partial<ProviderFilters>) {
-  const { activeUnitId } = useUnitStore()
+export function useProviders(
+  filters?: Partial<ProviderFilters>,
+  unitIdOverride?: string | null,
+) {
+  const storeUnitId = useUnitStore((s) => s.activeUnitId)
+  const activeUnitId = unitIdOverride !== undefined ? unitIdOverride : storeUnitId
   const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
 
   // Serialise filters for queryKey stability
@@ -125,12 +129,14 @@ export function useProviders(filters?: Partial<ProviderFilters>) {
 // ─────────────────────────────────────────────────────────────
 // useProvider — Detalhe completo
 // ─────────────────────────────────────────────────────────────
+// Fase 4b (ampliada): leitura-por-id NÃO filtra por activeUnitId. O id é único e
+// a RLS já garante o acesso (is_global_viewer() para super_admin/diretor +
+// membership em user_units para os demais). Pattern alinhada com useTicket.
 export function useProvider(providerId: string | null) {
-  const { activeUnitId } = useUnitStore()
   const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
 
   return useQuery({
-    queryKey: ['provider', providerId, activeUnitId],
+    queryKey: ['provider', providerId],
     enabled: !!providerId && isSessionReady,
     staleTime: 30 * 1000,
     retry: (count, error: unknown) => {
@@ -141,12 +147,11 @@ export function useProvider(providerId: string | null) {
     },
     queryFn: async (): Promise<ServiceProviderWithDetails> => {
       const supabase = createClient()
-      let detailQuery = supabase
+      const { data, error } = await supabase
         .from('service_providers')
         .select(PROVIDER_DETAIL_SELECT)
         .eq('id', providerId!)
-      if (activeUnitId) detailQuery = detailQuery.eq('unit_id', activeUnitId)
-      const { data, error } = await detailQuery.single()
+        .single()
       if (error) throw error
       return data as unknown as ServiceProviderWithDetails
     },
@@ -156,9 +161,9 @@ export function useProvider(providerId: string | null) {
 // ─────────────────────────────────────────────────────────────
 // useCreateProvider
 // ─────────────────────────────────────────────────────────────
+// `unit_id` é parte obrigatória de CreateProviderInput (Fase 4b) — caller decide.
 export function useCreateProvider() {
   const qc = useQueryClient()
-  const { activeUnitId } = useUnitStore()
 
   return useMutation({
     mutationFn: async (input: CreateProviderInput) => {
@@ -168,7 +173,6 @@ export function useCreateProvider() {
         .from('service_providers')
         .insert({
           ...input,
-          unit_id:    activeUnitId!,
           created_by: user?.id ?? null,
         })
         .select()
@@ -177,10 +181,11 @@ export function useCreateProvider() {
       return data
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['providers', activeUnitId] })
+      qc.invalidateQueries({ queryKey: ['providers'] })
       toast.success('Prestador cadastrado com sucesso.')
     },
-    onError: (err) => toast.error(mapPgError(err, { activeUnitId }, 'PROVIDER_CREATE')),
+    onError: (err, payload) =>
+      toast.error(mapPgError(err, { activeUnitId: payload?.unit_id ?? null }, 'PROVIDER_CREATE')),
   })
 }
 
@@ -189,7 +194,6 @@ export function useCreateProvider() {
 // ─────────────────────────────────────────────────────────────
 export function useUpdateProvider() {
   const qc = useQueryClient()
-  const { activeUnitId } = useUnitStore()
 
   return useMutation({
     mutationFn: async ({ id, ...patch }: UpdateProviderInput) => {
@@ -204,8 +208,9 @@ export function useUpdateProvider() {
       return data
     },
     onSuccess: (data) => {
-      qc.invalidateQueries({ queryKey: ['providers', activeUnitId] })
-      qc.invalidateQueries({ queryKey: ['provider', data.id, activeUnitId] })
+      // Invalida prefixo amplo — providers (lista, todas unidades) e provider/<id> (detalhe sem unit)
+      qc.invalidateQueries({ queryKey: ['providers'] })
+      qc.invalidateQueries({ queryKey: ['provider', data.id] })
       toast.success('Prestador atualizado.')
     },
     onError: (err) => toast.error(mapPgError(err, {}, 'PROVIDER_UPDATE')),
@@ -217,7 +222,6 @@ export function useUpdateProvider() {
 // ─────────────────────────────────────────────────────────────
 export function useDeleteProvider() {
   const qc = useQueryClient()
-  const { activeUnitId } = useUnitStore()
 
   return useMutation({
     mutationFn: async (id: string) => {
@@ -230,7 +234,7 @@ export function useDeleteProvider() {
       return id
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['providers', activeUnitId] })
+      qc.invalidateQueries({ queryKey: ['providers'] })
       toast.success('Prestador removido com sucesso.')
     },
     onError: (err) => toast.error(mapPgError(err, {}, 'PROVIDER_DELETE')),
@@ -246,12 +250,15 @@ const PROVIDER_EVENT_SELECT = `
   category:service_categories(id, name, icon, color)
 ` as const
 
+// Fase 4b (ampliada): sub-leitura de um prestador. event_providers tem RLS própria
+// e a unidade já é determinada pelo provider_id — não filtramos por activeUnitId
+// (que pode estar em outra unidade quando o usuário trocou o seletor após abrir
+// o detalhe do prestador).
 export function useProviderEvents(providerId: string | null) {
-  const { activeUnitId } = useUnitStore()
   const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
 
   return useQuery({
-    queryKey: ['provider-events', providerId, activeUnitId],
+    queryKey: ['provider-events', providerId],
     enabled: !!providerId && isSessionReady,
     staleTime: 60 * 1000,
     retry: (count, error: unknown) => {
@@ -262,13 +269,11 @@ export function useProviderEvents(providerId: string | null) {
     },
     queryFn: async () => {
       const supabase = createClient()
-      let eventsQuery = supabase
+      const { data, error } = await supabase
         .from('event_providers')
         .select(PROVIDER_EVENT_SELECT)
         .eq('provider_id', providerId!)
         .order('created_at', { ascending: false })
-      if (activeUnitId) eventsQuery = eventsQuery.eq('unit_id', activeUnitId)
-      const { data, error } = await eventsQuery
       if (error) throw error
       return (data ?? []) as unknown as ProviderEventItem[]
     },

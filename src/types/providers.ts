@@ -230,6 +230,7 @@ export interface CreateProviderInput {
   document_type: DocumentType
   document_number: string
   name: string
+  unit_id: string
   legal_name?: string
   status?: ProviderStatus
   tags?: string[]
