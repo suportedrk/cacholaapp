@@ -466,7 +466,7 @@ Legenda esforço: P (≤1 dia), M (1–3 dias), G (>3 dias).
 - (c) gerente em unidade única → campo Unidade NÃO aparece no modal, INSERT usa unidade do store.
 - (d) super_admin com unidade única no seletor global → campo Unidade NÃO aparece, INSERT usa unidade do store.
 
-> **✅ IMPLEMENTADO em 2026-05-21 — aguardando aprovação para commit/deploy.**
+> **✅ DEPLOYED em 2026-05-21** — merge commit `0610b8d`, PR #39, tag `v1.11.3`. Deploy to Production: success (5m15s). VPS: pm2 online, `package.json v1.11.3` confirmado. **Aguardando validação visual do Bruno em produção.**
 >
 > **Arquitetura:**
 > - Hook compartilhado `src/hooks/use-form-unit-selection.ts` (`useFormUnitSelection(formUnitId)` → `{ requiresUnitSelection, effectiveUnitId, availableUnits }`)
