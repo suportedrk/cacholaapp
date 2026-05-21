@@ -7,6 +7,7 @@ import { startOfMonth, endOfMonth, startOfYear, endOfYear, subMonths } from 'dat
 import { useUnitStore } from '@/stores/unit-store'
 import { useAuthReadyStore } from '@/stores/auth-store'
 import type { MaintenanceCost, MaintenanceCostStatus, MaintenanceCostType } from '@/types/database.types'
+import { mapPgError } from '@/lib/errors/map-pg-error'
 
 // ─────────────────────────────────────────────────────────────
 // TYPES
@@ -226,7 +227,7 @@ export function useSubmitCost() {
       qc.invalidateQueries({ queryKey: ['maintenance-stats', activeUnitId] })
       toast.success('Custo registrado e enviado para aprovação')
     },
-    onError: (err: Error) => toast.error(err.message ?? 'Erro ao registrar custo'),
+    onError: (err) => toast.error(mapPgError(err, { activeUnitId }, 'COST_CREATE')),
   })
 }
 
@@ -259,7 +260,7 @@ export function useApproveCost() {
       qc.invalidateQueries({ queryKey: ['maintenance-stats', activeUnitId] })
       toast.success('Custo aprovado')
     },
-    onError: (err: Error) => toast.error(err.message ?? 'Erro ao aprovar custo'),
+    onError: (err) => toast.error(mapPgError(err, {}, 'COST_APPROVE')),
   })
 }
 
@@ -293,7 +294,7 @@ export function useRejectCost() {
       qc.invalidateQueries({ queryKey: ['maintenance-stats', activeUnitId] })
       toast.success('Custo reprovado')
     },
-    onError: (err: Error) => toast.error(err.message ?? 'Erro ao reprovar custo'),
+    onError: (err) => toast.error(mapPgError(err, {}, 'COST_REJECT')),
   })
 }
 
@@ -319,7 +320,7 @@ export function useDeleteCost() {
       qc.invalidateQueries({ queryKey: ['maintenance-stats', activeUnitId] })
       toast.success('Custo cancelado')
     },
-    onError: (err: Error) => toast.error(err.message ?? 'Erro ao cancelar custo'),
+    onError: (err) => toast.error(mapPgError(err, {}, 'COST_CANCEL')),
   })
 }
 

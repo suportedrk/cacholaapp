@@ -6,6 +6,7 @@ import { useUnitStore } from '@/stores/unit-store'
 import { useAuthReadyStore } from '@/stores/auth-store'
 import { toast } from 'sonner'
 import type { MaintenanceSla } from '@/types/database.types'
+import { mapPgError } from '@/lib/errors/map-pg-error'
 
 // ─────────────────────────────────────────────────────────────
 // URGENCY ORDER (para exibição consistente)
@@ -84,6 +85,6 @@ export function useUpsertMaintenanceSla() {
       queryClient.invalidateQueries({ queryKey: ['maintenance-sla'] })
       toast.success('SLA atualizado')
     },
-    onError: () => toast.error('Erro ao salvar SLA'),
+    onError: (err) => toast.error(mapPgError(err, { activeUnitId }, 'SLA_UPSERT')),
   })
 }

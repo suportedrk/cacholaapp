@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import type { Sector } from '@/types/database.types'
 import { useUnitStore } from '@/stores/unit-store'
 import { useAuthReadyStore } from '@/stores/auth-store'
+import { mapPgError } from '@/lib/errors/map-pg-error'
 
 // ─────────────────────────────────────────────────────────────
 // LISTAR SETORES
@@ -46,7 +47,7 @@ export function useCreateSector() {
       if (error) throw error
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['sectors'] }); toast.success('Setor criado.') },
-    onError: () => toast.error('Erro ao criar setor.'),
+    onError: (err) => toast.error(mapPgError(err, { activeUnitId }, 'SECTOR_CREATE')),
   })
 }
 
@@ -62,7 +63,7 @@ export function useUpdateSector() {
       if (error) throw error
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['sectors'] }); toast.success('Setor atualizado.') },
-    onError: () => toast.error('Erro ao atualizar setor.'),
+    onError: (err) => toast.error(mapPgError(err, {}, 'SECTOR_UPDATE')),
   })
 }
 
@@ -78,6 +79,6 @@ export function useDeleteSector() {
       if (error) throw error
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['sectors'] }); toast.success('Setor desativado.') },
-    onError: () => toast.error('Erro ao desativar setor.'),
+    onError: (err) => toast.error(mapPgError(err, {}, 'SECTOR_DELETE')),
   })
 }

@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { useUnitStore } from '@/stores/unit-store'
 import { useAuthReadyStore } from '@/stores/auth-store'
 import type { ServiceCategory } from '@/types/providers'
+import { mapPgError } from '@/lib/errors/map-pg-error'
 
 // ─────────────────────────────────────────────────────────────
 // useServiceCategories — Lista categorias ativas da unidade
@@ -72,7 +73,7 @@ export function useCreateCategory() {
       qc.invalidateQueries({ queryKey: ['service-categories', activeUnitId] })
       toast.success('Categoria criada com sucesso.')
     },
-    onError: () => toast.error('Erro ao criar categoria.'),
+    onError: (err) => toast.error(mapPgError(err, { activeUnitId }, 'SERVICE_CATEGORY_CREATE')),
   })
 }
 
@@ -109,7 +110,7 @@ export function useUpdateCategory() {
       qc.invalidateQueries({ queryKey: ['service-categories', activeUnitId] })
       toast.success('Categoria atualizada.')
     },
-    onError: () => toast.error('Erro ao atualizar categoria.'),
+    onError: (err) => toast.error(mapPgError(err, {}, 'SERVICE_CATEGORY_UPDATE')),
   })
 }
 
@@ -134,6 +135,6 @@ export function useDeleteCategory() {
       qc.invalidateQueries({ queryKey: ['service-categories', activeUnitId] })
       toast.success('Categoria removida.')
     },
-    onError: () => toast.error('Erro ao remover categoria. Verifique se há prestadores vinculados.'),
+    onError: (err) => toast.error(mapPgError(err, {}, 'SERVICE_CATEGORY_DELETE')),
   })
 }

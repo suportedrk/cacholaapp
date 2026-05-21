@@ -6,6 +6,7 @@ import { useUnitStore } from '@/stores/unit-store'
 import { useAuthReadyStore } from '@/stores/auth-store'
 import { toast } from 'sonner'
 import type { MaintenanceItemWithSector } from '@/types/database.types'
+import { mapPgError } from '@/lib/errors/map-pg-error'
 
 // ─────────────────────────────────────────────────────────────
 // TYPES
@@ -86,7 +87,7 @@ export function useCreateMaintenanceItem() {
       queryClient.invalidateQueries({ queryKey: ['maintenance-items'] })
       toast.success('Item criado com sucesso')
     },
-    onError: () => toast.error('Erro ao criar item'),
+    onError: (err) => toast.error(mapPgError(err, { activeUnitId }, 'ITEM_CREATE')),
   })
 }
 
@@ -112,7 +113,7 @@ export function useUpdateMaintenanceItem() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['maintenance-items'] })
     },
-    onError: () => toast.error('Erro ao atualizar item'),
+    onError: (err) => toast.error(mapPgError(err, {}, 'ITEM_UPDATE')),
   })
 }
 
@@ -136,6 +137,6 @@ export function useDeleteMaintenanceItem() {
       queryClient.invalidateQueries({ queryKey: ['maintenance-items'] })
       toast.success('Item removido')
     },
-    onError: () => toast.error('Erro ao remover item'),
+    onError: (err) => toast.error(mapPgError(err, {}, 'ITEM_DELETE')),
   })
 }
