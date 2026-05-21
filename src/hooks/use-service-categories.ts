@@ -47,33 +47,40 @@ export function useServiceCategories(includeInactive = false) {
 // ─────────────────────────────────────────────────────────────
 // useCreateCategory
 // ─────────────────────────────────────────────────────────────
+// Payload exige `unit_id` explícito — caller decide a unidade (Fase 4b).
+// NOTA: este hook não é consumido por nenhum form ativo do cliente; service_categories
+// só é populado via API server-side (`/api/units/copy-templates`). Mantido como hook
+// seguro para uso futuro, caso uma UI de criação seja adicionada.
+export type ServiceCategoryCreatePayload = {
+  name: string
+  slug: string
+  description?: string
+  icon?: string
+  color?: string
+  sort_order?: number
+  unit_id: string
+}
+
 export function useCreateCategory() {
   const qc = useQueryClient()
-  const { activeUnitId } = useUnitStore()
 
   return useMutation({
-    mutationFn: async (input: {
-      name: string
-      slug: string
-      description?: string
-      icon?: string
-      color?: string
-      sort_order?: number
-    }) => {
+    mutationFn: async (input: ServiceCategoryCreatePayload) => {
       const supabase = createClient()
       const { data, error } = await supabase
         .from('service_categories')
-        .insert({ ...input, unit_id: activeUnitId! })
+        .insert(input)
         .select()
         .single()
       if (error) throw error
       return data
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['service-categories', activeUnitId] })
+      qc.invalidateQueries({ queryKey: ['service-categories'] })
       toast.success('Categoria criada com sucesso.')
     },
-    onError: (err) => toast.error(mapPgError(err, { activeUnitId }, 'SERVICE_CATEGORY_CREATE')),
+    onError: (err, payload) =>
+      toast.error(mapPgError(err, { activeUnitId: payload?.unit_id ?? null }, 'SERVICE_CATEGORY_CREATE')),
   })
 }
 

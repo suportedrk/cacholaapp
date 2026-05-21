@@ -6,7 +6,8 @@ import { ChevronLeft, Loader2, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
-import { useUnitStore } from '@/stores/unit-store'
+import { useFormUnitSelection } from '@/hooks/use-form-unit-selection'
+import { UnitPickerBanner } from '@/components/features/maintenance/unit-picker-banner'
 import { useServiceCategories } from '@/hooks/use-service-categories'
 import {
   useCreateProvider,
@@ -83,8 +84,12 @@ function buildBasicFromProvider(p: ServiceProviderWithDetails): BasicData {
 
 export function ProviderForm({ provider, onSuccess }: Props) {
   const router = useRouter()
-  const { activeUnitId } = useUnitStore()
   const isEditMode = !!provider
+
+  // Unidade: em edição vem do provider; em criação aplica o pattern Fase 2.
+  const [formUnitId, setFormUnitId] = useState<string>(provider?.unit_id ?? '')
+  const { requiresUnitSelection, effectiveUnitId, availableUnits } =
+    useFormUnitSelection(formUnitId || null)
 
   // ── Data ──────────────────────────────────────────────────
   const { data: categories = [] } = useServiceCategories()
@@ -207,8 +212,15 @@ export function ProviderForm({ provider, onSuccess }: Props) {
   }
 
   async function saveCreateMode() {
+    if (!effectiveUnitId) {
+      // Guard: submit deveria estar disabled. Defensivo se algo escapou.
+      toast.error('Selecione uma unidade antes de salvar.')
+      return
+    }
+
     // 1. Create provider
     const providerRow = await createProvider.mutateAsync({
+      unit_id: effectiveUnitId,
       document_type: basicData.document_type,
       document_number: basicData.document_number.replace(/\D/g, ''),
       name: basicData.name.trim(),
@@ -231,7 +243,7 @@ export function ProviderForm({ provider, onSuccess }: Props) {
       pendingContacts.map((c) =>
         createContact.mutateAsync({
           provider_id: providerId,
-          unit_id: activeUnitId!,
+          unit_id: effectiveUnitId,
           type: c.type,
           value: c.value.replace(/\D/g, '') || c.value,
           label: c.label || undefined,
@@ -250,7 +262,7 @@ export function ProviderForm({ provider, onSuccess }: Props) {
         createService.mutateAsync({
           provider_id: providerId,
           category_id: s.category_id,
-          unit_id: activeUnitId!,
+          unit_id: effectiveUnitId,
           description: s.description || undefined,
           price_type: s.price_type,
           price_value: s.price_value ? parseCurrency(s.price_value) : undefined,
@@ -270,7 +282,7 @@ export function ProviderForm({ provider, onSuccess }: Props) {
         .map((d) =>
           uploadDoc.mutateAsync({
             provider_id: providerId,
-            unit_id: activeUnitId!,
+            unit_id: effectiveUnitId,
             file: d.file,
             name: d.name.trim(),
             doc_type: d.doc_type,
@@ -327,14 +339,14 @@ export function ProviderForm({ provider, onSuccess }: Props) {
       updateContact.mutate({
         id,
         provider_id: provider.id,
-        unit_id: activeUnitId!,
+        unit_id: provider.unit_id,
         type: data.type,
         value: data.value,
         label: data.label,
         is_primary: data.is_primary,
       })
     },
-    [updateContact, provider, activeUnitId]
+    [updateContact, provider]
   )
 
   const handleDeleteSavedService = useCallback(
@@ -394,6 +406,16 @@ export function ProviderForm({ provider, onSuccess }: Props) {
           {isEditMode ? 'Voltar para o prestador' : 'Voltar para listagem'}
         </Link>
       </div>
+
+      {/* Seleção de unidade (apenas em criação com seletor global em "Todas") */}
+      {!isEditMode && requiresUnitSelection && (
+        <UnitPickerBanner
+          value={formUnitId}
+          onChange={setFormUnitId}
+          units={availableUnits}
+          contextLabel="cadastrar o prestador"
+        />
+      )}
 
       {/* Stepper */}
       <ProviderFormStepper
@@ -505,7 +527,7 @@ export function ProviderForm({ provider, onSuccess }: Props) {
           <button
             type="button"
             onClick={handleSave}
-            disabled={isSaving}
+            disabled={isSaving || (!isEditMode && requiresUnitSelection && !formUnitId)}
             className="h-11 sm:h-10 px-6 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-all inline-flex items-center justify-center gap-2 disabled:opacity-60"
           >
             {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}

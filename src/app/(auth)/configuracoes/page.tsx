@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { ExternalLink } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -8,6 +9,8 @@ import { ConfigTable, type ConfigItem } from '@/components/features/settings/con
 import { GeneralSettingsTab } from '@/components/features/settings/general-settings-tab'
 import { BusinessHoursTab } from '@/components/features/settings/business-hours-tab'
 import { BrandIdentityTab } from '@/components/features/settings/brand-identity-tab'
+import { UnitPickerBanner } from '@/components/features/maintenance/unit-picker-banner'
+import { useFormUnitSelection } from '@/hooks/use-form-unit-selection'
 import { useSectors, useCreateSector, useUpdateSector, useDeleteSector } from '@/hooks/use-sectors'
 import {
   useEquipmentCategoryItems,
@@ -17,14 +20,24 @@ import {
 } from '@/hooks/use-equipment-categories'
 
 export default function ConfiguracoesPage() {
+  // Em "Todas as unidades", cada aba precisa de uma unidade explícita para criação.
+  // A escolha é por aba (cada lista é independente).
+  const [sectorsUnitId, setSectorsUnitId] = useState<string>('')
+  const [equipCatsUnitId, setEquipCatsUnitId] = useState<string>('')
+
+  const sectorsUnit = useFormUnitSelection(sectorsUnitId || null)
+  const equipCatsUnit = useFormUnitSelection(equipCatsUnitId || null)
+
   // ── Setores (manutenção) ─────────────────────────────────
-  const { data: sectors = [], isLoading: loadingSectors, isError: errorSectors, refetch: refetchSectors } = useSectors(false)
+  const { data: sectors = [], isLoading: loadingSectors, isError: errorSectors, refetch: refetchSectors } =
+    useSectors(false, sectorsUnit.effectiveUnitId)
   const createSector = useCreateSector()
   const updateSector = useUpdateSector()
   const deleteSector = useDeleteSector()
 
   // ── Categorias de Equipamento ────────────────────────────
-  const { data: equipCats = [], isLoading: loadingEquipCats, isError: errorEquipCats, refetch: refetchEquipCats } = useEquipmentCategoryItems(false)
+  const { data: equipCats = [], isLoading: loadingEquipCats, isError: errorEquipCats, refetch: refetchEquipCats } =
+    useEquipmentCategoryItems(false, equipCatsUnit.effectiveUnitId)
   const createEquipCat = useCreateEquipmentCategory()
   const updateEquipCat = useUpdateEquipmentCategory()
   const deleteEquipCat = useDeleteEquipmentCategory()
@@ -72,11 +85,25 @@ export default function ConfiguracoesPage() {
           <p className="text-sm text-muted-foreground">
             Setores do buffet para vinculação das ordens de manutenção (ex: Cozinha, Salão Principal).
           </p>
+          {sectorsUnit.requiresUnitSelection && (
+            <UnitPickerBanner
+              value={sectorsUnitId}
+              onChange={setSectorsUnitId}
+              units={sectorsUnit.availableUnits}
+              contextLabel="criar setores"
+            />
+          )}
           <ConfigTable
             title="Setor"
             items={sectors as ConfigItem[]}
             isLoading={loadingSectors}
-            onCreate={(d) => createSector.mutateAsync(d as { name: string })}
+            canCreate={!sectorsUnit.requiresUnitSelection || !!sectorsUnit.effectiveUnitId}
+            onCreate={(d) =>
+              createSector.mutateAsync({
+                name: (d as { name: string }).name,
+                unit_id: sectorsUnit.effectiveUnitId,
+              })
+            }
             onUpdate={(id, d) => updateSector.mutateAsync({ id, data: d })}
             onDelete={(id) => deleteSector.mutateAsync(id)}
           />
@@ -87,11 +114,26 @@ export default function ConfiguracoesPage() {
           <p className="text-sm text-muted-foreground">
             Categorias para classificar os equipamentos do buffet. Alimentam o select no cadastro de equipamentos.
           </p>
+          {equipCatsUnit.requiresUnitSelection && (
+            <UnitPickerBanner
+              value={equipCatsUnitId}
+              onChange={setEquipCatsUnitId}
+              units={equipCatsUnit.availableUnits}
+              contextLabel="criar categorias de equipamento"
+            />
+          )}
           <ConfigTable
             title="Categoria"
             items={equipCats as ConfigItem[]}
             isLoading={loadingEquipCats}
-            onCreate={async (d) => { await createEquipCat.mutateAsync(d as { name: string }) }}
+            canCreate={!equipCatsUnit.requiresUnitSelection || !!equipCatsUnit.effectiveUnitId}
+            onCreate={async (d) => {
+              if (!equipCatsUnit.effectiveUnitId) return
+              await createEquipCat.mutateAsync({
+                name: (d as { name: string }).name,
+                unit_id: equipCatsUnit.effectiveUnitId,
+              })
+            }}
             onUpdate={async (id, d) => { await updateEquipCat.mutateAsync({ id, data: d }) }}
             onDelete={(id) => deleteEquipCat.mutateAsync(id)}
           />

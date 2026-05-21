@@ -734,6 +734,310 @@ END IF;
 > - Novo: `src/lib/auth/effective-unit-ids.ts`
 > - Modificados: `src/app/api/maintenance/stats/route.ts`, `src/app/api/maintenance/history-summary/route.ts`
 
+---
+
+## 8.5 SWEEP "Todas as unidades" — diagnóstico completo do módulo (2026-05-21)
+
+> Modo somente leitura. Após Fase 4 corrigir o dashboard, Bruno reportou novo sintoma: "Tempo esgotado ao carregar o chamado" no detalhe (`/manutencao/chamados/[id]`). Para evitar descobrir esses bugs um a um, este sweep mapeia TODOS os pontos do módulo que ainda assumem unidade única ou se comportam mal quando `activeUnitId = null`.
+
+### 8.5.1 Reprodução do timeout no detalhe — INCONCLUSIVA
+
+Cenário testado em produção (https://cachola.cloud, super_admin Bruno em "Todas"):
+
+1. Navegar para `/manutencao/chamados` em "Todas" → lista carrega OK (3 chamados misturando Pinheiros + Moema).
+2. Clicar no card "piscina de bolinhas quebrou" → detalhe abriu **sem erro** em ~700ms.
+3. Trocar seletor para "Todas" diretamente na tela de detalhe → ticket continua exibido (vem do cache do React Query, staleTime 30s).
+4. Hard reload na URL do detalhe → ticket carregou em ~800ms.
+
+**Network confirma:** `req=583 GET /rest/v1/maintenance_tickets?...&id=eq.33f...` → **HTTP 200**, ~700ms. Sem 4xx/5xx.
+
+**Conclusão:** o timeout reportado por Bruno foi **intermitente**, NÃO determinístico. Hipóteses originais refutadas via leitura de código:
+
+| Hipótese | Status | Evidência |
+|---|---|---|
+| (a) `useTicket` com `enabled: !!activeUnitId` | ❌ Refutada | `use-tickets.ts:119` → `enabled: !!id && isSessionReady`. Não depende de unidade. |
+| (b) `useLoadingTimeout` usado errado (sem desestruturar) | ❌ Refutada | `[id]/page.tsx:575` → `const { isTimedOut } = useLoadingTimeout(isLoading)`. Correto. |
+| (c) Query de tabela-filha pendurando | ❌ Refutada | Detalhe é uma query única com nested select (executions, photos, history em um único GET). |
+
+**Causa provável residual** (não determinística): latência de produção naquele instante batendo nos 12s default do `useLoadingTimeout`. Quando o detalhe é grande (ticket com muitas execuções/fotos/historico), o nested SELECT pode demorar. Não há bug estrutural no detalhe — apenas o threshold de 12s pode ser agressivo.
+
+**Recomendação:** investigar logs do Supabase no horário do incidente. Se confirmar latência >12s, considerar aumentar o threshold para 20s OU exibir mensagem mais informativa do que "Tempo esgotado" (por exemplo, "Carregando dados — isso está mais lento que o normal. Aguarde ou tente novamente.").
+
+### 8.5.2 Sweep completo — todos os pontos do módulo
+
+`grep` por `activeUnitId|useUnitStore` em `src/app/(auth)/manutencao/**`, `src/app/(auth)/equipamentos/**`, `src/app/(auth)/prestadores/**`, `src/components/features/maintenance/**`, `src/components/features/equipment/**`, `src/hooks/use-{tickets,sectors,maintenance*,equipment*,providers,suppliers,service-categories}.ts`.
+
+#### Classificação por severidade
+
+| Pt | Local | Tipo | Severidade | Resolução |
+|---|---|---|---|---|
+| **P1** | `[id]/page.tsx:597` — upload de foto | (ii) **Quebra em Todas** | ALTA | Substituir `activeUnitId` por `ticket.unit_id` (já disponível) |
+| **P2** | `[id]/page.tsx:803-806` — modal "Adicionar execução" | (ii) **Quebra em Todas** | ALTA | Idem P1 |
+| **P3** | `use-equipment.ts:119` — `useCreateEquipment` | (ii) `unit_id: activeUnitId!` → 42501 em Todas | ALTA | Aceitar `unit_id` no payload + `EquipmentForm` com `useFormUnitSelection` |
+| **P4** | `use-providers.ts:171` + `ProviderForm.tsx:234/253/273/330` — `useCreateProvider` + sub-mutations | (ii) `unit_id: activeUnitId!` → 42501 em Todas (4 mutations) | ALTA | Mesma pattern P3 |
+| **P5** | `use-service-categories.ts:66` — `useCreateServiceCategory` | (ii) `unit_id: activeUnitId!` → 42501 em Todas | ALTA | Mesma pattern P3 (já existe `UnitPickerBanner` em Configurações de Manutenção; replicar) |
+| **P6** | `use-equipment-categories.ts:48` — `useCreateEquipmentCategory` | (ii) `throw new Error('Nenhuma unidade selecionada')` antes do INSERT | MÉDIA | Aceitar `unit_id` no payload OR exibir `UnitPickerBanner` quando "Todas" |
+| **P7** | `use-suppliers.ts:118` — `useCreateSupplier` (LEGADO) | (ii) `unit_id: activeUnitId!` | BAIXA | Verificar se `/manutencao/fornecedores` ainda é alcançável (rotas redirect → /prestadores). Se dead code, remover na Fase 5; senão, mesma pattern P3 |
+| **P8** | `use-maintenance.ts:163` — `useCreateMaintenanceOrder` (LEGADO `maintenance_orders`) | (ii) `unit_id: activeUnitId!` | NENHUMA | Dead code — remover na Fase 5 |
+| **P9** | `chamados/page.tsx:143` — `useSectors(true)` no filtro de listagem | (iii) **Confuso silencioso** — dropdown de Setor lista entradas de TODAS as unidades sem distinguir | BAIXA | Anexar nome da unidade no label OR agrupar por unidade. Não crítico (RLS protege a query final). |
+| **P10** | `[id]/page.tsx:608/619` — `useLoadingTimeout(isLoading)` threshold 12s | (i) ok com null, mas threshold agressivo em produção lenta | MÉDIA | Aumentar para 20s OU mensagem mais informativa quando dispara. Não está relacionado a "Todas". |
+| **P11** | `kanban-board.tsx:206` + `ticket-kanban-board.tsx:294` — `activeUnitId` na queryKey | (i) **OK com null** | NENHUMA | Apenas particiona cache. Comportamento correto. |
+| **P12** | `PendingRatingsAlert.tsx:128` — `activeUnitId ?? ratingFor.unit_id` | (i) **OK com null** | NENHUMA | Fallback explícito para `unit_id` do rating. |
+| **P13** | Hooks de leitura (`useTickets`, `useTicket`, `useEquipment`, `useProviders`, `useSuppliers`, `useSectors`, `useMaintenanceCategories`, `useMaintenanceItems`, `useMaintenanceCosts`, `useMaintenanceCostsSummary`, `useMaintenanceHistory`, `useMaintenanceTicketsTrend`, `useMaintenanceTicketsPeriod`, `useOverdueMaintenance`, `usePreventiveMaintenance`, `useEquipmentCategoryItems`, `useServiceCategories`, `useEquipmentCategoryNames`) | (i) **OK com null** | NENHUMA | Pattern `if (activeUnitId) q = q.eq('unit_id', activeUnitId)` correto. RLS filtra pelo escopo do usuário. |
+
+Legenda de tipo: (i) ok com null; (ii) quebra/trava em "Todas"; (iii) comportamento incorreto silencioso em "Todas".
+
+#### Resumo numérico
+
+- **5 pontos ALTA** (P1, P2, P3, P4, P5) — quebram criação em "Todas". Mesma família do bug F1 da Fase 2, mas em entidades diferentes (equipamento, prestador, categoria de serviço, foto e execução de ticket).
+- **2 pontos MÉDIA** (P6, P10) — degradam UX.
+- **2 pontos BAIXA** (P7, P9) — dead code legado + dropdown de filtro.
+- **4 pontos NENHUMA** (P8, P11, P12, P13) — comportamento atual correto OU dead code já marcado para remoção na Fase 5.
+
+### 8.5.3 Resposta à Tarefa 3 — Botão delete na tela de detalhe
+
+**Resposta direta: NÃO existe.**
+
+- `grep` por `delete|Trash|Excluir|excluir|remover|Remover` em `[id]/page.tsx` → 0 ocorrências.
+- `grep` por `useDeleteTicket|deleteTicket` em `src/` → 0 ocorrências em todo o projeto.
+- O dropdown "..." nos cards da listagem (`uid 54_92/100/108`) não tem ação de delete (apenas alterar status via modal).
+
+**Implicação para Fase 3:** a permissão `delete=false` em `user_permissions(module='manutencao')` para `brunocasaletti@hotmail.com` (gerente) e `suporte@grupodrk.com.br` (manutencao) é **inócua** — não há fluxo UI que dispare DELETE em `maintenance_tickets`. A nova policy `unit_delete_tickets` proposta na Fase 3 (`check_permission(..., 'manutencao', 'delete')`) protege a API direta, mas nenhuma role precisa adicionar `delete=true` para uso normal do produto.
+
+**Decisão sugerida:** manter `delete=false` no template do gerente/manutencao. Se um dia for criada a ação UI, decidir caso a caso quem deveria deletar — provavelmente apenas super_admin/diretor.
+
+---
+
+## 8.6 Fase 4b — Plano coordenado para os 5 pontos ALTA + 2 MÉDIA
+
+**Objetivo:** unificar a solução das mesmas pattern de bug (P1–P6) em UM PR coordenado, evitando descobrir os mesmos sintomas em criação de equipamento → prestador → categoria de serviço → upload de foto → adicionar execução, um a um.
+
+### Escopo da Fase 4b
+
+#### 4b.1 — Detalhe do chamado usa `ticket.unit_id` em vez de `activeUnitId` do store
+
+**Arquivos:** `src/app/(auth)/manutencao/chamados/[id]/page.tsx`
+
+**Mudanças:**
+- Linha 597 (`handlePhotoUpload`): substituir `if (!file || !ticket || !activeUnitId)` por `if (!file || !ticket)`; usar `ticket.unit_id` na chamada `uploadPhoto({ file, ticketId: ticket.id, unitId: ticket.unit_id })`.
+- Linha 803-806 (modal `ExecutionFormModal`): substituir `addExecOpen && activeUnitId && (...)` por `addExecOpen && ticket && (...)`; passar `unitId={ticket.unit_id}`.
+- Remover `const { activeUnitId } = useUnitStore()` se ficar sem uso.
+
+**Por quê:** o `ticket.unit_id` é a **fonte de verdade** — o chamado já carregou e tem a unidade certa. O `activeUnitId` do store é irrelevante uma vez que o detalhe está aberto. Mesmo em "Todas", o usuário sabe qual unidade é (ela está no header do ticket).
+
+**Critério de aceite:**
+- (a) super_admin em "Todas" + abrir detalhe → upload de foto funciona; modal "Adicionar execução" abre.
+- (b) gerente em unidade única → comportamento inalterado.
+
+#### 4b.2 — Mutations de criação aceitam `unit_id` no payload
+
+**Arquivos:** `src/hooks/use-equipment.ts`, `src/hooks/use-providers.ts`, `src/hooks/use-service-categories.ts`, `src/hooks/use-equipment-categories.ts`.
+
+**Mudanças (mesma pattern da Fase 2 em `useCreateTicket`):**
+- Tipo do payload ganha `unit_id: string` obrigatório.
+- `mutationFn` deixa de ler `activeUnitId` do store.
+- `onError` recebe `payload` e passa `payload?.unit_id` para `mapPgError`.
+
+#### 4b.3 — Formulários com `useFormUnitSelection`
+
+**Arquivos:**
+- `src/components/features/equipment/equipment-form.tsx`
+- `src/app/(auth)/prestadores/components/ProviderForm.tsx`
+- `src/app/(auth)/prestadores/components/steps/*` (passos do stepper)
+- Formulário de criação de Categoria de Serviço (verificar onde está)
+- Formulário de criação de Categoria de Equipamento (verificar onde está)
+
+**Pattern (idêntica à Fase 2):**
+- Importar `useFormUnitSelection` de `@/hooks/use-form-unit-selection`.
+- Estado `formUnitId` inicializado com `effectiveUnitId` (ou `null` quando "Todas").
+- Campo `<UnitSelect>` visível e obrigatório quando `requiresUnitSelection`.
+- Submit disabled enquanto `requiresUnitSelection && !formUnitId`.
+- Reset cascade: se `formUnitId` mudar, zerar dropdowns dependentes da unidade (ex.: categoria do equipamento, categoria de serviço, contatos do prestador, etc. — auditar caso a caso).
+- Payload final: `unit_id: effectiveUnitId`.
+
+#### 4b.4 — Listagem de chamados: dropdown de Setor diferencia unidade (opcional, P9 BAIXA)
+
+**Arquivo:** `src/app/(auth)/manutencao/chamados/page.tsx`
+
+**Quando "Todas as unidades" estiver ativo**, label do `<SelectItem>` no dropdown de Setor passa de `"Salão Principal"` para `"Salão Principal · Pinheiros"`. Implementação: `useSectors(true)` retorna `sector.unit_id`, fazer LEFT JOIN com `units(name)` ou usar `useUnits()` em paralelo.
+
+#### 4b.5 — `useLoadingTimeout` mais informativo (opcional, P10 MÉDIA)
+
+**Arquivos:** `src/hooks/use-loading-timeout.ts`, todas as páginas que usam.
+
+**Mudanças:**
+- Aumentar threshold default para **20s** (de 12s).
+- Quando dispara, exibir "Está demorando mais do que o normal — verifique sua conexão." em vez de "Tempo esgotado".
+- Não afeta Fase 4b crítica; pode ir separado.
+
+### Critérios de aceite da Fase 4b
+
+| # | Cenário | Resultado esperado |
+|---|---|---|
+| 1 | super_admin em "Todas" abre detalhe de chamado → clica "Adicionar foto" | Foto sobe sem erro; ticket recebe foto na sua unidade |
+| 2 | super_admin em "Todas" abre detalhe de chamado → clica "Adicionar execução" | Modal abre normalmente |
+| 3 | super_admin em "Todas" → `/equipamentos/novo` | Form exibe campo "Unidade *" obrigatório |
+| 4 | super_admin em "Todas" + escolhe unidade no form → submit | Equipamento criado na unidade escolhida |
+| 5 | super_admin em "Todas" → `/prestadores/novo` | Form exibe campo "Unidade *" obrigatório |
+| 6 | super_admin em "Todas" + cria categoria de serviço/equipamento | Aceita unidade explícita ou exibe UnitPickerBanner |
+| 7 | gerente em unidade única | Comportamento inalterado em todos os fluxos acima |
+| 8 | (opcional) listagem de chamados em "Todas" → dropdown Setor | Itens com sufixo "· {unidade}" |
+| 9 | (opcional) timeout dispara em produção lenta | Mensagem informativa, não alarmante |
+
+### Risco e custo
+
+- **Risco:** baixo — mesma pattern já validada na Fase 2 (modal de Novo Chamado). 4b reaplica em 4–5 lugares.
+- **Custo:** ~1 dia (4–6 arquivos de hook + 3–5 formulários).
+- **Dependência:** nenhuma. Independe da Fase 3 (RLS) — pode subir antes ou depois.
+- **Esperado em paralelo:** sumir definitivamente a classe de bug "ainda achou outro lugar que quebra em Todas".
+
+### ✅ IMPLEMENTAÇÃO 4b — 2026-05-21 (aguardando aprovação para commit/deploy)
+
+> Implementação completa, validada localmente (tsc + lint + build verdes) e no browser (todos os 4 casos exigidos pelo prompt). **Sem commit ainda.**
+
+**Arquivos modificados (11):**
+
+| Tipo | Arquivo |
+|---|---|
+| Hook (P3) | `src/hooks/use-equipment.ts` — novo `EquipmentCreatePayload = Partial<Equipment> & { unit_id: string }`, `useCreateEquipment` deixou de ler store |
+| Hook (P4) | `src/hooks/use-providers.ts` — `useProviders(filters, unitIdOverride?)`, `useCreateProvider` lê `payload.unit_id` |
+| Hook (P5) | `src/hooks/use-service-categories.ts` — `ServiceCategoryCreatePayload` com `unit_id` obrigatório (sem caller ativo — preventivo) |
+| Hook (P6) | `src/hooks/use-equipment-categories.ts` — `useEquipmentCategoryItems(onlyActive, unitIdOverride?)`, `useCreateEquipmentCategory` com `EquipmentCategoryCreatePayload` exigindo `unit_id` |
+| Tipo (P4) | `src/types/providers.ts` — `CreateProviderInput.unit_id: string` (obrigatório) |
+| Página (P1+P2+P10) | `src/app/(auth)/manutencao/chamados/[id]/page.tsx` — removeu `useUnitStore`, upload foto usa `ticket.unit_id`, modal execução `addExecOpen && ticket && ...` com `unitId={typedTicket.unit_id}`, `EquipmentRow` recebe `ticketUnitId`, `useProviders` filtra pelo ticket. P10: `useLoadingTimeout(isLoading, 20_000)` LOCAL + mensagem "Está demorando mais do que o normal — verifique sua conexão e tente novamente." + botão "Tentar novamente" que faz `refetch()`. |
+| Form (P3) | `src/components/features/equipment/equipment-form.tsx` — `useFormUnitSelection` + `UnitPickerBanner` quando criação em "Todas"; `formUnitId` inicializado do equipment em edição; submit disabled sem unidade; payload passa `unit_id: effectiveUnitId` |
+| Form (P4) | `src/app/(auth)/prestadores/components/ProviderForm.tsx` — `useFormUnitSelection` + `UnitPickerBanner`; 4 sub-mutations (`createContact/createService/uploadDoc/updateContact`) usam `effectiveUnitId` (criação) ou `provider.unit_id` (edição) — não tocam mais o store |
+| Page (P6) | `src/app/(auth)/configuracoes/page.tsx` — useFormUnitSelection separado por aba (`sectorsUnitId`, `equipCatsUnitId`); UnitPickerBanner em cada aba; `canCreate={!requiresUnitSelection \|\| !!effectiveUnitId}` no `ConfigTable`; lista e mutations escopadas à unidade escolhida |
+
+**Validação local:**
+- `npx tsc --noEmit` → 0 erros ✅
+- `npm run lint` → 0 erros (348 warnings — baseline inalterado) ✅
+- `npm run build` → success ✅
+
+**Validação browser (super_admin local em "Todas as unidades", dev server :3004 v1.11.4):**
+
+| Caso | Cenário | Resultado | Screenshot |
+|---|---|---|---|
+| P1/P2 | Detalhe de ticket Moema em "Todas" → clicar "Adicionar" execução | Modal abre normalmente, lista 11 usuários, botão "Salvar" pronto. Anteriormente o modal NÃO abria. | `docs/screenshots/fase4b-p1p2-detalhe-execucao-modal.png` |
+| P3 | `/equipamentos/novo` em "Todas" | UnitPickerBanner amber "Selecione a unidade para cadastrar o equipamento" + dropdown; botão "Cadastrar equipamento" `disabled`. Escolher Moema + nome → criação OK; **DB: `unit = 'moema'` confirmado**. | `docs/screenshots/fase4b-p3-equipamentos-novo-todas-banner.png` + `fase4b-p3-equipamentos-novo-moema-escolhida.png` |
+| P4 | `/prestadores/novo` em "Todas" → 4 etapas com Moema | UnitPickerBanner aparece acima do stepper; após escolher Moema, banner muda para "Visualizando configurações por unidade". Criação completa: prestador + contato + serviço; **DB: 1 contato + 1 serviço todos vinculados a Moema**. | `docs/screenshots/fase4b-p4-prestador-moema-preenchido.png` + `fase4b-p4-prestador-cadastrado.png` |
+| P6 | `/configuracoes` aba "Categ. Equipamentos" em "Todas" | UnitPickerBanner "Selecione a unidade para criar categorias de equipamento"; **botão "Adicionar categoria" escondido** (canCreate=false). Escolher Moema + criar → toast "Categoria criada"; **DB: `unit = 'moema'` confirmado**. | `docs/screenshots/fase4b-p6-config-categ-todas-banner.png` + `fase4b-p6-categoria-criada-moema.png` |
+| Regressão | `/equipamentos/novo` com seletor em **Pinheiros** | Form abre direto sem banner (comportamento original preservado). | `docs/screenshots/fase4b-p3-equipamentos-novo-todas.png` (na verdade screenshot pré-troca; comportamento confirmado em snapshot) |
+
+**Observações:**
+- O fluxo P5 (`useCreateCategory` em `use-service-categories.ts`) **não tem caller UI ativo no projeto** — apenas a API server-side `copy-templates/route.ts` faz INSERT. Hook foi deixado seguro (`unit_id` obrigatório no payload) para uso futuro, sem nova UI.
+- Como o banco local de Moema não tinha `service_categories`, criamos uma via SQL (`Categoria Teste P4`) só para completar o fluxo de stepper de prestador. Não afeta produção.
+- Banco local: 3 entidades criadas em Moema durante validação (equipamento, categoria, prestador+contato+serviço) — pode ser apagado a qualquer momento; não há impacto.
+
+**Aguardando aprovação do Bruno** para empacotar v1.11.5 (bump patch) + commit + push + PR develop→main.
+
+---
+
+## 8.7 Fase 4b — AMPLIADA: fix das leituras-por-id (2026-05-21)
+
+### Trigger
+
+Após implementar P1–P6 da Fase 4b, Bruno navegou de volta para o detalhe do prestador `ed9b2e78` (criado em Moema durante a validação) com o seletor global em Pinheiros. Tela retornou erro "Não foi possível carregar o prestador. Verifique sua conexão."
+
+Diagnóstico: `useProvider(id)` filtrava a query por `activeUnitId` (igual o bug original P1/P2 do detalhe de chamado, mas em outra entidade). O sweep original só cobriu **mutations** (criação); este passo cobre o lado **leitura por id**.
+
+### Critério (bug vs intencional)
+
+- **LEITURA DE UM REGISTRO POR ID** (`useX(id)` / detalhe): NÃO deve filtrar por `activeUnitId`. O id já é único; filtrar por unidade quebra ver um registro de outra unidade. RLS já garante o acesso. Padrão referência: `useTicket(id)` em `use-tickets.ts:114-138`. **→ CORRIGIR.**
+- **LEITURA DE LISTA** com `activeUnitId`: pode ser intencional (filtro implícito por unidade ativa). **→ Apenas listar como suspeita, sem alterar.**
+- **SUB-LEITURA ligada a um pai** (ex.: eventos de um prestador): derivar do pai ou confiar na RLS própria da tabela filha; nunca depender do store. **→ CORRIGIR como leitura-por-id.**
+
+### Arquivos corrigidos (4)
+
+| Hook | Arquivo | Mudança |
+|---|---|---|
+| `useProvider(id)` | `src/hooks/use-providers.ts:135` | Removido `activeUnitId` da queryKey + filtro `unit_id` da query. |
+| `useProviderEvents(providerId)` | `src/hooks/use-providers.ts:257` | Idem. |
+| `useUpdateProvider` / `useDeleteProvider` | mesmo arquivo | Invalidates alinhados com keys novas (`['providers']` / `['provider', id]`). |
+| `useProviderRatings(providerId)` | `src/hooks/use-provider-ratings.ts:19` | Sub-leitura por pai. Removido filtro. |
+| `useEventRatings(eventId)` | `src/hooks/use-provider-ratings.ts:170` | Idem. |
+| `useCreateRating` / `useUpdateRating` | mesmo arquivo | Invalidates alinhados. |
+| `useEventProviders(eventId)` | `src/hooks/use-event-providers.ts:34` | Sub-leitura por pai. Removido filtro. |
+| `useProviderEvents(providerId)` (**duplicado**) | `src/hooks/use-event-providers.ts:66` | Idem. |
+| `useProviderScheduleConflicts` | `src/hooks/use-event-providers.ts:99` | Removido `activeUnitId` da queryKey (query já não filtrava). |
+| `useAddProviderToEvent` / `useUpdateEventProvider` / `useRemoveProviderFromEvent` | mesmo arquivo | Invalidates alinhados. |
+
+### Já corretos antes (referência)
+
+- `useTicket(id)` em `use-tickets.ts:114` — padrão referência.
+- `useEquipmentItem(id)` em `use-equipment.ts:63` — não usava store.
+- `useEquipmentMaintenanceHistory(id)` em `use-equipment.ts:84` — não usava store.
+- `useMaintenanceOrder(id)` em `use-maintenance.ts:128` legacy — não usava store.
+- `useSupplier(id)` em `use-suppliers.ts:80` legacy — importava `_activeUnitId` sem uso.
+
+### LISTAS suspeitas (NÃO alteradas — pendentes de decisão Bruno)
+
+| Hook | Arquivo:linha | Avaliação |
+|---|---|---|
+| `useProviders(filters)` | `use-providers.ts:43` | Lista global de prestadores. Em "Todas" não filtra (correto). Filtro por `activeUnitId` quando setado parece intencional — escopo natural do usuário. |
+| `usePendingRatings()` | `use-provider-ratings.ts:51` | Avaliações pendentes cross-unit. Em "Todas" lista tudo. Filtro por unidade quando setado é intencional. |
+| `useSuppliers(filters)` | `use-suppliers.ts:43` (legado) | Lista de fornecedores legacy. Mesma pattern. |
+
+Para essas, RLS controla acesso; `activeUnitId` na queryKey particiona o cache (não muda comportamento funcional). Não correm risco do bug "detalhe de outra unidade quebra".
+
+### Validação local
+
+- **tsc**: 0 erros ✅
+- **lint**: 0 erros (348 warnings — baseline inalterado) ✅
+- **build**: success ✅
+
+### Validação browser
+
+Cenário do Bruno: `/prestadores/ed9b2e78-a778-4e89-b3b4-05ad1143494c` (prestador de **Moema**) com seletor global em **Pinheiros**.
+
+**Antes do fix (na sessão anterior):**
+- Request: `GET .../service_providers?...&id=eq.ed9b2e78&unit_id=eq.36d3b2e5-...` (filtra por Pinheiros)
+- Status: 400 PGRST116 (no rows) — filtro de unidade rejeitava o registro de Moema
+- UI: "Não foi possível carregar o prestador"
+
+**Depois do fix (esta sessão):**
+- Request: `GET .../service_providers?...&id=eq.ed9b2e78` (**sem `unit_id=`**) ✅
+- Validado via `fetch()` direto com o JWT do usuário logado:
+  ```json
+  {"status":200,"body":"[{\"id\":\"ed9b2e78...\",\"name\":\"Prestador Teste Fase 4b\",\"unit_id\":\"df2e4286-...\"}]"}
+  ```
+  → Registro de Moema agora alcançado, mesmo com seletor em Pinheiros. RLS deixa passar (super_admin tem `is_global_viewer()` + `user_units` cobrindo ambas).
+- Request `event_providers?provider_id=eq.ed9b2e78` (sub-leitura) também passou de 400 → 200.
+- Screenshot: `docs/screenshots/fase4b-ampliada-fetch-200-cross-unit.png`
+
+### Bug PRÉ-EXISTENTE descoberto (NÃO relacionado)
+
+A UI ainda mostra "Não foi possível carregar" **no banco local** porque o select completo do `useProvider` inclui `rated_by_user:users!provider_ratings_rated_by_fkey(...)`. A FK `provider_ratings.rated_by` aponta para `auth.users` (não `public.users`), e o PostgREST local roda **12.2.3** que não suporta hints cross-schema. **Em produção, PostgREST = 14.6** que suporta — o select funciona normalmente (Bruno usa essa tela em produção sem reportar essa mensagem). Confirmado via SSH na VPS.
+
+**Esse bug é independente da Fase 4b.** Existia antes; estava mascarado pelo filtro de unidade que rejeitava a query antes de chegar ao select. Não vamos tocar agora — fora do escopo.
+
+### Resultado
+
+A Fase 4b (ampliada) corrige **o bug funcional reportado pelo Bruno** em produção:
+- Local: provado via `fetch()` direto que a query agora alcança o registro de outra unidade.
+- Produção (após deploy): vai funcionar end-to-end, pois o PostgREST 14.6 resolve o select completo sem o PGRST200 que o 12.2.3 dispara.
+
+### Arquivos modificados nesta sessão (total Fase 4b + ampliada)
+
+```
+docs/diagnostico-manutencao.md                          | +201 / -1
+src/app/(auth)/configuracoes/page.tsx                   |  +50 / -3
+src/app/(auth)/manutencao/chamados/[id]/page.tsx        |  +48 / -23
+src/app/(auth)/prestadores/components/ProviderForm.tsx  |  +38 / -10
+src/components/features/equipment/equipment-form.tsx    |  +38 / -3
+src/hooks/use-equipment-categories.ts                   |  +27 / -7
+src/hooks/use-equipment.ts                              |  +14 / -8
+src/hooks/use-event-providers.ts                        |  ~30 / -30  (sweep ampliação)
+src/hooks/use-providers.ts                              |  ~25 / -14  (P4 + ampliação)
+src/hooks/use-provider-ratings.ts                       |  ~25 / -19  (ampliação)
+src/hooks/use-service-categories.ts                     |  +31 / -10
+src/types/providers.ts                                  |  +1 / -0
+```
+
+Total ~ +400 / -130 linhas; +0 dependências.
+
+**Aguardando aprovação do Bruno** para commit + push + PR develop→main + bump v1.11.5.
+
 ### Fase 5 — Limpeza de código legado (opcional, separável)
 **Checkpoint:** Bruno aprova após auditar dados em `maintenance_orders` (F12).
 
@@ -758,11 +1062,13 @@ END IF;
 | Fase 1 — Toast melhorado + mapPgError | ✅ Deployed | v1.11.2 | #38 | `1de05f7` |
 | Fase 2 — Fix modal Novo Chamado | ✅ Deployed | v1.11.3 | #39 | `0610b8d` |
 | Fase 4 — Dashboard agrega "Todas" | ✅ Deployed | v1.11.4 | #40 | `ecbe55b` |
+| **Sweep "Todas" completo** | ✅ Diagnóstico | — | — | — |
+| **Fase 4b — Fix coordenado (5 ALTA + 2 MÉDIA)** | ✅ Implementado (aguarda commit/deploy) | v1.11.5 (pendente) | — | — |
 | Fase 3 — Migration RLS + backfill | 🔲 Pendente aprovação Bruno | — | — | — |
 | Fase 5 — Cleanup código legado | 🔲 Pendente | — | — | — |
 | Fase 6 — Otimizações opcionais | 🔲 Pendente | — | — | — |
 
-**Próximo passo:** Bruno validar em produção `/manutencao/dashboard` como super_admin em "Todas as unidades" (v1.11.4 no footer). Se OK, aprovar Fase 3 (migration de RLS `091_maintenance_rls_alignment.sql`).
+**Próximo passo:** Bruno aprovar Fase 4b (descrita na seção 8.6) — fecha de uma vez a classe de bug "criação quebra em Todas" em Equipamentos, Prestadores, Categorias e ações do detalhe (foto/execução), seguindo a mesma pattern já validada em produção pela Fase 2. Risco baixo, sem dependência da Fase 3.
 
 ---
 

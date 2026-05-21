@@ -5,14 +5,19 @@ import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { useUnitStore } from '@/stores/unit-store'
 import { useAuthReadyStore } from '@/stores/auth-store'
+import { mapPgError } from '@/lib/errors/map-pg-error'
 import type { EquipmentCategory } from '@/types/database.types'
 
 // ─────────────────────────────────────────────────────────────
 // LISTAR (com opção de filtrar só ativas)
 // ─────────────────────────────────────────────────────────────
 
-export function useEquipmentCategoryItems(onlyActive = false) {
-  const { activeUnitId } = useUnitStore()
+export function useEquipmentCategoryItems(
+  onlyActive = false,
+  unitIdOverride?: string | null,
+) {
+  const storeUnitId = useUnitStore((s) => s.activeUnitId)
+  const activeUnitId = unitIdOverride !== undefined ? unitIdOverride : storeUnitId
   const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
 
   return useQuery({
@@ -39,27 +44,30 @@ export function useEquipmentCategoryItems(onlyActive = false) {
 // CRIAR
 // ─────────────────────────────────────────────────────────────
 
+// Payload exige unit_id explícito — caller decide a unidade (Fase 4b).
+// Hook deixou de ler `activeUnitId` do store para não jogar erro JS quando
+// `activeUnitId === null` ("Todas as unidades").
+export type EquipmentCategoryCreatePayload = { name: string; unit_id: string }
+
 export function useCreateEquipmentCategory() {
   const qc = useQueryClient()
-  const { activeUnitId } = useUnitStore()
 
   return useMutation({
-    mutationFn: async (data: { name: string }) => {
-      if (!activeUnitId) throw new Error('Nenhuma unidade selecionada')
+    mutationFn: async (data: EquipmentCategoryCreatePayload) => {
       const supabase = createClient()
 
-      // Calcula próximo sort_order
+      // Calcula próximo sort_order dentro da unidade
       const { data: existing } = await supabase
         .from('equipment_categories')
         .select('sort_order')
-        .eq('unit_id', activeUnitId)
+        .eq('unit_id', data.unit_id)
         .order('sort_order', { ascending: false })
         .limit(1)
       const nextOrder = existing?.[0] ? existing[0].sort_order + 1 : 0
 
       const { data: created, error } = await supabase
         .from('equipment_categories')
-        .insert({ ...data, unit_id: activeUnitId, sort_order: nextOrder })
+        .insert({ name: data.name, unit_id: data.unit_id, sort_order: nextOrder })
         .select()
         .single()
       if (error) throw error
@@ -69,7 +77,8 @@ export function useCreateEquipmentCategory() {
       qc.invalidateQueries({ queryKey: ['equipment-category-items'] })
       toast.success('Categoria criada')
     },
-    onError: (err: Error) => toast.error(`Erro ao criar categoria: ${err.message}`),
+    onError: (err, payload) =>
+      toast.error(mapPgError(err, { activeUnitId: payload?.unit_id ?? null }, 'EQUIPMENT_CATEGORY_CREATE')),
   })
 }
 

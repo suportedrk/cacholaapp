@@ -33,7 +33,6 @@ import { useEquipment } from '@/hooks/use-equipment'
 import { useSignedUrls } from '@/hooks/use-signed-urls'
 import { useProviders } from '@/hooks/use-providers'
 import { useUnitUsers } from '@/hooks/use-units'
-import { useUnitStore } from '@/stores/unit-store'
 import { useAuth } from '@/hooks/use-auth'
 import { URGENCY_CONFIG, NATURE_CONFIG, STATUS_CONFIG } from '@/components/features/maintenance/ticket-card'
 import { useLoadingTimeout } from '@/hooks/use-loading-timeout'
@@ -116,17 +115,21 @@ function InfoRow({ icon: Icon, label, value }: { icon: React.ElementType; label:
 // ─────────────────────────────────────────────────────────────
 function EquipmentRow({
   ticketId,
+  ticketUnitId,
   currentEquipment,
   canEdit,
 }: {
   ticketId: string
+  ticketUnitId: string
   currentEquipment: { id: string; name: string; category: string | null } | null
   canEdit: boolean
 }) {
   const [editing, setEditing] = useState(false)
   const [selected, setSelected] = useState(currentEquipment?.id ?? '')
 
-  const { data: equipments = [] } = useEquipment({ status: ['active', 'in_repair'] })
+  // Filtra equipamentos pela unidade do TICKET (não do store) — evita listar equipamentos
+  // de outras unidades quando o seletor global está em "Todas" ou em unidade diferente.
+  const { data: equipments = [] } = useEquipment({ status: ['active', 'in_repair'] }, ticketUnitId)
   const { mutate: updateEquipment, isPending } = useUpdateTicketEquipment()
 
   function handleConfirm() {
@@ -321,7 +324,9 @@ function AddExecutionModal({
   const [execStatus, setExecStatus] = useState<ExecutionStatus>('assigned')
 
   const { data: unitUsers = [] } = useUnitUsers(unitId)
-  const { data: providers = [] } = useProviders({ status: 'active' })
+  // Prestadores filtrados pela unidade do TICKET — em "Todas" no seletor global,
+  // o store estaria em null e o hook listaria prestadores de todas as unidades.
+  const { data: providers = [] } = useProviders({ status: 'active' }, unitId)
   const { mutate: addExecution, isPending } = useAddExecution(onClose)
 
   function handleSave() {
@@ -569,10 +574,12 @@ export default function ChamadoDetailPage() {
   const { id } = useParams<{ id: string }>()
   const router  = useRouter()
   const { profile } = useAuth()
-  const { activeUnitId } = useUnitStore()
 
-  const { data: ticket, isLoading, isError } = useTicket(id)
-  const { isTimedOut } = useLoadingTimeout(isLoading)
+  const { data: ticket, isLoading, isError, refetch } = useTicket(id)
+  // Threshold local maior que o default (12s) — o detalhe inclui nested select pesado
+  // (executions + photos + history em uma única query). Em produção lenta, 12s gera
+  // falso positivo. P10/Fase 4b: 20s + mensagem suavizada + Tentar novamente que refetch.
+  const { isTimedOut } = useLoadingTimeout(isLoading, 20_000)
 
   const [statusModalOpen, setStatusModalOpen]   = useState(false)
   const [addExecOpen, setAddExecOpen]           = useState(false)
@@ -594,10 +601,10 @@ export default function ChamadoDetailPage() {
 
   async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
-    if (!file || !ticket || !activeUnitId) return
+    if (!file || !ticket) return
     setIsUploading(true)
     try {
-      await uploadPhoto({ file, ticketId: ticket.id, unitId: activeUnitId })
+      await uploadPhoto({ file, ticketId: ticket.id, unitId: ticket.unit_id })
     } finally {
       setIsUploading(false)
       if (fileInputRef.current) fileInputRef.current.value = ''
@@ -617,6 +624,7 @@ export default function ChamadoDetailPage() {
   }
 
   if (isError || isTimedOut || !ticket) {
+    const isSlow = isTimedOut && !isError
     return (
       <div className="space-y-4">
         <Button variant="ghost" size="sm" onClick={() => router.back()}>
@@ -624,13 +632,22 @@ export default function ChamadoDetailPage() {
           Voltar
         </Button>
         <div className="bg-card border border-border rounded-xl p-8 text-center">
-          <AlertTriangle className="w-8 h-8 text-destructive mx-auto mb-3" />
+          <AlertTriangle className={`w-8 h-8 mx-auto mb-3 ${isSlow ? 'text-amber-500' : 'text-destructive'}`} />
           <p className="text-sm text-muted-foreground">
-            {isTimedOut ? 'Tempo esgotado ao carregar o chamado.' : 'Chamado não encontrado.'}
+            {isSlow
+              ? 'Está demorando mais do que o normal — verifique sua conexão e tente novamente.'
+              : 'Chamado não encontrado.'}
           </p>
-          <Button variant="outline" size="sm" className="mt-4" onClick={() => router.back()}>
-            Voltar para Chamados
-          </Button>
+          <div className="flex flex-wrap gap-2 justify-center mt-4">
+            {isSlow && (
+              <Button size="sm" onClick={() => refetch()}>
+                Tentar novamente
+              </Button>
+            )}
+            <Button variant="outline" size="sm" onClick={() => router.back()}>
+              Voltar para Chamados
+            </Button>
+          </div>
         </div>
       </div>
     )
@@ -694,6 +711,7 @@ export default function ChamadoDetailPage() {
         <InfoRow icon={Wrench}   label="Item/Local"  value={typedTicket.item?.name} />
         <EquipmentRow
           ticketId={typedTicket.id}
+          ticketUnitId={typedTicket.unit_id}
           currentEquipment={typedTicket.equipment ?? null}
           canEdit={canEdit}
         />
@@ -800,10 +818,10 @@ export default function ChamadoDetailPage() {
         />
       )}
 
-      {addExecOpen && activeUnitId && (
+      {addExecOpen && (
         <AddExecutionModal
           ticketId={typedTicket.id}
-          unitId={activeUnitId}
+          unitId={typedTicket.unit_id}
           onClose={() => setAddExecOpen(false)}
         />
       )}

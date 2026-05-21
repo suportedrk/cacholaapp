@@ -107,16 +107,21 @@ export function useEquipmentMaintenanceHistory(equipmentId: string) {
 // CRIAR EQUIPAMENTO
 // ─────────────────────────────────────────────────────────────
 
+// O payload exige `unit_id` explicitamente — o caller é quem decide a unidade
+// (Fase 4b: formulários usam `useFormUnitSelection` quando o seletor global está em
+// "Todas as unidades"). Hook deixou de ler do `useUnitStore` para evitar `unit_id = null`
+// silencioso quando `activeUnitId === null`.
+export type EquipmentCreatePayload = Partial<Equipment> & { unit_id: string }
+
 export function useCreateEquipment() {
   const qc = useQueryClient()
-  const { activeUnitId } = useUnitStore()
 
   return useMutation({
-    mutationFn: async (data: Partial<Equipment>) => {
+    mutationFn: async (data: EquipmentCreatePayload) => {
       const supabase = createClient()
       const { data: created, error } = await supabase
         .from('equipment')
-        .insert({ ...data, unit_id: activeUnitId! })
+        .insert(data)
         .select()
         .single()
       if (error) throw error
@@ -126,7 +131,8 @@ export function useCreateEquipment() {
       qc.invalidateQueries({ queryKey: ['equipment'] })
       toast.success('Equipamento cadastrado com sucesso')
     },
-    onError: (err) => toast.error(mapPgError(err, { activeUnitId }, 'EQUIPMENT_CREATE')),
+    onError: (err, payload) =>
+      toast.error(mapPgError(err, { activeUnitId: payload?.unit_id ?? null }, 'EQUIPMENT_CREATE')),
   })
 }
 

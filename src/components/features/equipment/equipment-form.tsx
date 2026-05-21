@@ -17,6 +17,8 @@ import { compressImage } from '@/components/shared/photo-upload'
 import { useCreateEquipment, useUpdateEquipment } from '@/hooks/use-equipment'
 import { useEquipmentCategoryItems } from '@/hooks/use-equipment-categories'
 import { useSignedUrls } from '@/hooks/use-signed-urls'
+import { useFormUnitSelection } from '@/hooks/use-form-unit-selection'
+import { UnitPickerBanner } from '@/components/features/maintenance/unit-picker-banner'
 import { Package, Camera, ImagePlus, X } from 'lucide-react'
 import type { Equipment } from '@/types/database.types'
 
@@ -80,8 +82,14 @@ export function EquipmentForm({ equipment, onSuccess }: Props) {
   const create = useCreateEquipment()
   const update = useUpdateEquipment()
 
-  // Categorias gerenciadas (fallback para lista hardcoded se vazia)
-  const { data: managedCategories = [] } = useEquipmentCategoryItems(true)
+  // Unidade: em edição vem do equipment; em criação usa o pattern Fase 2.
+  const [formUnitId, setFormUnitId] = useState<string>(equipment?.unit_id ?? '')
+  const { requiresUnitSelection, effectiveUnitId, availableUnits } =
+    useFormUnitSelection(formUnitId || null)
+
+  // Categorias filtram pela unidade EFETIVA (form em "Todas", store caso contrário).
+  // Em edição, effectiveUnitId já é a unidade do equipamento.
+  const { data: managedCategories = [] } = useEquipmentCategoryItems(true, effectiveUnitId)
   const categoryOptions = managedCategories.length > 0
     ? managedCategories.map((c) => c.name)
     : FALLBACK_CATEGORIES
@@ -122,6 +130,11 @@ export function EquipmentForm({ equipment, onSuccess }: Props) {
     const errs: Partial<Record<keyof FormData, string>> = {}
     if (!form.name.trim()) errs.name = 'Nome é obrigatório'
     setErrors(errs)
+    if (!isEditing && requiresUnitSelection && !formUnitId) {
+      // Erro de unidade não usa o map `errs` (não é um campo do FormData).
+      // O submit fica disabled e o banner sinaliza visualmente.
+      return false
+    }
     return Object.keys(errs).length === 0
   }
 
@@ -165,7 +178,7 @@ export function EquipmentForm({ equipment, onSuccess }: Props) {
     e.preventDefault()
     if (!validate()) return
 
-    const payload: Partial<Equipment> = {
+    const basePayload: Partial<Equipment> = {
       name:           form.name.trim(),
       category:       form.category || null,
       location:       form.location || null,
@@ -178,18 +191,31 @@ export function EquipmentForm({ equipment, onSuccess }: Props) {
     }
 
     if (isEditing) {
-      const updated = await update.mutateAsync({ id: equipment.id, data: payload })
+      const updated = await update.mutateAsync({ id: equipment.id, data: basePayload })
       onSuccess ? onSuccess(updated.id) : router.push(`/equipamentos/${updated.id}`)
     } else {
-      const created = await create.mutateAsync(payload)
+      if (!effectiveUnitId) return // guard: submit deveria estar disabled
+      const created = await create.mutateAsync({ ...basePayload, unit_id: effectiveUnitId })
       onSuccess ? onSuccess(created.id) : router.push(`/equipamentos/${created.id}`)
     }
   }
 
   const isSaving = create.isPending || update.isPending
+  const submitDisabled =
+    isSaving || uploading || (!isEditing && requiresUnitSelection && !formUnitId)
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
+
+      {/* ── Seleção de unidade (apenas em criação com seletor global em "Todas") */}
+      {!isEditing && requiresUnitSelection && (
+        <UnitPickerBanner
+          value={formUnitId}
+          onChange={setFormUnitId}
+          units={availableUnits}
+          contextLabel="cadastrar o equipamento"
+        />
+      )}
 
       {/* ── Seção 1: Dados Básicos ─────────────────────────────── */}
       <section className="space-y-4">
@@ -385,7 +411,7 @@ export function EquipmentForm({ equipment, onSuccess }: Props) {
 
       {/* ── Ações ─────────────────────────────────────────────── */}
       <div className="flex items-center gap-3 pt-2">
-        <Button type="submit" disabled={isSaving || uploading}>
+        <Button type="submit" disabled={submitDisabled}>
           {isSaving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
           {isEditing ? 'Salvar alterações' : 'Cadastrar equipamento'}
         </Button>

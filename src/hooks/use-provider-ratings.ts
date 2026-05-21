@@ -16,12 +16,13 @@ const RATING_SELECT = `
 // ─────────────────────────────────────────────────────────────
 // useProviderRatings — Avaliações de um prestador
 // ─────────────────────────────────────────────────────────────
+// Fase 4b (ampliada): sub-leitura por providerId. Não filtra por activeUnitId
+// (RLS de provider_ratings já protege e o vínculo com a unidade é via provider).
 export function useProviderRatings(providerId: string | null) {
-  const { activeUnitId } = useUnitStore()
   const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
 
   return useQuery({
-    queryKey: ['provider-ratings', providerId, activeUnitId],
+    queryKey: ['provider-ratings', providerId],
     enabled: !!providerId && isSessionReady,
     staleTime: 60 * 1000,
     retry: (count, error: unknown) => {
@@ -32,13 +33,11 @@ export function useProviderRatings(providerId: string | null) {
     },
     queryFn: async (): Promise<ProviderRating[]> => {
       const supabase = createClient()
-      let rQuery = supabase
+      const { data, error } = await supabase
         .from('provider_ratings')
         .select(RATING_SELECT)
         .eq('provider_id', providerId!)
         .order('created_at', { ascending: false })
-      if (activeUnitId) rQuery = rQuery.eq('unit_id', activeUnitId)
-      const { data, error } = await rQuery
       if (error) throw error
       return data as unknown as ProviderRating[]
     },
@@ -101,7 +100,6 @@ export function usePendingRatings() {
 // ─────────────────────────────────────────────────────────────
 export function useCreateRating() {
   const qc = useQueryClient()
-  const { activeUnitId } = useUnitStore()
 
   return useMutation({
     mutationFn: async (input: CreateRatingInput) => {
@@ -117,12 +115,12 @@ export function useCreateRating() {
     },
     onSuccess: (data) => {
       // DB trigger recalcula avg_rating em service_providers automaticamente
-      qc.invalidateQueries({ queryKey: ['provider-ratings', data.provider_id, activeUnitId] })
-      qc.invalidateQueries({ queryKey: ['event-ratings', data.event_id, activeUnitId] })
-      qc.invalidateQueries({ queryKey: ['provider', data.provider_id, activeUnitId] })
-      qc.invalidateQueries({ queryKey: ['providers', activeUnitId] })
-      qc.invalidateQueries({ queryKey: ['pending-ratings', activeUnitId] })
-      qc.invalidateQueries({ queryKey: ['provider-kpis', activeUnitId] })
+      qc.invalidateQueries({ queryKey: ['provider-ratings', data.provider_id] })
+      qc.invalidateQueries({ queryKey: ['event-ratings', data.event_id] })
+      qc.invalidateQueries({ queryKey: ['provider', data.provider_id] })
+      qc.invalidateQueries({ queryKey: ['providers'] })
+      qc.invalidateQueries({ queryKey: ['pending-ratings'] })
+      qc.invalidateQueries({ queryKey: ['provider-kpis'] })
       toast.success('Avaliação registrada com sucesso.')
     },
     onError: (error: unknown) => {
@@ -141,7 +139,6 @@ export function useCreateRating() {
 // ─────────────────────────────────────────────────────────────
 export function useUpdateRating() {
   const qc = useQueryClient()
-  const { activeUnitId } = useUnitStore()
 
   return useMutation({
     mutationFn: async ({ id, provider_id, ...patch }: UpdateRatingInput) => {
@@ -156,9 +153,9 @@ export function useUpdateRating() {
       return { ...data, provider_id }
     },
     onSuccess: (data) => {
-      qc.invalidateQueries({ queryKey: ['provider-ratings', data.provider_id, activeUnitId] })
-      qc.invalidateQueries({ queryKey: ['provider', data.provider_id, activeUnitId] })
-      qc.invalidateQueries({ queryKey: ['providers', activeUnitId] })
+      qc.invalidateQueries({ queryKey: ['provider-ratings', data.provider_id] })
+      qc.invalidateQueries({ queryKey: ['provider', data.provider_id] })
+      qc.invalidateQueries({ queryKey: ['providers'] })
       toast.success('Avaliação atualizada.')
     },
     onError: () => toast.error('Erro ao atualizar avaliação.'),
@@ -169,12 +166,12 @@ export function useUpdateRating() {
 // useEventRatings — Avaliações de todos os prestadores de um evento
 // Retorna um mapa: event_provider_id → ProviderRating
 // ─────────────────────────────────────────────────────────────
+// Fase 4b (ampliada): sub-leitura por eventId. Não filtra por activeUnitId.
 export function useEventRatings(eventId: string | null) {
-  const { activeUnitId } = useUnitStore()
   const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
 
   return useQuery({
-    queryKey: ['event-ratings', eventId, activeUnitId],
+    queryKey: ['event-ratings', eventId],
     enabled: !!eventId && isSessionReady,
     staleTime: 30 * 1000,
     retry: (count, error: unknown) => {
@@ -185,12 +182,10 @@ export function useEventRatings(eventId: string | null) {
     },
     queryFn: async (): Promise<Record<string, ProviderRating>> => {
       const supabase = createClient()
-      let q = supabase
+      const { data, error } = await supabase
         .from('provider_ratings')
         .select(RATING_SELECT)
         .eq('event_id', eventId!)
-      if (activeUnitId) q = q.eq('unit_id', activeUnitId)
-      const { data, error } = await q
       if (error) throw error
       const map: Record<string, ProviderRating> = {}
       for (const r of (data ?? []) as unknown as ProviderRating[]) {
