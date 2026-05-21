@@ -466,7 +466,7 @@ Legenda esforço: P (≤1 dia), M (1–3 dias), G (>3 dias).
 - (c) gerente em unidade única → campo Unidade NÃO aparece no modal, INSERT usa unidade do store.
 - (d) super_admin com unidade única no seletor global → campo Unidade NÃO aparece, INSERT usa unidade do store.
 
-> **✅ IMPLEMENTADO em 2026-05-21 — aguardando aprovação para commit/deploy.**
+> **✅ DEPLOYED em 2026-05-21** — merge commit `0610b8d`, PR #39, tag `v1.11.3`. Deploy to Production: success (5m15s). VPS: pm2 online, `package.json v1.11.3` confirmado. **Aguardando validação visual do Bruno em produção.**
 >
 > **Arquitetura:**
 > - Hook compartilhado `src/hooks/use-form-unit-selection.ts` (`useFormUnitSelection(formUnitId)` → `{ requiresUnitSelection, effectiveUnitId, availableUnits }`)
@@ -703,6 +703,36 @@ END IF;
 - 4.2 Para roles não-globais com `user_units` em múltiplas unidades, agregar todas elas.
 - 4.3 Idem para `/api/maintenance/history-summary`.
 - 4.4 Validar visualmente o painel com super_admin "Todas", diretor "Todas" e gerente em unidade única.
+
+> **✅ IMPLEMENTADO em 2026-05-21 — aguardando aprovação para commit/deploy.**
+>
+> **Diagnóstico (somente leitura):**
+> - Ambas as rotas (`stats/route.ts:34–252`, `history-summary/route.ts:22–206`) usam `createClient()` SSR (sessão do usuário, RLS aplicada). Não usam `service_role`.
+> - Cálculo: queries diretas no Supabase via `Promise.all` (sem RPC), agregação no servidor com `count: 'exact', head: true`. Todas as queries faziam `.eq('unit_id', unitId)`.
+> - O 400 disparava em `stats:43–45` e `history-summary:36` quando `unit_id` ausente. Os hooks (`useMaintenanceDashboardStats`, `useHistorySummary`) já chamavam a rota mesmo sem o param — só a rota rejeitava.
+>
+> **Implementação:**
+> - Novo helper `src/lib/auth/effective-unit-ids.ts` → `getEffectiveUnitIds(supabase, requestedUnitId)`:
+>   1. `requestedUnitId` veio → array `[requestedUnitId]` (caminho atual).
+>   2. Null/ausente + `super_admin`/`diretor` (via `GLOBAL_VIEWER_ROLES`) → todas as `units.id`.
+>   3. Caso contrário → `user_units` do usuário autenticado.
+> - `/api/maintenance/stats/route.ts`: removeu o 400; `getEffectiveUnitIds()` resolve `unitIds[]`; substituiu todos os `.eq('unit_id', unitId)` por `.in('unit_id', unitIds)`. Resposta vazia coerente quando `unitIds.length === 0` (usuário sem escopo nenhum).
+> - `/api/maintenance/history-summary/route.ts`: mesma estratégia; afeta os 3 query builders (`buildTicketQuery`, `buildTicketIdsQuery`, `buildMonthlyTicketsQuery`).
+> - Hooks **não precisaram mudar** — já chamavam a rota sem `unit_id` quando `activeUnitId === null`.
+>
+> **Validação browser (super_admin local, dev v1.11.3 em :3004, 4 tickets de teste inseridos no banco — 2/unidade):**
+> - **Caso (a) "Todas as unidades":** Total=4, Taxa=50% (2 concluídos), Tempo médio=6d, 4 chamados listados misturando Pinheiros + Moema, "Por natureza" mostra Pontual/Emergencial/Preventivo/Agendado a 25% cada. Sem 400 no console.
+> - **Caso (b) Pinheiros isolada:** Total=2, Taxa=50%, só chamados de Pinheiros listados, Por natureza = Pontual+Preventivo a 50% cada.
+> - **Caso (c) Moema isolada:** Total=2, Taxa=50%, só chamados de Moema listados, Por natureza = Emergencial+Agendado a 50% cada.
+> - Screenshots em `docs/screenshots/fase4-{todas,pinheiros,moema}.png`.
+> - **Sem vazamento cross-unit:** quando o seletor está em uma unidade, só essas linhas aparecem. Quando está em "Todas", apenas as unidades do escopo do usuário entram na agregação (super_admin com 2 unidades → 4 tickets; usuário com 1 unidade veria 2).
+> - **Sem duplicação:** Total muda de 2→4→2 conforme o escopo. A pre-fetch de `ticketIds` também respeita o `in` — execuções/custos vinculados pelo `ticket_id` permanecem no escopo correto.
+>
+> **Validação local:** `npx tsc --noEmit` limpo; `npm run lint` 0 erros (348 warnings — baseline inalterado); `npm run build` verde.
+>
+> **Arquivos tocados (3):**
+> - Novo: `src/lib/auth/effective-unit-ids.ts`
+> - Modificados: `src/app/api/maintenance/stats/route.ts`, `src/app/api/maintenance/history-summary/route.ts`
 
 ### Fase 5 — Limpeza de código legado (opcional, separável)
 **Checkpoint:** Bruno aprova após auditar dados em `maintenance_orders` (F12).

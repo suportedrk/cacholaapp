@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { requireRoleApi } from '@/lib/auth/require-role'
+import { getEffectiveUnitIds } from '@/lib/auth/effective-unit-ids'
 import { MAINTENANCE_MODULE_ROLES } from '@/config/roles'
 
 type TicketNature = 'emergencial' | 'pontual' | 'agendado' | 'preventivo'
@@ -27,13 +28,24 @@ export async function GET(req: NextRequest) {
     const supabase = await createClient()
 
     const { searchParams } = new URL(req.url)
-    const unitId    = searchParams.get('unit_id')
+    const requestedUnitId = searchParams.get('unit_id')
     const dateFrom  = searchParams.get('date_from')
     const dateTo    = searchParams.get('date_to')
     const typeParam = searchParams.get('type')     // comma-separated nature values
     const sectorId  = searchParams.get('sector_id')
 
-    if (!unitId) return NextResponse.json({ error: 'unit_id é obrigatório.' }, { status: 400 })
+    const unitIds = await getEffectiveUnitIds(supabase, requestedUnitId)
+
+    if (unitIds.length === 0) {
+      const empty: HistorySummaryResponse = {
+        kpis: {
+          total_completed: 0, avg_resolution_hours: null,
+          total_cost_approved: 0, avg_cost_per_order: null,
+        },
+        by_month: [],
+      }
+      return NextResponse.json(empty)
+    }
 
     const now = new Date()
 
@@ -54,7 +66,7 @@ export async function GET(req: NextRequest) {
       let q = supabase
         .from('maintenance_tickets')
         .select('id, created_at, concluded_at')
-        .eq('unit_id', unitId)
+        .in('unit_id', unitIds)
         .eq('status', 'concluded')
       if (dateFrom)  q = q.gte('concluded_at', dateFrom)
       if (dateTo)    q = q.lte('concluded_at', dateTo)
@@ -67,7 +79,7 @@ export async function GET(req: NextRequest) {
       let q = supabase
         .from('maintenance_tickets')
         .select('id')
-        .eq('unit_id', unitId)
+        .in('unit_id', unitIds)
         .eq('status', 'concluded')
       if (dateFrom)  q = q.gte('concluded_at', dateFrom)
       if (dateTo)    q = q.lte('concluded_at', dateTo)
@@ -81,7 +93,7 @@ export async function GET(req: NextRequest) {
       let q = supabase
         .from('maintenance_tickets')
         .select('id, concluded_at')
-        .eq('unit_id', unitId)
+        .in('unit_id', unitIds)
         .eq('status', 'concluded')
         .gte('concluded_at', months[0].from)
         .lte('concluded_at', months[11].to)
