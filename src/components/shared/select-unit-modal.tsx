@@ -24,7 +24,7 @@ interface SelectUnitModalProps {
 }
 
 export function SelectUnitModal({ open, onClose, onConfirm }: SelectUnitModalProps) {
-  const { userUnits, setActiveUnit } = useUnitStore()
+  const { userUnits, selectUnit } = useUnitStore()
   const [selectedId, setSelectedId] = useState<string>('')
 
   function handleConfirm() {
@@ -33,7 +33,7 @@ export function SelectUnitModal({ open, onClose, onConfirm }: SelectUnitModalPro
     const unit = found?.unit
       ? { id: found.unit.id, name: found.unit.name, slug: found.unit.slug }
       : null
-    setActiveUnit(selectedId, unit)
+    selectUnit(selectedId, unit)
     onConfirm(selectedId)
     setSelectedId('')
   }
