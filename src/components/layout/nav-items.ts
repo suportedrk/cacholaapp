@@ -23,6 +23,9 @@ import {
   Zap,
   HardDrive,
   Shield,
+  Palette,
+  Droplet,
+  Sparkles,
 } from 'lucide-react'
 import { ROUTES } from '@/lib/constants'
 import type { Module, Role } from '@/types/permissions'
@@ -44,6 +47,7 @@ import {
   DASHBOARD_ACCESS_ROLES,
   SETTINGS_ROLES,
   TEMPLATE_MANAGE_ROLES,
+  DECORACAO_MANAGE_ROLES,
 } from '@/config/roles'
 
 export interface NavItem {
@@ -132,6 +136,13 @@ export const NAV_GROUPS: NavGroup[] = [
         ],
       },
       { label: 'Prestadores',  href: ROUTES.providers,   icon: Handshake, module: 'prestadores',  allowedRoles: [...PRESTADORES_ACCESS_ROLES]  },
+      {
+        label: 'Decoração', href: ROUTES.decoracaoTemas, icon: Palette, module: 'decoracao', allowedRoles: [...DECORACAO_MANAGE_ROLES],
+        children: [
+          { label: 'Cores de forminhas', href: ROUTES.decoracaoForminhas, icon: Droplet,  module: 'decoracao', allowedRoles: [...DECORACAO_MANAGE_ROLES] },
+          { label: 'Temas',              href: ROUTES.decoracaoTemas,      icon: Sparkles, module: 'decoracao', allowedRoles: [...DECORACAO_MANAGE_ROLES] },
+        ],
+      },
       { label: 'Atas',         href: ROUTES.minutes,     icon: FileText,  module: 'atas',         allowedRoles: [...ATAS_ACCESS_ROLES]  },
       { label: 'Relatórios',   href: ROUTES.reports,     icon: BarChart3, module: 'relatorios',   allowedRoles: [...BI_ACCESS_ROLES] },
     ],

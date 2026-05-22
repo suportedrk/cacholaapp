@@ -78,6 +78,9 @@ export const ROUTES = {
   commercialChecklistTemplates: '/vendas/checklist/templates',
   commercialChecklistAutomacoes: '/vendas/checklist/automacoes',
   backups: '/admin/backups',
+  decoracao: '/decoracao',
+  decoracaoForminhas: '/decoracao/forminhas',
+  decoracaoTemas: '/decoracao/temas',
 } as const
 
 // ============================================================

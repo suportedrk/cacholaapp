@@ -217,6 +217,32 @@ export const TEAM_TASKS_ROLES = [
 ] as const satisfies readonly Role[]
 
 // ──────────────────────────────────────────────────────────────
+// Módulo Decoração (/decoracao)
+// ──────────────────────────────────────────────────────────────
+
+/**
+ * Acesso ao módulo Decoração — ver, criar e editar temas e cores de forminha.
+ * Usado no guard de layout, na sidebar e nas API routes de POST/PATCH.
+ * Exclusão permanente é restrita — ver DECORACAO_DELETE_ROLES.
+ */
+export const DECORACAO_MANAGE_ROLES = [
+  'super_admin',
+  'diretor',
+  'gerente',
+  'decoracao',
+] as const satisfies readonly Role[]
+
+/**
+ * Pode EXCLUIR temas e cores de forminha de forma permanente.
+ * gerente e decoracao não excluem — usam o toggle ativo/inativo para
+ * aposentar um tema ou cor sem apagar.
+ */
+export const DECORACAO_DELETE_ROLES = [
+  'super_admin',
+  'diretor',
+] as const satisfies readonly Role[]
+
+// ──────────────────────────────────────────────────────────────
 // Módulos de acesso geral
 // ──────────────────────────────────────────────────────────────
 

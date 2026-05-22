@@ -28,6 +28,7 @@ export type Module =
   | 'manutencao'
   | 'equipamentos'
   | 'prestadores'
+  | 'decoracao'
   | 'atas'
   | 'relatorios'
   | 'usuarios'
