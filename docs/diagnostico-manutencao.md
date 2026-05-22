@@ -891,9 +891,9 @@ Legenda de tipo: (i) ok com null; (ii) quebra/trava em "Todas"; (iii) comportame
 - **Dependência:** nenhuma. Independe da Fase 3 (RLS) — pode subir antes ou depois.
 - **Esperado em paralelo:** sumir definitivamente a classe de bug "ainda achou outro lugar que quebra em Todas".
 
-### ✅ IMPLEMENTAÇÃO 4b — 2026-05-21 (aguardando aprovação para commit/deploy)
+### ✅ IMPLEMENTAÇÃO 4b — 2026-05-21 — DEPLOYED v1.11.5
 
-> Implementação completa, validada localmente (tsc + lint + build verdes) e no browser (todos os 4 casos exigidos pelo prompt). **Sem commit ainda.**
+> Implementação completa, validada localmente (tsc + lint + build verdes) e no browser. **Deployed em produção via PR #41 / tag v1.11.5 (merge `09b6542`).**
 
 **Arquivos modificados (11):**
 
@@ -929,7 +929,7 @@ Legenda de tipo: (i) ok com null; (ii) quebra/trava em "Todas"; (iii) comportame
 - Como o banco local de Moema não tinha `service_categories`, criamos uma via SQL (`Categoria Teste P4`) só para completar o fluxo de stepper de prestador. Não afeta produção.
 - Banco local: 3 entidades criadas em Moema durante validação (equipamento, categoria, prestador+contato+serviço) — pode ser apagado a qualquer momento; não há impacto.
 
-**Aguardando aprovação do Bruno** para empacotar v1.11.5 (bump patch) + commit + push + PR develop→main.
+**✅ Empacotado e deployed como v1.11.5** (bump patch, PR #41, merge `09b6542`).
 
 ---
 
@@ -1036,7 +1036,7 @@ src/types/providers.ts                                  |  +1 / -0
 
 Total ~ +400 / -130 linhas; +0 dependências.
 
-**Aguardando aprovação do Bruno** para commit + push + PR develop→main + bump v1.11.5.
+> **✅ DEPLOYED em 2026-05-21** — commit `8609778` (develop), merge commit `09b6542` (main), PR #41, tag `v1.11.5`. Deploy to Production: success (4m02s). VPS: `package.json v1.11.5` confirmado.
 
 ### Fase 5 — Limpeza de código legado (opcional, separável)
 **Checkpoint:** Bruno aprova após auditar dados em `maintenance_orders` (F12).
@@ -1063,13 +1063,182 @@ Total ~ +400 / -130 linhas; +0 dependências.
 | Fase 2 — Fix modal Novo Chamado | ✅ Deployed | v1.11.3 | #39 | `0610b8d` |
 | Fase 4 — Dashboard agrega "Todas" | ✅ Deployed | v1.11.4 | #40 | `ecbe55b` |
 | **Sweep "Todas" completo** | ✅ Diagnóstico | — | — | — |
-| **Fase 4b — Fix coordenado (5 ALTA + 2 MÉDIA)** | ✅ Implementado (aguarda commit/deploy) | v1.11.5 (pendente) | — | — |
+| **Fase 4b — Fix coordenado (5 ALTA + 2 MÉDIA)** | ✅ Deployed | v1.11.5 | #41 | `09b6542` |
+| **QA Adversarial pós-4b** | ✅ Concluído — ver §10 | — | — | — |
+| **Fase 4c — Fix QA-1/QA-2/QA-6 (corrupção de unidade)** | ✅ Implementado — aguarda aprovação — ver §11 | — | — | — |
 | Fase 3 — Migration RLS + backfill | 🔲 Pendente aprovação Bruno | — | — | — |
 | Fase 5 — Cleanup código legado | 🔲 Pendente | — | — | — |
 | Fase 6 — Otimizações opcionais | 🔲 Pendente | — | — | — |
 
-**Próximo passo:** Bruno aprovar Fase 4b (descrita na seção 8.6) — fecha de uma vez a classe de bug "criação quebra em Todas" em Equipamentos, Prestadores, Categorias e ações do detalhe (foto/execução), seguindo a mesma pattern já validada em produção pela Fase 2. Risco baixo, sem dependência da Fase 3.
+**Próximo passo:** Bruno revisar os achados da QA Adversarial (§10) e decidir o que entra numa Fase 4c. Fase 3 (migration RLS) continua pendente e independente.
 
 ---
 
-Skills consultadas: cachola-rbac-pattern (SKILL.md + roles-ts-annotated.md + patterns-by-layer.md), cachola-stack (referência rápida), cachola-supabase-ops (referência). cachola-dev-sync pulada — modo investigação (somente leitura).
+## 10. QA Adversarial — pós-Fase 4b (2026-05-21)
+
+> **Tipo:** passada adversarial somente-teste sobre o trabalho multiunidade (Fases 2/4/4b, v1.11.5). Nenhum código alterado, nenhuma migration, nenhum commit.
+> **Método:** análise estática dos 3 módulos (Manutenção, Equipamentos, Prestadores) + reprodução no browser local (`localhost:3004`, dev server — label exibe `v1.11.4` por env var bakeada no start, mas o código em disco e servido por hot reload é o de `v1.11.5`/`develop`).
+> **Usuário:** `teste.diretor@cachola.local` (diretor — global viewer; usado como proxy de super_admin, mesmo `GLOBAL_VIEWER_ROLES`; não há `teste.superadmin` no seed local e a senha de `admin@cachola.local` é desconhecida).
+> **Foco:** quebrar a classe de bug multiunidade / "Todas" / troca de unidade no meio do fluxo.
+
+### 10.1 Resumo dos achados
+
+| # | Achado | Severidade | Reproduzido |
+|---|---|---|---|
+| QA-1 | Trocar o seletor global durante o preenchimento de form de página inteira sobrescreve silenciosamente a unidade escolhida no `UnitPickerBanner` | **MÉDIA** | ✅ browser + SQL |
+| QA-2 | `useServiceCategories()` no `ProviderForm` não é escopado pela unidade do form → categoria cross-unit em `provider_services` | **MÉDIA** | ✅ código (mecanismo confirmado) |
+| QA-3 | Seleção "Todas as unidades" não sobrevive a reload / cold start — reverte para unidade específica | **MÉDIA** | ✅ browser (localStorage antes/depois) |
+| QA-4 | `/configuracoes` (Setores e Categ. Equip.): a lista mistura unidades antes de uma unidade ser escolhida no banner; editar/excluir sem gate | BAIXA | ✅ código |
+| QA-5 | `TicketFormModal`: o reset cascade não cobre mudança do seletor global — mas o modal é modal e bloqueia o acesso ao seletor (latente) | BAIXA (latente) | ✅ browser (mitigação confirmada) |
+| QA-6 | `EquipmentForm` em edição: dropdown Categoria carrega categorias da unidade do seletor global, não a do equipamento | BAIXA | código |
+| QA-7 | Inconsistência de guard entre as 2 abas de `/configuracoes` (`onCreate` de Categ. Equip. tem guard explícito; Setores não) | INFO | código |
+| QA-8 | Após criar chamado em "Todas", o seletor global terminou numa unidade específica (provável efeito do QA-3) | INFO | observado |
+
+### 10.2 Achados detalhados
+
+#### QA-1 — [MÉDIA] Troca de seletor global sobrescreve a unidade do `UnitPickerBanner`
+
+**Reprodução (confirmada):**
+1. Seletor global em "Todas as unidades". Abrir `/equipamentos/novo` → `UnitPickerBanner` amber aparece.
+2. Escolher **Pinheiros** no banner. Preencher Nome = `"QA adversarial - F2 equipamento banner-Pinheiros"`.
+3. Sem sair da página, abrir o seletor global do header e trocar para **Moema**.
+4. O `UnitPickerBanner` **desaparece** (screenshot `docs/screenshots/qa-f2-equipamento-banner-sumiu.png`). Nenhum aviso.
+5. Clicar "Cadastrar equipamento".
+
+**Evidência (SQL):** o equipamento — cujo próprio nome diz "banner-Pinheiros" — foi gravado com `unidade = Buffet Cachola Moema`.
+
+**Causa-raiz:** `useFormUnitSelection(formUnitId)` (`src/hooks/use-form-unit-selection.ts:22-25`) deriva:
+- `requiresUnitSelection = activeUnitId === null`
+- `effectiveUnitId = requiresUnitSelection ? (formUnitId ?? null) : activeUnitId`
+
+Quando o seletor global deixa de ser "Todas" (`activeUnitId` passa a um UUID), `requiresUnitSelection` vira `false` e `effectiveUnitId` passa a ser **o `activeUnitId` do store**, descartando o `formUnitId` que o usuário escolheu no banner. O banner é renderizado sob `!isEditing && requiresUnitSelection` (`equipment-form.tsx:211`, `ProviderForm.tsx:411`) — então some. O submit usa `unit_id: effectiveUnitId` (`equipment-form.tsx:198`, `ProviderForm.tsx:222`).
+
+**Afeta:** `EquipmentForm` e `ProviderForm` (ambos páginas inteiras — o header e seu seletor estão sempre acessíveis). No `ProviderForm`, provider + contatos + serviços + documentos vão todos para a unidade errada (internamente consistentes entre si). No `EquipmentForm`, só a unidade fica errada (`category` é texto livre, sem FK).
+
+**Correção proposta:** o `formUnitId` deve ter precedência sobre o `activeUnitId` do store assim que o usuário o escolhe explicitamente. Ex.: `effectiveUnitId = formUnitId || activeUnitId` (form vence sempre); e o banner deveria continuar visível enquanto `formUnitId` estiver setado, para o usuário ver/confirmar a unidade. Alternativa: re-exibir o banner com aviso quando `activeUnitId` mudar com o form sujo.
+
+#### QA-2 — [MÉDIA] `useServiceCategories()` no `ProviderForm` ignora a unidade do form
+
+`ProviderForm.tsx:95` chama `useServiceCategories()` sem argumento. O hook (`src/hooks/use-service-categories.ts:14-44`) filtra por `activeUnitId` do **store** e **não aceita `unitIdOverride`**. Em modo "Todas" (`activeUnitId = null`) o filtro `eq('unit_id', ...)` não é aplicado → o dropdown da etapa "Serviços" lista categorias de **todas as unidades** (no banco local: 13 de Pinheiros + 1 de Moema), sem rótulo de unidade.
+
+**Consequência:** criar um prestador na unidade A (escolhida no `UnitPickerBanner`) e adicionar um serviço cuja categoria pertence à unidade B → `provider_services` gravado com `unit_id = A` e `category_id → service_categories` da unidade B. Corrupção cross-unit silenciosa; a FK é válida e a RLS não barra. **Não exige troca mid-flow** — basta estar em "Todas" e criar um prestador com serviço.
+
+A Fase 4b ampliada deu `unitIdOverride` a `useProviders`, mas **não** a `useServiceCategories` — o `ProviderForm` ficou com uma fonte de categorias não escopada.
+
+**Correção proposta:** `useServiceCategories(includeInactive, unitIdOverride?)` aceitar override (mesmo padrão de `useSectors`/`useEquipmentCategoryItems`); `ProviderForm` passar `effectiveUnitId`. Resetar `pendingServices` quando o `formUnitId` mudar.
+
+#### QA-3 — [MÉDIA] "Todas as unidades" não sobrevive a reload / cold start
+
+**Reprodução (confirmada):**
+1. Selecionar "Todas as unidades" → `localStorage['cachola-active-unit'] = {"state":{"activeUnitId":null},"version":0}`.
+2. Recarregar a página (F5 / `navigate reload`).
+3. `localStorage['cachola-active-unit'] = {"state":{"activeUnitId":"36d3b2e5-…"},"version":0}` — voltou para **Pinheiros**.
+
+**Causa-raiz (confirmada por código):** `src/lib/providers.tsx:64-82`. Linha 65: `const storedUnit = stored ? units.find(...) : null` — quando `stored === null` ("Todas" persistido), o ternário `stored ? … : null` curto-circuita para `storedUnit = null`. A linha 67 `if (storedUnit)` então é falsa e o boot cai no `else` (linha 73): `units.find(u => u.is_default) ?? units[0]` → `setActiveUnit(defaultUnit)`. O `null` legítimo de "Todas" é indistinguível de "nunca escolheu uma unidade" — ambos passam pelo mesmo ramo de fallback.
+
+**Impacto:** todo global viewer (super_admin/diretor) que trabalha em "Todas" perde o modo a cada refresh ou cold start de PWA. Pode passar a operar escopado a uma unidade achando que vê tudo (ou vice-versa). Também explica QA-8.
+
+**Correção proposta:** o boot precisa distinguir "`null` persistido intencionalmente (Todas)" de "nunca escolhido" — ex.: um flag separado `hasExplicitUnitChoice`, ou tratar a presença da chave persistida com `version` como decisão válida mesmo com valor `null`.
+
+#### QA-4 — [BAIXA] `/configuracoes`: lista mistura unidades antes da escolha no banner
+
+Em "Todas", antes de escolher a unidade no `UnitPickerBanner`, `effectiveUnitId = null`. `useSectors(false, null)` e `useEquipmentCategoryItems(false, null)` — com `unitIdOverride` explicitamente `null`, o `if (activeUnitId)` é falso e o `eq('unit_id')` não é emitido (`use-sectors.ts:16,24`) → retornam entradas de **todas as unidades** sem rótulo. O banner diz "Selecione a unidade para criar setores", mas a `ConfigTable` abaixo já mostra ~16 setores das duas unidades juntos; os botões editar/excluir de cada linha funcionam sem gate de unidade.
+
+**Risco:** renomear ou desativar o setor "Cozinha" da unidade errada (nomes coincidem entre unidades).
+
+**Correção proposta:** quando `requiresUnitSelection && !effectiveUnitId`, ocultar a `ConfigTable` (como o `SlaTab` da Manutenção já faz) ou rotular cada linha com a unidade.
+
+#### QA-5 — [BAIXA, latente] `TicketFormModal` e a mudança do seletor global
+
+O mesmo mecanismo do QA-1 existe no `TicketFormModal`: o reset cascade só dispara em `set('unit_id', …)` (`ticket-form-modal.tsx:119-128`), não quando o `activeUnitId` do store muda. Se o seletor global mudasse com o modal aberto, `effectiveUnitId` mudaria sem resetar `sector_id`/`category_id`/`item_id`/`equipment_id` → chamado gravado numa unidade com FKs de outra.
+
+**Mitigação confirmada no browser:** o `Dialog` (`@/components/ui/dialog`) é modal — com o modal aberto, o seletor de unidade do header fica inerte/inacessível (o snapshot de a11y nem lista o header). **Não é reproduzível por interação normal de mouse/teclado.** É um risco latente: se o `Dialog` algum dia virar não-modal, o bug ativa. A correção do QA-1 (precedência do `formUnitId`) também cobre este caso.
+
+#### QA-6 / QA-7 / QA-8 — menores
+
+- **QA-6 [BAIXA]:** `EquipmentForm` em edição com o seletor global numa unidade ≠ da do equipamento → `requiresUnitSelection = false` → `effectiveUnitId = activeUnitId` → `useEquipmentCategoryItems` carrega categorias da unidade do seletor, não a do equipamento. `category` é texto livre (sem FK), então não há corrupção de FK, mas a lista oferecida é da unidade errada.
+- **QA-7 [INFO]:** em `configuracoes/page.tsx`, o `onCreate` da aba "Categ. Equipamentos" tem `if (!equipCatsUnit.effectiveUnitId) return` explícito; o da aba "Setores" não tem — depende só do `canCreate`. Inconsistência de defensividade (code smell, sem bug funcional: `canCreate` gateia).
+- **QA-8 [INFO]:** após criar um chamado em "Todas" e navegar, o seletor global terminou em Pinheiros (unidade do chamado criado). Não foi possível isolar o mecanismo exato — provável efeito combinado do QA-3 (reload) com a navegação. Mencionado para rastreio.
+
+### 10.3 O que foi exercitado e passou limpo
+
+- **Happy path — criar chamado em "Todas":** modal `Novo Chamado` com seletor em "Todas" → campo "Unidade *" obrigatório, escolher Pinheiros + setor "Cozinha" → chamado criado corretamente (`d83a485f`, unit Pinheiros, setor Cozinha).
+- **Reset cascade dentro do modal de chamado:** trocar a unidade no campo do form reseta os 4 dependentes (validado na Fase 2; reconferido no código).
+- **P1/P2 (Fase 4b):** no detalhe do chamado em "Todas", o modal "Adicionar Execução" abre normalmente (lista colaboradores etc.).
+- **v1.11.5 — fix de leitura por id (deep-link cross-unit):** abrir a URL direta de um prestador → `GET /rest/v1/service_providers?…&id=eq.<id>` **sem `unit_id=`** na querystring — query unit-agnóstica, alcança registro de qualquer unidade. `event_providers?provider_id=eq.<id>` (sub-leitura) → HTTP 200, também sem filtro de unidade.
+- **Empty state:** `/manutencao/chamados` numa unidade sem chamados → "Nenhum chamado ainda" renderiza corretamente, sem erro.
+- **Error state:** detalhe de prestador que falhou ao carregar → mensagem + botões "Tentar novamente" e "Voltar".
+- **Validação de obrigatórios:** "Próximo" no `ProviderForm` com CPF/Nome vazios não avança de etapa.
+- **`TicketFormModal` é corretamente modal** — background inerte; protege contra o QA-5.
+
+### 10.4 Não testado / fora de escopo
+
+- **Guards de role por rota:** já cobertos pela matriz da Fase 2.8b (CLAUDE.md, 7 roles × 5 rotas). Não re-testados nesta passada — sem valor adversarial novo.
+- **Render completo do detalhe de prestador no local:** bloqueado pelo artefato conhecido PGRST200 (PostgREST local 12.2.3 não resolve o embed cross-schema `rated_by_user`); produção usa 14.6 e funciona. Validado via query/network, não via render — conforme instrução do prompt.
+- **Duplo submit:** não reproduzido no browser (difícil via automação de UI). Observação estática: os guards (`createTicket.isPending` / `disabled`) dependem de re-render; um duplo-clique sub-frame teoricamente escaparia antes do `isPending` propagar. Risco baixo; vale um teste manual dirigido pelo Bruno se quiser fechar o ponto.
+- **Realtime/WebSocket:** não conecta no local (intencional).
+
+### 10.5 Dados de teste criados e removidos
+
+Durante a QA foram criados no banco local (todos com prefixo `QA adversarial`): 1 chamado (`d83a485f`, Pinheiros) e 1 equipamento (Moema). **Ambos removidos ao final** via `DELETE … WHERE … LIKE 'QA adversarial%'`. O prestador `ed9b2e78` (Moema) é resíduo da sessão da Fase 4b anterior — não criado por esta QA; deixado intacto.
+
+---
+
+## 11. Fase 4c — Correção das 3 corrupções silenciosas de unidade (QA-1, QA-2, QA-6)
+
+> **Escopo:** corrige só os 3 achados da QA Adversarial (§10) onde dado é gravado na unidade/categoria ERRADA sem erro. QA-3 (persistência do "Todas" no store) fica para PR separado. QA-4/5/7/8 não incluídos.
+> **Status:** ✅ implementado e validado localmente (branch `develop`, v1.11.5). **Aguardando aprovação do Bruno — sem commit/push/PR/deploy.**
+
+### 11.1 Arquivos alterados (3)
+
+| Arquivo | Mudança | Resolve |
+|---|---|---|
+| `src/hooks/use-form-unit-selection.ts` | Escolha de unidade do formulário virou **pegajosa**: `hasFormChoice = !!formUnitId`; `effectiveUnitId = hasFormChoice ? formUnitId : activeUnitId`; `requiresUnitSelection = activeUnitId === null \|\| hasFormChoice`. A escolha explícita do form passa a ter precedência sobre o seletor global e o banner permanece visível/travado. | **QA-1 + QA-6** |
+| `src/hooks/use-service-categories.ts` | `useServiceCategories(includeInactive, unitIdOverride?)` — aceita override opcional (mesmo padrão de `useSectors`/`useEquipmentCategoryItems`). Sem override, usa o store (legado). | **QA-2** |
+| `src/app/(auth)/prestadores/components/ProviderForm.tsx` | `useServiceCategories(false, effectiveUnitId)` — categorias escopadas à unidade efetiva do form. Novo `handleFormUnitChange` (ligado ao `onChange` do `UnitPickerBanner`) reseta `pendingServices` ao trocar a unidade — evita `provider_services.category_id` cross-unit. | **QA-2** |
+
+**Por que 3 arquivos para 3 bugs:** QA-1 e QA-6 têm a mesma causa-raiz (`useFormUnitSelection` deixava o store sobrescrever a escolha do form) — uma correção resolve os dois. QA-6 (edição de equipamento) é resolvido **transitivamente**: em modo edição `formUnitId` já é `equipment.unit_id`, então com a regra pegajosa `effectiveUnitId = equipment.unit_id` sempre, e o `EquipmentForm` já passava `effectiveUnitId` a `useEquipmentCategoryItems` — nenhuma alteração adicional no `EquipmentForm` foi necessária.
+
+**Defesa em camadas do QA-2:** (a) `useServiceCategories` agora escopa a query pela unidade do form; (b) o banner pegajoso (QA-1) mantém a unidade visível e fixa; (c) `handleFormUnitChange` descarta serviços pendentes ao trocar a unidade. Juntas fecham a janela de corrupção. O override sozinho não bastava: em "Todas" sem unidade escolhida `effectiveUnitId` é `null` e a query volta a não filtrar (padrão "null = sem filtro", igual aos demais hooks) — por isso o reset de `pendingServices` é parte da correção, não escopo extra.
+
+### 11.2 Consumidores verificados (sem regressão)
+
+`useFormUnitSelection` tem 8 call sites — todos rastreados: `ticket-form-modal.tsx`, `equipment-form.tsx`, `ProviderForm.tsx`, `configuracoes/page.tsx` (×2), `manutencao/configuracoes/page.tsx` (×4). Em todos, `requiresUnitSelection` é consumido para mostrar banner/campo e gatear `canCreate`/submit; manter `requiresUnitSelection = true` após a escolha apenas mantém o banner visível (travado) — comportamento desejado. **Efeito colateral consciente:** em `/configuracoes` e `/manutencao/configuracoes`, escolher a unidade na aba e depois trocar o seletor global agora **mantém** a aba na unidade escolhida (antes re-escopava silenciosamente para a unidade global) — consistente com a correção do QA-1. `useServiceCategories` tem 2 call sites: `ProviderForm` (recebe override) e `prestadores/page.tsx` (sem override — inalterado, lista de filtro segue o store).
+
+### 11.3 Validação local
+
+- `npx tsc --noEmit` → 0 erros ✅
+- `npm run lint` → 0 erros, 348 warnings (baseline inalterado) ✅
+- `npm run build` → sucesso ✅
+
+### 11.4 Validação no browser
+
+Dev server fresh em `localhost:3002` (v1.11.5), usuário `teste.diretor@cachola.local`, service workers/caches limpos.
+
+| Caso | Cenário | Resultado | Evidência |
+|---|---|---|---|
+| **QA-1 equipamento** | "Todas" → `/equipamentos/novo` → banner = Pinheiros → preencher nome → trocar seletor global p/ Moema | Banner **permaneceu** travado em "Buffet Cachola Pinheiros"; submit → **SQL: equipamento gravado em Pinheiros** (antes ia p/ Moema) | `docs/screenshots/qa4c-f1-equip-banner-pegajoso.png` + SQL |
+| **QA-1 prestador** | "Todas" → `/prestadores/novo` → banner = Pinheiros → trocar seletor global p/ Moema | Banner **permaneceu** em "Buffet Cachola Pinheiros" (antes sumia) | `docs/screenshots/qa4c-f1-prestador-banner-pegajoso.png` |
+| **QA-2** | `ProviderForm` em "Todas", banner = Pinheiros | Rede: `GET service_categories?…&unit_id=eq.36d3b2e5…` (Pinheiros) quando `effectiveUnitId`=Pinheiros; sem `unit_id=` quando "Todas" sem escolha — o override flui corretamente | reqid 3262 (escopada) vs 3273 (sem escopo) |
+| **QA-6** | Editar equipamento de **Moema** com seletor global em **Pinheiros** | Dropdown Categoria lista **só "Categoria Teste Fase 4b"** (categoria de Moema) — não as 9 de Pinheiros | `docs/screenshots/qa4c-f6-edicao-categoria-da-unidade-do-equip.png` |
+| **Regressão** | `/equipamentos/novo` e `/prestadores/novo` com seletor global numa unidade específica | Sem banner; form usa a unidade do store (comportamento original preservado) | snapshot |
+
+**Limitação de validação — QA-2 reset de `pendingServices`:** não foi possível dirigir o stepper do `ProviderForm` até a etapa "Serviços" pela automação de browser (o input de CPF mascarado não sincroniza o estado React via eventos sintéticos da ferramenta — fricção de automação, não bug de produto; a validação de obrigatórios da etapa 1 funciona corretamente, ver §10.3). O reset (`handleFormUnitChange` → `setPendingServices([])`, ligado ao `onChange` do banner) está verificado por código + `tsc`. Recomenda-se um teste manual rápido do Bruno: em "Todas", `ProviderForm`, escolher unidade A → adicionar um serviço → trocar a unidade do banner → confirmar que a lista de serviços pendentes esvaziou.
+
+### 11.5 Dados de teste
+
+Criado e **removido** ao final: 1 equipamento (`QA4c - F1 equip banner-Pinheiros`, Pinheiros). O `ProviderForm` do QA-2 não chegou a ser submetido — nenhum prestador criado. Baseline do banco local restaurado.
+
+### 11.6 git diff (resumo)
+
+```
+src/hooks/use-form-unit-selection.ts                    | reescrito — lógica pegajosa
+src/hooks/use-service-categories.ts                     | +unitIdOverride em useServiceCategories
+src/app/(auth)/prestadores/components/ProviderForm.tsx  | useServiceCategories(false, effectiveUnitId) + handleFormUnitChange
+```
+
+3 arquivos, +0 dependências, sem migration.
+
+---
+
+Skills consultadas: cachola-stack (SKILL.md + references/auth-and-session.md), cachola-supabase-ops (SKILL.md). cachola-dev-sync pulada — fluxo de implementação coberto pelo protocolo do CLAUDE.md.
