@@ -1581,6 +1581,78 @@ Equipamentos movido do nível superior do grupo "Operações" para **dentro do s
 
 ### 13.5 Status
 
-🔲 **Aguarda aprovação do Bruno** (screenshots + diff) antes de commitar/push/PR.
+✅ Aprovado pelo Bruno, deployado em produção — v1.11.10, PR #46, merge commit `6ce89a5`.
 
-Skills consultadas: cachola-stack (SKILL.md + references/auth-and-session.md), cachola-supabase-ops (SKILL.md). cachola-dev-sync pulada — fluxo de implementação coberto pelo protocolo do CLAUDE.md.
+---
+
+## 14. Limpeza de Dados de Teste — Manutenção (2026-05-22)
+
+### 14.1 Escopo
+
+O diagnóstico pré-limpeza confirmou que **100% do dado operacional** do módulo era de teste — criado pela conta `admin@cacholaos.com.br` em abr/2026, durante o desenvolvimento. Removido apenas o dado operacional; o **seed de configuração foi preservado**.
+
+### 14.2 Removido (dado de teste)
+
+| Item | Qtd | Detalhe |
+|---|---|---|
+| Chamados | 3 | "Unir sala de vendas com estoque", "Porta de entrada", "piscina de bolinhas quebrou" — todos Pinheiros |
+| Execuções | 3 | removidas via `ON DELETE CASCADE` de `maintenance_tickets` |
+| Fotos de chamado | 4 | removidas via CASCADE |
+| Histórico de status | 2 | removido via CASCADE |
+| Equipamento | 1 | "Piscina de bolinhas" (Brinquedo, Pinheiros) |
+| Objetos de storage | 5 | 4 em `maintenance-photos` + 1 em `equipment-photos` |
+
+### 14.3 Preservado (seed de config — NÃO é dado de teste)
+
+Trava de segurança transacional confirmou intactos **antes do COMMIT**:
+
+| Config | Antes | Depois |
+|---|---|---|
+| `maintenance_sectors` | 16 (8+8) | **16** ✅ |
+| `maintenance_categories` | 14 (7+7) | **14** ✅ |
+| `equipment_categories` | 9 | **9** ✅ |
+
+### 14.4 Procedimento
+
+- **Passo A** — capturadas as chaves de storage (4 paths em `maintenance-photos`, 1 em `equipment-photos`) antes de qualquer DELETE.
+- **Passo B** — DELETE em produção dentro de uma única transação (`BEGIN … COMMIT`), com trava `DO $$ … RAISE EXCEPTION` que abortaria a transação se os contadores do seed (16/14/9) mudassem. Trava passou; COMMIT executado. Tabelas operacionais zeradas: `maintenance_tickets`, `maintenance_executions`, `maintenance_ticket_photos`, `maintenance_status_history`, `equipment` → todas 0.
+- **Passo C** — os 5 objetos de storage removidos via Storage API (`DELETE /storage/v1/object/…`, HTTP 200 "Successfully deleted" em todos) — remove o arquivo físico **e** a linha em `storage.objects`. Verificação final: 0 objetos restantes nos buckets `maintenance-photos` e `equipment-photos`.
+
+### 14.5 Estado pós-limpeza
+
+Módulo de Manutenção em produção: **0 chamados, 0 equipamentos, 0 fotos** — pronto para uso real. Configuração (setores/categorias/SLA/categorias de equipamento) intacta.
+
+---
+
+## 15. Clean Slate da Configuração — Manutenção (2026-05-22)
+
+### 15.1 Decisão
+
+Entregar o módulo com a configuração **zerada**, para o setor responsável configurar do zero, por unidade. Como a limpeza anterior (§14) deixou **0 chamados / 0 equipamentos / 0 itens**, nada referencia as linhas de configuração — apagar é seguro.
+
+### 15.2 Pré-check (Passo A)
+
+FKs que apontam para as 3 tabelas a zerar: `maintenance_tickets.sector_id`, `maintenance_tickets.category_id`, `maintenance_items.sector_id` — todas as tabelas de origem **vazias**. `equipment_categories` **não tem nenhuma FK apontando para ela** (`equipment.category` é TEXT, não FK). Referências reais hoje: **0**.
+
+### 15.3 Zerado (Passo B)
+
+| Tabela | Antes | Depois |
+|---|---|---|
+| `maintenance_sectors` | 16 | **0** ✅ |
+| `maintenance_categories` | 14 | **0** ✅ |
+| `equipment_categories` | 9 | **0** ✅ |
+
+DELETE em transação única (`BEGIN … COMMIT`), com trava `RAISE EXCEPTION` que abortaria se o SLA mudasse ou `maintenance_items` deixasse de estar vazia.
+
+### 15.4 Preservado
+
+| Tabela | Estado | |
+|---|---|---|
+| `maintenance_sla` | 8 linhas (4 níveis × 2 unidades) — defaults | ✅ intacto |
+| `maintenance_items` | tabela existe, 0 linhas — conceito **mantido** | ✅ intacto |
+
+### 15.5 Estado final
+
+Módulo de Manutenção em produção: **0 chamados · 0 equipamentos · 0 setores · 0 categorias · 0 categorias de equipamento**. Único resíduo de config: o **SLA** (defaults, intencionalmente preservado). Setor responsável configura setores/categorias do zero, por unidade.
+
+Skills consultadas: cachola-stack (SKILL.md + references/auth-and-session.md), cachola-supabase-ops (SKILL.md + references/postgrest-pagination.md), cachola-vps-ops (SKILL.md). cachola-dev-sync pulada — fluxo de implementação coberto pelo protocolo do CLAUDE.md.

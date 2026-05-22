@@ -91,7 +91,12 @@ export function useCreateMaintenanceCategory() {
       queryClient.invalidateQueries({ queryKey: ['maintenance-categories'] })
       toast.success('Categoria criada com sucesso')
     },
-    onError: (err) => toast.error(mapPgError(err, { activeUnitId: storeUnitId }, 'CATEGORY_CREATE')),
+    onError: (err) => {
+      const msg = (err as { code?: string })?.code === '23505'
+        ? 'Já existe uma categoria com esse nome nesta unidade.'
+        : mapPgError(err, { activeUnitId: storeUnitId }, 'CATEGORY_CREATE')
+      toast.error(msg)
+    },
   })
 }
 
