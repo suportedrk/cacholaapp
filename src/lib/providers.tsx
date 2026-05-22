@@ -11,7 +11,7 @@ import { useAuthReadyStore } from '@/stores/auth-store'
 import { useUnitStore } from '@/stores/unit-store'
 import { useImpersonateStore } from '@/stores/impersonate-store'
 import type { User as AppUser, UserUnitWithUnit } from '@/types/database.types'
-import { hasRole, VENDEDORA_ROLES } from '@/config/roles'
+import { hasRole, VENDEDORA_ROLES, GLOBAL_VIEWER_ROLES } from '@/config/roles'
 
 /**
  * AuthBootstrap — monta UMA única vez na árvore inteira.
@@ -47,7 +47,7 @@ function AuthBootstrap() {
       return data as AppUser | null
     }
 
-    async function loadUserUnits(userId: string): Promise<void> {
+    async function loadUserUnits(userId: string, profile: AppUser | null): Promise<void> {
       const { data } = await supabase
         .from('user_units')
         .select(`
@@ -61,7 +61,7 @@ function AuthBootstrap() {
       setUserUnits(units)
 
       // Restaurar unidade do localStorage, ou usar a default, ou a primeira disponível
-      const stored = useUnitStore.getState().activeUnitId
+      const { activeUnitId: stored, hasExplicitSelection } = useUnitStore.getState()
       const storedUnit = stored ? units.find((u) => u.unit_id === stored) : null
 
       if (storedUnit) {
@@ -69,6 +69,15 @@ function AuthBootstrap() {
           storedUnit.unit_id,
           storedUnit.unit as { id: string; name: string; slug: string }
         )
+      } else if (
+        stored === null &&
+        hasExplicitSelection &&
+        hasRole(profile?.role, GLOBAL_VIEWER_ROLES)
+      ) {
+        // O usuário escolheu "Todas as unidades" explicitamente (QA-3): preservar
+        // o null no reload em vez de cair no is_default. A checagem de role
+        // neutraliza um flag remanescente de outro usuário no mesmo browser.
+        setActiveUnit(null, null)
       } else {
         const defaultUnit = units.find((u) => u.is_default) ?? units[0]
         if (defaultUnit) {
@@ -86,7 +95,7 @@ function AuthBootstrap() {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
         const profile = await loadProfile(session.user.id)
-        await loadUserUnits(session.user.id)
+        await loadUserUnits(session.user.id, profile)
         if (hasRole(profile?.role, VENDEDORA_ROLES) && !profile.seller_id) {
           console.warn('[AuthBootstrap] vendedora sem seller_id vinculado — user:', session.user.id)
         }
@@ -114,7 +123,7 @@ function AuthBootstrap() {
         // Login real (após logout ou expiração de sessão)
         if (session?.user) {
           const profile = await loadProfile(session.user.id)
-          await loadUserUnits(session.user.id)
+          await loadUserUnits(session.user.id, profile)
           setAuthState(session.user, session, profile)
         }
         qc.invalidateQueries()

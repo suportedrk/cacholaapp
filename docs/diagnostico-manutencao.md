@@ -1065,12 +1065,13 @@ Total ~ +400 / -130 linhas; +0 dependências.
 | **Sweep "Todas" completo** | ✅ Diagnóstico | — | — | — |
 | **Fase 4b — Fix coordenado (5 ALTA + 2 MÉDIA)** | ✅ Deployed | v1.11.5 | #41 | `09b6542` |
 | **QA Adversarial pós-4b** | ✅ Concluído — ver §10 | — | — | — |
-| **Fase 4c — Fix QA-1/QA-2/QA-6 (corrupção de unidade)** | ✅ Implementado — aguarda aprovação — ver §11 | — | — | — |
+| **Fase 4c — Fix QA-1/QA-2/QA-6 (corrupção de unidade)** | ✅ Deployed — ver §11 | v1.11.6 | #42 | `657f3f7` |
+| **QA-3 — "Todas" sobrevive ao reload** | ✅ Implementado e validado localmente — aguarda aprovação — ver §12 | — | — | — |
 | Fase 3 — Migration RLS + backfill | 🔲 Pendente aprovação Bruno | — | — | — |
 | Fase 5 — Cleanup código legado | 🔲 Pendente | — | — | — |
 | Fase 6 — Otimizações opcionais | 🔲 Pendente | — | — | — |
 
-**Próximo passo:** Bruno revisar os achados da QA Adversarial (§10) e decidir o que entra numa Fase 4c. Fase 3 (migration RLS) continua pendente e independente.
+**Próximo passo:** Bruno revisar o QA-3 (§12) e aprovar o deploy. Fase 3 (migration RLS) continua pendente e independente.
 
 ---
 
@@ -1187,7 +1188,7 @@ Durante a QA foram criados no banco local (todos com prefixo `QA adversarial`): 
 ## 11. Fase 4c — Correção das 3 corrupções silenciosas de unidade (QA-1, QA-2, QA-6)
 
 > **Escopo:** corrige só os 3 achados da QA Adversarial (§10) onde dado é gravado na unidade/categoria ERRADA sem erro. QA-3 (persistência do "Todas" no store) fica para PR separado. QA-4/5/7/8 não incluídos.
-> **Status:** ✅ implementado e validado localmente (branch `develop`, v1.11.5). **Aguardando aprovação do Bruno — sem commit/push/PR/deploy.**
+> **Status:** ✅ **Deployed em produção** — commit `657f3f7`, merge `08bdddc`, tag `v1.11.6`, PR #42. Deploy concluído em 2026-05-22. Build ID em prod: `08bdddc`.
 
 ### 11.1 Arquivos alterados (3)
 
@@ -1238,6 +1239,76 @@ src/app/(auth)/prestadores/components/ProviderForm.tsx  | useServiceCategories(f
 ```
 
 3 arquivos, +0 dependências, sem migration.
+
+---
+
+## 12. QA-3 — "Todas as unidades" deve sobreviver ao reload
+
+> **Escopo:** PR separado da Fase 4c. Corrige a causa-raiz da confusão "o seletor voltou para Pinheiros sozinho". Mexe no **store global de unidade** (`unit-store`) usado pelo app inteiro — por isso o smoke check cross-módulo (§12.5) é obrigatório.
+> **Status:** ✅ implementado e validado localmente (branch `develop`, v1.11.6). **Aguardando aprovação do Bruno — sem commit/push/PR/deploy.**
+
+### 12.1 Causa-raiz
+
+`providers.tsx → loadUserUnits` lê `useUnitStore.getState().activeUnitId` na hidratação. O `null` é **ambíguo**: significa tanto "usuário escolheu Todas" quanto "usuário nunca escolheu" (default em memória). A linha `stored ? units.find(...) : null` cai no `else` em ambos os casos e aplica o `is_default` — sobrescrevendo a escolha "Todas" no F5.
+
+### 12.2 Arquivos alterados (5)
+
+| Arquivo | Mudança |
+|---|---|
+| `src/stores/unit-store.ts` | Novo campo persistido `hasExplicitSelection: boolean` + nova action `selectUnit()` (marca o flag) + `setActiveUnit()` mantida intacta para uso programático. `partialize` persiste o flag; `reset()` (logout) zera o flag. |
+| `src/lib/providers.tsx` | `loadUserUnits` recebe `profile`; novo ramo: se `stored === null && hasExplicitSelection && hasRole(profile?.role, GLOBAL_VIEWER_ROLES)` → preserva `null` ("Todas") em vez de cair no `is_default`. 2 call sites atualizados. |
+| `src/components/layout/unit-switcher.tsx` | `setActiveUnit` → `selectUnit` (escolha do usuário no header). |
+| `src/components/shared/select-unit-modal.tsx` | `setActiveUnit` → `selectUnit`. |
+| `src/app/(auth)/admin/unidades/setup/components/UnitSetupWizard.tsx` | `setActiveUnit` → `selectUnit`. |
+
+**Decisão de design:** `setActiveUnit` (programático — boot, impersonate) **não** marca escolha; só `selectUnit` (escolha do usuário pela UI) marca. A checagem `hasRole(..., GLOBAL_VIEWER_ROLES)` no `loadUserUnits` neutraliza um flag remanescente de outro usuário no mesmo browser (tab fechada sem logout): só super_admin/diretor podem ter "Todas" restaurado. `reset()` no logout zera o flag — dupla proteção.
+
+**Comportamento preservado (primeira visita / usuários atuais):** localStorage sem `hasExplicitSelection` → o merge do persist usa o default `false` → cai no `is_default`, exatamente como hoje. Não muda o default de primeira visita.
+
+### 12.3 Limite de migração (esperado, não é regressão)
+
+Usuários que **hoje** têm `activeUnitId: null` persistido (tinham "Todas" pré-fix) revertem ao `is_default` **uma vez** após o deploy — o blob antigo não tem `hasExplicitSelection`. A partir da próxima escolha de "Todas", o flag é gravado e a preferência passa a grudar. É a fronteira de migração, não um bug.
+
+### 12.4 Validação local
+
+- `npx tsc --noEmit` → 0 erros ✅
+- `npm run lint` → 0 erros, 348 warnings (baseline inalterado) ✅
+- `npm run build` → sucesso ✅
+
+Browser: dev server fresh em `localhost:3003` (v1.11.6), usuário super_admin (global viewer), service workers/caches limpos.
+
+| Caso | Cenário | Resultado | Evidência |
+|---|---|---|---|
+| **QA-3** | Selecionar "Todas" → F5 | localStorage = `{"activeUnitId":null,"hasExplicitSelection":true}`; seletor permanece "Todas as unidades"; dashboard passa de 38→50 eventos (visão consolidada das 2 unidades) | `qa3-1-todas-antes-do-reload.png` + `qa3-2-todas-sobreviveu-ao-reload.png` |
+| **Regressão 1** | Selecionar Moema → F5 | localStorage = `{"activeUnitId":"df2e4286…","hasExplicitSelection":true}`; seletor permanece "Moema"; dashboard mostra 12 eventos (só Moema) | snapshot |
+| **Regressão 2** | Blob pré-fix `{"activeUnitId":null}` (sem flag) → F5 | Cai no `is_default` (Pinheiros), `hasExplicitSelection:false`; dashboard 38 eventos | `qa3-3-regressao-pre-fix-cai-no-default.png` |
+
+### 12.5 Smoke check cross-módulo (de-risk do blast radius global)
+
+Com "Todas" persistido após reload, todos os módulos carregaram sem erro:
+
+| Módulo | Resultado | Evidência |
+|---|---|---|
+| Início (`/dashboard`) | ✅ calendário + KPIs, 50 eventos consolidados | §12.4 |
+| Manutenção — Chamados | ✅ KPIs + lista de chamados | `qa3-smoke-1-manutencao-chamados.png` |
+| Manutenção — Dashboard | ✅ KPIs + 3 gráficos + últimos chamados | `qa3-smoke-2-manutencao-dashboard.png` |
+| BI (`/bi`) | ✅ KPIs + Detalhe por Unidade + Comparativo + funil + Origem dos Leads (ambas unidades) | `qa3-smoke-3-bi.png` |
+| Checklist Operacional | ✅ KPIs + filtros + empty state | `qa3-smoke-4-checklists.png` |
+| Eventos (`/eventos`) | ✅ 711 itens, ambas as unidades | `qa3-smoke-5-eventos.png` |
+
+Console: 2 erros não relacionados ao QA-3 — `SyntaxError` de uma extensão de browser (`chrome-extension://…recordConsoleEvents.js`, não é código do app) e falha de WebSocket do realtime do Supabase local (ruído conhecido de dev). Nenhum erro originado das mudanças.
+
+### 12.6 git diff (resumo)
+
+```
+src/stores/unit-store.ts                                      | +hasExplicitSelection + selectUnit
+src/lib/providers.tsx                                         | loadUserUnits(profile) + ramo "Todas" explícito
+src/components/layout/unit-switcher.tsx                       | setActiveUnit → selectUnit
+src/components/shared/select-unit-modal.tsx                   | setActiveUnit → selectUnit
+src/app/(auth)/admin/unidades/setup/.../UnitSetupWizard.tsx   | setActiveUnit → selectUnit
+```
+
+5 arquivos, +0 dependências, sem migration.
 
 ---
 

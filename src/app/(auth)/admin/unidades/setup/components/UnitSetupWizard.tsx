@@ -75,7 +75,7 @@ function SummarySection({ label, icon: Icon, count, done }: {
 
 export function UnitSetupWizard({ unitId, initialStatus }: Props) {
   const router = useRouter()
-  const { setActiveUnit } = useUnitStore()
+  const { selectUnit } = useUnitStore()
 
   const [currentStep, setCurrentStep] = useState(0)
   const [visitedSteps, setVisitedSteps] = useState<Set<number>>(new Set([0]))
@@ -203,7 +203,7 @@ export function UnitSetupWizard({ unitId, initialStatus }: Props) {
       toast.success('Setup concluído com sucesso!')
 
       // Selecionar a unidade recém-configurada
-      setActiveUnit(unitId)
+      selectUnit(unitId)
 
       // Redirecionar para o dashboard
       router.push('/dashboard')

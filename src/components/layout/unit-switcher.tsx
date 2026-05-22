@@ -18,7 +18,7 @@ import { UnitChip } from '@/components/shared/unit-chip'
 export function UnitSwitcher() {
   const qc = useQueryClient()
   const { userUnits, activeUnitId, profile } = useAuth()
-  const { setActiveUnit } = useUnitStore()
+  const { selectUnit } = useUnitStore()
 
   // Verificar se o usuário pode ver todas as unidades (usa users.role — fonte de verdade)
   const canViewAll = hasRole(profile?.role, GLOBAL_VIEWER_ROLES)
@@ -30,7 +30,7 @@ export function UnitSwitcher() {
     const unitObj = unitId
       ? (userUnits.find((u) => u.unit_id === unitId)?.unit as { id: string; name: string; slug: string } | undefined) ?? null
       : null
-    setActiveUnit(unitId, unitObj)
+    selectUnit(unitId, unitObj)
     // Invalidar todas as queries dependentes de unidade
     qc.invalidateQueries({ queryKey: ['events'] })
     qc.invalidateQueries({ queryKey: ['events-infinite'] })
