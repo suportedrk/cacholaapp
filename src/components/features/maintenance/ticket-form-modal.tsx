@@ -380,6 +380,9 @@ export function TicketFormModal({ open, onClose, onCreated }: TicketFormModalPro
             <label className="text-sm font-medium text-text-primary">
               Item / Local
             </label>
+            <p className="text-xs text-muted-foreground">
+              Item = lugar/elemento simples do espaço. Para ativos com número de série/garantia, use Equipamento.
+            </p>
             <Select
               value={form.item_id || 'none'}
               onValueChange={(v) => set('item_id', v === 'none' ? '' : (v ?? ''))}

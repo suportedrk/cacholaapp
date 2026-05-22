@@ -517,6 +517,18 @@ function ItensTab() {
         Itens são elementos específicos que podem precisar de manutenção dentro de um setor (ex: &quot;Geladeira&quot;, &quot;Torneira do Pia&quot;).
       </p>
 
+      <div className="rounded-lg border border-border bg-surface-secondary p-4 space-y-2 text-sm text-text-secondary">
+        <p>
+          <span className="font-medium text-text-primary">📦 Equipamento</span> é um bem que você controla um por um: tem número de série, garantia, e você acompanha o estado dele ao longo do tempo (ex.: a piscina de bolinhas, o ar-condicionado da sala azul, a geladeira do buffet).
+        </p>
+        <p>
+          <span className="font-medium text-text-primary">📍 Item</span> é um lugar ou elemento mais simples do espaço, sem esse controle todo — serve pra dizer &quot;onde&quot; ou &quot;o quê&quot; do chamado (ex.: a pia da cozinha, a tomada do salão, a porta de entrada).
+        </p>
+        <p className="text-xs text-text-tertiary">
+          Na dúvida: precisa rastrear garantia/número de série? É <strong>Equipamento</strong>. É só pra localizar ou descrever? É <strong>Item</strong>.
+        </p>
+      </div>
+
       {requiresUnitSelection && (
         <UnitPickerBanner
           value={pickedUnitId}
