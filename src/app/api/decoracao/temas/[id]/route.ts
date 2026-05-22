@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 import { requireRoleApi } from '@/lib/auth/require-role'
 import { DECORACAO_MANAGE_ROLES, DECORACAO_DELETE_ROLES } from '@/config/roles'
 
@@ -35,7 +35,7 @@ export async function PATCH(
       : []
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const supabase = (await createAdminClient()) as any
+    const supabase = (await createClient()) as any
 
     const { data: tema, error } = await supabase
       .from('decoracao_temas')
@@ -89,7 +89,7 @@ export async function DELETE(
     const { id } = await params
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const supabase = (await createAdminClient()) as any
+    const supabase = (await createClient()) as any
 
     const { error } = await supabase.from('decoracao_temas').delete().eq('id', id)
     if (error) throw error

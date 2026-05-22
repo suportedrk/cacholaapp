@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 import { requireRoleApi } from '@/lib/auth/require-role'
 import { DECORACAO_MANAGE_ROLES } from '@/config/roles'
 
@@ -32,7 +32,7 @@ export async function PATCH(
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const supabase = (await createAdminClient()) as any
+    const supabase = (await createClient()) as any
 
     const { data, error } = await supabase
       .from('decoracao_forminha_cores')

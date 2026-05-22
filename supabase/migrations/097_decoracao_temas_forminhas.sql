@@ -57,6 +57,16 @@ CREATE INDEX IF NOT EXISTS idx_decoracao_tema_forminhas_tema
 CREATE INDEX IF NOT EXISTS idx_decoracao_tema_forminhas_cor
   ON public.decoracao_tema_forminhas (forminha_cor_id);
 
+-- ── 1b. GRANTS de tabela (papel authenticated do PostgREST) ──
+-- Obrigatório: sem GRANT explícito, o PostgREST retorna
+-- "permission denied for table" ANTES de avaliar a RLS — não basta
+-- ter políticas. Módulo é autenticado-only; a RLS abaixo (TO
+-- authenticated) faz o controle fino. Leituras (browser) e mutações
+-- (API routes com requireRoleApi) usam o papel `authenticated`.
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.decoracao_forminha_cores TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.decoracao_temas          TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.decoracao_tema_forminhas TO authenticated;
+
 -- ── 2. TRIGGERS updated_at (reutiliza update_updated_at()) ────
 
 CREATE OR REPLACE TRIGGER trg_decoracao_forminha_cores_updated_at
