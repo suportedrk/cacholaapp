@@ -1065,12 +1065,12 @@ Total ~ +400 / -130 linhas; +0 dependências.
 | **Sweep "Todas" completo** | ✅ Diagnóstico | — | — | — |
 | **Fase 4b — Fix coordenado (5 ALTA + 2 MÉDIA)** | ✅ Deployed | v1.11.5 | #41 | `09b6542` |
 | **QA Adversarial pós-4b** | ✅ Concluído — ver §10 | — | — | — |
-| **Fase 4c — Fix QA-1/QA-2/QA-6 (corrupção de unidade)** | ✅ Implementado — aguarda aprovação — ver §11 | — | — | — |
+| **Fase 4c — Fix QA-1/QA-2/QA-6 (corrupção de unidade)** | ✅ Deployed — ver §11 | v1.11.6 | #42 | `657f3f7` |
 | Fase 3 — Migration RLS + backfill | 🔲 Pendente aprovação Bruno | — | — | — |
 | Fase 5 — Cleanup código legado | 🔲 Pendente | — | — | — |
 | Fase 6 — Otimizações opcionais | 🔲 Pendente | — | — | — |
 
-**Próximo passo:** Bruno revisar os achados da QA Adversarial (§10) e decidir o que entra numa Fase 4c. Fase 3 (migration RLS) continua pendente e independente.
+**Próximo passo:** Bruno validar em produção os 3 casos da Fase 4c (ver §11.4 — QA-1/QA-2/QA-6) após limpar service workers/caches. Fase 3 (migration RLS) continua pendente e independente.
 
 ---
 
@@ -1187,7 +1187,7 @@ Durante a QA foram criados no banco local (todos com prefixo `QA adversarial`): 
 ## 11. Fase 4c — Correção das 3 corrupções silenciosas de unidade (QA-1, QA-2, QA-6)
 
 > **Escopo:** corrige só os 3 achados da QA Adversarial (§10) onde dado é gravado na unidade/categoria ERRADA sem erro. QA-3 (persistência do "Todas" no store) fica para PR separado. QA-4/5/7/8 não incluídos.
-> **Status:** ✅ implementado e validado localmente (branch `develop`, v1.11.5). **Aguardando aprovação do Bruno — sem commit/push/PR/deploy.**
+> **Status:** ✅ **Deployed em produção** — commit `657f3f7`, merge `08bdddc`, tag `v1.11.6`, PR #42. Deploy concluído em 2026-05-22. Build ID em prod: `08bdddc`.
 
 ### 11.1 Arquivos alterados (3)
 
