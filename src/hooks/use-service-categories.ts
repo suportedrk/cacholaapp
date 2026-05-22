@@ -11,8 +11,13 @@ import { mapPgError } from '@/lib/errors/map-pg-error'
 // ─────────────────────────────────────────────────────────────
 // useServiceCategories — Lista categorias ativas da unidade
 // ─────────────────────────────────────────────────────────────
-export function useServiceCategories(includeInactive = false) {
-  const { activeUnitId } = useUnitStore()
+// Fase 4c (QA-2): aceita `unitIdOverride` opcional — mesmo padrão de useSectors /
+// useEquipmentCategoryItems. Formulários (ProviderForm) passam a unidade efetiva do
+// form para não listar categorias de outra unidade quando o seletor global está em
+// "Todas". Sem override, usa o activeUnitId do store (comportamento legado).
+export function useServiceCategories(includeInactive = false, unitIdOverride?: string | null) {
+  const storeUnitId = useUnitStore((s) => s.activeUnitId)
+  const activeUnitId = unitIdOverride !== undefined ? unitIdOverride : storeUnitId
   const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
 
   return useQuery({

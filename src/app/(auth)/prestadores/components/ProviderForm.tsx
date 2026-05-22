@@ -92,7 +92,9 @@ export function ProviderForm({ provider, onSuccess }: Props) {
     useFormUnitSelection(formUnitId || null)
 
   // ── Data ──────────────────────────────────────────────────
-  const { data: categories = [] } = useServiceCategories()
+  // Fase 4c (QA-2): categorias escopadas à unidade EFETIVA do formulário (não ao
+  // store) — evita listar/gravar category_id de outra unidade quando em "Todas".
+  const { data: categories = [] } = useServiceCategories(false, effectiveUnitId)
 
   // ── Mutations ─────────────────────────────────────────────
   const createProvider = useCreateProvider()
@@ -139,6 +141,13 @@ export function ProviderForm({ provider, onSuccess }: Props) {
       delete next[step][field]
       return next
     })
+  }
+
+  // Fase 4c (QA-2): ao trocar a unidade do formulário, descarta serviços pendentes —
+  // suas categorias (`category_id`) são por unidade e ficariam cross-unit.
+  function handleFormUnitChange(unitId: string) {
+    setFormUnitId(unitId)
+    setPendingServices([])
   }
 
   function validateStep(step: number): boolean {
@@ -411,7 +420,7 @@ export function ProviderForm({ provider, onSuccess }: Props) {
       {!isEditMode && requiresUnitSelection && (
         <UnitPickerBanner
           value={formUnitId}
-          onChange={setFormUnitId}
+          onChange={handleFormUnitChange}
           units={availableUnits}
           contextLabel="cadastrar o prestador"
         />
