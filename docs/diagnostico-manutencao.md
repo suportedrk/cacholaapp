@@ -802,10 +802,81 @@ Criado o script de reversão: faz `DROP` das 28 policies da 094 e `re-CREATE` da
 
 O `deploy.yml` faz apenas `git pull` + `npm ci` + `npm run build` + `pm2 restart` — **não aplica migrations**. Merge da v1.11.8 leva os arquivos `094_*.sql` e `094_*_rollback.sql` para a VPS, mas o banco de produção continua com as policies da 031 até o Passo 3 rodar `094` via `docker exec psql`.
 
+#### Fase 3.4 — Migration aplicada em produção (Passo 3) — 2026-05-22
+
+> **A 094 foi aplicada no banco de produção.** A RLS das 8 tabelas da migration 031 agora é role-gated via `check_permission`. Aguarda apenas a validação visual final do Bruno no app.
+
+##### Aplicação
+
+`docker exec -i supabase-db psql … -v ON_ERROR_STOP=1 < …/094_maintenance_rls_alignment.sql` — `BEGIN → INSERT 0 0 → COMMIT`, sem erro. Backfill inseriu **0 linhas** (os 7 usuários já tinham as permissões de `manutencao`, confirmado no diagnóstico da Fase 3.1). Policies: **16 → 28**; `maintenance_tickets` com 3 (`INSERT/SELECT/UPDATE`, sem DELETE). Sem `NOTIFY pgrst` — RLS é avaliada pelo Postgres em tempo de query, o PostgREST não faz cache de policy; o backfill em `user_permissions` também não toca o schema.
+
+##### Smoke test em produção (usuários reais, `BEGIN/ROLLBACK` — nenhum dado de teste persistido)
+
+| | Cenário (usuário real) | Resultado |
+|---|---|---|
+| P1 | super_admin INSERT chamado | ✅ `INSERT 0 1` (bypass) |
+| P2 | gerente (`brunocasaletti@gmail.com`, role manutencao, `create`+unidade pinheiros) INSERT | ✅ `INSERT 0 1` |
+| P3 | gerente SELECT chamados | ✅ 3 chamados, sem erro |
+| P4 | vendedora real (`bruna.jana`, membro de unidade) INSERT | ✅ `42501` — **§4.2.1 fechada (escrita)** |
+| P5 | vendedora real SELECT chamados | ✅ `0` — §4.2.1 fechada (leitura) |
+| P6 | os 7 usuários têm `user_permissions` de `manutencao` | ✅ diretor 5/5, gerente 5/4, manutencao 3, super_admin 5/5 |
+
+**P4/P5 provam em produção** que a "porta dos fundos" foi fechada: a vendedora, que tem membership de unidade, conseguiria CRUD de chamados via API direta sob a 031 — agora é bloqueada na escrita e na leitura.
+
+##### FYI para o Bruno — lacuna de `user_units` (não é regressão, não bloqueia)
+
+Dois usuários em `MAINTENANCE_MODULE_ROLES` têm **0 linhas em `user_units`**: `brunocasaletti@hotmail.com` (gerente) e `suporte@grupodrk.com.br` (manutencao). Como não são global viewers, ficam **sem acesso ao módulo de chamados** — mas isso já valia sob a 031 (a policy antiga também exigia `unit_id = ANY(get_user_unit_ids())`). A 094 **não regrediu** ninguém. Higiene de dados a avaliar à parte: esses contatos provavelmente precisam de unidade atribuída, ou são contas de suporte propositalmente órfãs. O backfill da 094 deu a eles as linhas de `user_permissions`, mas não cria `user_units` — confirma que a lacuna é de `user_units`, não de permissão.
+
 ##### Pendente
 
-- **Passo 3 (separado, aguarda liberação do Bruno):** aplicar `094` no banco de produção via `docker exec -i supabase-db psql … < …/094_maintenance_rls_alignment.sql`, depois validar.
-- Proposta de trigger do PASSO B (aprovação de custo) — tratar como Fase 3.3-bis / PR futuro.
+- **Validação visual final do Bruno:** abrir `/manutencao/chamados` em produção como super_admin e confirmar que carrega e funciona sem erro de RLS.
+- Trigger de aprovação de custo (§4.2.4) — implementado na Fase 3.5 (ver abaixo).
+- Rollback disponível e testado caso necessário: `094_maintenance_rls_alignment_rollback.sql`.
+
+### Fase 3.5 — Trigger de guarda da aprovação de custo (§4.2.4)
+
+> **Status:** migration `095` escrita e testada no banco local. **Não aplicada em produção, não commitada.** Aguarda revisão do Bruno.
+
+Fecha a segunda porta dos fundos: a aprovação de custo (`maintenance_executions.cost_approved` + `_by` + `_at`) é feita por `UPDATE` direto do cliente (`useApproveCost`, `use-tickets.ts`). A RLS de UPDATE da 094 (`maintenance_executions: edit`) só checa `check_permission(...,'edit')` e **não distingue colunas** — um técnico (role `manutencao`, que tem `edit`) passaria na RLS e viraria a flag via PostgREST direto.
+
+#### Passo A — Investigação
+
+| Pergunta | Resultado |
+|---|---|
+| Colunas de aprovação | `cost_approved` (bool NOT NULL default false), `cost_approved_by` (uuid), `cost_approved_at` (timestamptz) — **só em `maintenance_executions`** |
+| Há outra tabela/coluna de aprovação? | Não. A `maintenance_costs` legada (workflow `status`/`reviewed_by`) foi DROPada pela migration 032 |
+| Quem escreve essas colunas? | **Apenas `useApproveCost`** (sessão do usuário). Nenhum `service_role`/cron/sync/outro trigger escreve. Os 2 triggers existentes (`maintenance_executions_updated_at`, `sync_ticket_total_cost`) não tocam as colunas de aprovação |
+| Como identificar admin em SQL | Padrão canônico (`cachola-rbac-pattern`, patterns-by-layer §6): subquery em `public.users` com `role IN (...)`, dentro de função `SECURITY DEFINER`. Sem helper dedicado — `super_admin/diretor/gerente` não coincide com `is_super_admin()`/`is_global_viewer()`; uso único → checagem inline |
+
+**Decisão sobre `service_role`:** como **nenhum** processo não-usuário escreve as colunas de aprovação, o trigger exige cargo admin e **não tem "passe" de `service_role`** (nada legítimo precisa dele). Não se usou `auth.uid() IS NOT NULL` (impreciso — não identifica `service_role`); a checagem é positiva (`EXISTS … role IN (admin)`). Se uma migration futura precisar editar essas colunas em massa, desativar o trigger na janela (`ALTER TABLE … DISABLE/ENABLE TRIGGER`, padrão já usado no projeto).
+
+#### Passo B — Migration `095_maintenance_cost_approval_trigger.sql`
+
+Trigger `BEFORE UPDATE` em `maintenance_executions` → função `guard_cost_approval()` (`SECURITY DEFINER`, `search_path=public`). Dispara quando a tupla `(cost_approved, cost_approved_by, cost_approved_at)` muda (`IS DISTINCT FROM` — NULL-safe; cobre aprovar, desaprovar e spoof isolado de `_by`/`_at`); se o ator não for `super_admin/diretor/gerente`, `RAISE EXCEPTION` com `ERRCODE 42501`. Idempotente (`DROP TRIGGER/FUNCTION IF EXISTS`).
+
+#### Passo C — Smoke test local (`docker exec psql`)
+
+| | Cenário | Resultado |
+|---|---|---|
+| C1 | gerente UPDATE `cost_approved=true` | ✅ `UPDATE 1` (permitido) |
+| C2 | super_admin UPDATE `cost_approved=true` | ✅ `UPDATE 1` (permitido) |
+| C3 | diretor (com `edit` concedido na txn) UPDATE `cost_approved=true` | ✅ `UPDATE 1` (permitido) |
+| C4 | técnico (`manutencao`, com `edit`) UPDATE `cost_approved=true` | ✅ `ERRO 42501` — `permissao_negada` |
+| C5 | técnico UPDATE `description`+`cost` (colunas não-aprovação) | ✅ `UPDATE 1` — trigger é cirúrgico, não barra |
+| C6 | técnico UPDATE `cost_approved_by` isolado | ✅ `ERRO 42501` — anti-spoof |
+
+**C4 prova o ponto:** o técnico passa na RLS de `edit` da 094 mas o trigger barra a alteração da flag. **C5 prova que o trigger é cirúrgico:** só intercepta as 3 colunas de aprovação. **C6 prova o anti-spoof:** mexer só em `cost_approved_by` também é bloqueado.
+
+> **Validação pela UI não reexecutada** (logar como gerente + aprovar custo): exigiria `docker + npm run dev + Chrome` simultâneos, combinação que esgotou a RAM da máquina e travou o Docker Desktop nesta sessão. O `useApproveCost` emite exatamente `UPDATE maintenance_executions SET cost_approved=true, cost_approved_by=<uid>, cost_approved_at=now()` como o usuário autenticado — idêntico ao que C1 (gerente) exercita no banco. Recomendado: Bruno fazer o clique de aprovar custo como gerente na validação visual.
+
+#### Passo D — Rollback `095_..._rollback.sql`
+
+`DROP TRIGGER` + `DROP FUNCTION`. Testado: aplicar 095 → rollback (trigger e função removidos, voltam só os 2 triggers da 031) → re-aplicar 095 (trigger ativo). ✅
+
+#### Pendente
+
+- Revisão do Bruno da migration `095`.
+- Publicação no repo + aplicação em produção — passos separados, quando o Bruno liberar.
 
 ### Fase 4 — Fix do dashboard "Todas"
 **Checkpoint:** Bruno aprova após Bruno testar dashboard em "Todas" como super_admin.
@@ -1178,11 +1249,12 @@ Total ~ +400 / -130 linhas; +0 dependências.
 | **QA Adversarial pós-4b** | ✅ Concluído — ver §10 | — | — | — |
 | **Fase 4c — Fix QA-1/QA-2/QA-6 (corrupção de unidade)** | ✅ Deployed — ver §11 | v1.11.6 | #42 | `657f3f7` |
 | **QA-3 — "Todas" sobrevive ao reload** | ✅ Deployed — ver §12 | v1.11.7 | #43 | `32e019d` |
-| Fase 3 — Migration RLS + backfill (094) — arquivos publicados | ✅ Em `main` + rollback testado — banco de prod aguarda Passo 3 — ver §3.2/§3.3 | v1.11.8 | — | — |
+| Fase 3 — Migration RLS + backfill (094) | ✅ Aplicada em produção (16→28 policies) — smoke test OK — aguarda validação visual — ver §3.4 | v1.11.8 | #44 | `bd81753` |
+| Fase 3.5 — Trigger de aprovação de custo (095) | ✅ Escrita + testada localmente (C1–C6) + rollback — aguarda revisão — ver §3.5 | — | — | — |
 | Fase 5 — Cleanup código legado | 🔲 Pendente | — | — | — |
 | Fase 6 — Otimizações opcionais | 🔲 Pendente | — | — | — |
 
-**Próximo passo:** Bruno liberar o Passo 3 — aplicar a migration `094` no banco de produção via `docker exec psql` (§3.3).
+**Próximo passo:** Bruno validar `/manutencao/chamados` em produção como super_admin (§3.4). Fase 3 concluída após o OK visual.
 
 ---
 
