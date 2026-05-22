@@ -125,12 +125,12 @@ export const NAV_GROUPS: NavGroup[] = [
       {
         label: 'Manutenção', href: ROUTES.maintenance, icon: Wrench, module: 'manutencao', allowedRoles: [...MAINTENANCE_MODULE_ROLES],
         children: [
-          { label: 'Dashboard',     href: ROUTES.maintenanceDashboard, icon: LayoutDashboard, module: 'manutencao', allowedRoles: [...MAINTENANCE_ADMIN_ROLES]  },
-          { label: 'Chamados',      href: ROUTES.maintenanceChamados,  icon: ClipboardList,   module: 'manutencao', allowedRoles: [...MAINTENANCE_MODULE_ROLES] },
-          { label: 'Configurações', href: ROUTES.maintenanceConfig,    icon: Settings2,       module: 'manutencao', allowedRoles: [...MAINTENANCE_ADMIN_ROLES]  },
+          { label: 'Dashboard',     href: ROUTES.maintenanceDashboard, icon: LayoutDashboard, module: 'manutencao',    allowedRoles: [...MAINTENANCE_ADMIN_ROLES]   },
+          { label: 'Chamados',      href: ROUTES.maintenanceChamados,  icon: ClipboardList,   module: 'manutencao',    allowedRoles: [...MAINTENANCE_MODULE_ROLES]  },
+          { label: 'Equipamentos',  href: ROUTES.equipment,            icon: Package,         module: 'equipamentos',  allowedRoles: [...MAINTENANCE_MODULE_ROLES]  },
+          { label: 'Configurações', href: ROUTES.maintenanceConfig,    icon: Settings2,       module: 'manutencao',    allowedRoles: [...MAINTENANCE_ADMIN_ROLES]   },
         ],
       },
-      { label: 'Equipamentos', href: ROUTES.equipment,   icon: Package,   module: 'equipamentos', allowedRoles: [...MAINTENANCE_MODULE_ROLES]  },
       { label: 'Prestadores',  href: ROUTES.providers,   icon: Handshake, module: 'prestadores',  allowedRoles: [...PRESTADORES_ACCESS_ROLES]  },
       { label: 'Atas',         href: ROUTES.minutes,     icon: FileText,  module: 'atas',         allowedRoles: [...ATAS_ACCESS_ROLES]  },
       { label: 'Relatórios',   href: ROUTES.reports,     icon: BarChart3, module: 'relatorios',   allowedRoles: [...BI_ACCESS_ROLES] },
