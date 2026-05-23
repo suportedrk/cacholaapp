@@ -87,3 +87,64 @@ export interface BalaoModeloFormInput {
   observacoes: string | null
   foto_url?: string | null
 }
+
+// ── Ordens de serviço (OS de balões) ─────────────────────────
+
+export type DecoracaoOSItemStatus = 'aguardando_prova' | 'aprovada' | 'realizada'
+
+/** Status agregado da OS (derivado dos itens): o menos avançado entre eles. */
+export type DecoracaoOSStatusAgregado = DecoracaoOSItemStatus | 'vazia'
+
+/** Item da OS — preços NÃO são gravados, calculados ao vivo a partir do modelo. */
+export interface DecoracaoOSItem {
+  id: string
+  os_id: string
+  balao_modelo_id: string | null
+  quantidade: number
+  observacoes: string | null
+  status: DecoracaoOSItemStatus
+  ordem: number
+  created_at: string
+  updated_at: string
+}
+
+/** Ordem de serviço (a "festa") — sem coluna de status; status agregado vem dos itens. */
+export interface DecoracaoOS {
+  id: string
+  unit_id: string
+  data_festa: string | null
+  hora_festa: string | null
+  tema: string
+  tema_id: string | null
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+/** OS com itens já resolvidos e modelos hidratados para cálculo ao vivo. */
+export interface DecoracaoOSItemComModelo extends DecoracaoOSItem {
+  modelo: Pick<DecoracaoBalaoModelo, 'id' | 'nome' | 'custo' | 'valor_venda'> | null
+}
+
+export interface DecoracaoOSComItens extends DecoracaoOS {
+  itens: DecoracaoOSItemComModelo[]
+}
+
+/** Input de item no formulário (id ausente = novo item). */
+export interface DecoracaoOSItemFormInput {
+  id?: string
+  balao_modelo_id: string | null
+  quantidade: number
+  observacoes: string | null
+  status: DecoracaoOSItemStatus
+  ordem: number
+}
+
+export interface DecoracaoOSFormInput {
+  unit_id: string
+  data_festa: string | null   // YYYY-MM-DD
+  hora_festa: string | null   // HH:MM
+  tema: string
+  tema_id: string | null
+  itens: DecoracaoOSItemFormInput[]
+}
