@@ -108,6 +108,20 @@ export interface DecoracaoOSItem {
   updated_at: string
 }
 
+/** Resumo mínimo de uma festa para exibir no vínculo OS ↔ Festa. */
+export interface EventSummaryForOS {
+  id: string
+  date: string            // YYYY-MM-DD
+  start_time: string      // HH:MM:SS
+  end_time: string        // HH:MM:SS
+  client_name: string
+  birthday_person: string | null
+  theme: string | null
+  status: string
+  unit_id: string
+  unit_slug: string | null
+}
+
 /** Ordem de serviço (a "festa") — sem coluna de status; status agregado vem dos itens. */
 export interface DecoracaoOS {
   id: string
@@ -116,6 +130,7 @@ export interface DecoracaoOS {
   hora_festa: string | null
   tema: string
   tema_id: string | null
+  event_id: string | null
   created_by: string | null
   created_at: string
   updated_at: string
@@ -146,5 +161,6 @@ export interface DecoracaoOSFormInput {
   hora_festa: string | null   // HH:MM
   tema: string
   tema_id: string | null
+  event_id: string | null
   itens: DecoracaoOSItemFormInput[]
 }

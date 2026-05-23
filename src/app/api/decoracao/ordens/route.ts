@@ -10,6 +10,7 @@ interface OSBody {
   hora_festa?: string | null
   tema?: string
   tema_id?: string | null
+  event_id?: string | null
   itens?: DecoracaoOSItemFormInput[]
 }
 
@@ -39,6 +40,7 @@ export async function POST(request: Request) {
       p_tema: tema,
       p_tema_id: body.tema_id ?? null,
       p_itens: body.itens ?? [],
+      p_event_id: body.event_id ?? null,
     })
 
     if (error) {
