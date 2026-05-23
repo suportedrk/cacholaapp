@@ -60,3 +60,27 @@ export interface TemaFormInput {
   /** IDs das cores de forminha vinculadas ao tema. */
   forminha_cor_ids: string[]
 }
+
+// ── Balões ───────────────────────────────────────────────────
+
+export interface DecoracaoBalaoModelo {
+  id: string
+  nome: string
+  categoria: string | null
+  custo: number | null
+  valor_venda: number | null
+  ativo: boolean
+  observacoes: string | null
+  foto_url: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface BalaoModeloFormInput {
+  nome: string
+  categoria: string | null
+  custo: number | null
+  valor_venda: number | null
+  ativo: boolean
+  observacoes: string | null
+}
