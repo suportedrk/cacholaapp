@@ -140,6 +140,7 @@ export const NAV_GROUPS: NavGroup[] = [
       {
         label: 'Decoração', href: ROUTES.decoracaoTemas, icon: Palette, module: 'decoracao', allowedRoles: [...DECORACAO_MANAGE_ROLES],
         children: [
+          { label: 'Ordens de serviço', href: ROUTES.decoracaoOrdens,    icon: ClipboardList, module: 'decoracao', allowedRoles: [...DECORACAO_MANAGE_ROLES] },
           { label: 'Cores de forminhas', href: ROUTES.decoracaoForminhas, icon: Droplet,  module: 'decoracao', allowedRoles: [...DECORACAO_MANAGE_ROLES] },
           { label: 'Temas',              href: ROUTES.decoracaoTemas,      icon: Sparkles, module: 'decoracao', allowedRoles: [...DECORACAO_MANAGE_ROLES] },
           { label: 'Balões',             href: ROUTES.decoracaoBaloes,     icon: Wind,     module: 'decoracao', allowedRoles: [...DECORACAO_MANAGE_ROLES] },
