@@ -27,6 +27,7 @@ import {
   Droplet,
   Sparkles,
   Wind,
+  Truck,
 } from 'lucide-react'
 import { ROUTES } from '@/lib/constants'
 import type { Module, Role } from '@/types/permissions'
@@ -144,6 +145,7 @@ export const NAV_GROUPS: NavGroup[] = [
           { label: 'Cores de forminhas', href: ROUTES.decoracaoForminhas, icon: Droplet,  module: 'decoracao', allowedRoles: [...DECORACAO_MANAGE_ROLES] },
           { label: 'Temas',              href: ROUTES.decoracaoTemas,      icon: Sparkles, module: 'decoracao', allowedRoles: [...DECORACAO_MANAGE_ROLES] },
           { label: 'Balões',             href: ROUTES.decoracaoBaloes,     icon: Wind,     module: 'decoracao', allowedRoles: [...DECORACAO_MANAGE_ROLES] },
+          { label: 'Fornecedores',       href: ROUTES.decoracaoFornecedores, icon: Truck,  module: 'decoracao', allowedRoles: [...DECORACAO_MANAGE_ROLES] },
         ],
       },
       { label: 'Atas',         href: ROUTES.minutes,     icon: FileText,  module: 'atas',         allowedRoles: [...ATAS_ACCESS_ROLES]  },
