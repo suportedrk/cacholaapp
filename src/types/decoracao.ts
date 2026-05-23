@@ -88,6 +88,32 @@ export interface BalaoModeloFormInput {
   foto_url?: string | null
 }
 
+// ── Fornecedores de decoração ─────────────────────────────────
+
+export interface DecoracaoFornecedor {
+  id: string
+  nome: string
+  telefone: string | null
+  email: string | null
+  fornece: string | null
+  documento: string | null
+  observacoes: string | null
+  ativo: boolean
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface FornecedorFormInput {
+  nome: string
+  telefone: string | null
+  email: string | null
+  fornece: string | null
+  documento: string | null
+  observacoes: string | null
+  ativo: boolean
+}
+
 // ── Ordens de serviço (OS de balões) ─────────────────────────
 
 export type DecoracaoOSItemStatus = 'aguardando_prova' | 'aprovada' | 'realizada'
