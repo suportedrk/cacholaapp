@@ -9,6 +9,11 @@ import {
   AlertCircle,
   GripVertical,
   ChevronDown,
+  Link2,
+  Unlink,
+  CalendarDays,
+  CheckCircle2,
+  AlertTriangle,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -39,6 +44,7 @@ import {
   useDecoracaoOSDetail,
   useDeleteDecoracaoOS,
   useUpdateDecoracaoOS,
+  useEventForOSLink,
 } from '@/hooks/use-decoracao-os'
 import { ROUTES } from '@/lib/constants'
 import { cn } from '@/lib/utils'
@@ -48,10 +54,12 @@ import {
   calcTotalOS,
   formatBRLOuTraco,
 } from './os-helpers'
+import { EventLinkSheet } from './event-link-sheet'
 import type {
   DecoracaoOSItemFormInput,
   DecoracaoOSItemStatus,
   DecoracaoBalaoModelo,
+  EventSummaryForOS,
 } from '@/types/decoracao'
 
 interface Props {
@@ -69,6 +77,14 @@ function newEmptyItem(ordem: number): DecoracaoOSItemFormInput {
     status: 'aguardando_prova',
     ordem,
   }
+}
+
+function formatDateBR(d: string) {
+  const [y, m, day] = d.split('-')
+  return `${day}/${m}/${y}`
+}
+function formatTime(t: string) {
+  return t.slice(0, 5)
 }
 
 export function OSEditor({ mode, osId }: Props) {
@@ -97,11 +113,31 @@ export function OSEditor({ mode, osId }: Props) {
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [hydrated, setHydrated] = useState(false)
 
-  // Hidratação inicial (create) — escolhe a primeira unidade do usuário.
+  // ── Estado de vínculo com festa ──────────────────────────────
+  const [eventId, setEventId] = useState<string | null>(null)
+  const [linkedEvent, setLinkedEvent] = useState<EventSummaryForOS | null>(null)
+  const [linkSheetOpen, setLinkSheetOpen] = useState(false)
+  // Festa pendente de confirmação de sobrescrita de tema
+  const [pendingLinkEvent, setPendingLinkEvent] = useState<EventSummaryForOS | null>(null)
+
+  // Carregar detalhes da festa vinculada em modo edit
+  const eventLinkQuery = useEventForOSLink(
+    mode === 'edit' && hydrated ? eventId : null,
+  )
+
+  useEffect(() => {
+    if (eventLinkQuery.data && !linkedEvent) {
+      /* eslint-disable react-hooks/set-state-in-effect */
+      setLinkedEvent(eventLinkQuery.data)
+      /* eslint-enable react-hooks/set-state-in-effect */
+    }
+  }, [eventLinkQuery.data, linkedEvent])
+
+  // ── Hidratação inicial (create) ──────────────────────────────
   useEffect(() => {
     if (hydrated) return
     if (mode === 'create' && units.length > 0) {
-      /* eslint-disable react-hooks/set-state-in-effect -- hidratação inicial uma única vez */
+      /* eslint-disable react-hooks/set-state-in-effect */
       setUnitId(units[0].id)
       setItens([newEmptyItem(0)])
       setHydrated(true)
@@ -109,17 +145,18 @@ export function OSEditor({ mode, osId }: Props) {
     }
   }, [mode, units, hydrated])
 
-  // Hidratação a partir do detalhe (edit).
+  // ── Hidratação a partir do detalhe (edit) ────────────────────
   useEffect(() => {
     if (hydrated) return
     if (mode === 'edit' && detailQuery.data) {
       const d = detailQuery.data
-      /* eslint-disable react-hooks/set-state-in-effect -- hidratação inicial uma única vez */
+      /* eslint-disable react-hooks/set-state-in-effect */
       setUnitId(d.unit_id)
       setDataFesta(d.data_festa ?? '')
       setHoraFesta(d.hora_festa ? d.hora_festa.slice(0, 5) : '')
       setTema(d.tema)
       setTemaId(d.tema_id)
+      setEventId(d.event_id ?? null)
       setItens(
         d.itens.map((i) => ({
           id: i.id,
@@ -152,7 +189,7 @@ export function OSEditor({ mode, osId }: Props) {
     [temas],
   )
 
-  // Total ao vivo — mesma matemática da listagem.
+  // Total ao vivo
   const total = useMemo(() => {
     return calcTotalOS(
       itens.map((i) => ({
@@ -161,6 +198,46 @@ export function OSEditor({ mode, osId }: Props) {
       })),
     )
   }, [itens, modeloById])
+
+  // ── Lógica de vínculo com festa ──────────────────────────────
+  function applyLink(event: EventSummaryForOS) {
+    setEventId(event.id)
+    setLinkedEvent(event)
+    setUnitId(event.unit_id)
+    setDataFesta(event.date)
+    setHoraFesta(formatTime(event.start_time))
+    setPendingLinkEvent(null)
+  }
+
+  function handleEventSelected(event: EventSummaryForOS) {
+    // Se já há tema digitado → pedir confirmação de sobrescrita
+    const themeFromEvent = event.theme?.trim() ?? ''
+    if (themeFromEvent && tema.trim() && tema.trim() !== themeFromEvent) {
+      setPendingLinkEvent(event)
+      return
+    }
+    // Sem conflito — aplicar diretamente (preenchendo tema se vazio)
+    if (themeFromEvent && !tema.trim()) {
+      setTema(themeFromEvent)
+    }
+    applyLink(event)
+  }
+
+  function handleConfirmThemeOverwrite() {
+    if (!pendingLinkEvent) return
+    setTema(pendingLinkEvent.theme?.trim() ?? tema)
+    applyLink(pendingLinkEvent)
+  }
+
+  function handleKeepTheme() {
+    if (!pendingLinkEvent) return
+    applyLink(pendingLinkEvent)
+  }
+
+  function handleUnlink() {
+    setEventId(null)
+    setLinkedEvent(null)
+  }
 
   // ── Handlers de itens ────────────────────────────────────────
   function updateItem(idx: number, patch: Partial<DecoracaoOSItemFormInput>) {
@@ -202,6 +279,7 @@ export function OSEditor({ mode, osId }: Props) {
       hora_festa: horaFesta || null,
       tema: temaTrim,
       tema_id: temaId,
+      event_id: eventId,
       itens: itens.map((it, i) => ({ ...it, ordem: i })),
     }
 
@@ -267,6 +345,7 @@ export function OSEditor({ mode, osId }: Props) {
     )
   }
 
+  const isLinked = !!eventId
   const canSave = !!unitId && !!tema.trim() && !isPending
 
   return (
@@ -275,12 +354,113 @@ export function OSEditor({ mode, osId }: Props) {
         title={mode === 'create' ? 'Nova ordem de serviço' : 'Editar ordem de serviço'}
       />
 
+      {/* ── Bloco de vínculo com festa ─────────────────────────── */}
+      <div className="rounded-lg border border-border-default bg-card p-4">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <CalendarDays className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <span className="text-sm font-medium">Festa vinculada</span>
+          </div>
+
+          {!isLinked && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setLinkSheetOpen(true)}
+            >
+              <Link2 className="mr-1.5 h-4 w-4" />
+              Vincular festa
+            </Button>
+          )}
+        </div>
+
+        {isLinked ? (
+          <div className="mt-3 space-y-2">
+            <div className="flex items-start justify-between gap-3 rounded-md bg-brand-50 px-3 py-2.5 dark:bg-brand-950/20">
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-1.5 text-sm font-medium">
+                  <CheckCircle2 className="h-4 w-4 text-brand-600" />
+                  {linkedEvent ? linkedEvent.client_name : '…'}
+                </div>
+                {linkedEvent && (
+                  <p className="pl-5 text-xs text-muted-foreground">
+                    {formatDateBR(linkedEvent.date)} · {formatTime(linkedEvent.start_time)} –{' '}
+                    {formatTime(linkedEvent.end_time)}
+                    {linkedEvent.birthday_person && ` · 🎂 ${linkedEvent.birthday_person}`}
+                    {linkedEvent.unit_slug && (
+                      <span className="ml-1 uppercase tracking-wide text-[10px] font-medium text-brand-600">
+                        {linkedEvent.unit_slug}
+                      </span>
+                    )}
+                  </p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={handleUnlink}
+                className="shrink-0 rounded p-1 text-muted-foreground hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                title="Desvincular festa"
+              >
+                <Unlink className="h-4 w-4" />
+              </button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Data, hora e unidade são preenchidos pela festa e não podem ser editados enquanto o
+              vínculo estiver ativo. O tema pode ser alterado livremente.
+            </p>
+          </div>
+        ) : (
+          <p className="mt-2 text-xs text-muted-foreground">
+            Sem vínculo — preencha os campos manualmente.
+          </p>
+        )}
+
+        {/* Confirmação de sobrescrita de tema */}
+        {pendingLinkEvent && (
+          <div className="mt-3 flex flex-col gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-3 dark:border-amber-800/40 dark:bg-amber-950/20">
+            <div className="flex items-start gap-2 text-sm text-amber-800 dark:text-amber-400">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>
+                A festa tem tema &ldquo;{pendingLinkEvent.theme}&rdquo;. Substituir o tema atual
+                &ldquo;{tema}&rdquo;?
+              </span>
+            </div>
+            <div className="flex gap-2 pl-6">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="border-amber-300 text-amber-800 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-400 dark:hover:bg-amber-900/30"
+                onClick={handleConfirmThemeOverwrite}
+              >
+                Substituir tema
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={handleKeepTheme}
+              >
+                Manter atual
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Cabeçalho da OS */}
       <div className="grid grid-cols-1 gap-4 rounded-lg border border-border-default bg-card p-4 md:grid-cols-2 lg:grid-cols-4">
         <div className="space-y-1.5">
-          <Label htmlFor="os-unit">Unidade *</Label>
-          <Select value={unitId} onValueChange={(v) => setUnitId(v ?? '')}>
-            <SelectTrigger id="os-unit">
+          <Label htmlFor="os-unit" className={cn(isLinked && 'text-muted-foreground')}>
+            Unidade *{isLinked && ' (da festa)'}
+          </Label>
+          <Select
+            value={unitId}
+            onValueChange={(v) => setUnitId(v ?? '')}
+            disabled={isLinked}
+          >
+            <SelectTrigger id="os-unit" disabled={isLinked}>
               <SelectValue placeholder="Selecione…">
                 {units.find((u) => u.id === unitId)?.name ?? 'Selecione…'}
               </SelectValue>
@@ -296,22 +476,30 @@ export function OSEditor({ mode, osId }: Props) {
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="os-data">Data da festa</Label>
+          <Label htmlFor="os-data" className={cn(isLinked && 'text-muted-foreground')}>
+            Data da festa{isLinked && ' (da festa)'}
+          </Label>
           <Input
             id="os-data"
             type="date"
             value={dataFesta}
             onChange={(e) => setDataFesta(e.target.value)}
+            disabled={isLinked}
+            readOnly={isLinked}
           />
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="os-hora">Hora da festa</Label>
+          <Label htmlFor="os-hora" className={cn(isLinked && 'text-muted-foreground')}>
+            Hora da festa{isLinked && ' (da festa)'}
+          </Label>
           <Input
             id="os-hora"
             type="time"
             value={horaFesta}
             onChange={(e) => setHoraFesta(e.target.value)}
+            disabled={isLinked}
+            readOnly={isLinked}
           />
         </div>
 
@@ -558,6 +746,13 @@ export function OSEditor({ mode, osId }: Props) {
           </Button>
         </div>
       </div>
+
+      {/* Sheet de busca de festas */}
+      <EventLinkSheet
+        open={linkSheetOpen}
+        onOpenChange={setLinkSheetOpen}
+        onSelect={handleEventSelected}
+      />
     </div>
   )
 }

@@ -8,6 +8,7 @@ import type {
   DecoracaoOSComItens,
   DecoracaoOSFormInput,
   DecoracaoOSItemComModelo,
+  EventSummaryForOS,
 } from '@/types/decoracao'
 
 const retry = (count: number, err: unknown) => {
@@ -130,6 +131,83 @@ export function useDecoracaoOSDetail(id: string | undefined) {
       const { itens: _drop, ...header } = data
       void _drop
       return { ...header, itens } as DecoracaoOSComItens
+    },
+  })
+}
+
+/** Carrega um evento específico pelo ID — usado para exibir o vínculo em modo edit. */
+export function useEventForOSLink(eventId: string | null | undefined) {
+  const isSessionReady = useAuthReadyStore((s: { isSessionReady: boolean }) => s.isSessionReady)
+  return useQuery({
+    queryKey: ['decoracao', 'event-for-os-link', eventId],
+    enabled: isSessionReady && !!eventId,
+    staleTime: 5 * 60 * 1000,
+    retry,
+    queryFn: async () => {
+      const supabase = createClient()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any)
+        .from('events')
+        .select('id, date, start_time, end_time, client_name, birthday_person, theme, status, unit_id, units!events_unit_id_fkey(slug)')
+        .eq('id', eventId)
+        .single()
+      if (error) throw error
+      return {
+        id: data.id,
+        date: data.date,
+        start_time: data.start_time,
+        end_time: data.end_time,
+        client_name: data.client_name,
+        birthday_person: data.birthday_person,
+        theme: data.theme,
+        status: data.status,
+        unit_id: data.unit_id,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        unit_slug: (data as any).units?.slug ?? null,
+      } as EventSummaryForOS
+    },
+  })
+}
+
+/** Busca festas para vincular a uma OS. Janela padrão: -30 a +90 dias. */
+export function useEventsForLink(params: { search?: string } = {}) {
+  const isSessionReady = useAuthReadyStore((s: { isSessionReady: boolean }) => s.isSessionReady)
+  const { search = '' } = params
+  return useQuery({
+    queryKey: ['decoracao', 'events-for-link', search],
+    enabled: isSessionReady,
+    staleTime: 30 * 1000,
+    retry,
+    queryFn: async () => {
+      const supabase = createClient()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any).rpc('search_events_for_os_link', {
+        p_search: search || null,
+        p_date_from: null,
+        p_date_to: null,
+      })
+      if (error) throw error
+      return (data ?? []) as EventSummaryForOS[]
+    },
+  })
+}
+
+/** Conta quantas OS já estão vinculadas a uma festa (para aviso de duplicata). */
+export function useOSCountForEvent(eventId: string | null) {
+  const isSessionReady = useAuthReadyStore((s: { isSessionReady: boolean }) => s.isSessionReady)
+  return useQuery({
+    queryKey: ['decoracao', 'os-count-for-event', eventId],
+    enabled: isSessionReady && !!eventId,
+    staleTime: 30 * 1000,
+    retry,
+    queryFn: async () => {
+      const supabase = createClient()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any).rpc('get_os_count_for_event', {
+        p_event_id: eventId,
+      })
+      if (error) throw error
+      return (data as number) ?? 0
     },
   })
 }
