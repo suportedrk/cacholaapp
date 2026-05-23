@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { Loader2, ImageOff, AlertTriangle, Trash2 } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Loader2, AlertTriangle, Trash2 } from 'lucide-react'
 import {
   Sheet,
   SheetContent,
@@ -17,7 +17,11 @@ import { Switch } from '@/components/ui/switch'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/hooks/use-auth'
 import { hasRole, DECORACAO_DELETE_ROLES } from '@/config/roles'
+import { PhotoDropZone, PhotoThumb } from '@/components/shared/photo-upload'
+import { useSignedUrls } from '@/hooks/use-signed-urls'
 import { useCreateTema, useUpdateTema, useDeleteTema } from '@/hooks/use-decoracao'
+import { createClient } from '@/lib/supabase/client'
+import { DECORACAO_BUCKETS } from '@/lib/constants'
 import { ForminhaColorDot } from './forminha-color-dot'
 import type {
   DecoracaoForminhaCor,
@@ -25,12 +29,24 @@ import type {
   TemaFormInput,
 } from '@/types/decoracao'
 
+const BUCKET = DECORACAO_BUCKETS.temas
+
 interface TemaEditSheetProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   tema: DecoracaoTemaComForminhas | null
   createMode: boolean
   allForminhas: DecoracaoForminhaCor[]
+}
+
+async function removeFromStorage(paths: string[]): Promise<void> {
+  if (paths.length === 0) return
+  try {
+    const supabase = createClient()
+    await supabase.storage.from(BUCKET).remove(paths)
+  } catch {
+    // fire-and-forget
+  }
 }
 
 function WarningBanner({ message }: { message: string }) {
@@ -65,11 +81,19 @@ export function TemaEditSheet({
   const [decoradoraExterna, setDecoradoraExterna] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [fotoUrl, setFotoUrl] = useState<string | null>(null)
+
+  // Paths subidos durante esta edição e ainda não confirmados pelo Salvar.
+  const pendingUploadsRef = useRef<string[]>([])
+
+  const fotoPaths = fotoUrl ? [fotoUrl] : []
+  const { data: signedUrls = {} } = useSignedUrls(BUCKET, fotoPaths)
 
   useEffect(() => {
     if (!open) return
     /* eslint-disable react-hooks/set-state-in-effect -- sincroniza props→form ao abrir */
     setConfirmingDelete(false)
+    pendingUploadsRef.current = []
     if (createMode) {
       setNome('')
       setCategoria('')
@@ -78,6 +102,7 @@ export function TemaEditSheet({
       setPersonalizado(false)
       setDecoradoraExterna(false)
       setSelectedIds(new Set())
+      setFotoUrl(null)
     } else if (tema) {
       setNome(tema.nome)
       setCategoria(tema.categoria ?? '')
@@ -86,6 +111,7 @@ export function TemaEditSheet({
       setPersonalizado(tema.personalizado)
       setDecoradoraExterna(tema.decoradora_externa)
       setSelectedIds(new Set(tema.forminhas.map((f) => f.id)))
+      setFotoUrl(tema.foto_url)
     }
     /* eslint-enable react-hooks/set-state-in-effect */
   }, [open, createMode, tema])
@@ -108,27 +134,77 @@ export function TemaEditSheet({
       personalizado,
       decoradora_externa: decoradoraExterna,
       forminha_cor_ids: [...selectedIds],
+      foto_url: fotoUrl,
     }
+  }
+
+  function handleFotoUpload(storagePath: string): Promise<void> {
+    setFotoUrl(storagePath)
+    pendingUploadsRef.current = [...pendingUploadsRef.current, storagePath]
+    return Promise.resolve()
+  }
+
+  function handleFotoRemove() {
+    setFotoUrl(null)
+  }
+
+  function discardPendingUploads() {
+    const toClean = pendingUploadsRef.current
+    pendingUploadsRef.current = []
+    if (toClean.length > 0) void removeFromStorage(toClean)
+  }
+
+  function handleOpenChange(nextOpen: boolean) {
+    if (nextOpen) {
+      onOpenChange(true)
+      return
+    }
+    discardPendingUploads()
+    onOpenChange(false)
   }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!nome.trim()) return
     const input = buildInput()
+    const originalFotoUrl = tema?.foto_url ?? null
+
+    function afterSuccess() {
+      const orphans: string[] = []
+      for (const p of pendingUploadsRef.current) {
+        if (p !== fotoUrl) orphans.push(p)
+      }
+      if (originalFotoUrl && originalFotoUrl !== fotoUrl) orphans.push(originalFotoUrl)
+      pendingUploadsRef.current = []
+      void removeFromStorage(orphans)
+      onOpenChange(false)
+    }
+
     if (createMode) {
-      createTema.mutate(input, { onSuccess: () => onOpenChange(false) })
+      createTema.mutate(input, { onSuccess: afterSuccess })
     } else if (tema) {
-      updateTema.mutate({ id: tema.id, input }, { onSuccess: () => onOpenChange(false) })
+      updateTema.mutate({ id: tema.id, input }, { onSuccess: afterSuccess })
     }
   }
 
   function handleDelete() {
     if (!tema) return
-    deleteTema.mutate(tema.id, { onSuccess: () => onOpenChange(false) })
+    deleteTema.mutate(tema.id, {
+      onSuccess: () => {
+        const toClean: string[] = []
+        if (tema.foto_url) toClean.push(tema.foto_url)
+        pendingUploadsRef.current.forEach((p) => {
+          if (p !== tema.foto_url) toClean.push(p)
+        })
+        pendingUploadsRef.current = []
+        void removeFromStorage(toClean)
+        onOpenChange(false)
+      },
+    })
   }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetContent
         side="right"
         showCloseButton
@@ -176,13 +252,29 @@ export function TemaEditSheet({
               />
             </div>
 
-            {/* Foto — upload deferido */}
+            {/* Foto */}
             <div className="space-y-1.5">
               <Label>Foto</Label>
-              <div className="flex items-center gap-2 rounded-md border border-dashed border-border-default px-3 py-2.5 text-xs text-text-tertiary">
-                <ImageOff className="h-4 w-4" />
-                Upload de foto — em breve
-              </div>
+              {fotoUrl && signedUrls[fotoUrl] ? (
+                <PhotoThumb
+                  src={signedUrls[fotoUrl]}
+                  alt={nome || 'foto do tema'}
+                  onRemove={handleFotoRemove}
+                  disabled={isPending}
+                />
+              ) : (
+                <PhotoDropZone
+                  bucket={BUCKET}
+                  folder={tema?.id ?? 'tmp'}
+                  maxFiles={1}
+                  existingCount={0}
+                  disabled={isPending}
+                  onUploadComplete={handleFotoUpload}
+                />
+              )}
+              <p className="text-xs text-text-tertiary">
+                As mudanças na foto só são salvas ao clicar em Salvar.
+              </p>
             </div>
 
             {/* Cores de forminha */}
@@ -312,7 +404,7 @@ export function TemaEditSheet({
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => onOpenChange(false)}
+                onClick={() => handleOpenChange(false)}
                 disabled={isPending}
               >
                 Cancelar

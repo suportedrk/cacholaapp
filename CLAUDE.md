@@ -1143,6 +1143,13 @@ Quando agregar produtos por deal, usar CTE pré-agregada (`prods`) para evitar e
 
 ## DÉBITOS TÉCNICOS
 
+- **Decoração — órfãos no storage quando a aba fecha:** os edit-sheets/dialog dos 3 catálogos
+  (forminhas, temas, balões) limpam corretamente arquivos pendentes ao Cancelar/X/ESC, mas se o
+  usuário fechar a aba do navegador ou recarregar a página com upload pendente, o arquivo fica
+  órfão no bucket. Solução futura: cron periódico que varre os 3 buckets (`decoracao-forminhas`,
+  `decoracao-temas`, `decoracao-baloes`) procurando objetos cujo path não corresponde a nenhum
+  `foto_url` nas respectivas tabelas, e deleta os antigos (ex.: > 24h sem referência).
+
 - **Sellers órfãos:** sync de sellers deve garantir que todo `owner_id` que aparece em
   `ploomes_deals`, `ploomes_contacts` ou `events` tem entrada em `sellers` (mesmo que `inactive`).
   Hoje há ~16 contatos com `owner_id` sem entrada (Vitória Menezes, Vinícius Lupi, etc.) — caem na

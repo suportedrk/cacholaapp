@@ -8,10 +8,11 @@ import type { DecoracaoTemaComForminhas } from '@/types/decoracao'
 
 interface TemaCardProps {
   tema: DecoracaoTemaComForminhas
+  signedUrl?: string
   onClick: () => void
 }
 
-export function TemaCard({ tema, onClick }: TemaCardProps) {
+export function TemaCard({ tema, signedUrl, onClick }: TemaCardProps) {
   return (
     <div
       role="button"
@@ -29,10 +30,19 @@ export function TemaCard({ tema, onClick }: TemaCardProps) {
       )}
       aria-label={`Abrir tema ${tema.nome}`}
     >
-      {/* Foto — placeholder (upload deferido) */}
-      <div className="flex h-24 items-center justify-center bg-surface-secondary text-text-tertiary">
-        <ImageOff className="h-6 w-6" />
-      </div>
+      {/* Foto */}
+      {signedUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={signedUrl}
+          alt={tema.nome}
+          className="h-24 w-full object-cover"
+        />
+      ) : (
+        <div className="flex h-24 items-center justify-center bg-surface-secondary text-text-tertiary">
+          <ImageOff className="h-6 w-6" />
+        </div>
+      )}
 
       <div className="flex flex-1 flex-col gap-2 p-3">
         <div className="flex items-start justify-between gap-2">

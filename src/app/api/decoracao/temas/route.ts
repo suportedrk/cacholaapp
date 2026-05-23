@@ -11,6 +11,7 @@ interface TemaBody {
   personalizado?: boolean
   decoradora_externa?: boolean
   forminha_cor_ids?: string[]
+  foto_url?: string | null
 }
 
 /** Cria um tema de decoração e seus vínculos com cores de forminha. */
@@ -42,6 +43,7 @@ export async function POST(request: Request) {
         observacoes: body.observacoes?.trim() || null,
         personalizado: body.personalizado ?? false,
         decoradora_externa: body.decoradora_externa ?? false,
+        foto_url: body.foto_url ?? null,
       })
       .select()
       .single()

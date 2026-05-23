@@ -10,6 +10,7 @@ interface BalaoBody {
   valor_venda?: number | null
   ativo?: boolean
   observacoes?: string | null
+  foto_url?: string | null
 }
 
 /** Cria um modelo de balão. */
@@ -37,6 +38,7 @@ export async function POST(request: Request) {
         valor_venda: body.valor_venda ?? null,
         ativo: body.ativo ?? true,
         observacoes: body.observacoes?.trim() || null,
+        foto_url: body.foto_url ?? null,
       })
       .select()
       .single()
