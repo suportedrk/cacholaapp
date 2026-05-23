@@ -8,6 +8,8 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { PageHeader } from '@/components/shared/page-header'
 import { useLoadingTimeout } from '@/hooks/use-loading-timeout'
 import { useDecoracaoTemas, useForminhaCores } from '@/hooks/use-decoracao'
+import { useSignedUrls } from '@/hooks/use-signed-urls'
+import { DECORACAO_BUCKETS } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 import { TemaCard } from './tema-card'
 import { TemaEditSheet } from './tema-edit-sheet'
@@ -25,6 +27,9 @@ export function TemasClient() {
   const { data: temas = [], isLoading, isError } = useDecoracaoTemas()
   const { data: forminhas = [] } = useForminhaCores()
   const { isTimedOut, retry } = useLoadingTimeout(isLoading)
+
+  const fotoPaths = temas.map((t) => t.foto_url).filter((p): p is string => p !== null)
+  const { data: signedUrls = {} } = useSignedUrls(DECORACAO_BUCKETS.temas, fotoPaths)
 
   const [filter, setFilter] = useState<FilterKey>('all')
   const [search, setSearch] = useState('')
@@ -138,7 +143,12 @@ export function TemasClient() {
         ) : (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {filtered.map((tema) => (
-              <TemaCard key={tema.id} tema={tema} onClick={() => openEdit(tema)} />
+              <TemaCard
+                key={tema.id}
+                tema={tema}
+                signedUrl={tema.foto_url ? signedUrls[tema.foto_url] : undefined}
+                onClick={() => openEdit(tema)}
+              />
             ))}
           </div>
         )}

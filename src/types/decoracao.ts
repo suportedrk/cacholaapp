@@ -44,6 +44,7 @@ export interface ForminhaCorFormInput {
   nome: string
   cor_hex: string | null
   ativo: boolean
+  foto_url?: string | null
 }
 
 export interface ForminhaCorCreateInput extends ForminhaCorFormInput {
@@ -59,6 +60,7 @@ export interface TemaFormInput {
   decoradora_externa: boolean
   /** IDs das cores de forminha vinculadas ao tema. */
   forminha_cor_ids: string[]
+  foto_url?: string | null
 }
 
 // ── Balões ───────────────────────────────────────────────────
@@ -83,4 +85,5 @@ export interface BalaoModeloFormInput {
   valor_venda: number | null
   ativo: boolean
   observacoes: string | null
+  foto_url?: string | null
 }

@@ -1,18 +1,24 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { Trash2, ImageOff } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Trash2 } from 'lucide-react'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
+import { PhotoDropZone, PhotoThumb } from '@/components/shared/photo-upload'
+import { useSignedUrls } from '@/hooks/use-signed-urls'
 import { useCreateBalaoModelo, useUpdateBalaoModelo, useDeleteBalaoModelo } from '@/hooks/use-decoracao'
 import { hasRole } from '@/config/roles'
 import { DECORACAO_DELETE_ROLES } from '@/config/roles'
 import { useAuth } from '@/hooks/use-auth'
+import { createClient } from '@/lib/supabase/client'
+import { DECORACAO_BUCKETS } from '@/lib/constants'
 import type { DecoracaoBalaoModelo, BalaoModeloFormInput } from '@/types/decoracao'
+
+const BUCKET = DECORACAO_BUCKETS.baloes
 
 interface Props {
   open: boolean
@@ -30,15 +36,37 @@ const EMPTY: BalaoModeloFormInput = {
   observacoes: null,
 }
 
-function parseMoney(raw: string): number | null {
-  const cleaned = raw.replace(/[^0-9,.\-]/g, '').replace(',', '.')
-  const n = parseFloat(cleaned)
-  return isNaN(n) || n < 0 ? null : n
+/**
+ * Converte uma string em formato brasileiro (ponto = milhar, vírgula = decimal)
+ * para number. "1.000,00" → 1000, "3.200" → 3200, "80" → 80, "" → null.
+ * Se já vier number, devolve como está (defensivo).
+ */
+function parseMoney(raw: string | number | null | undefined): number | null {
+  if (raw === null || raw === undefined) return null
+  if (typeof raw === 'number') return Number.isFinite(raw) && raw >= 0 ? raw : null
+
+  const cleaned = raw.replace(/[^0-9,.\-]/g, '')
+  if (!cleaned) return null
+
+  // BR: remove TODOS os pontos (separador de milhar), troca vírgula por ponto (decimal)
+  const normalized = cleaned.replace(/\./g, '').replace(',', '.')
+  const n = parseFloat(normalized)
+  return Number.isFinite(n) && n >= 0 ? n : null
 }
 
 function moneyDisplay(v: number | null): string {
   if (v === null) return ''
   return v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+async function removeFromStorage(paths: string[]): Promise<void> {
+  if (paths.length === 0) return
+  try {
+    const supabase = createClient()
+    await supabase.storage.from(BUCKET).remove(paths)
+  } catch {
+    // fire-and-forget — arquivo órfão fica no storage mas não bloqueia o usuário
+  }
 }
 
 export function BalaoEditSheet({ open, onOpenChange, modelo, createMode }: Props) {
@@ -53,15 +81,25 @@ export function BalaoEditSheet({ open, onOpenChange, modelo, createMode }: Props
   const [custoRaw, setCustoRaw] = useState('')
   const [vendaRaw, setVendaRaw] = useState('')
   const [deleteConfirm, setDeleteConfirm] = useState(false)
+  const [fotoUrl, setFotoUrl] = useState<string | null>(null)
+
+  // Paths subidos ao storage durante esta edição e ainda não confirmados pelo Salvar.
+  // Ref (não state) porque precisamos ler/escrever sincronamente em handlers de fechamento.
+  const pendingUploadsRef = useRef<string[]>([])
+
+  const fotoPaths = fotoUrl ? [fotoUrl] : []
+  const { data: signedUrls = {} } = useSignedUrls(BUCKET, fotoPaths)
 
   useEffect(() => {
     if (!open) return
     /* eslint-disable react-hooks/set-state-in-effect -- sincroniza props→form ao abrir */
     setDeleteConfirm(false)
+    pendingUploadsRef.current = []
     if (createMode) {
       setForm(EMPTY)
       setCustoRaw('')
       setVendaRaw('')
+      setFotoUrl(null)
     } else if (modelo) {
       setForm({
         nome: modelo.nome,
@@ -73,6 +111,7 @@ export function BalaoEditSheet({ open, onOpenChange, modelo, createMode }: Props
       })
       setCustoRaw(moneyDisplay(modelo.custo))
       setVendaRaw(moneyDisplay(modelo.valor_venda))
+      setFotoUrl(modelo.foto_url)
     }
     /* eslint-enable react-hooks/set-state-in-effect */
   }, [open, createMode, modelo?.id]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -80,7 +119,29 @@ export function BalaoEditSheet({ open, onOpenChange, modelo, createMode }: Props
   const isPending =
     createMutation.isPending || updateMutation.isPending || deleteMutation.isPending
 
-  function close() {
+  function handleFotoUpload(storagePath: string): Promise<void> {
+    setFotoUrl(storagePath)
+    pendingUploadsRef.current = [...pendingUploadsRef.current, storagePath]
+    return Promise.resolve()
+  }
+
+  function handleFotoRemove() {
+    // Apenas marca como vazio no form — a remoção real só acontece no Salvar.
+    setFotoUrl(null)
+  }
+
+  function discardPendingUploads() {
+    const toClean = pendingUploadsRef.current
+    pendingUploadsRef.current = []
+    if (toClean.length > 0) void removeFromStorage(toClean)
+  }
+
+  function handleOpenChange(nextOpen: boolean) {
+    if (nextOpen) {
+      onOpenChange(true)
+      return
+    }
+    discardPendingUploads()
     onOpenChange(false)
   }
 
@@ -90,13 +151,30 @@ export function BalaoEditSheet({ open, onOpenChange, modelo, createMode }: Props
       ...form,
       custo: parseMoney(custoRaw),
       valor_venda: parseMoney(vendaRaw),
+      foto_url: fotoUrl,
     }
-    if (createMode) {
-      await createMutation.mutateAsync(payload)
-    } else {
-      await updateMutation.mutateAsync({ id: modelo!.id, input: payload })
+    try {
+      if (createMode) {
+        await createMutation.mutateAsync(payload)
+      } else {
+        await updateMutation.mutateAsync({ id: modelo!.id, input: payload })
+      }
+    } catch {
+      // toast disparado pela mutation — não fecha o sheet
+      return
     }
-    close()
+
+    // Sucesso: deletar arquivos órfãos.
+    const originalFotoUrl = modelo?.foto_url ?? null
+    const orphans: string[] = []
+    for (const p of pendingUploadsRef.current) {
+      if (p !== fotoUrl) orphans.push(p)
+    }
+    if (originalFotoUrl && originalFotoUrl !== fotoUrl) orphans.push(originalFotoUrl)
+    pendingUploadsRef.current = [] // limpa ANTES de close para handleOpenChange não re-disparar cleanup
+    void removeFromStorage(orphans)
+
+    onOpenChange(false)
   }
 
   async function handleDelete() {
@@ -105,11 +183,19 @@ export function BalaoEditSheet({ open, onOpenChange, modelo, createMode }: Props
       return
     }
     await deleteMutation.mutateAsync(modelo!.id)
-    close()
+    // Após delete, o registro já não existe — limpa qualquer foto staged/original do storage.
+    const toClean: string[] = []
+    if (modelo?.foto_url) toClean.push(modelo.foto_url)
+    pendingUploadsRef.current.forEach((p) => {
+      if (p !== modelo?.foto_url) toClean.push(p)
+    })
+    pendingUploadsRef.current = []
+    void removeFromStorage(toClean)
+    onOpenChange(false)
   }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetContent side="right" className="sm:max-w-lg overflow-y-auto">
         <SheetHeader>
           <SheetTitle>{createMode ? 'Novo modelo de balão' : 'Editar modelo'}</SheetTitle>
@@ -173,13 +259,29 @@ export function BalaoEditSheet({ open, onOpenChange, modelo, createMode }: Props
             </div>
           </div>
 
-          {/* Foto — placeholder */}
+          {/* Foto */}
           <div className="space-y-1.5">
             <Label>Foto</Label>
-            <div className="flex h-20 items-center justify-center gap-2 rounded-md border border-dashed text-sm text-muted-foreground">
-              <ImageOff className="h-4 w-4" />
-              Foto — em breve
-            </div>
+            {fotoUrl && signedUrls[fotoUrl] ? (
+              <PhotoThumb
+                src={signedUrls[fotoUrl]}
+                alt={form.nome || 'foto do modelo'}
+                onRemove={handleFotoRemove}
+                disabled={isPending}
+              />
+            ) : (
+              <PhotoDropZone
+                bucket={BUCKET}
+                folder={modelo?.id ?? 'tmp'}
+                maxFiles={1}
+                existingCount={0}
+                disabled={isPending}
+                onUploadComplete={handleFotoUpload}
+              />
+            )}
+            <p className="text-xs text-text-tertiary">
+              As mudanças na foto só são salvas ao clicar em {createMode ? 'Criar' : 'Salvar'}.
+            </p>
           </div>
 
           {/* Observações */}
@@ -225,7 +327,7 @@ export function BalaoEditSheet({ open, onOpenChange, modelo, createMode }: Props
               </Button>
             )}
             <div className="flex gap-2 sm:ml-auto">
-              <Button type="button" variant="outline" onClick={close} disabled={isPending}>
+              <Button type="button" variant="outline" onClick={() => handleOpenChange(false)} disabled={isPending}>
                 Cancelar
               </Button>
               <Button type="submit" disabled={isPending || !form.nome.trim()}>

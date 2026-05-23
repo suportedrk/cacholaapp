@@ -8,6 +8,8 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { PageHeader } from '@/components/shared/page-header'
 import { useLoadingTimeout } from '@/hooks/use-loading-timeout'
 import { useForminhaCores } from '@/hooks/use-decoracao'
+import { useSignedUrls } from '@/hooks/use-signed-urls'
+import { DECORACAO_BUCKETS } from '@/lib/constants'
 import { ForminhaColorDot } from './forminha-color-dot'
 import { ForminhaEditDialog } from './forminha-edit-dialog'
 import type { DecoracaoForminhaCor } from '@/types/decoracao'
@@ -17,6 +19,9 @@ const ALL_NUMBERS = Array.from({ length: 26 }, (_, i) => i + 1)
 export function ForminhasClient() {
   const { data: cores = [], isLoading, isError } = useForminhaCores()
   const { isTimedOut, retry } = useLoadingTimeout(isLoading)
+
+  const fotoPaths = cores.map((c) => c.foto_url).filter((p): p is string => p !== null)
+  const { data: signedUrls = {} } = useSignedUrls(DECORACAO_BUCKETS.forminhas, fotoPaths)
 
   const [editTarget, setEditTarget] = useState<DecoracaoForminhaCor | null>(null)
   const [createMode, setCreateMode] = useState(false)
@@ -125,10 +130,20 @@ export function ForminhasClient() {
                       Inativa
                     </Badge>
                   )}
-                  <span className="hidden items-center gap-1 text-xs text-text-tertiary sm:inline-flex">
-                    <ImageOff className="h-3.5 w-3.5" />
-                    Foto em breve
-                  </span>
+                  <div className="hidden sm:block">
+                    {cor.foto_url && signedUrls[cor.foto_url] ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={signedUrls[cor.foto_url]}
+                        alt={cor.nome}
+                        className="h-8 w-10 shrink-0 rounded object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-8 w-10 shrink-0 items-center justify-center rounded bg-muted">
+                        <ImageOff className="h-3.5 w-3.5 text-muted-foreground" />
+                      </div>
+                    )}
+                  </div>
                   <button
                     onClick={() => openEdit(cor)}
                     aria-label={`Editar forminha Nº ${cor.numero}`}

@@ -1,13 +1,15 @@
 'use client'
 
 import { useState } from 'react'
-import { RefreshCw, AlertCircle, Plus, Search, Wind } from 'lucide-react'
+import { RefreshCw, AlertCircle, Plus, Search, Wind, ImageOff } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { PageHeader } from '@/components/shared/page-header'
 import { useLoadingTimeout } from '@/hooks/use-loading-timeout'
 import { useBalaoModelos } from '@/hooks/use-decoracao'
+import { useSignedUrls } from '@/hooks/use-signed-urls'
+import { DECORACAO_BUCKETS } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 import { BalaoEditSheet } from './balao-edit-sheet'
 import type { DecoracaoBalaoModelo } from '@/types/decoracao'
@@ -32,6 +34,9 @@ function formatBRL(v: number | null): string {
 export function BaloesClient() {
   const { data: modelos = [], isLoading, isError, refetch } = useBalaoModelos()
   const { isTimedOut, retry } = useLoadingTimeout(isLoading)
+
+  const fotoPaths = modelos.map((m) => m.foto_url).filter((p): p is string => p !== null)
+  const { data: signedUrls = {} } = useSignedUrls(DECORACAO_BUCKETS.baloes, fotoPaths)
 
   const [filter, setFilter] = useState<FilterKey>('all')
   const [search, setSearch] = useState('')
@@ -163,10 +168,26 @@ export function BaloesClient() {
                   )}
                 >
                   <td className="px-4 py-3">
-                    <span className="font-medium">{m.nome}</span>
-                    {m.categoria && (
-                      <span className="ml-2 text-xs text-muted-foreground">{m.categoria}</span>
-                    )}
+                    <div className="flex items-center gap-3">
+                      {m.foto_url && signedUrls[m.foto_url] ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={signedUrls[m.foto_url]}
+                          alt={m.nome}
+                          className="h-8 w-10 shrink-0 rounded object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-8 w-10 shrink-0 items-center justify-center rounded bg-muted">
+                          <ImageOff className="h-3.5 w-3.5 text-muted-foreground" />
+                        </div>
+                      )}
+                      <div>
+                        <span className="font-medium">{m.nome}</span>
+                        {m.categoria && (
+                          <span className="ml-2 text-xs text-muted-foreground">{m.categoria}</span>
+                        )}
+                      </div>
+                    </div>
                   </td>
                   <td className="hidden px-4 py-3 text-right tabular-nums text-muted-foreground sm:table-cell">
                     {formatBRL(m.custo)}

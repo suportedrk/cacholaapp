@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { Loader2, ImageOff } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Loader2 } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -21,8 +21,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { PhotoDropZone, PhotoThumb } from '@/components/shared/photo-upload'
+import { useSignedUrls } from '@/hooks/use-signed-urls'
 import { useCreateForminhaCor, useUpdateForminhaCor } from '@/hooks/use-decoracao'
+import { createClient } from '@/lib/supabase/client'
+import { DECORACAO_BUCKETS } from '@/lib/constants'
 import type { DecoracaoForminhaCor } from '@/types/decoracao'
+
+const BUCKET = DECORACAO_BUCKETS.forminhas
 
 interface ForminhaEditDialogProps {
   open: boolean
@@ -33,6 +39,16 @@ interface ForminhaEditDialogProps {
 }
 
 const DEFAULT_PICKER = '#7c8d78'
+
+async function removeFromStorage(paths: string[]): Promise<void> {
+  if (paths.length === 0) return
+  try {
+    const supabase = createClient()
+    await supabase.storage.from(BUCKET).remove(paths)
+  } catch {
+    // fire-and-forget
+  }
+}
 
 export function ForminhaEditDialog({
   open,
@@ -49,45 +65,95 @@ export function ForminhaEditDialog({
   const [nome, setNome] = useState('')
   const [corHex, setCorHex] = useState<string | null>(null)
   const [ativo, setAtivo] = useState(true)
+  const [fotoUrl, setFotoUrl] = useState<string | null>(null)
+
+  // Paths subidos durante esta edição e ainda não confirmados pelo Salvar.
+  const pendingUploadsRef = useRef<string[]>([])
+
+  const fotoPaths = fotoUrl ? [fotoUrl] : []
+  const { data: signedUrls = {} } = useSignedUrls(BUCKET, fotoPaths)
 
   useEffect(() => {
     if (!open) return
     /* eslint-disable react-hooks/set-state-in-effect -- sincroniza props→form ao abrir */
+    pendingUploadsRef.current = []
     if (createMode) {
       setNumero(freeNumbers[0] ?? null)
       setNome('')
       setCorHex(null)
       setAtivo(true)
+      setFotoUrl(null)
     } else if (cor) {
       setNumero(cor.numero)
       setNome(cor.nome)
       setCorHex(cor.cor_hex)
       setAtivo(cor.ativo)
+      setFotoUrl(cor.foto_url)
     }
     /* eslint-enable react-hooks/set-state-in-effect */
   }, [open, createMode, cor, freeNumbers])
+
+  function handleFotoUpload(storagePath: string): Promise<void> {
+    setFotoUrl(storagePath)
+    pendingUploadsRef.current = [...pendingUploadsRef.current, storagePath]
+    return Promise.resolve()
+  }
+
+  function handleFotoRemove() {
+    setFotoUrl(null)
+  }
+
+  function discardPendingUploads() {
+    const toClean = pendingUploadsRef.current
+    pendingUploadsRef.current = []
+    if (toClean.length > 0) void removeFromStorage(toClean)
+  }
+
+  function handleOpenChange(nextOpen: boolean) {
+    if (nextOpen) {
+      onOpenChange(true)
+      return
+    }
+    discardPendingUploads()
+    onOpenChange(false)
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     const trimmed = nome.trim()
     if (!trimmed) return
 
+    const originalFotoUrl = cor?.foto_url ?? null
+
+    function afterSuccess() {
+      const orphans: string[] = []
+      for (const p of pendingUploadsRef.current) {
+        if (p !== fotoUrl) orphans.push(p)
+      }
+      if (originalFotoUrl && originalFotoUrl !== fotoUrl) orphans.push(originalFotoUrl)
+      pendingUploadsRef.current = []
+      void removeFromStorage(orphans)
+      onOpenChange(false)
+    }
+
     if (createMode) {
       if (numero == null) return
       createForminha.mutate(
-        { numero, nome: trimmed, cor_hex: corHex, ativo },
-        { onSuccess: () => onOpenChange(false) },
+        // Forminhas não permitem foto no createMode (precisam do id para gravar no storage),
+        // então foto_url sempre é null aqui — mas mantemos a estrutura para consistência.
+        { numero, nome: trimmed, cor_hex: corHex, ativo, foto_url: fotoUrl },
+        { onSuccess: afterSuccess },
       )
     } else if (cor) {
       updateForminha.mutate(
-        { id: cor.id, input: { nome: trimmed, cor_hex: corHex, ativo } },
-        { onSuccess: () => onOpenChange(false) },
+        { id: cor.id, input: { nome: trimmed, cor_hex: corHex, ativo, foto_url: fotoUrl } },
+        { onSuccess: afterSuccess },
       )
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
@@ -162,13 +228,35 @@ export function ForminhaEditDialog({
             </p>
           </div>
 
-          {/* Foto — upload deferido para micro-passo separado */}
+          {/* Foto */}
           <div className="space-y-1.5">
             <Label>Foto</Label>
-            <div className="flex items-center gap-2 rounded-md border border-dashed border-border-default px-3 py-2.5 text-xs text-text-tertiary">
-              <ImageOff className="h-4 w-4" />
-              Upload de foto — em breve
-            </div>
+            {fotoUrl && signedUrls[fotoUrl] ? (
+              <PhotoThumb
+                src={signedUrls[fotoUrl]}
+                alt={nome || 'foto da forminha'}
+                onRemove={handleFotoRemove}
+                disabled={isPending}
+              />
+            ) : !createMode ? (
+              <PhotoDropZone
+                bucket={BUCKET}
+                folder={cor?.id ?? 'tmp'}
+                maxFiles={1}
+                existingCount={0}
+                disabled={isPending}
+                onUploadComplete={handleFotoUpload}
+              />
+            ) : (
+              <p className="text-xs text-text-tertiary py-1">
+                Salve a cor primeiro para adicionar uma foto.
+              </p>
+            )}
+            {!createMode && (
+              <p className="text-xs text-text-tertiary">
+                As mudanças na foto só são salvas ao clicar em Salvar.
+              </p>
+            )}
           </div>
 
           <div className="flex items-center gap-3 rounded-lg border border-border-default p-3">
@@ -182,7 +270,7 @@ export function ForminhaEditDialog({
             <Button
               type="button"
               variant="outline"
-              onClick={() => onOpenChange(false)}
+              onClick={() => handleOpenChange(false)}
               disabled={isPending}
             >
               Cancelar

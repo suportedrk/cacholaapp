@@ -85,6 +85,15 @@ export const ROUTES = {
 } as const
 
 // ============================================================
+// STORAGE — buckets por módulo
+// ============================================================
+export const DECORACAO_BUCKETS = {
+  forminhas: 'decoracao-forminhas',
+  temas: 'decoracao-temas',
+  baloes: 'decoracao-baloes',
+} as const
+
+// ============================================================
 // PAGINAÇÃO
 // ============================================================
 export const DEFAULT_PAGE_SIZE = 20
