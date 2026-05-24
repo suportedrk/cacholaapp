@@ -85,6 +85,8 @@ export const ROUTES = {
   decoracaoOrdens: '/decoracao/ordens',
   decoracaoFornecedores: '/decoracao/fornecedores',
   decoracaoLocais: '/decoracao/locais',
+  decoracaoItens: '/decoracao/itens',
+  decoracaoItemNovo: '/decoracao/itens/nova',
 } as const
 
 // ============================================================
@@ -94,6 +96,7 @@ export const DECORACAO_BUCKETS = {
   forminhas: 'decoracao-forminhas',
   temas: 'decoracao-temas',
   baloes: 'decoracao-baloes',
+  itens: 'decoracao-itens',
 } as const
 
 // ============================================================
