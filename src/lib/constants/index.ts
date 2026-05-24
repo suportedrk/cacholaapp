@@ -84,6 +84,7 @@ export const ROUTES = {
   decoracaoBaloes: '/decoracao/baloes',
   decoracaoOrdens: '/decoracao/ordens',
   decoracaoFornecedores: '/decoracao/fornecedores',
+  decoracaoLocais: '/decoracao/locais',
 } as const
 
 // ============================================================

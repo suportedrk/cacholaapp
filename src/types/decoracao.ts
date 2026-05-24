@@ -114,6 +114,24 @@ export interface FornecedorFormInput {
   ativo: boolean
 }
 
+// ── Locais de guarda do estoque ──────────────────────────────
+
+export interface DecoracaoLocal {
+  id: string
+  nome: string
+  observacoes: string | null
+  ativo: boolean
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface LocalFormInput {
+  nome: string
+  observacoes: string | null
+  ativo: boolean
+}
+
 // ── Ordens de serviço (OS de balões) ─────────────────────────
 
 export type DecoracaoOSItemStatus = 'aguardando_prova' | 'aprovada' | 'realizada'
