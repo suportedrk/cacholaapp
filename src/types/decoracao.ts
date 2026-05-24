@@ -132,6 +132,66 @@ export interface LocalFormInput {
   ativo: boolean
 }
 
+// ── Itens com variações (Bloco 2 do estoque) ─────────────────
+
+export type DecoracaoItemTipo = 'proprio' | 'alugado'
+
+export interface DecoracaoItemVariacao {
+  id: string
+  item_id: string
+  tamanho: string | null
+  cor: string | null
+  detalhe: string | null
+  codigo: string
+  ordem: number
+  created_at: string
+  updated_at: string
+}
+
+export interface DecoracaoItem {
+  id: string
+  nome: string
+  tipo: DecoracaoItemTipo
+  fornecedor_id: string | null
+  foto_path: string | null
+  observacoes: string | null
+  ativo: boolean
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+/** Item com fornecedor resolvido e variações já carregadas. */
+export interface DecoracaoItemComDetalhes extends DecoracaoItem {
+  fornecedor_nome: string | null
+  variacoes: DecoracaoItemVariacao[]
+}
+
+/** Resumo para listagem: foto, tipo, fornecedor, contagem de variações. */
+export interface DecoracaoItemResumo extends DecoracaoItem {
+  fornecedor_nome: string | null
+  variacoes_count: number
+}
+
+/** Input de variação no editor (id ausente = nova; código gerado pelo banco). */
+export interface VariacaoFormInput {
+  id?: string
+  tamanho: string | null
+  cor: string | null
+  detalhe: string | null
+  ordem: number
+}
+
+export interface ItemFormInput {
+  nome: string
+  tipo: DecoracaoItemTipo
+  fornecedor_id: string | null
+  foto_path: string | null
+  observacoes: string | null
+  ativo: boolean
+  variacoes: VariacaoFormInput[]
+}
+
 // ── Ordens de serviço (OS de balões) ─────────────────────────
 
 export type DecoracaoOSItemStatus = 'aguardando_prova' | 'aprovada' | 'realizada'
