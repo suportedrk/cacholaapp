@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
-import { Plus, AlertCircle, Loader2, Trash2 } from 'lucide-react'
+import { Plus, AlertCircle, Loader2, Trash2, Package, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -29,6 +29,7 @@ import {
 import { hasRole, DECORACAO_DELETE_ROLES } from '@/config/roles'
 import { useAuth } from '@/hooks/use-auth'
 import { createClient } from '@/lib/supabase/client'
+import { useDecoracaoEstoquePorItem } from '@/hooks/use-decoracao-estoque'
 import { DECORACAO_BUCKETS, ROUTES } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 import { VariacaoCard } from './variacao-card'
@@ -74,6 +75,9 @@ export function ItemEditor({ mode, itemId }: Props) {
   const deleteMutation = useDeleteItem()
 
   const { data: fornecedores = [] } = useDecoracaoFornecedores('ativos')
+  const { data: estoquePorItem = [] } = useDecoracaoEstoquePorItem(
+    mode === 'edit' ? itemId : undefined,
+  )
 
   const [form, setForm] = useState<ItemFormInput>({
     nome: '',
@@ -469,6 +473,63 @@ export function ItemEditor({ mode, itemId }: Props) {
           </p>
         )}
       </section>
+
+      {/* Resumo de saldo em estoque — somente em edição, read-only */}
+      {mode === 'edit' && estoquePorItem.length > 0 && (
+        <section className="rounded-lg border border-border-default bg-card p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Package className="h-4 w-4 text-muted-foreground" />
+              <h2 className="text-sm font-medium text-text-secondary">Saldo em estoque</h2>
+            </div>
+            <a
+              href={ROUTES.decoracaoEstoque}
+              className="flex items-center gap-1 text-xs text-primary hover:underline"
+            >
+              Ajustar
+              <ExternalLink className="h-3 w-3" />
+            </a>
+          </div>
+          <div className="space-y-1.5">
+            {estoquePorItem.map((resumo) => {
+              const variacao = detailQuery.data?.variacoes.find((v) => v.id === resumo.variacao_id)
+              if (!variacao) return null
+              const partes = [variacao.tamanho, variacao.cor, variacao.detalhe].filter(Boolean)
+              const label = partes.length ? partes.join(' / ') : variacao.codigo
+
+              const locaisComSaldo = resumo.locais.filter(
+                (l) => (resumo.saldos[l.id] ?? 0) > 0,
+              )
+
+              return (
+                <div
+                  key={resumo.variacao_id}
+                  className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 text-sm"
+                >
+                  <span className="font-medium">{label}</span>
+                  <span className="font-mono text-xs text-muted-foreground">{variacao.codigo}</span>
+                  <span className="text-muted-foreground">—</span>
+                  {locaisComSaldo.length === 0 ? (
+                    <span className="text-xs text-muted-foreground italic">sem estoque</span>
+                  ) : (
+                    <>
+                      {locaisComSaldo.map((l, i) => (
+                        <span key={l.id} className="text-sm">
+                          {l.nome}: <strong>{resumo.saldos[l.id]}</strong>
+                          {i < locaisComSaldo.length - 1 && ' ·'}
+                        </span>
+                      ))}
+                      <span className="text-xs text-muted-foreground">
+                        · total: <strong>{resumo.total}</strong>
+                      </span>
+                    </>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </section>
+      )}
 
       {/* Footer de ações de exclusão (apenas em edit) */}
       {mode === 'edit' && canDelete && (

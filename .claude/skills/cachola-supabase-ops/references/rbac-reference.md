@@ -48,7 +48,7 @@ Quando estiver implementando uma feature **nova com controle de acesso**, abra *
                        ▼
 ┌─────────────────────────────────────────────────────┐
 │  Camada 4 — RLS no Postgres                          │
-│  USING (check_permission(auth.uid(), ..., unit_id))  │
+│  USING (check_permission(auth.uid(), 'mod', 'view')) │
 │  Última linha de defesa — bloqueia mesmo bug em app  │
 └─────────────────────────────────────────────────────┘
 ```
@@ -76,13 +76,14 @@ A chave única `(user_id, module, action, unit_id)` evita duplicar permissão. N
 
 ```sql
 SELECT check_permission(
-  p_user_id := auth.uid(),
-  p_module := 'vendas',
-  p_action := 'edit',
-  p_unit_id := '<uuid-unidade>'
+  auth.uid(),  -- user_id
+  'vendas',    -- module
+  'edit'       -- action
 );
 -- retorna boolean
 ```
+
+⚠️ **A função tem 3 argumentos, NÃO 4.** Assinatura real: `check_permission(uuid, text, text)`. Confirmado via psql direto em mai/2026 — toda documentação com 4 args estava errada. Não existe `p_unit_id` nesta função.
 
 Usado em:
 - **RLS policies** das tabelas (camada 4).

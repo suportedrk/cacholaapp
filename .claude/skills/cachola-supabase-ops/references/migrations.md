@@ -115,7 +115,7 @@ SET search_path = public
 AS $$
 BEGIN
   -- validar permissão antes de qualquer query
-  IF NOT check_permission(p_user_id, 'vendas', 'view', p_unit_id) THEN
+  IF NOT check_permission(p_user_id, 'vendas', 'view') THEN
     RAISE EXCEPTION 'permission_denied';
   END IF;
 
@@ -159,7 +159,7 @@ Migrations vão referenciar funções helpers já criadas. Conhecer estas econom
 |---|---|---|
 | `is_global_viewer()` | Retorna `true` se user atual tem role com `GLOBAL_VIEWER` | Em política RLS |
 | `get_user_unit_ids()` | Retorna `UUID[]` das unidades às quais o user atual tem acesso | Filtros de unidade |
-| `check_permission(user_id, module, action, unit_id)` | Retorna `bool` se user tem permissão específica | RPCs, políticas RLS |
+| `check_permission(user_id, module, action)` | Retorna `bool` se user tem permissão específica — **3 args, não 4** | RPCs, políticas RLS |
 | `can_view_meeting(meeting_id)` | SECURITY DEFINER específico para Atas (evita RLS circular) | Política RLS de `meeting_minutes` |
 
 ⚠️ `is_global_viewer()` e `get_user_unit_ids()` **não recebem argumento** — pegam `auth.uid()` do contexto. Se você passar argumento, vai dar erro de signature.
@@ -210,7 +210,10 @@ ON CONFLICT (unit_id) DO NOTHING;
 - [ ] Cabeçalho com objetivo nas primeiras linhas?
 - [ ] `BEGIN; ... COMMIT;` envolvendo tudo?
 - [ ] `IF NOT EXISTS` / `IF EXISTS` onde aplicável?
+- [ ] **Toda tabela nova tem `GRANT SELECT, INSERT, UPDATE, DELETE ON public.x TO authenticated;`?** ← PostgREST checa GRANT antes da RLS; sem GRANT = "permission denied for table"
+- [ ] **Se a tabela tem RLS, também tem `ALTER TABLE x ENABLE ROW LEVEL SECURITY;`?**
 - [ ] Testou aplicando em dev local? (`docker exec -i cacholaos-db psql ...`)
+- [ ] Testou acesso via PostgREST com usuário autenticado real? (não só via psql diretamente)
 - [ ] `tsc --noEmit | grep -v .next` passa? (se tipos no Supabase mudaram)
 - [ ] `npm run build` passa?
 - [ ] Comentários (`COMMENT ON`) em colunas/funções não-óbvias?
