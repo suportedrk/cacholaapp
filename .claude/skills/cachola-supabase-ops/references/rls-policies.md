@@ -77,10 +77,10 @@ CREATE POLICY "vendas_edit_unit_deals"
   FOR UPDATE
   TO authenticated
   USING (
-    check_permission(auth.uid(), 'vendas', 'edit', unit_id)
+    check_permission(auth.uid(), 'vendas', 'edit')
   )
   WITH CHECK (
-    check_permission(auth.uid(), 'vendas', 'edit', unit_id)
+    check_permission(auth.uid(), 'vendas', 'edit')
   );
 ```
 
@@ -135,18 +135,20 @@ Uso em política:
 USING (unit_id = ANY(get_user_unit_ids()))
 ```
 
-### `check_permission(user_id, module, action, unit_id)` — bool
+### `check_permission(user_id, module, action)` — bool
 
 Helper completo de autorização. Consulta `user_permissions` para a tupla específica.
 
 ```sql
-SELECT check_permission(auth.uid(), 'vendas', 'edit', '<uuid-unidade>');
+SELECT check_permission(auth.uid(), 'vendas', 'edit');
 -- retorna true/false
 ```
 
-`user_permissions` é uma tabela com chave única `(user_id, module, action, unit_id)`.
+`user_permissions` é uma tabela com chave `(user_id, module, action)`.
 
-⚠️ Se `unit_id` for `NULL`, considera permissão **global** (não atrelada a unidade — ex: `admin/users`).
+⚠️ **A função tem 3 argumentos, NÃO 4.** Passar `unit_id` como 4º argumento é um erro — a assinatura real é `check_permission(uuid, text, text)`. Confirmado via psql em mai/2026 durante implementação do módulo Decoração.
+
+⚠️ As políticas RLS dos módulos mais recentes (decoração, manutenção) usam o padrão direto sem `check_permission`, gateando apenas pelo `requireRoleApi` na API Route + `is_global_viewer()` na RLS para tabelas globais (sem `unit_id`). `check_permission` é usado principalmente em tabelas com escopo por unidade.
 
 ### `can_view_meeting(meeting_id)` — bool
 
@@ -198,7 +200,7 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-  IF NOT check_permission(auth.uid(), 'modulo', 'view', p_unit_id) THEN
+  IF NOT check_permission(auth.uid(), 'modulo', 'view') THEN
     RAISE EXCEPTION 'permission_denied';
   END IF;
 
@@ -223,6 +225,31 @@ CREATE POLICY "admin_all"
 Mas **não recomendado para tabelas com lógicas distintas por action**. No Cachola, prefere-se 1 política por action — fica explícito.
 
 ## Anti-padrões comuns
+
+### ❌ Esquecer o GRANT ao `authenticated` — erro silencioso que parece erro de dados
+
+```sql
+CREATE TABLE foo (...);
+ALTER TABLE foo ENABLE ROW LEVEL SECURITY;
+CREATE POLICY ... ON foo FOR SELECT USING (...);
+-- Esqueceu: GRANT SELECT, INSERT, UPDATE, DELETE ON foo TO authenticated;
+-- PostgREST checa o GRANT ANTES de avaliar a RLS.
+-- Resultado: "permission denied for table foo" — parece problema de dados, mas é de GRANT.
+```
+
+**Regra obrigatória:** toda tabela nova com RLS precisa de GRANT explícito ao papel `authenticated` na mesma migration. Sem GRANT, PostgREST retorna 403 mesmo que a política RLS permita o acesso.
+
+```sql
+-- ✅ Bloco obrigatório em toda migration que cria tabela
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.minha_tabela TO authenticated;
+```
+
+Tabelas de catalogação pública (somente leitura para todos):
+```sql
+GRANT SELECT ON public.minha_tabela TO authenticated, anon;
+```
+
+> Aprendizado da migration 097 (módulo Decoração, mai/2026): as três tabelas de decoração foram criadas sem GRANT e PostgREST retornava "permission denied for table" mesmo com RLS e políticas corretas. Diagnóstico via `SET ROLE authenticated; SELECT COUNT(*) FROM tabela;` confirmou a causa-raiz.
 
 ### ❌ Esquecer `ENABLE ROW LEVEL SECURITY`
 
@@ -281,6 +308,7 @@ Não testar com dados reais — criar usuário de teste por role, em ambiente de
 ## Checklist nova tabela
 
 - [ ] `ALTER TABLE x ENABLE ROW LEVEL SECURITY;`?
+- [ ] **`GRANT SELECT, INSERT, UPDATE, DELETE ON public.x TO authenticated;`?** ← obrigatório, PostgREST checa GRANT antes da RLS
 - [ ] Política para SELECT (`view`)?
 - [ ] Política para INSERT (`create`)?
 - [ ] Política para UPDATE (`edit`) com `USING` E `WITH CHECK`?

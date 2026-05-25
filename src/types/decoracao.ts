@@ -192,6 +192,30 @@ export interface ItemFormInput {
   variacoes: VariacaoFormInput[]
 }
 
+// ── Estoque — saldo por variação × local (Bloco 3) ───────────
+
+export interface DecoracaoEstoqueSaldo {
+  id: string
+  variacao_id: string
+  local_id: string
+  quantidade: number
+  created_at: string
+  updated_at: string
+}
+
+/** Saldo de uma variação num local, com nome do local resolvido. */
+export interface EstoqueSaldoComLocal extends DecoracaoEstoqueSaldo {
+  local_nome: string
+}
+
+/** Resumo de saldo de uma variação para exibir no editor do item (read-only). */
+export interface EstoqueVariacaoResumo {
+  variacao_id: string
+  saldos: Record<string, number>
+  locais: { id: string; nome: string }[]
+  total: number
+}
+
 // ── Ordens de serviço (OS de balões) ─────────────────────────
 
 export type DecoracaoOSItemStatus = 'aguardando_prova' | 'aprovada' | 'realizada'
