@@ -216,6 +216,63 @@ export interface EstoqueVariacaoResumo {
   total: number
 }
 
+// ── Transferências entre locais (Bloco 4) ────────────────────
+
+export type TransferenciaStatus = 'em_transito' | 'recebida' | 'cancelada'
+
+export interface DecoracaoTransferencia {
+  id: string
+  origem_local_id: string
+  destino_local_id: string
+  status: TransferenciaStatus
+  observacoes: string | null
+  created_by: string | null
+  recebido_por: string | null
+  data_envio: string
+  data_recebimento: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface DecoracaoTransferenciaItem {
+  id: string
+  transferencia_id: string
+  variacao_id: string
+  quantidade: number
+  created_at: string
+}
+
+/** Linha da listagem: cabeçalho com nomes resolvidos e contagem de itens. */
+export interface TransferenciaResumo extends DecoracaoTransferencia {
+  origem_nome: string
+  destino_nome: string
+  created_by_nome: string | null
+  recebido_por_nome: string | null
+  itens_count: number
+}
+
+/** Item da transferência hidratado com variação + código + nome do item. */
+export interface TransferenciaItemHidratado extends DecoracaoTransferenciaItem {
+  variacao_codigo: string
+  variacao_tamanho: string | null
+  variacao_cor: string | null
+  variacao_detalhe: string | null
+  item_nome: string
+}
+
+/** Transferência completa (detalhe / impressão do romaneio). */
+export interface TransferenciaComItens extends TransferenciaResumo {
+  itens: TransferenciaItemHidratado[]
+}
+
+/** Input para criar transferência via RPC. */
+export interface CriarTransferenciaInput {
+  origem_local_id: string
+  destino_local_id: string
+  observacoes: string | null
+  itens: { variacao_id: string; quantidade: number }[]
+}
+
 // ── Ordens de serviço (OS de balões) ─────────────────────────
 
 export type DecoracaoOSItemStatus = 'aguardando_prova' | 'aprovada' | 'realizada'

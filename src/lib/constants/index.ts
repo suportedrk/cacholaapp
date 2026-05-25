@@ -88,6 +88,7 @@ export const ROUTES = {
   decoracaoItens: '/decoracao/itens',
   decoracaoItemNovo: '/decoracao/itens/nova',
   decoracaoEstoque: '/decoracao/estoque',
+  decoracaoTransferencias: '/decoracao/transferencias',
 } as const
 
 // ============================================================

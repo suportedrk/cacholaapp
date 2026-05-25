@@ -31,6 +31,7 @@ import {
   MapPin,
   Boxes,
   Warehouse,
+  ArrowLeftRight,
 } from 'lucide-react'
 import { ROUTES } from '@/lib/constants'
 import type { Module, Role } from '@/types/permissions'
@@ -151,6 +152,7 @@ export const NAV_GROUPS: NavGroup[] = [
           { label: 'Fornecedores',       href: ROUTES.decoracaoFornecedores, icon: Truck,   module: 'decoracao', allowedRoles: [...DECORACAO_MANAGE_ROLES] },
           { label: 'Locais de guarda',   href: ROUTES.decoracaoLocais,       icon: MapPin,  module: 'decoracao', allowedRoles: [...DECORACAO_MANAGE_ROLES] },
           { label: 'Estoque',            href: ROUTES.decoracaoEstoque,      icon: Warehouse, module: 'decoracao', allowedRoles: [...DECORACAO_MANAGE_ROLES] },
+          { label: 'Transferências',     href: ROUTES.decoracaoTransferencias, icon: ArrowLeftRight, module: 'decoracao', allowedRoles: [...DECORACAO_MANAGE_ROLES] },
           { label: 'Itens',              href: ROUTES.decoracaoItens,        icon: Boxes,   module: 'decoracao', allowedRoles: [...DECORACAO_MANAGE_ROLES] },
         ],
       },
