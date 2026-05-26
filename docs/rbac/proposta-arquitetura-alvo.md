@@ -149,6 +149,98 @@ sem código novo.
 
 ---
 
+## 🔒 Aprendizados de execução — invarianetes para Fase 2 e seguintes
+
+> Registrados após pilotos Equipamentos (v1.23.0) e Backups (v1.24.0).
+> Todas as conversões da Fase 2 devem cumprir.
+
+### Aprendizado 1 — Backfill ADITIVO em `user_permissions` é obrigatório ANTES da troca de RLS
+
+Toda migração de RLS para o molde de ouro deve ser precedida (ou acompanhada
+na mesma transação) de um backfill aditivo em `user_permissions` para
+**todos os cargos que hoje têm acesso ao módulo via RLS antiga**. Sem isso,
+um cargo cujo acesso atual vinha de uma RLS frouxa (ex.: "qualquer um com
+unit_id") perde acesso no instante da troca, porque `check_permission` passa
+a ler de `user_permissions` que pode estar vazio para esse cargo.
+
+**Caso de referência:** no piloto Equipamentos, o cargo `gerente` tinha
+acesso completo via RLS antiga (que só filtrava por unidade); ao migrar
+para `check_permission`, gerentes que não tinham linhas em `user_permissions`
+perderiam acesso silenciosamente. O backfill da migration 109 garantiu a
+invisibilidade.
+
+**Forma:** `INSERT INTO user_permissions SELECT ... FROM users JOIN role_permissions
+... ON CONFLICT (user_id, unit_id, module, action) DO NOTHING`. O `DO NOTHING`
+preserva qualquer customização individual existente (não-destrutivo).
+
+**super_admin é EXCLUÍDO de propósito** do backfill — `check_permission()` tem
+early-return `TRUE` para super_admin antes de consultar `user_permissions`.
+
+### Aprendizado 2 — Portar SOMENTE as ações que existem hoje
+
+A migration de RLS golden pattern deve criar policies **apenas para as ações
+que já têm policy hoje**. NÃO criar policies novas para ações que ninguém
+usa atualmente — isso concederia capacidade nova sem querer.
+
+**Caso de referência:** no módulo Backups, a tabela `backup_log` tem hoje
+apenas policy de SELECT (criada na 067). Nenhum cargo escreve via JWT —
+toda escrita acontece via `service_role` em scripts de backup. Se a
+migration de golden pattern tivesse criado também `"backups: create"`,
+`"backups: edit"` e `"backups: delete"` com `check_permission`, o cargo
+`super_admin` (que tem bypass na função) ganharia capacidade NOVA de
+escrever em `backup_log` via JWT — o oposto de invisível. A migration 112
+portou apenas SELECT.
+
+**Regra prática:** antes de escrever a migration de RLS, listar as policies
+atuais da tabela:
+```
+SELECT cmd FROM pg_policies WHERE schemaname='public' AND tablename='<tabela>';
+```
+Criar policies novas só para os `cmd` que aparecem nessa lista. As outras
+ações ficam fora da migration — preservam o status quo (impossível via JWT).
+
+### Aprendizado 3 — Tabelas de catálogo / lista compartilhada mantêm a LEITURA aberta
+
+Tabelas que servem como **catálogo lido por vários módulos** (BI, dropdowns,
+JOINs) NÃO devem ter o `SELECT` trancado por `check_permission` — isso
+quebra dropdowns em formulários, JOINs em queries de BI e qualquer lookup
+feito por usuário não-admin.
+
+**Padrão para essas tabelas:**
+- **SELECT**: manter aberto a `auth.uid() IS NOT NULL` (qualquer autenticado).
+  NÃO portar para `check_permission`.
+- **INSERT / UPDATE / DELETE**: portar para `check_permission(...)` no
+  molde de ouro normal — escrita continua controlada por cargo + permissão.
+
+**Caso de referência:** módulo `vendedoras` (tabela `public.sellers`).
+9 dos 11 cargos hoje fazem SELECT em `sellers` porque a RLS é
+`auth.uid() IS NOT NULL` — comentário no código ("BI, dropdowns, joins")
+deixa claro que é intencional. Migrar SELECT para `check_permission` removeria
+esse acesso e quebraria múltiplos call sites.
+
+**Como decidir se uma tabela é "catálogo":**
+- Aparece em vários `dropdown`/select de formulário?
+- É feita `JOIN` com ela em queries de outros módulos (especialmente BI)?
+- O comentário da RLS original menciona "lookup", "dropdown", "join" ou
+  "catálogo"?
+
+Se qualquer resposta for "sim", aplicar este padrão.
+
+### Receita consolidada para conversão de módulo (Fase 2)
+
+1. **Passo 1 — Mapear** acesso real por cargo lendo: layout, API, RLS atual,
+   eventuais gates de tela.
+2. **Passo 2 — Comparar template** (`role_permissions`) com acesso real.
+   Se algum cargo hoje consegue X mas o template não dá X → divergência:
+   pedir decisão do dono (não corrigir sozinho).
+3. **Passo 3 — Backfill aditivo** em `user_permissions` (Aprendizado 1).
+4. **Passo 4 — RLS golden pattern** portando SÓ as ações em uso hoje
+   (Aprendizado 2). Filtro de unidade só se a tabela tem `unit_id`.
+5. **Passo 5 — Validar antes/depois** via JWT simulado. Matriz tem que ser
+   idêntica para todos os cargos.
+
+---
+
 ## Item 2 — Molde de ouro (referência canônica)
 
 **Módulo de referência: `eventos`.** Hoje é o módulo mais completo no eixo
