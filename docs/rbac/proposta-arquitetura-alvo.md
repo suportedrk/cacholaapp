@@ -264,6 +264,70 @@ Nenhuma RLS foi tocada.
 - Aprendizado 4: escrita **não deve** ser configurável. A trava é de cargo,
   estrutural, e o template deve refletir exatamente quem pode escrever.
 
+### Aprendizado 5 — Quando um único `check_permission('view')` não basta: semânticas de `view` distintas por tabela
+
+Alguns módulos têm várias tabelas com **semânticas de visibilidade diferentes**
+dentro do mesmo módulo:
+
+- **Catálogo:** tabela lida por todos com `view` granted (lista compartilhada).
+- **Propriedade:** tabela visível apenas ao "dono" da linha (regra de negócio
+  tipo `assignee_id = auth.uid()`).
+- **Estrutural / global-viewer:** tabela visível apenas a quem é
+  `is_global_viewer()` (audit/admin).
+
+Um único `check_permission(módulo, 'view')` não distingue essas três regras —
+ele é binário por (módulo, ação) e não sabe sub-recurso. Aplicar a mesma
+fórmula a todas as tabelas do módulo **vaza acesso** para cargos que tinham
+`view` granted (catálogo) mas eram mais restritos em tabelas de propriedade.
+
+**Caso de referência:** módulo `checklist_comercial` (Fase 2, v1.27.0).
+
+| Tabela | Semântica do `view` | Regra de SELECT no molde |
+|--------|---------------------|--------------------------|
+| `commercial_task_templates` | Catálogo | `check_permission(view) AND (is_global_viewer() OR unit_id IS NULL OR unit_id = ANY(user_units))` |
+| `commercial_template_items` | Catálogo (herda do pai) | via `can_view_commercial_template` |
+| `commercial_tasks` | Propriedade | `is_global_viewer() OR assignee_id = auth.uid()` — **SEM** `check_permission(view)` |
+| `commercial_task_completions` | Propriedade (herda da task) | via `can_view_commercial_task` (que NÃO chama `check_permission(view)`) |
+| `commercial_stage_automations` | Estrutural | `is_global_viewer()` — **SEM** `check_permission(view)` |
+
+A vendedora tem `view` granted em `checklist_comercial` (catálogo de templates),
+mas hoje só vê **as próprias tasks** (via `assignee`), nunca as de outras
+vendedoras da mesma unidade. Se eu aplicasse a fórmula golden literal em
+`commercial_tasks`:
+
+```sql
+-- ❌ ERRADO — expande o acesso da vendedora silenciosamente
+USING (
+  check_permission(uid, 'checklist_comercial', 'view')
+  AND (is_global_viewer() OR unit_id = ANY(get_user_unit_ids()))
+  OR assignee_id = auth.uid()
+)
+```
+
+A vendedora passaria a ver **todas as tasks da unidade dela** — expansão de
+escopo não autorizada.
+
+**Princípio prático para Fase 2:**
+
+1. **Mapear cada tabela do módulo ao seu eixo semântico:** catálogo,
+   propriedade ou estrutural.
+2. **Aplicar `check_permission` apenas onde a ação configurável realmente
+   governa aquele eixo:**
+   - Catálogo → `check_permission(view) AND (unit OR NULL)`
+   - Propriedade → `is_global_viewer() OR <regra de propriedade>` (sem
+     `check_permission(view)`)
+   - Estrutural → `is_global_viewer()` (sem `check_permission(view)`)
+3. **Validar cargo a cargo, com atenção especial aos cargos que TÊM a
+   permissão configurável mas são MAIS restritos por regra de negócio** —
+   estes são os candidatos a expansão silenciosa.
+
+A causa raiz é que o motor `check_permission(módulo, ação)` é **único por
+módulo**, mas a expressão de visibilidade do banco pode ser **distinta por
+tabela**. Em módulos onde todas as tabelas têm a mesma semântica (events,
+maintenance, equipment), o molde de ouro completo funciona sem ajuste.
+Em módulos mistos (checklist_comercial), o desenho da policy precisa
+respeitar a semântica da tabela, não a sintaxe do molde.
+
 ### Receita consolidada para conversão de módulo (Fase 2)
 
 1. **Passo 1 — Mapear** acesso real por cargo lendo: layout, API, RLS atual,
