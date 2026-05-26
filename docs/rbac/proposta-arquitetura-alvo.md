@@ -649,6 +649,37 @@ com `NULL`), e atualizar policies cujas tabelas têm `unit_id`.
 Cada pergunta tem contexto suficiente para resposta clara. Resposta marca
 direção de fase subsequente.
 
+> ### ✅ Decisões aprovadas pelo dono (registro 2026-05-26)
+>
+> Estas respostas valem como ordem para futuras sessões — agir sem reperguntar.
+>
+> **Q1 — Tabelas `ploomes_deals` / `ploomes_orders` / `ploomes_order_products`:**
+> aprovada a **Opção C**. As tabelas permanecem protegidas só por unidade na RLS
+> (`is_global_viewer() OR unit_id = ANY(get_user_unit_ids())`). O controle de
+> acesso por módulo (Vendas vs BI) é feito na **camada de rota** (layouts) e nas
+> **RPCs** de cada módulo, não na RLS dessas tabelas.
+>
+> **Q2 — `check_permission` ignora `unit_id`:** **adiar**. Por ora o recorte
+> por unidade continua vindo do vínculo `user_units` + `get_user_unit_ids()`,
+> não de permissão por unidade. NÃO adicionar a dimensão de unidade ao motor
+> (`check_permission`) agora. A coluna `unit_id` em `user_permissions`
+> permanece como está (status quo ambíguo aceito conscientemente).
+>
+> **Q3 — Futuro de `hasRole` / `requireRoleServer`:** aprovada a **Opção A** —
+> cargo permanece como molde (template de permissões em `role_permissions`).
+> Travas hard-coded por cargo continuam **apenas para coisas estruturais de
+> segurança** (ex.: `super_admin` bypass, `IMPERSONATION_ROLES`,
+> `SYSTEM_ONLY_ROLES`). As decisões configuráveis migram para leitura de
+> permissão. NÃO remover `hasRole` / `requireRoleServer` em massa.
+>
+> **Q4 — Default de controle fino novo:** aprovada a **Opção A** — default
+> OFF + seed obrigatório no mesmo PR.
+>
+> **Q5 — Bypass de `super_admin` em `check_permission`:** aprovada a
+> **Opção A** — manter o bypass como hoje.
+>
+> **Q6:** consolidada por Q3 — `hasRole` e `requireRoleServer` ficam.
+
 ### Q1 — RLS das tabelas `ploomes_deals`, `ploomes_orders`, `ploomes_order_products`
 
 **Contexto:** essas tabelas alimentam tanto o módulo **Vendas** quanto o
