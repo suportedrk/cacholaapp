@@ -384,6 +384,38 @@ para ler `check_permission(uid, modulo, 'view')` em vez de verificar cargo via
 `requireRoleServer(X_ACCESS_ROLES)`. Até essa conversão, os toggles são **decorativos**.
 Registrar como item explícito da Fase 3 de UI.
 
+### Backlog de aperto — tabelas parqueadas para Fase 3 (UI / limpeza)
+
+Itens descobertos durante o diagnóstico de Fase 2 (BI/Vendas) que não compensam apertar
+agora — efeito menor, custo alto ou exigem decisão maior. Endereçar quando a fase de UI
+tocar os módulos correspondentes.
+
+- **`upsell_contact_log` — SELECT cross-unit aberto.** A policy atual usa
+  `role IN ('super_admin', 'diretor', 'gerente', 'vendedora')` no SELECT, sem qualquer
+  filtro de unidade. Toda vendedora ativa enxerga **todos** os logs de upsell, inclusive
+  os de outra unidade. Apertar exige propagar `unit_id` para `upsell_contact_log` (a
+  tabela tem `event_id` mas não tem coluna de unidade) — operação intrusiva: ALTER TABLE
+  + backfill via JOIN com `events.unit_id` + atualizar o INSERT e o cron de log diário.
+  **Decisão atual:** parqueado para a fase de UI/limpeza. Vendedoras hoje são poucas (3-4
+  em produção) e o dado é operacional, não financeiro — risco baixo. Reabrir quando o
+  módulo Vendas/Upsell for tocado pela próxima vez.
+
+- **`notifications: own (ALL)` policy redundante.** Coexiste com `notifications_select_own`,
+  `notifications_update_own`, `notifications_delete_own` — todas com o mesmo predicado
+  `user_id = auth_user_id()`. Inofensiva, apenas verbosa. (Já registrado no Aprendizado 6;
+  repetido aqui por completude.)
+
+- **`notifications: service insert` com `WITH CHECK (true)`.** Permite INSERT via JWT de
+  qualquer autenticado. A SELECT policy impede que o beneficiário leia notificação alheia,
+  então não é vazamento ativo — mas vale travar para `service_role` apenas. Baixa
+  severidade. (Já registrado no Aprendizado 6.)
+
+- **`ploomes_webhook_log` com SELECT `true` irrestrito.** Qualquer autenticado consegue
+  ler o log de webhooks Ploomes (payload bruto, contém PII de clientes). Não foi tocado
+  em Fase 2 porque é log de infra, fora do escopo. Apertar para
+  `role IN ('super_admin', 'diretor')` ou `is_global_viewer()` é cirúrgico — vale fazer
+  quando alguém tocar no módulo Integrações/Configurações.
+
 ### Receita consolidada para conversão de módulo (Fase 2)
 
 1. **Passo 1 — Mapear** acesso real por cargo lendo: layout, API, RLS atual,
