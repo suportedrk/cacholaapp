@@ -328,6 +328,62 @@ maintenance, equipment), o molde de ouro completo funciona sem ajuste.
 Em módulos mistos (checklist_comercial), o desenho da policy precisa
 respeitar a semântica da tabela, não a sintaxe do molde.
 
+### Aprendizado 6 — Sub-caso PROPRIETÁRIO: tabela de dados pessoais
+
+Módulos cujas tabelas armazenam registros de um único usuário **NÃO devem ser migrados para
+`check_permission`** — o cadeado correto é a propriedade (`user_id = auth.uid()`), não a
+permissão de módulo. Aplicar o molde de ouro a essas tabelas seria incorreto: o dado é
+pessoal e não está associado a cargo ou unidade.
+
+**Características do sub-caso PROPRIETÁRIO:**
+- RLS usa `user_id = auth.uid()` (sem `unit_id`, sem `check_permission`)
+- Geralmente não há rota dedicada de módulo (componente global — ex.: navbar)
+- As entries em `role_permissions`/`user_permissions` para este módulo são **decorativas**
+  (alimentam UI de gestão de permissões mas não afetam acesso em runtime)
+
+**Caso de referência:** módulo `notificacoes` (tabela `public.notifications`).
+- RLS confirmada como proprietário puro: `user_id = auth_user_id()` em todas as operações
+- Sem `unit_id`, sem `check_permission`
+- Sem rota dedicada — componente `notification-bell.tsx` no navbar, universal para autenticados
+
+**Implicação para fase de UI (Fase 3):** não expor toggles por cargo para módulos PROPRIETÁRIO
+em `/admin/cargos/[code]`. Não há o que configurar por cargo em dado pessoal — cada usuário
+sempre vê apenas os próprios registros, independente do cargo.
+
+**Backlog — não agir agora:**
+- `notifications` tem uma policy `notifications: own` (ALL) redundante com as 3 específicas
+  (select/update/delete own) — inofensiva, apenas verbosa. Limpeza opcional futura.
+- `notifications: service insert` usa `WITH CHECK (true)` irrestrito via JWT. Vale revisar
+  se a criação de notificação deve ser restrita a `service_role` para impedir que um usuário
+  insira notificação para outro via JWT. Baixa severidade — a SELECT policy já impede o
+  beneficiário de ler notificações alheias, portanto não é vazamento ativo. Backlog.
+
+### Aprendizado 7 — Sub-caso AGREGAÇÃO/ROTA: módulo sem tabela própria
+
+Módulos que **não têm tabela própria** e apenas agregam dados de outros módulos **não têm
+RLS própria para migrar**. O dado já é protegido pelas RLS das tabelas-fonte. O controle de
+acesso REAL desses módulos é o **layout guard da rota** (`requireRoleServer`).
+
+**Características do sub-caso AGREGAÇÃO/ROTA:**
+- Sem tabela própria; a rota apenas consulta tabelas de outros módulos
+- Sem policies RLS próprias — o dado é filtrado pela RLS de cada tabela-fonte
+- O controle de acesso real é `requireRoleServer(X_ACCESS_ROLES)` no `layout.tsx`
+- As entries em `role_permissions`/`user_permissions` para este módulo são **decorativas hoje**
+
+**Casos de referência:**
+- `dashboard`: sem tabela própria; agrega `events`, `ploomes_deals`, `checklists`, pré-reservas.
+  Guard: `requireRoleServer(DASHBOARD_ACCESS_ROLES)` — todos exceto freelancer e entregador.
+  `role_permissions.dashboard.view = true` para 9 cargos — consistente com o guard.
+- `relatorios`: sem tabela própria; agrega eventos, manutenções, checklists, equipe em 4 tabs.
+  Guard: `requireRoleServer(BI_ACCESS_ROLES)` — super_admin e diretor apenas (mais restritivo).
+  `role_permissions.relatorios.view = true` para 2 cargos — consistente com o guard.
+
+**Implicação para fase de UI (Fase 3 — item de backlog):** o toggle `view` desses módulos
+na tela `/admin/cargos/[code]` só se tornará **funcional** quando o layout guard for convertido
+para ler `check_permission(uid, modulo, 'view')` em vez de verificar cargo via
+`requireRoleServer(X_ACCESS_ROLES)`. Até essa conversão, os toggles são **decorativos**.
+Registrar como item explícito da Fase 3 de UI.
+
 ### Receita consolidada para conversão de módulo (Fase 2)
 
 1. **Passo 1 — Mapear** acesso real por cargo lendo: layout, API, RLS atual,
@@ -791,11 +847,14 @@ Abordagem: **um PR por módulo**, no padrão Eventos (Item 2). Cada PR contém:
 
 **Ordem sugerida** (do mais isolado para o mais entrelaçado):
 
-1. `notificacoes` (RLS já é `user_id = auth.uid()` — só formalizar).
+1. ~~`notificacoes`~~ — **sub-caso PROPRIETÁRIO** (Aprendizado 6): sem migration de RLS necessária.
+   O cadeado já é correto (`user_id = auth.uid()`); as entries de `role_permissions` são decorativas.
 2. `vendedoras` (1 tabela: `sellers`).
 3. `equipamentos` (1 tabela: `equipment`).
 4. `backups` + `unidades` (admin, baixo tráfego).
-5. `dashboard` + `relatorios` (sem tabelas próprias — formalizar guards).
+5. ~~`dashboard` + `relatorios`~~ — **sub-caso AGREGAÇÃO/ROTA** (Aprendizado 7): sem migration de
+   RLS necessária. O toggle `view` só se tornará funcional quando o guard de rota for convertido
+   para `check_permission` (Fase 3 de UI — backlog).
 6. `checklist_comercial` (4 tabelas).
 7. `bi`, `bi_atendimento`, `bi_vendas` — **aguarda Q1 do Item 7** (afeta
    tabelas ploomes_*).

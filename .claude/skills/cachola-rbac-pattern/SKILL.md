@@ -131,3 +131,45 @@ matriz ANTES/DEPOIS antes de declarar o módulo migrado.
 Ver detalhe e justificativa em
 [`docs/rbac/proposta-arquitetura-alvo.md`](../../docs/rbac/proposta-arquitetura-alvo.md)
 seção "Aprendizado 5".
+
+---
+
+## Atenção: sub-casos que NÃO precisam de migration de RLS
+
+Antes de iniciar a conversion de um módulo para o molde de ouro, verificar se ele se enquadra
+em um dos dois sub-casos abaixo — ambos já estão corretos por design e **não devem ser migrados**.
+
+### Sub-caso PROPRIETÁRIO (ex.: `notificacoes` / tabela `notifications`)
+
+Tabela de dados pessoais cujo acesso correto é `user_id = auth.uid()`.
+
+**Sinais de identificação:**
+- RLS usa `user_id = auth.uid()` em vez de `unit_id` ou `check_permission`
+- O módulo não tem rota dedicada (componente global, ex.: navbar)
+- Sem `unit_id` na tabela
+
+**Regra:** NÃO migrar para `check_permission`. O cadeado é a propriedade, não a permissão de
+módulo. As entries em `role_permissions`/`user_permissions` para esses módulos são **decorativas**
+— não afetam acesso em runtime.
+
+**Implicação para UI (Fase 3):** não expor toggles por cargo em `/admin/cargos/[code]` para
+módulos PROPRIETÁRIO. Não há o que configurar por cargo em dado pessoal.
+
+### Sub-caso AGREGAÇÃO/ROTA (ex.: `dashboard`, `relatorios`)
+
+Módulo sem tabela própria que apenas agrega dados de outras tabelas.
+
+**Sinais de identificação:**
+- Sem tabela própria no schema
+- A rota consulta múltiplas tabelas de outros módulos
+- O `layout.tsx` tem `requireRoleServer(X_ACCESS_ROLES)` como único controle
+
+**Regra:** NÃO há RLS própria para migrar — o dado já é protegido pelas RLS das tabelas-fonte.
+O controle real é o **layout guard**. As entries em `role_permissions` são decorativas **hoje**.
+
+**Backlog de UI (Fase 3):** o toggle `view` desses módulos só se tornará funcional quando o
+guard de rota for convertido para `check_permission(uid, modulo, 'view')`. Até lá, são decorativos.
+
+Ver detalhe em
+[`docs/rbac/proposta-arquitetura-alvo.md`](../../docs/rbac/proposta-arquitetura-alvo.md)
+seções "Aprendizado 6" e "Aprendizado 7".
