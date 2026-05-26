@@ -149,6 +149,200 @@ sem código novo.
 
 ---
 
+## 🔒 Aprendizados de execução — invarianetes para Fase 2 e seguintes
+
+> Registrados após pilotos Equipamentos (v1.23.0) e Backups (v1.24.0).
+> Todas as conversões da Fase 2 devem cumprir.
+
+### Aprendizado 1 — Backfill ADITIVO em `user_permissions` é obrigatório ANTES da troca de RLS
+
+Toda migração de RLS para o molde de ouro deve ser precedida (ou acompanhada
+na mesma transação) de um backfill aditivo em `user_permissions` para
+**todos os cargos que hoje têm acesso ao módulo via RLS antiga**. Sem isso,
+um cargo cujo acesso atual vinha de uma RLS frouxa (ex.: "qualquer um com
+unit_id") perde acesso no instante da troca, porque `check_permission` passa
+a ler de `user_permissions` que pode estar vazio para esse cargo.
+
+**Caso de referência:** no piloto Equipamentos, o cargo `gerente` tinha
+acesso completo via RLS antiga (que só filtrava por unidade); ao migrar
+para `check_permission`, gerentes que não tinham linhas em `user_permissions`
+perderiam acesso silenciosamente. O backfill da migration 109 garantiu a
+invisibilidade.
+
+**Forma:** `INSERT INTO user_permissions SELECT ... FROM users JOIN role_permissions
+... ON CONFLICT (user_id, unit_id, module, action) DO NOTHING`. O `DO NOTHING`
+preserva qualquer customização individual existente (não-destrutivo).
+
+**super_admin é EXCLUÍDO de propósito** do backfill — `check_permission()` tem
+early-return `TRUE` para super_admin antes de consultar `user_permissions`.
+
+### Aprendizado 2 — Portar SOMENTE as ações que existem hoje
+
+A migration de RLS golden pattern deve criar policies **apenas para as ações
+que já têm policy hoje**. NÃO criar policies novas para ações que ninguém
+usa atualmente — isso concederia capacidade nova sem querer.
+
+**Caso de referência:** no módulo Backups, a tabela `backup_log` tem hoje
+apenas policy de SELECT (criada na 067). Nenhum cargo escreve via JWT —
+toda escrita acontece via `service_role` em scripts de backup. Se a
+migration de golden pattern tivesse criado também `"backups: create"`,
+`"backups: edit"` e `"backups: delete"` com `check_permission`, o cargo
+`super_admin` (que tem bypass na função) ganharia capacidade NOVA de
+escrever em `backup_log` via JWT — o oposto de invisível. A migration 112
+portou apenas SELECT.
+
+**Regra prática:** antes de escrever a migration de RLS, listar as policies
+atuais da tabela:
+```
+SELECT cmd FROM pg_policies WHERE schemaname='public' AND tablename='<tabela>';
+```
+Criar policies novas só para os `cmd` que aparecem nessa lista. As outras
+ações ficam fora da migration — preservam o status quo (impossível via JWT).
+
+### Aprendizado 3 — Tabelas de catálogo / lista compartilhada mantêm a LEITURA aberta
+
+Tabelas que servem como **catálogo lido por vários módulos** (BI, dropdowns,
+JOINs) NÃO devem ter o `SELECT` trancado por `check_permission` — isso
+quebra dropdowns em formulários, JOINs em queries de BI e qualquer lookup
+feito por usuário não-admin.
+
+**Padrão para essas tabelas:**
+- **SELECT**: manter aberto a `auth.uid() IS NOT NULL` (qualquer autenticado).
+  NÃO portar para `check_permission`.
+- **INSERT / UPDATE / DELETE**: portar para `check_permission(...)` no
+  molde de ouro normal — escrita continua controlada por cargo + permissão.
+
+**Caso de referência:** módulo `vendedoras` (tabela `public.sellers`).
+9 dos 11 cargos hoje fazem SELECT em `sellers` porque a RLS é
+`auth.uid() IS NOT NULL` — comentário no código ("BI, dropdowns, joins")
+deixa claro que é intencional. Migrar SELECT para `check_permission` removeria
+esse acesso e quebraria múltiplos call sites.
+
+**Como decidir se uma tabela é "catálogo":**
+- Aparece em vários `dropdown`/select de formulário?
+- É feita `JOIN` com ela em queries de outros módulos (especialmente BI)?
+- O comentário da RLS original menciona "lookup", "dropdown", "join" ou
+  "catálogo"?
+
+Se qualquer resposta for "sim", aplicar este padrão.
+
+### Aprendizado 4 — Operações estruturais de infra mantêm trava de cargo
+
+Algumas operações de escrita **não são configuráveis por permissão** — são
+travas estruturais do sistema que nem o produto deve expor como toggle.
+
+**Critérios para classificar como "estrutural":**
+- A operação cria ou destrói artefatos que afetam múltiplos cargos e módulos
+  (ex.: criar / deletar uma unidade de negócio reorganiza toda a base de dados).
+- Toda escrita válida em produção já passa por uma rota de API que usa
+  `service_role` (não JWT do usuário); a RLS via JWT é irrelevante para o
+  happy path.
+- Nenhum cargo abaixo de `super_admin` deve ter essa capacidade, mesmo que
+  um admin queira conceder.
+
+**Padrão para tabelas nessa categoria:**
+- **SELECT**: manter aberto a `auth.uid() IS NOT NULL` (Aprendizado 3 — frequentemente
+  usada como catálogo global).
+- **INSERT / UPDATE / DELETE**: manter a policy de cargo existente (`super_admin manage`
+  ou equivalente). **NÃO portar para `check_permission`** — isso tornaria a
+  operação configurável, que é exatamente o contrário da intenção.
+- **Template (`role_permissions`)**: alinhar ao acesso real. Se a RLS só permite
+  `super_admin` escrever, as linhas de `diretor` devem ter `granted=false` para
+  `create/edit/delete` — não `true` (que seria mentira sobre o acesso real).
+
+**Caso de referência:** módulo `unidades` (tabela `public.units`).
+Toda criação / edição / exclusão de unidade acontece via `POST /api/admin/units`
+usando `createAdminClient()` (service_role). A RLS tem policy `units: super_admin manage`
+que só permite `role='super_admin'` via JWT — nunca diretor.
+O template tinha `diretor.unidades.create/edit/delete = true` (mentira).
+A migration 115 corrigiu para `false` para alinhar template à realidade.
+Nenhuma RLS foi tocada.
+
+**Diferença em relação ao Aprendizado 3:**
+- Aprendizado 3: SELECT aberto porque a tabela serve como catálogo lido por
+  outros módulos. Escrita **pode** ser configurável.
+- Aprendizado 4: escrita **não deve** ser configurável. A trava é de cargo,
+  estrutural, e o template deve refletir exatamente quem pode escrever.
+
+### Aprendizado 5 — Quando um único `check_permission('view')` não basta: semânticas de `view` distintas por tabela
+
+Alguns módulos têm várias tabelas com **semânticas de visibilidade diferentes**
+dentro do mesmo módulo:
+
+- **Catálogo:** tabela lida por todos com `view` granted (lista compartilhada).
+- **Propriedade:** tabela visível apenas ao "dono" da linha (regra de negócio
+  tipo `assignee_id = auth.uid()`).
+- **Estrutural / global-viewer:** tabela visível apenas a quem é
+  `is_global_viewer()` (audit/admin).
+
+Um único `check_permission(módulo, 'view')` não distingue essas três regras —
+ele é binário por (módulo, ação) e não sabe sub-recurso. Aplicar a mesma
+fórmula a todas as tabelas do módulo **vaza acesso** para cargos que tinham
+`view` granted (catálogo) mas eram mais restritos em tabelas de propriedade.
+
+**Caso de referência:** módulo `checklist_comercial` (Fase 2, v1.27.0).
+
+| Tabela | Semântica do `view` | Regra de SELECT no molde |
+|--------|---------------------|--------------------------|
+| `commercial_task_templates` | Catálogo | `check_permission(view) AND (is_global_viewer() OR unit_id IS NULL OR unit_id = ANY(user_units))` |
+| `commercial_template_items` | Catálogo (herda do pai) | via `can_view_commercial_template` |
+| `commercial_tasks` | Propriedade | `is_global_viewer() OR assignee_id = auth.uid()` — **SEM** `check_permission(view)` |
+| `commercial_task_completions` | Propriedade (herda da task) | via `can_view_commercial_task` (que NÃO chama `check_permission(view)`) |
+| `commercial_stage_automations` | Estrutural | `is_global_viewer()` — **SEM** `check_permission(view)` |
+
+A vendedora tem `view` granted em `checklist_comercial` (catálogo de templates),
+mas hoje só vê **as próprias tasks** (via `assignee`), nunca as de outras
+vendedoras da mesma unidade. Se eu aplicasse a fórmula golden literal em
+`commercial_tasks`:
+
+```sql
+-- ❌ ERRADO — expande o acesso da vendedora silenciosamente
+USING (
+  check_permission(uid, 'checklist_comercial', 'view')
+  AND (is_global_viewer() OR unit_id = ANY(get_user_unit_ids()))
+  OR assignee_id = auth.uid()
+)
+```
+
+A vendedora passaria a ver **todas as tasks da unidade dela** — expansão de
+escopo não autorizada.
+
+**Princípio prático para Fase 2:**
+
+1. **Mapear cada tabela do módulo ao seu eixo semântico:** catálogo,
+   propriedade ou estrutural.
+2. **Aplicar `check_permission` apenas onde a ação configurável realmente
+   governa aquele eixo:**
+   - Catálogo → `check_permission(view) AND (unit OR NULL)`
+   - Propriedade → `is_global_viewer() OR <regra de propriedade>` (sem
+     `check_permission(view)`)
+   - Estrutural → `is_global_viewer()` (sem `check_permission(view)`)
+3. **Validar cargo a cargo, com atenção especial aos cargos que TÊM a
+   permissão configurável mas são MAIS restritos por regra de negócio** —
+   estes são os candidatos a expansão silenciosa.
+
+A causa raiz é que o motor `check_permission(módulo, ação)` é **único por
+módulo**, mas a expressão de visibilidade do banco pode ser **distinta por
+tabela**. Em módulos onde todas as tabelas têm a mesma semântica (events,
+maintenance, equipment), o molde de ouro completo funciona sem ajuste.
+Em módulos mistos (checklist_comercial), o desenho da policy precisa
+respeitar a semântica da tabela, não a sintaxe do molde.
+
+### Receita consolidada para conversão de módulo (Fase 2)
+
+1. **Passo 1 — Mapear** acesso real por cargo lendo: layout, API, RLS atual,
+   eventuais gates de tela.
+2. **Passo 2 — Comparar template** (`role_permissions`) com acesso real.
+   Se algum cargo hoje consegue X mas o template não dá X → divergência:
+   pedir decisão do dono (não corrigir sozinho).
+3. **Passo 3 — Backfill aditivo** em `user_permissions` (Aprendizado 1).
+4. **Passo 4 — RLS golden pattern** portando SÓ as ações em uso hoje
+   (Aprendizado 2). Filtro de unidade só se a tabela tem `unit_id`.
+5. **Passo 5 — Validar antes/depois** via JWT simulado. Matriz tem que ser
+   idêntica para todos os cargos.
+
+---
+
 ## Item 2 — Molde de ouro (referência canônica)
 
 **Módulo de referência: `eventos`.** Hoje é o módulo mais completo no eixo

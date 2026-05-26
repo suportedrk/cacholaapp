@@ -98,3 +98,36 @@ Ver tabela completa das constantes disponíveis em `references/roles-ts-annotate
   `useAuth().profile?.role` (hydratado do banco, não do token JWT)
 - **`.in('role', [...])` inline em queries Supabase** — `.in('role', ['super_admin', 'dir'])`
   → spread de constante: `.in('role', [...MAINTENANCE_MODULE_ROLES])`
+
+---
+
+## Cuidado em Fase 2: semânticas de `view` distintas por tabela (Aprendizado 5)
+
+Antes de aplicar o molde de ouro a um módulo com **várias tabelas**, mapeie a semântica
+de visibilidade de cada tabela. Um único `check_permission(módulo,'view')` é binário —
+não distingue sub-recurso. Aplicar a fórmula golden literal em todas as tabelas pode
+**expandir acesso** para cargos que têm `view` granted (catálogo) mas eram mais restritos
+em tabelas de propriedade.
+
+Os 3 eixos semânticos:
+
+| Eixo | Quem vê | SELECT no molde |
+|------|---------|------------------|
+| **Catálogo** (lista compartilhada) | quem tem `view` granted | `check_permission(view) AND (is_global_viewer() OR unit_id IS NULL OR unit_id = ANY(get_user_unit_ids()))` |
+| **Propriedade** (dono da linha) | dono + global viewer | `is_global_viewer() OR <regra de dono>` — SEM `check_permission(view)` |
+| **Estrutural** (admin/auditoria) | só global viewer | `is_global_viewer()` — SEM `check_permission(view)` |
+
+Para o módulo `checklist_comercial` (referência):
+
+- `commercial_task_templates`, `commercial_template_items` → Catálogo
+- `commercial_tasks`, `commercial_task_completions` → Propriedade (via `assignee_id`)
+- `commercial_stage_automations` → Estrutural
+
+**Heurística de validação:** quando um cargo tem `view` granted mas a regra de negócio
+o limita (ex.: vendedora que tem view de templates mas só vê próprias tasks),
+ele é o **candidato a expansão silenciosa**. Sempre teste esse cargo cargo a cargo na
+matriz ANTES/DEPOIS antes de declarar o módulo migrado.
+
+Ver detalhe e justificativa em
+[`docs/rbac/proposta-arquitetura-alvo.md`](../../docs/rbac/proposta-arquitetura-alvo.md)
+seção "Aprendizado 5".
