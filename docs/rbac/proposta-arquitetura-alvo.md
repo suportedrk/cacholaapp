@@ -226,6 +226,44 @@ esse acesso e quebraria múltiplos call sites.
 
 Se qualquer resposta for "sim", aplicar este padrão.
 
+### Aprendizado 4 — Operações estruturais de infra mantêm trava de cargo
+
+Algumas operações de escrita **não são configuráveis por permissão** — são
+travas estruturais do sistema que nem o produto deve expor como toggle.
+
+**Critérios para classificar como "estrutural":**
+- A operação cria ou destrói artefatos que afetam múltiplos cargos e módulos
+  (ex.: criar / deletar uma unidade de negócio reorganiza toda a base de dados).
+- Toda escrita válida em produção já passa por uma rota de API que usa
+  `service_role` (não JWT do usuário); a RLS via JWT é irrelevante para o
+  happy path.
+- Nenhum cargo abaixo de `super_admin` deve ter essa capacidade, mesmo que
+  um admin queira conceder.
+
+**Padrão para tabelas nessa categoria:**
+- **SELECT**: manter aberto a `auth.uid() IS NOT NULL` (Aprendizado 3 — frequentemente
+  usada como catálogo global).
+- **INSERT / UPDATE / DELETE**: manter a policy de cargo existente (`super_admin manage`
+  ou equivalente). **NÃO portar para `check_permission`** — isso tornaria a
+  operação configurável, que é exatamente o contrário da intenção.
+- **Template (`role_permissions`)**: alinhar ao acesso real. Se a RLS só permite
+  `super_admin` escrever, as linhas de `diretor` devem ter `granted=false` para
+  `create/edit/delete` — não `true` (que seria mentira sobre o acesso real).
+
+**Caso de referência:** módulo `unidades` (tabela `public.units`).
+Toda criação / edição / exclusão de unidade acontece via `POST /api/admin/units`
+usando `createAdminClient()` (service_role). A RLS tem policy `units: super_admin manage`
+que só permite `role='super_admin'` via JWT — nunca diretor.
+O template tinha `diretor.unidades.create/edit/delete = true` (mentira).
+A migration 115 corrigiu para `false` para alinhar template à realidade.
+Nenhuma RLS foi tocada.
+
+**Diferença em relação ao Aprendizado 3:**
+- Aprendizado 3: SELECT aberto porque a tabela serve como catálogo lido por
+  outros módulos. Escrita **pode** ser configurável.
+- Aprendizado 4: escrita **não deve** ser configurável. A trava é de cargo,
+  estrutural, e o template deve refletir exatamente quem pode escrever.
+
 ### Receita consolidada para conversão de módulo (Fase 2)
 
 1. **Passo 1 — Mapear** acesso real por cargo lendo: layout, API, RLS atual,
