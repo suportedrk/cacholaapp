@@ -1,10 +1,9 @@
 import { NextResponse } from 'next/server'
-import { requireRoleApi } from '@/lib/auth/require-role'
+import { requirePermissionApi } from '@/lib/auth/require-permission'
 import { createClient } from '@/lib/supabase/server'
-import { BACKUP_VIEW_ROLES } from '@/config/roles'
 
 export async function GET() {
-  const guard = await requireRoleApi(BACKUP_VIEW_ROLES)
+  const guard = await requirePermissionApi('backups', 'view')
   if (!guard.ok) return guard.response
 
   const supabase = await createClient()

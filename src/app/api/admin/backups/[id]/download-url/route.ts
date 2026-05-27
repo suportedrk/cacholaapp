@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
-import { requireRoleApi } from '@/lib/auth/require-role'
+import { requirePermissionApi } from '@/lib/auth/require-permission'
 import { createClient } from '@/lib/supabase/server'
-import { BACKUP_VIEW_ROLES } from '@/config/roles'
 
 export async function POST(
   _req: NextRequest,
@@ -19,7 +18,7 @@ export async function POST(
     )
   }
 
-  const guard = await requireRoleApi(BACKUP_VIEW_ROLES)
+  const guard = await requirePermissionApi('backups', 'view')
   if (!guard.ok) return guard.response
 
   const { id } = await params

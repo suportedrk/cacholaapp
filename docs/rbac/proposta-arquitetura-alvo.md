@@ -328,6 +328,56 @@ maintenance, equipment), o molde de ouro completo funciona sem ajuste.
 Em módulos mistos (checklist_comercial), o desenho da policy precisa
 respeitar a semântica da tabela, não a sintaxe do molde.
 
+### Aprendizado 8 — Auditoria de overrides escondidos antes de cada conversão de Fase 3
+
+Antes de converter um guard de cargo (`requireRoleServer(X_ROLES)`) para um guard de permissão
+(`requirePermissionServer(modulo, 'view')`), liste **explicitamente** quais usuários têm grants
+individuais em `user_permissions` para esse módulo cujo cargo está **FORA** do guard de cargo
+atual. Esses grants estão **dormindo** — o guard de cargo os ignora hoje. A conversão **acorda**
+esses grants e o usuário passa a ter acesso.
+
+**Por que isso é fácil de perder:** todo o eixo "grant individual em `user_permissions`" foi
+projetado para sobrepor o template do cargo, mas o guard de cargo atual nem olha para essa
+tabela. Resultado: muitas linhas em `user_permissions` para cargos fora da `X_ROLES` estão lá
+sem efeito visível — possivelmente por seed antigo, conta de teste, override intencional
+esquecido, ou aplicação de template em momento anterior. Só a conversão expõe.
+
+**Caso de referência:** Etapa 1 da Fase 3 — módulo Backups (2026-05-27). A auditoria revelou
+que o usuário gerente `brunocasaletti@gmail.com` (conta de teste do dono) tinha **todos os 5
+grants** de `backups` em `user_permissions` — herança de quando a conta foi criada, escondida
+pelo `BACKUP_VIEW_ROLES = [super_admin, diretor]` que ignora `user_permissions`. A conversão
+passou a permitir acesso a esse gerente. Foi aprovado pela Opção A: aceitar o grant que agora
+vale, registrar no PR, manter `user_permissions` como está.
+
+**Query padrão (substitua `<modulo>` e as roles de `X_ROLES`):**
+
+```sql
+SELECT u.id, u.role, u.name, u.email,
+       up.action, up.granted, up.unit_id
+FROM public.users u
+JOIN public.user_permissions up
+  ON up.user_id = u.id
+  AND up.module = '<modulo>'
+  AND up.granted = true
+WHERE u.role NOT IN (<lista de X_ROLES atual>)
+ORDER BY u.role, u.name;
+```
+
+**Para cada usuário que aparecer**, o dono decide entre:
+
+- **(A) Aceitar** o grant agora válido. A divergência é registrada no PR e no commit como
+  "divergência aprovada por design da Fase 3". `user_permissions` não muda. Recomendado quando o
+  override era intencional e o grant é legítimo.
+- **(B) Revogar** o(s) grant(s) ANTES da conversão (DELETE em `user_permissions`) para preservar
+  `antes == depois` ponto-a-ponto. Migration aditiva-reversa, isolada. Recomendado quando o
+  grant é resíduo/teste/lixo.
+- **(C) Aceitar + auditar em PR separado.** Avança a Fase 3 com (A) e abre tarefa de auditoria
+  paralela para os casos suspeitos. Útil quando há muitos overrides e o dono quer separar
+  "fechamento de gap" de "limpeza de dados".
+
+Esse passo é **obrigatório** e precede a conversão. Entra como Passo 1 do recipe de conversão
+de todo módulo daqui pra frente, junto com o backfill aditivo (Aprendizado 1).
+
 ### Aprendizado 6 — Sub-caso PROPRIETÁRIO: tabela de dados pessoais
 
 Módulos cujas tabelas armazenam registros de um único usuário **NÃO devem ser migrados para

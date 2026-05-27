@@ -265,3 +265,37 @@ nestes casos:
 Ver detalhe e justificativa em
 [`docs/rbac/proposta-arquitetura-alvo.md`](../../docs/rbac/proposta-arquitetura-alvo.md)
 seção "Fase 3 — Decisões aprovadas para a conversão".
+
+### Receita de conversão por módulo (Fase 3) — OBRIGATÓRIA
+
+Aplicar nesta ordem em todo PR de conversão. Os Passos 1 e 2 são gates: divergência
+em qualquer um deles pausa o PR e pede decisão do dono.
+
+**Passo 1 — Auditoria de backfill (Aprendizado 1).** Confirmar que todo usuário cujo
+`role` está hoje na constante `X_ROLES` do guard tem `(user_id, modulo, 'view')` em
+`user_permissions` (super_admin bypassa via `check_permission`). Backfill aditivo
+(`ON CONFLICT DO NOTHING`) se faltar — migration numerada + rollback.
+
+**Passo 2 — Auditoria de overrides escondidos (Aprendizado 8 — OBRIGATÓRIO).**
+Listar usuários com grant individual em `user_permissions` para o módulo **cujo
+cargo está FORA do guard atual**. Esses grants estão dormindo: o guard de cargo os
+ignora, a conversão os acorda. Apresentar a lista ao dono ANTES da conversão para
+cada caso decidir entre (A) aceitar, (B) revogar antes, ou (C) aceitar + auditar
+em separado. Sem essa lista, a conversão pode introduzir acessos não-autorizados
+silenciosamente. Query padrão na seção Aprendizado 8 do doc da arquitetura.
+
+**Passo 3 — Conversão dos guards.** Trocar `requireRoleServer(X_ROLES)` por
+`requirePermissionServer(modulo, action)`, `requireRoleApi(X_ROLES)` por
+`requirePermissionApi(modulo, action)`, e `IF NOT EXISTS ... role IN` em RPCs por
+`PERFORM check_permission_or_raise(modulo, action)`.
+
+**Passo 4 — Validação INVISÍVEL.** Para cada usuário do banco, confirmar que o
+acesso DEPOIS == ANTES (exceção: divergências aprovadas no Passo 2). Tabela
+explícita por cargo no PR.
+
+**Passo 5 — Validação FUNCIONAL (prova do toggle).** Com conta de teste **limpa
+e separada** (NÃO usar a conta que apareceu no Passo 2 — sempre usar
+`teste.<role>@cachola.local` do seed local), conceder o grant temporariamente,
+provar que entra, revogar, provar que volta a bloquear. Deixar ambiente limpo.
+
+**Passo 6 — Checks.** `tsc --noEmit`, `lint`, `build`, `npm test`. Um PR por módulo.
