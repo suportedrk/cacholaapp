@@ -929,6 +929,117 @@ com `NULL`), e atualizar policies cujas tabelas têm `unit_id`.
 
 ---
 
+## Fase 3 — Decisões aprovadas para a conversão (registro 2026-05-27)
+
+Estado: **Etapa 0 (fundação) entregue** na Migration 120 + helpers TS em
+[`src/lib/auth/require-permission.ts`](../../src/lib/auth/require-permission.ts).
+Nenhum guard existente foi alterado nesta etapa — só ferramental.
+
+As 4 decisões abaixo valem como ordem para as etapas de conversão (1–7 do
+diagnóstico de 2026-05-27). Aplicar sem reperguntar.
+
+### D1 — Mapeamento das RPCs de Vendas
+
+`get_upsell_*`, `get_recompra_*`, `get_vendas_*` e `get_event_sales_summary`
+convertem para `PERFORM check_permission_or_raise('vendas', 'view')`.
+
+**Por quê:** o módulo do catálogo que cobre Upsell e Recompra é `vendas`. Não
+há módulo `upsell` ou `recompra` separado no catálogo. Mapear para
+`('vendas', 'view')` preserva o acesso atual:
+
+- `gerente` já foi removido de `VENDAS_MODULE_ROLES` em v1.5.1, então não tem
+  `vendas.view` em `role_permissions`/`user_permissions`. Sair pelo RAISE é o
+  comportamento esperado.
+- `super_admin`, `diretor`, `vendedora`, `pos_vendas` têm `vendas.view` granted
+  (confirmar por auditoria em cada PR antes de converter — Aprendizado 1).
+
+**Validação invisível por RPC:** antes do PR de conversão, listar os usuários
+cujo `users.role` está hoje na cláusula `role IN` da RPC e confirmar que cada
+um tem `(user_id, 'vendas', 'view')` em `user_permissions`. Backfill aditivo
+(`ON CONFLICT DO NOTHING`) se faltar.
+
+### D2 — Sub-rotas de gerência NÃO viram `('modulo', 'edit')` se expandem público
+
+Caso concreto que motivou a regra: `/vendas/checklist/{equipe,templates,automacoes}`
+hoje exige `COMMERCIAL_CHECKLIST_MANAGE_ROLES` (super_admin, diretor). Mapear
+para `('checklist_comercial', 'edit')` **incluiria `pos_vendas`** (que ganhou
+`edit` granted via backfill da Fase 2) e expandiria indevidamente o público
+dessas sub-rotas.
+
+**Regra:** para cada sub-rota de gerência, antes de converter, listar quem
+hoje passa pela constante de role e quem teria `('modulo', 'edit')` granted.
+Se o conjunto da segunda for **maior**, a conversão expande público:
+
+- **Não converter agora.** Manter `requireRoleServer(LISTA_ROLES)`.
+- **Anotar como bloqueada por falta de controle fino.** A solução correta é
+  criar um controle fino (`permission_controls.kind='control'`, ex.:
+  `checklist_comercial.manage_team`) e converter para
+  `check_permission(uid, 'checklist_comercial', 'manage_team')`. Isso entra
+  na Fase 2 do roteiro original (controles finos pilotados).
+
+Sub-rotas conhecidas que ficam BLOQUEADAS por D2 até existir controle fino:
+
+| Sub-rota | Constante atual | Expandiria para | Status |
+|----------|----------------|-----------------|--------|
+| `/vendas/checklist/equipe` | super_admin, diretor | + pos_vendas via `checklist_comercial.edit` | bloqueada |
+| `/vendas/checklist/templates` | super_admin, diretor | idem | bloqueada |
+| `/vendas/checklist/automacoes` | super_admin, diretor | idem | bloqueada |
+| `/manutencao/dashboard` | super_admin, diretor, gerente | conferir antes de converter | a checar |
+| `/manutencao/configuracoes` | mesmo | conferir antes de converter | a checar |
+
+Sub-rotas que **não expandem** (mapeamento direto seguro) seguem o fluxo
+normal de conversão da Etapa 2.
+
+### D3 — Decisões por cargo per se permanecem `hasRole`
+
+Categoria B do diagnóstico de 2026-05-27. Lista de call sites que NÃO viram
+toggle (consolida Q3 do Item 7):
+
+- `isVendedora` / `isManager` / `effectiveSellerId` em
+  [`meu-painel-client.tsx`](../../src/app/(auth)/vendas/_components/meu-painel/meu-painel-client.tsx)
+  e correlatos
+- `canViewAll` (`GLOBAL_VIEWER_ROLES`) em
+  [`unit-switcher.tsx`](../../src/components/layout/unit-switcher.tsx)
+- Forçar seleção de unidade em [`providers.tsx`](../../src/lib/providers.tsx)
+- `OPERATIONAL_MOBILE_ROLES` no redirect pós-login em
+  [`login/page.tsx`](../../src/app/(public)/login/page.tsx) e
+  [`403/page.tsx`](../../src/app/403/page.tsx)
+- `IMPERSONATION_ROLES` em handlers de impersonation
+- `TEMPLATE_MANAGE_ROLES` na gestão do próprio RBAC (matrix `/admin/cargos`,
+  API `/api/admin/role-permissions`)
+
+Esses checks dizem "este cargo é semanticamente X" — não dependem de uma
+permissão configurável. Mexer em toggle não muda essa identidade. Mantêm
+`hasRole(profile?.role, X_ROLES)` para sempre.
+
+### D4 — Ordem de conversão dos módulos
+
+Do mais isolado ao mais entrelaçado, **validando invisível a cada PR**
+(antes/depois por cargo). Cada PR auto-contido: backfill audit + RPC
+conversion + layout conversion + API conversion + UI hasRole conversion
+daquele módulo:
+
+1. **Backups** (1 layout, 2 APIs, 0 RPCs) — exercício de menor risco.
+2. **Equipamentos** (1 layout, 0 APIs, 0 RPCs).
+3. **Atas** (1 layout, 1 API, 0 RPCs).
+4. **Logs** (1 layout).
+5. **Vendedoras** (1 layout — sub-rota de configuracoes; 0 APIs, 0 RPCs).
+6. **Manutenção** (3 layouts, 3 APIs, 1 RPC `guard_cost_approval`).
+7. **Decoração** (3 layouts, 14 APIs, 7 hasRole sites — esforço maior).
+8. **Prestadores** (1 layout).
+9. **Checklists operacionais** (1 layout).
+10. **Eventos** (1 layout).
+11. **Configurações + integrações Ploomes** (1 layout + sub-rotas).
+12. **Checklist Comercial** (4 layouts, 1 RPC `trigger_stage_automation`).
+13. **Vendas / Upsell / Recompra** (1 layout, 0 APIs, 8 RPCs — aplicar D1).
+14. **BI** (1 layout, 0 APIs, 17 RPCs — broad 14 + narrow 3).
+15. **Dashboard** (1 layout — Aprendizado 7; toggle vira real após).
+16. **Relatórios** (1 layout — idem).
+17. **Notificações** (componente navbar — sub-caso PROPRIETÁRIO, Aprendizado 6;
+    toggle continua decorativo mesmo após conversão).
+
+---
+
 ## Item 7 — Decisões para o dono do produto
 
 Cada pergunta tem contexto suficiente para resposta clara. Resposta marca
