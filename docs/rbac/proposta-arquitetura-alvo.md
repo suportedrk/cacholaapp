@@ -378,6 +378,33 @@ ORDER BY u.role, u.name;
 Esse passo é **obrigatório** e precede a conversão. Entra como Passo 1 do recipe de conversão
 de todo módulo daqui pra frente, junto com o backfill aditivo (Aprendizado 1).
 
+**⚠️ PASSO OBRIGATÓRIO PRÉ-DEPLOY EM PRODUÇÃO — repetir a auditoria contra o banco de PRODUÇÃO:**
+
+As auditorias de Aprendizado 8 realizadas durante o desenvolvimento foram executadas no banco
+local (Docker), que pode ter usuários de teste (`@cachola.local`) com grants que não existem
+em produção. Antes de deployar cada módulo convertido na Fase 3, executar a query padrão
+acima **contra o banco de produção** para garantir que nenhum usuário real tenha override
+escondido que acorde silenciosamente.
+
+Módulos já convertidos e auditados localmente que requerem auditoria em produção antes do deploy:
+
+| Módulo | Guard original | Cargos externos com grant local (aprovados) | Status prod |
+|--------|---------------|---------------------------------------------|-------------|
+| `backups` | `BACKUP_VIEW_ROLES` | gerente `brunocasaletti@gmail.com` — backfill-seed histórico | ⬜ a checar |
+| `equipamentos` | `MAINTENANCE_MODULE_ROLES` | nenhum | ⬜ a checar |
+| `atas` | `ATAS_ACCESS_ROLES` | manutencao/freelancer/entregador @cachola.local | ⬜ a checar |
+| `logs` | `ADMIN_LOGS_VIEW_ROLES` | nenhum | ⬜ a checar |
+| `vendedoras` | `SELLERS_MANAGE_ROLES` | nenhum | ⬜ a checar |
+| `manutencao` | `MAINTENANCE_MODULE_ROLES` | nenhum | ⬜ a checar |
+| `prestadores` | `PRESTADORES_ACCESS_ROLES` | nenhum (grant manutencao foi backfill intencional) | ⬜ a checar |
+| `checklists` | `OPERATIONAL_CHECKLIST_ROLES` | manutencao/vendedora @cachola.local (Opção A aprovada) | ⬜ a checar |
+| `eventos` | `EVENTOS_ACCESS_ROLES` | freelancer/entregador @cachola.local (Opção A aprovada) | ⬜ a checar |
+| `configuracoes` | `SETTINGS_ROLES` | nenhum | ⬜ a checar |
+
+Em particular: confirmar que nenhum usuário real de `freelancer`/`entregador` tem `eventos/view`
+e que nenhum real fora dos guards tem `checklists/view` em produção. Se houver, aplicar
+decisão A/B/C do dono no momento do deploy (não da conversão local).
+
 ### Aprendizado 6 — Sub-caso PROPRIETÁRIO: tabela de dados pessoais
 
 Módulos cujas tabelas armazenam registros de um único usuário **NÃO devem ser migrados para
@@ -465,6 +492,16 @@ tocar os módulos correspondentes.
   em Fase 2 porque é log de infra, fora do escopo. Apertar para
   `role IN ('super_admin', 'diretor')` ou `is_global_viewer()` é cirúrgico — vale fazer
   quando alguém tocar no módulo Integrações/Configurações.
+
+- **`ploomes_config` — RLS hardcoded vs SETTINGS_ROLES desalinhados (Aprendizado 4, detectado na Fase 3 — 2026-05-27).**
+  A RLS SELECT de `ploomes_config` usa `role IN ('super_admin','diretor','gerente')` —
+  inclui `gerente`. Mas `SETTINGS_ROLES` (guard da rota `/configuracoes`) só tem
+  `[super_admin, diretor]` — exclui `gerente`. Consequência: um hook que leia
+  `ploomes_config` diretamente (ex.: AutoSync) retorna dados para gerente via PostgREST,
+  mas a tela `/configuracoes/integracoes/ploomes` bloqueia gerente no layout. Inconsistência
+  estrutural pré-existente. Decisão futura: ou ampliar SETTINGS_ROLES para incluir gerente,
+  ou apertar a RLS para `is_global_viewer()`. Fora do escopo da Fase 3 (Aprendizado 4 —
+  tabela de configuração de infraestrutura, acesso gerenciado por policy fixa).
 
 ### Receita consolidada para conversão de módulo (Fase 2)
 
@@ -1029,13 +1066,38 @@ Se o conjunto da segunda for **maior**, a conversão expande público:
 
 Sub-rotas conhecidas que ficam BLOQUEADAS por D2 até existir controle fino:
 
-| Sub-rota | Constante atual | Expandiria para | Status |
-|----------|----------------|-----------------|--------|
+| Sub-rota / API | Constante atual | Expandiria para | Status |
+|----------------|----------------|-----------------|--------|
 | `/vendas/checklist/equipe` | super_admin, diretor | + pos_vendas via `checklist_comercial.edit` | bloqueada |
 | `/vendas/checklist/templates` | super_admin, diretor | idem | bloqueada |
 | `/vendas/checklist/automacoes` | super_admin, diretor | idem | bloqueada |
-| `/manutencao/dashboard` | super_admin, diretor, gerente | conferir antes de converter | a checar |
-| `/manutencao/configuracoes` | mesmo | conferir antes de converter | a checar |
+| `/manutencao/dashboard` | `MAINTENANCE_ADMIN_ROLES` (super_admin, diretor, gerente) | + manutencao via `manutencao.edit` | bloqueada |
+| `/manutencao/configuracoes` | `MAINTENANCE_ADMIN_ROLES` | idem | bloqueada |
+| RPC `guard_cost_approval` | `role IN (super_admin, diretor, gerente)` | + manutencao via `manutencao.edit` (e contrairia diretor, que não tem edit) | bloqueada |
+| UI `canApprove` (`chamados/[id]:597`) | `MAINTENANCE_ADMIN_ROLES` | espelho do RPC acima | bloqueada |
+| `POST /api/email/maintenance-emergency` | `MAINTENANCE_MODULE_ROLES` (super_admin, diretor, gerente, manutencao) | `view` acoplaria disparo de e-mail a leitura (RH read-only dispararia alertas) | bloqueada |
+| `POST /api/minutes/notify` | `ATAS_MANAGE_ROLES` (super_admin, diretor, gerente) | + pos_vendas via `atas.edit` | bloqueada |
+| `nova/page.tsx` redirect gate (`/atas/nova`) | `ATAS_MANAGE_ROLES` | + pos_vendas via `atas.create` | bloqueada |
+| `[id]/page.tsx` isElevated flags | `ATAS_MANAGE_ROLES` | idem | bloqueada |
+| `[id]/editar/page.tsx` isElevated redirect | `ATAS_MANAGE_ROLES` | idem | bloqueada |
+
+**Nota para Manutenção (D2-hold de 2026-05-27):** o cargo `manutencao` tem
+`manutencao.edit` granted (preservado na Fase 2, Opção B — técnico edita execuções),
+mas NÃO está em `MAINTENANCE_ADMIN_ROLES`. Por isso mapear dashboard/configuracoes/RPC
+de aprovação de custo para `check_permission('manutencao','edit')` expandiria para o
+técnico (e ainda contrairia diretor no RPC, pois diretor não tem edit). Controles finos
+sugeridos, granted ao público atual de `MAINTENANCE_ADMIN_ROLES`:
+- `manutencao.gerenciar` (ou `manutencao.admin`) — dashboard, configuracoes, e a UI/RPC de aprovação de custo.
+A API `/api/email/maintenance-emergency` fica em D2-hold separado: mapear para `view`
+acoplaria o disparo de e-mail de emergência à mera leitura (um RH com `manutencao.view`
+de supervisão dispararia alertas a todos os gestores). Controle fino sugerido:
+- `manutencao.notify_emergency` — granted ao público atual de `MAINTENANCE_MODULE_ROLES`.
+
+**Nota para `/api/minutes/notify` e guards de criação/edição de atas:**
+Aguardam controle fino `atas.publicar` (ou nome equivalente) em `permission_controls`
+com `kind='control'`, granted apenas ao público atual de `ATAS_MANAGE_ROLES`. Não
+converter para `check_permission('atas','edit')` — expandiria para pos_vendas (que tem
+`atas/edit` granted pelo `role_default_perms`) sem intenção. Decisão do dono: D2-hold.
 
 Sub-rotas que **não expandem** (mapeamento direto seguro) seguem o fluxo
 normal de conversão da Etapa 2.
