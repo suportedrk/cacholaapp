@@ -436,6 +436,18 @@ Todos os overrides são contas de produção ativas (domínio real, não @cachol
 
 1 usuário ativo com cargo `manutencao` em produção → 1 INSERT esperado ao aplicar `121_prestadores_manutencao_backfill.sql`.
 
+#### Resultado do deploy (28/mai/2026)
+
+- **Merge commit:** `90ee836` — `Merge pull request #52 from suportedrk/develop`
+- **Deploy CI:** success (4m52s)
+- **PM2:** 2 instâncias `online`, uptime estável — sem restart-loop
+- **Migration 120** (helper): aplicada limpa — `CREATE FUNCTION check_permission_or_raise` confirmada em `pg_proc`
+- **Migration 121** (backfill manutencao): `INSERT 0 1`, `v_short=0` — sem WARNING
+- **Smoke 5a:** `user_permissions prestadores/view granted` 9 → **10** (+1 ✅)
+- **Smoke 5b:** `check_permission(suporte@grupodrk.com.br, 'prestadores', 'view') = TRUE` ✅
+- **Smoke 5c:** zero ERROR/5xx das rotas convertidas nos logs pós-deploy
+- **Status:** produção estável, `/manutencao/fornecedores` populada para cargo manutencao
+
 ### Aprendizado 6 — Sub-caso PROPRIETÁRIO: tabela de dados pessoais
 
 Módulos cujas tabelas armazenam registros de um único usuário **NÃO devem ser migrados para
