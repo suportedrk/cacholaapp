@@ -4,9 +4,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { requireRoleApi } from '@/lib/auth/require-role'
+import { requirePermissionApi } from '@/lib/auth/require-permission'
 import { getEffectiveUnitIds } from '@/lib/auth/effective-unit-ids'
-import { MAINTENANCE_MODULE_ROLES } from '@/config/roles'
 
 type TicketNature = 'emergencial' | 'pontual' | 'agendado' | 'preventivo'
 
@@ -22,7 +21,7 @@ export interface HistorySummaryResponse {
 
 export async function GET(req: NextRequest) {
   try {
-    const guard = await requireRoleApi(MAINTENANCE_MODULE_ROLES)
+    const guard = await requirePermissionApi('manutencao', 'view')
     if (!guard.ok) return guard.response
 
     const supabase = await createClient()
