@@ -173,3 +173,129 @@ guard de rota for convertido para `check_permission(uid, modulo, 'view')`. Até 
 Ver detalhe em
 [`docs/rbac/proposta-arquitetura-alvo.md`](../../docs/rbac/proposta-arquitetura-alvo.md)
 seções "Aprendizado 6" e "Aprendizado 7".
+
+---
+
+## Fase 3 — Tornar os toggles funcionais (helpers de fundação)
+
+A partir da Etapa 0 da Fase 3 (Migration 120) existem 3 helpers que **substituem**
+o padrão `requireRoleServer/Api(LISTA_ROLES)` + `IF NOT EXISTS ... role IN` inline
+em RPCs por leitura do catálogo configurável de permissões.
+
+### Helpers TypeScript ([src/lib/auth/require-permission.ts](../../src/lib/auth/require-permission.ts))
+
+```ts
+// Layout (Server Component) — substitui requireRoleServer(X_ROLES)
+await requirePermissionServer('eventos', 'view')
+
+// API Route Handler — substitui requireRoleApi(X_ROLES)
+const guard = await requirePermissionApi('manutencao', 'edit')
+if (!guard.ok) return guard.response
+```
+
+Comportamento:
+- Sem sessão → `redirect('/login')` (server) ou `401` (api)
+- `check_permission` retorna `false`/erro → `redirect('/403')` (server) ou `403` (api)
+- `check_permission` retorna `true` → continua
+
+super_admin é bypassado dentro da própria `check_permission` (early return na
+função), portanto os helpers herdam o bypass sem código adicional.
+
+### Helper plpgsql `check_permission_or_raise(p_module, p_action)`
+
+Para RPCs SECURITY DEFINER, substitui o bloco:
+
+```sql
+-- ❌ ANTIGO — cargo hard-coded
+IF NOT EXISTS (
+  SELECT 1 FROM public.users
+  WHERE id = auth.uid()
+    AND role IN ('super_admin', 'diretor', 'gerente', 'financeiro')
+) THEN
+  RAISE EXCEPTION 'insufficient_privilege';
+END IF;
+```
+
+por uma única linha que lê o catálogo:
+
+```sql
+-- ✅ NOVO — permissão configurável
+PERFORM public.check_permission_or_raise('bi', 'view');
+```
+
+ERRCODE 42501 é mantido. Substituição é mecânica, mas exige confirmar que
+`user_permissions` cobre todos os cargos que tinham acesso pelo `role IN`
+antigo (auditoria + backfill aditivo se faltar — Aprendizado 1).
+
+### Quando NÃO usar os helpers de permissão
+
+Mantenha `requireRoleServer/Api(X_ROLES)` ou `IF NOT EXISTS ... role IN` inline
+nestes casos:
+
+- **Estruturais** (Aprendizado 4): `units`, `role_permissions`, `role_default_perms`,
+  `role_template_audit`, `pre_reservas_diretoria` writes, gestão do próprio RBAC.
+- **Sub-rotas de gerência** que expandiriam o público se mapeadas para `'edit'`
+  do módulo pai (D2 abaixo).
+- **Lógica de negócio dependente de cargo per se** (D3): `isVendedora`,
+  `isManager`, `GLOBAL_VIEWER_ROLES`, `IMPERSONATION_ROLES`,
+  `OPERATIONAL_MOBILE_ROLES` (redirect pós-login).
+
+### Decisões aprovadas para a fase de conversão
+
+- **D1 — RPCs de Vendas mapeiam para `('vendas', 'view')`.** `get_upsell_*`,
+  `get_recompra_*`, `get_vendas_*`, `get_event_sales_summary` convertem para
+  `check_permission_or_raise('vendas', 'view')`. Gerente (já fora de
+  `VENDAS_MODULE_ROLES` desde v1.5.1) naturalmente não tem `vendas.view`.
+- **D2 — Sub-rotas de gerência NÃO mapeiam para `'edit'` se expandem público.**
+  Ex.: `/vendas/checklist/{equipe,templates,automacoes}` hoje exige
+  `COMMERCIAL_CHECKLIST_MANAGE_ROLES` (super_admin, diretor); mapear para
+  `('checklist_comercial', 'edit')` incluiria `pos_vendas` (que tem `edit`
+  granted pelo backfill da Fase 2) e expandiria indevidamente. Regra:
+  conferir sempre, sub-rota a sub-rota; se expande, MANTER trava de cargo até
+  existir controle fino (`kind='control'`).
+- **D3 — Decisões por cargo per se permanecem `hasRole`.** `isVendedora`,
+  `isManager`, `canViewAll` (unit switcher) — todas Categoria B do
+  diagnóstico. Não viram toggle.
+- **D4 — Ordem de conversão dos módulos** (do mais isolado ao mais
+  entrelaçado, validando invisível a cada PR): Backups → Equipamentos →
+  Atas → Logs → Vendedoras → Manutenção → Decoração → Prestadores →
+  Checklists → Eventos → Configurações → Checklist Comercial → Vendas →
+  BI (broad + narrow) → Dashboard → Relatórios → Notificações.
+
+Ver detalhe e justificativa em
+[`docs/rbac/proposta-arquitetura-alvo.md`](../../docs/rbac/proposta-arquitetura-alvo.md)
+seção "Fase 3 — Decisões aprovadas para a conversão".
+
+### Receita de conversão por módulo (Fase 3) — OBRIGATÓRIA
+
+Aplicar nesta ordem em todo PR de conversão. Os Passos 1 e 2 são gates: divergência
+em qualquer um deles pausa o PR e pede decisão do dono.
+
+**Passo 1 — Auditoria de backfill (Aprendizado 1).** Confirmar que todo usuário cujo
+`role` está hoje na constante `X_ROLES` do guard tem `(user_id, modulo, 'view')` em
+`user_permissions` (super_admin bypassa via `check_permission`). Backfill aditivo
+(`ON CONFLICT DO NOTHING`) se faltar — migration numerada + rollback.
+
+**Passo 2 — Auditoria de overrides escondidos (Aprendizado 8 — OBRIGATÓRIO).**
+Listar usuários com grant individual em `user_permissions` para o módulo **cujo
+cargo está FORA do guard atual**. Esses grants estão dormindo: o guard de cargo os
+ignora, a conversão os acorda. Apresentar a lista ao dono ANTES da conversão para
+cada caso decidir entre (A) aceitar, (B) revogar antes, ou (C) aceitar + auditar
+em separado. Sem essa lista, a conversão pode introduzir acessos não-autorizados
+silenciosamente. Query padrão na seção Aprendizado 8 do doc da arquitetura.
+
+**Passo 3 — Conversão dos guards.** Trocar `requireRoleServer(X_ROLES)` por
+`requirePermissionServer(modulo, action)`, `requireRoleApi(X_ROLES)` por
+`requirePermissionApi(modulo, action)`, e `IF NOT EXISTS ... role IN` em RPCs por
+`PERFORM check_permission_or_raise(modulo, action)`.
+
+**Passo 4 — Validação INVISÍVEL.** Para cada usuário do banco, confirmar que o
+acesso DEPOIS == ANTES (exceção: divergências aprovadas no Passo 2). Tabela
+explícita por cargo no PR.
+
+**Passo 5 — Validação FUNCIONAL (prova do toggle).** Com conta de teste **limpa
+e separada** (NÃO usar a conta que apareceu no Passo 2 — sempre usar
+`teste.<role>@cachola.local` do seed local), conceder o grant temporariamente,
+provar que entra, revogar, provar que volta a bloquear. Deixar ambiente limpo.
+
+**Passo 6 — Checks.** `tsc --noEmit`, `lint`, `build`, `npm test`. Um PR por módulo.

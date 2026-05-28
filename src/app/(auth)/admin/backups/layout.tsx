@@ -1,11 +1,10 @@
-import { BACKUP_VIEW_ROLES } from '@/config/roles'
-import { requireRoleServer } from '@/lib/auth/require-role'
+import { requirePermissionServer } from '@/lib/auth/require-permission'
 
 export default async function BackupsLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  await requireRoleServer(BACKUP_VIEW_ROLES)
+  await requirePermissionServer('backups', 'view')
   return <>{children}</>
 }

@@ -328,6 +328,114 @@ maintenance, equipment), o molde de ouro completo funciona sem ajuste.
 Em módulos mistos (checklist_comercial), o desenho da policy precisa
 respeitar a semântica da tabela, não a sintaxe do molde.
 
+### Aprendizado 8 — Auditoria de overrides escondidos antes de cada conversão de Fase 3
+
+Antes de converter um guard de cargo (`requireRoleServer(X_ROLES)`) para um guard de permissão
+(`requirePermissionServer(modulo, 'view')`), liste **explicitamente** quais usuários têm grants
+individuais em `user_permissions` para esse módulo cujo cargo está **FORA** do guard de cargo
+atual. Esses grants estão **dormindo** — o guard de cargo os ignora hoje. A conversão **acorda**
+esses grants e o usuário passa a ter acesso.
+
+**Por que isso é fácil de perder:** todo o eixo "grant individual em `user_permissions`" foi
+projetado para sobrepor o template do cargo, mas o guard de cargo atual nem olha para essa
+tabela. Resultado: muitas linhas em `user_permissions` para cargos fora da `X_ROLES` estão lá
+sem efeito visível — possivelmente por seed antigo, conta de teste, override intencional
+esquecido, ou aplicação de template em momento anterior. Só a conversão expõe.
+
+**Caso de referência:** Etapa 1 da Fase 3 — módulo Backups (2026-05-27). A auditoria revelou
+que o usuário gerente `brunocasaletti@gmail.com` (conta de teste do dono) tinha **todos os 5
+grants** de `backups` em `user_permissions` — herança de quando a conta foi criada, escondida
+pelo `BACKUP_VIEW_ROLES = [super_admin, diretor]` que ignora `user_permissions`. A conversão
+passou a permitir acesso a esse gerente. Foi aprovado pela Opção A: aceitar o grant que agora
+vale, registrar no PR, manter `user_permissions` como está.
+
+**Query padrão (substitua `<modulo>` e as roles de `X_ROLES`):**
+
+```sql
+SELECT u.id, u.role, u.name, u.email,
+       up.action, up.granted, up.unit_id
+FROM public.users u
+JOIN public.user_permissions up
+  ON up.user_id = u.id
+  AND up.module = '<modulo>'
+  AND up.granted = true
+WHERE u.role NOT IN (<lista de X_ROLES atual>)
+ORDER BY u.role, u.name;
+```
+
+**Para cada usuário que aparecer**, o dono decide entre:
+
+- **(A) Aceitar** o grant agora válido. A divergência é registrada no PR e no commit como
+  "divergência aprovada por design da Fase 3". `user_permissions` não muda. Recomendado quando o
+  override era intencional e o grant é legítimo.
+- **(B) Revogar** o(s) grant(s) ANTES da conversão (DELETE em `user_permissions`) para preservar
+  `antes == depois` ponto-a-ponto. Migration aditiva-reversa, isolada. Recomendado quando o
+  grant é resíduo/teste/lixo.
+- **(C) Aceitar + auditar em PR separado.** Avança a Fase 3 com (A) e abre tarefa de auditoria
+  paralela para os casos suspeitos. Útil quando há muitos overrides e o dono quer separar
+  "fechamento de gap" de "limpeza de dados".
+
+Esse passo é **obrigatório** e precede a conversão. Entra como Passo 1 do recipe de conversão
+de todo módulo daqui pra frente, junto com o backfill aditivo (Aprendizado 1).
+
+**⚠️ PASSO OBRIGATÓRIO PRÉ-DEPLOY EM PRODUÇÃO — repetir a auditoria contra o banco de PRODUÇÃO:**
+
+As auditorias de Aprendizado 8 realizadas durante o desenvolvimento foram executadas no banco
+local (Docker), que pode ter usuários de teste (`@cachola.local`) com grants que não existem
+em produção. Antes de deployar cada módulo convertido na Fase 3, executar a query padrão
+acima **contra o banco de produção** para garantir que nenhum usuário real tenha override
+escondido que acorde silenciosamente.
+
+Módulos já convertidos e auditados localmente que requerem auditoria em produção antes do deploy:
+
+| Módulo | Guard original | Cargos externos com grant local (aprovados) | Status prod |
+|--------|---------------|---------------------------------------------|-------------|
+| `backups` | `BACKUP_VIEW_ROLES` | gerente `brunocasaletti@gmail.com` — backfill-seed histórico | ✅ checado em prod, overrides aceitos (A) |
+| `equipamentos` | `MAINTENANCE_MODULE_ROLES` | nenhum | ✅ checado em prod, sem overrides |
+| `atas` | `ATAS_ACCESS_ROLES` | manutencao/freelancer/entregador @cachola.local | ✅ checado em prod, sem overrides reais |
+| `logs` | `ADMIN_LOGS_VIEW_ROLES` | nenhum | ✅ checado em prod, overrides aceitos (A) |
+| `vendedoras` | `SELLERS_MANAGE_ROLES` | nenhum | ✅ checado em prod, overrides aceitos (A) |
+| `manutencao` | `MAINTENANCE_MODULE_ROLES` | nenhum | ✅ checado em prod, sem overrides |
+| `prestadores` | `PRESTADORES_ACCESS_ROLES` | nenhum (grant manutencao foi backfill intencional) | ✅ checado em prod, sem overrides |
+| `checklists` | `OPERATIONAL_CHECKLIST_ROLES` | manutencao/vendedora @cachola.local (Opção A aprovada) | ✅ checado em prod, overrides aceitos (A) |
+| `eventos` | `EVENTOS_ACCESS_ROLES` | freelancer/entregador @cachola.local (Opção A aprovada) | ✅ checado em prod, sem overrides reais |
+| `configuracoes` | `SETTINGS_ROLES` | nenhum | ✅ checado em prod, overrides aceitos (A) |
+
+Em particular: confirmar que nenhum usuário real de `freelancer`/`entregador` tem `eventos/view`
+e que nenhum real fora dos guards tem `checklists/view` em produção. Se houver, aplicar
+decisão A/B/C do dono no momento do deploy (não da conversão local).
+
+### Deploy Fase 3 leva 1 — D1 auditoria em produção (28/mai/2026)
+
+Auditoria executada antes do merge develop→main. Banco de produção consultado via SSH (alias `cacholaos-vps`).
+
+#### Inventário
+
+- **11 itens** no lote: Etapa 0 (foundation helpers TS + migration 120) + 10 conversões de layout/API.
+- **2 migrations**: `120_check_permission_or_raise.sql` (helper SQL aditivo) + `121_prestadores_manutencao_backfill.sql` (1 INSERT esperado).
+- **1 mudança visível**: manutenção passa a ver dados em `/manutencao/fornecedores` (bug fix deliberado).
+- **Todos os demais**: 100% invisíveis em produção.
+
+#### 7 overrides reais encontrados e decididos
+
+Todos os overrides são contas de produção ativas (domínio real, não @cachola.local). Decisão do dono: **Opção A — aceitar** em todos.
+
+| Módulo | Role | Nome | Email | Efeito após deploy | Decisão |
+|--------|------|------|-------|-------------------|---------|
+| `backups` | gerente | Bruno Casaletti | brunocasaletti@gmail.com | passa a ver `/admin/backups` | A ✅ |
+| `configuracoes` | gerente | Bruno Casaletti | brunocasaletti@gmail.com | passa a ver `/configuracoes` | A ✅ |
+| `logs` | gerente | Bruno Casaletti | brunocasaletti@gmail.com | passa a ver `/admin/logs` | A ✅ |
+| `vendedoras` (edit) | gerente | Bruno Casaletti | brunocasaletti@gmail.com | passa a ver `/configuracoes/vendedoras` | A ✅ |
+| `checklists` | manutencao | Suporte DRK | suporte@grupodrk.com.br | passa a ver `/checklists` | A ✅ |
+| `checklists` | vendedora | Raphaela Melo | raphaela.melo@festanacachola.com.br | passa a ver `/checklists` | A ✅ |
+| `checklists` | vendedora | Bruna Jana | bruna.jana@festanacachola.com.br | passa a ver `/checklists` | A ✅ |
+
+**Módulos sem overrides reais**: `atas`, `equipamentos`, `eventos`, `manutencao`, `prestadores`.
+
+#### Migration 121 — impacto em produção
+
+1 usuário ativo com cargo `manutencao` em produção → 1 INSERT esperado ao aplicar `121_prestadores_manutencao_backfill.sql`.
+
 ### Aprendizado 6 — Sub-caso PROPRIETÁRIO: tabela de dados pessoais
 
 Módulos cujas tabelas armazenam registros de um único usuário **NÃO devem ser migrados para
@@ -415,6 +523,16 @@ tocar os módulos correspondentes.
   em Fase 2 porque é log de infra, fora do escopo. Apertar para
   `role IN ('super_admin', 'diretor')` ou `is_global_viewer()` é cirúrgico — vale fazer
   quando alguém tocar no módulo Integrações/Configurações.
+
+- **`ploomes_config` — RLS hardcoded vs SETTINGS_ROLES desalinhados (Aprendizado 4, detectado na Fase 3 — 2026-05-27).**
+  A RLS SELECT de `ploomes_config` usa `role IN ('super_admin','diretor','gerente')` —
+  inclui `gerente`. Mas `SETTINGS_ROLES` (guard da rota `/configuracoes`) só tem
+  `[super_admin, diretor]` — exclui `gerente`. Consequência: um hook que leia
+  `ploomes_config` diretamente (ex.: AutoSync) retorna dados para gerente via PostgREST,
+  mas a tela `/configuracoes/integracoes/ploomes` bloqueia gerente no layout. Inconsistência
+  estrutural pré-existente. Decisão futura: ou ampliar SETTINGS_ROLES para incluir gerente,
+  ou apertar a RLS para `is_global_viewer()`. Fora do escopo da Fase 3 (Aprendizado 4 —
+  tabela de configuração de infraestrutura, acesso gerenciado por policy fixa).
 
 ### Receita consolidada para conversão de módulo (Fase 2)
 
@@ -926,6 +1044,142 @@ Conforme Q2 do Item 7. Se a decisão for "passar a respeitar `unit_id`",
 fazer migration nova que reescreve `check_permission` com 4 args
 (retrocompat manter `check_permission/3` chamando `check_permission/4`
 com `NULL`), e atualizar policies cujas tabelas têm `unit_id`.
+
+---
+
+## Fase 3 — Decisões aprovadas para a conversão (registro 2026-05-27)
+
+Estado: **Etapa 0 (fundação) entregue** na Migration 120 + helpers TS em
+[`src/lib/auth/require-permission.ts`](../../src/lib/auth/require-permission.ts).
+Nenhum guard existente foi alterado nesta etapa — só ferramental.
+
+As 4 decisões abaixo valem como ordem para as etapas de conversão (1–7 do
+diagnóstico de 2026-05-27). Aplicar sem reperguntar.
+
+### D1 — Mapeamento das RPCs de Vendas
+
+`get_upsell_*`, `get_recompra_*`, `get_vendas_*` e `get_event_sales_summary`
+convertem para `PERFORM check_permission_or_raise('vendas', 'view')`.
+
+**Por quê:** o módulo do catálogo que cobre Upsell e Recompra é `vendas`. Não
+há módulo `upsell` ou `recompra` separado no catálogo. Mapear para
+`('vendas', 'view')` preserva o acesso atual:
+
+- `gerente` já foi removido de `VENDAS_MODULE_ROLES` em v1.5.1, então não tem
+  `vendas.view` em `role_permissions`/`user_permissions`. Sair pelo RAISE é o
+  comportamento esperado.
+- `super_admin`, `diretor`, `vendedora`, `pos_vendas` têm `vendas.view` granted
+  (confirmar por auditoria em cada PR antes de converter — Aprendizado 1).
+
+**Validação invisível por RPC:** antes do PR de conversão, listar os usuários
+cujo `users.role` está hoje na cláusula `role IN` da RPC e confirmar que cada
+um tem `(user_id, 'vendas', 'view')` em `user_permissions`. Backfill aditivo
+(`ON CONFLICT DO NOTHING`) se faltar.
+
+### D2 — Sub-rotas de gerência NÃO viram `('modulo', 'edit')` se expandem público
+
+Caso concreto que motivou a regra: `/vendas/checklist/{equipe,templates,automacoes}`
+hoje exige `COMMERCIAL_CHECKLIST_MANAGE_ROLES` (super_admin, diretor). Mapear
+para `('checklist_comercial', 'edit')` **incluiria `pos_vendas`** (que ganhou
+`edit` granted via backfill da Fase 2) e expandiria indevidamente o público
+dessas sub-rotas.
+
+**Regra:** para cada sub-rota de gerência, antes de converter, listar quem
+hoje passa pela constante de role e quem teria `('modulo', 'edit')` granted.
+Se o conjunto da segunda for **maior**, a conversão expande público:
+
+- **Não converter agora.** Manter `requireRoleServer(LISTA_ROLES)`.
+- **Anotar como bloqueada por falta de controle fino.** A solução correta é
+  criar um controle fino (`permission_controls.kind='control'`, ex.:
+  `checklist_comercial.manage_team`) e converter para
+  `check_permission(uid, 'checklist_comercial', 'manage_team')`. Isso entra
+  na Fase 2 do roteiro original (controles finos pilotados).
+
+Sub-rotas conhecidas que ficam BLOQUEADAS por D2 até existir controle fino:
+
+| Sub-rota / API | Constante atual | Expandiria para | Status |
+|----------------|----------------|-----------------|--------|
+| `/vendas/checklist/equipe` | super_admin, diretor | + pos_vendas via `checklist_comercial.edit` | bloqueada |
+| `/vendas/checklist/templates` | super_admin, diretor | idem | bloqueada |
+| `/vendas/checklist/automacoes` | super_admin, diretor | idem | bloqueada |
+| `/manutencao/dashboard` | `MAINTENANCE_ADMIN_ROLES` (super_admin, diretor, gerente) | + manutencao via `manutencao.edit` | bloqueada |
+| `/manutencao/configuracoes` | `MAINTENANCE_ADMIN_ROLES` | idem | bloqueada |
+| RPC `guard_cost_approval` | `role IN (super_admin, diretor, gerente)` | + manutencao via `manutencao.edit` (e contrairia diretor, que não tem edit) | bloqueada |
+| UI `canApprove` (`chamados/[id]:597`) | `MAINTENANCE_ADMIN_ROLES` | espelho do RPC acima | bloqueada |
+| `POST /api/email/maintenance-emergency` | `MAINTENANCE_MODULE_ROLES` (super_admin, diretor, gerente, manutencao) | `view` acoplaria disparo de e-mail a leitura (RH read-only dispararia alertas) | bloqueada |
+| `POST /api/minutes/notify` | `ATAS_MANAGE_ROLES` (super_admin, diretor, gerente) | + pos_vendas via `atas.edit` | bloqueada |
+| `nova/page.tsx` redirect gate (`/atas/nova`) | `ATAS_MANAGE_ROLES` | + pos_vendas via `atas.create` | bloqueada |
+| `[id]/page.tsx` isElevated flags | `ATAS_MANAGE_ROLES` | idem | bloqueada |
+| `[id]/editar/page.tsx` isElevated redirect | `ATAS_MANAGE_ROLES` | idem | bloqueada |
+
+**Nota para Manutenção (D2-hold de 2026-05-27):** o cargo `manutencao` tem
+`manutencao.edit` granted (preservado na Fase 2, Opção B — técnico edita execuções),
+mas NÃO está em `MAINTENANCE_ADMIN_ROLES`. Por isso mapear dashboard/configuracoes/RPC
+de aprovação de custo para `check_permission('manutencao','edit')` expandiria para o
+técnico (e ainda contrairia diretor no RPC, pois diretor não tem edit). Controles finos
+sugeridos, granted ao público atual de `MAINTENANCE_ADMIN_ROLES`:
+- `manutencao.gerenciar` (ou `manutencao.admin`) — dashboard, configuracoes, e a UI/RPC de aprovação de custo.
+A API `/api/email/maintenance-emergency` fica em D2-hold separado: mapear para `view`
+acoplaria o disparo de e-mail de emergência à mera leitura (um RH com `manutencao.view`
+de supervisão dispararia alertas a todos os gestores). Controle fino sugerido:
+- `manutencao.notify_emergency` — granted ao público atual de `MAINTENANCE_MODULE_ROLES`.
+
+**Nota para `/api/minutes/notify` e guards de criação/edição de atas:**
+Aguardam controle fino `atas.publicar` (ou nome equivalente) em `permission_controls`
+com `kind='control'`, granted apenas ao público atual de `ATAS_MANAGE_ROLES`. Não
+converter para `check_permission('atas','edit')` — expandiria para pos_vendas (que tem
+`atas/edit` granted pelo `role_default_perms`) sem intenção. Decisão do dono: D2-hold.
+
+Sub-rotas que **não expandem** (mapeamento direto seguro) seguem o fluxo
+normal de conversão da Etapa 2.
+
+### D3 — Decisões por cargo per se permanecem `hasRole`
+
+Categoria B do diagnóstico de 2026-05-27. Lista de call sites que NÃO viram
+toggle (consolida Q3 do Item 7):
+
+- `isVendedora` / `isManager` / `effectiveSellerId` em
+  [`meu-painel-client.tsx`](../../src/app/(auth)/vendas/_components/meu-painel/meu-painel-client.tsx)
+  e correlatos
+- `canViewAll` (`GLOBAL_VIEWER_ROLES`) em
+  [`unit-switcher.tsx`](../../src/components/layout/unit-switcher.tsx)
+- Forçar seleção de unidade em [`providers.tsx`](../../src/lib/providers.tsx)
+- `OPERATIONAL_MOBILE_ROLES` no redirect pós-login em
+  [`login/page.tsx`](../../src/app/(public)/login/page.tsx) e
+  [`403/page.tsx`](../../src/app/403/page.tsx)
+- `IMPERSONATION_ROLES` em handlers de impersonation
+- `TEMPLATE_MANAGE_ROLES` na gestão do próprio RBAC (matrix `/admin/cargos`,
+  API `/api/admin/role-permissions`)
+
+Esses checks dizem "este cargo é semanticamente X" — não dependem de uma
+permissão configurável. Mexer em toggle não muda essa identidade. Mantêm
+`hasRole(profile?.role, X_ROLES)` para sempre.
+
+### D4 — Ordem de conversão dos módulos
+
+Do mais isolado ao mais entrelaçado, **validando invisível a cada PR**
+(antes/depois por cargo). Cada PR auto-contido: backfill audit + RPC
+conversion + layout conversion + API conversion + UI hasRole conversion
+daquele módulo:
+
+1. **Backups** (1 layout, 2 APIs, 0 RPCs) — exercício de menor risco.
+2. **Equipamentos** (1 layout, 0 APIs, 0 RPCs).
+3. **Atas** (1 layout, 1 API, 0 RPCs).
+4. **Logs** (1 layout).
+5. **Vendedoras** (1 layout — sub-rota de configuracoes; 0 APIs, 0 RPCs).
+6. **Manutenção** (3 layouts, 3 APIs, 1 RPC `guard_cost_approval`).
+7. **Decoração** (3 layouts, 14 APIs, 7 hasRole sites — esforço maior).
+8. **Prestadores** (1 layout).
+9. **Checklists operacionais** (1 layout).
+10. **Eventos** (1 layout).
+11. **Configurações + integrações Ploomes** (1 layout + sub-rotas).
+12. **Checklist Comercial** (4 layouts, 1 RPC `trigger_stage_automation`).
+13. **Vendas / Upsell / Recompra** (1 layout, 0 APIs, 8 RPCs — aplicar D1).
+14. **BI** (1 layout, 0 APIs, 17 RPCs — broad 14 + narrow 3).
+15. **Dashboard** (1 layout — Aprendizado 7; toggle vira real após).
+16. **Relatórios** (1 layout — idem).
+17. **Notificações** (componente navbar — sub-caso PROPRIETÁRIO, Aprendizado 6;
+    toggle continua decorativo mesmo após conversão).
 
 ---
 
