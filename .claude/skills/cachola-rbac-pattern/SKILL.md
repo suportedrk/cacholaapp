@@ -299,3 +299,21 @@ e separada** (NÃO usar a conta que apareceu no Passo 2 — sempre usar
 provar que entra, revogar, provar que volta a bloquear. Deixar ambiente limpo.
 
 **Passo 6 — Checks.** `tsc --noEmit`, `lint`, `build`, `npm test`. Um PR por módulo.
+
+---
+
+## Aprendizados de workflow (sessão 28/mai/2026)
+
+Quatro lições aprendidas na sessão da Fase 3 leva 1 — aplicar em todas as sessões futuras de deploy RBAC:
+
+**1. Revisão técnica de diff é do advisor, não do dono.**
+Bruno é não-técnico — nunca pedir a ele para revisar código, diff ou migration. Antes de aprovar merge de PR de deploy, o advisor (claude reviewer) revisa o diff explicitamente, em especial migrations e mudanças de lógica. O advisor dá veredito explícito ("diff aprovado" ou "problema X encontrado").
+
+**2. git add + commit + push devem estar explícitos nos prompts.**
+"Pode commitar" deixado para o Bruno resolver leva a working tree poluída. Na Fase 3 leva 1, 9 módulos acumularam mudanças não-commitadas antes do deploy por falta de instrução explícita de commit no final de cada PR. O prompt de cada módulo deve terminar com a sequência de git add + commit + push ou confirmar que Claude Code a executará.
+
+**3. Audit-first em módulos não-triviais.**
+Para módulos com múltiplos layouts, APIs ou RPCs (ex.: Manutenção, Configurações, Prestadores), usar sempre o padrão FASE A (read-only, classifica como Conversível/D2-hold/Estrutural/D3, audita overrides, verifica risco de RLS data-unlock) ANTES da FASE B (conversão). FASE B só começa após decisões explícitas do dono sobre todos os gates da FASE A.
+
+**4. Deploy requer auditoria dos overrides contra produção, não local.**
+Auditorias de overrides escondidos (Aprendizado 8) rodadas no banco local (Docker) só surfaceiam contas @cachola.local. Contas reais (ex.: Suporte DRK com checklists/view, Raphaela/Bruna com checklists/view, Bruno Casaletti gerente com grants em 4 módulos) só aparecem rodando a query contra o banco de produção via SSH. A auditoria-em-produção é passo obrigatório no checklist de deploy da Fase 3 (registrado em proposta-arquitetura-alvo.md seção Aprendizado 8).

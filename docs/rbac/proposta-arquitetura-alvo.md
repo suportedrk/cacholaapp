@@ -1,3 +1,40 @@
+## Estado atual e handoff — sessão 28/mai/2026
+
+### Onde estamos
+- Cachola OS v1.28.0 em produção.
+- RBAC Fase 3 leva 1 deployada 28/mai/2026 (commit main 90ee836).
+- 11 conversões (foundation Etapa 0 + 10 módulos) + bug fix /manutencao/fornecedores.
+- Auditoria D1: 7 overrides reais aceitos (A) — detalhes na seção "Deploy Fase 3 leva 1 — D1 auditoria em produção".
+
+### Próximo passo
+Checklist Comercial — FASE A levantamento read-only primeiro. Módulo pesado: 4 layouts + RPCs trigger_stage_automation e apply_commercial_template. Recomendação: Opus pra conversão.
+
+### Fila Fase 3 após Checklist Comercial (ordem D4)
+1. Vendas (1 layout + 8 RPCs) — Opus
+2. BI (1 layout + 17 RPCs) — Opus
+3. Dashboard + Relatórios (Aprendizado 7 — toggle vira real quando convertido) — Sonnet
+4. Decoração — somente após Bruno estabilizar dev ativo (3 layouts + 14 APIs + 7 hasRole)
+5. Notificações (Aprendizado 6 owner-pattern user_id=auth.uid; toggle decorativo, sem conversão real)
+
+### Backlog de controles finos (kind='control', sub-fase após todas as rotas)
+- atas.publicar — D2-hold de POST /api/minutes/notify
+- manutencao.gerenciar — D2-hold de /manutencao/dashboard, /manutencao/configuracoes, RPC guard_cost_approval, canApprove em chamados/[id]
+- manutencao.notify_emergency — D2-hold de POST /api/email/maintenance-emergency
+- ploomes_config alignment — RLS hardcoded liberando gerente, SETTINGS_ROLES sem gerente (Aprendizado 4)
+
+### Estado git pós-deploy
+- main: 90ee836 (PR #52 merged).
+- develop: 2 commits ahead (ebb7aec bump v1.28.0 + b145560 doc resultado do deploy). Vão pro main com a próxima PR de leva.
+- pm2 prod: 2 instâncias online estáveis.
+
+### Aprendizados de workflow desta sessão
+1. Revisão técnica de diff é responsabilidade do Claude advisor, não do dono (Bruno é não-técnico, não deve ser pedido a ler código). Antes de aprovar merge de qualquer PR de deploy, o advisor revisa o diff (em especial migrations e mudanças de lógica) e dá veredito explícito.
+2. Prompts pro Claude Code devem incluir git add + commit + push explícitos quando produzem mudanças. Só dizer "pode commitar" pro Bruno deixa working tree poluída (na Fase 3 leva 1, 9 PRs acumularam não-commitados antes do deploy).
+3. Audit-first em módulos não-triviais (Configurações, Prestadores, Checklists+Eventos foram modelo): FASE A read-only com classificação por categoria (Conversível/D2-hold/Estrutural/D3) + auditoria de overrides + risco de RLS unlock. FASE B só após decisões do dono.
+4. Deploy em prod requer auditoria-em-produção dos overrides (não local). Auditorias locais surfaceiam só @cachola.local; reais aparecem só rodando contra o banco de produção.
+
+---
+
 # Proposta — Arquitetura-alvo de Permissões do Cachola OS
 
 > Status: **proposta para aval do dono do produto**. Nenhuma migration, schema ou
@@ -435,6 +472,18 @@ Todos os overrides são contas de produção ativas (domínio real, não @cachol
 #### Migration 121 — impacto em produção
 
 1 usuário ativo com cargo `manutencao` em produção → 1 INSERT esperado ao aplicar `121_prestadores_manutencao_backfill.sql`.
+
+#### Resultado do deploy (28/mai/2026)
+
+- **Merge commit:** `90ee836` — `Merge pull request #52 from suportedrk/develop`
+- **Deploy CI:** success (4m52s)
+- **PM2:** 2 instâncias `online`, uptime estável — sem restart-loop
+- **Migration 120** (helper): aplicada limpa — `CREATE FUNCTION check_permission_or_raise` confirmada em `pg_proc`
+- **Migration 121** (backfill manutencao): `INSERT 0 1`, `v_short=0` — sem WARNING
+- **Smoke 5a:** `user_permissions prestadores/view granted` 9 → **10** (+1 ✅)
+- **Smoke 5b:** `check_permission(suporte@grupodrk.com.br, 'prestadores', 'view') = TRUE` ✅
+- **Smoke 5c:** zero ERROR/5xx das rotas convertidas nos logs pós-deploy
+- **Status:** produção estável, `/manutencao/fornecedores` populada para cargo manutencao
 
 ### Aprendizado 6 — Sub-caso PROPRIETÁRIO: tabela de dados pessoais
 
