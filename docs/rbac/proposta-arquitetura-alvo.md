@@ -1,20 +1,18 @@
 ## Estado atual e handoff — sessão 29/mai/2026
 
 ### Onde estamos
-- Cachola OS v1.29.0 em produção.
-- RBAC Fase 3 — Checklist Comercial convertido e deployado 29/mai/2026 (PR #53, commit main 11e753f).
-- A camada de banco do módulo já fora convertida na Fase 2 (migration 117). A FASE B desta sessão foi apenas o guard do layout raiz /vendas/checklist: requireRoleServer(COMMERCIAL_CHECKLIST_ACCESS_ROLES) passou a requirePermissionServer('checklist_comercial', 'view').
-- Auditoria de produção (gate G6): 1 override dormindo — gerente Bruno Casaletti (conta gmail) com checklist_comercial.view granted — aceito como net-zero (opção A), pois a porta pai /vendas (role-based, VENDAS_MODULE_ROLES não inclui gerente) já o barra antes do layout filho. Lista B (perderiam acesso) vazia; backfill sem gaps.
-- FASE A e resultado da FASE B documentados em docs/rbac/fase-a-checklist-comercial.md.
+- Cachola OS v1.30.0 em produção.
+- RBAC Fase 3 — Vendas convertido e deployado 29/mai/2026 (PR #55, commit main f7bd886). Duas partes: migration 122 (backfill vendas.view, neutra) + migration 123 (limpeza do override dormente do gerente gmail [5 grants removidos] + 9 RPCs de leitura → check_permission('vendas','view') + get_event_sales_summary → check_permission('eventos','view'), decisão G-RISK C). Layout /vendas → requirePermissionServer('vendas','view'). 0 gaps, conversão invisível confirmada em produção (visual).
+- Checklist Comercial concluído anteriormente (v1.29.0).
+- Infra: chrome-devtools-mcp corrigido (.mcp.json sem --browser-url → lança navegador próprio com perfil persistente) + nova skill cachola-visual-qa.
 
 ### Próximo passo
-Vendas — FASE A levantamento read-only primeiro. 1 layout + 8 RPCs. Recomendação: Opus.
+BI — FASE A levantamento read-only primeiro. ~1 layout + 17 RPCs; atenção aos módulos do catálogo (bi, bi_atendimento, bi_vendas). Recomendação: Opus.
 
-### Fila Fase 3 após Vendas (ordem D4)
-1. BI (1 layout + 17 RPCs) — Opus
-2. Dashboard + Relatórios (Aprendizado 7 — toggle vira real quando convertido) — Sonnet
-3. Decoração — somente após Bruno estabilizar dev ativo (3 layouts + 14 APIs + 7 hasRole)
-4. Notificações (Aprendizado 6 owner-pattern user_id=auth.uid; toggle decorativo, sem conversão real)
+### Fila Fase 3 após BI (ordem D4)
+1. Dashboard + Relatórios (Aprendizado 7) — Sonnet
+2. Decoração — somente após estabilizar dev ativo
+3. Notificações (toggle decorativo)
 
 ### Backlog de controles finos (kind='control', sub-fase após todas as rotas)
 - atas.publicar — D2-hold de POST /api/minutes/notify
@@ -23,9 +21,9 @@ Vendas — FASE A levantamento read-only primeiro. 1 layout + 8 RPCs. Recomenda�
 - ploomes_config alignment — RLS hardcoded liberando gerente, SETTINGS_ROLES sem gerente (Aprendizado 4)
 
 ### Estado git pós-deploy
-- main: 11e753f (PR #53 merged).
-- develop: sincronizado com main (fast-forward para 11e753f).
-- pm2 prod: 2 instâncias online estáveis.
+- main: f7bd886 (PR #55 merged).
+- develop: à frente de main com commits de doc/QA (handoff, skill cachola-visual-qa, .mcp.json) — vão na próxima PR de leva.
+- pm2 prod: 2 instâncias online, v1.30.0.
 
 ### Aprendizados de workflow (acumulado)
 1. Revisão técnica de diff é responsabilidade do Claude advisor, não do dono (Bruno é não-técnico, não deve ser pedido a ler código). Antes de aprovar merge de qualquer PR de deploy, o advisor revisa o diff (em especial migrations e mudanças de lógica) e dá veredito explícito.
