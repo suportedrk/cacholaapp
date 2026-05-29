@@ -1,15 +1,16 @@
-import { VENDAS_MODULE_ROLES } from '@/config/roles'
-import { requireRoleServer } from '@/lib/auth/require-role'
+import { requirePermissionServer } from '@/lib/auth/require-permission'
 
 /**
  * Guard para /vendas — módulo Vendas.
- * Restringe a super_admin, diretor, gerente e vendedora.
+ * Governado por permissão configurável: check_permission(uid, 'vendas', 'view').
+ * O toggle em /admin/cargos passa a controlar o acesso à rota (Fase 3, Parte 2).
+ * Backfill de vendas.view aplicado na migration 122; gerente sai (sem vendas.view).
  */
 export default async function VendasLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  await requireRoleServer(VENDAS_MODULE_ROLES)
+  await requirePermissionServer('vendas', 'view')
   return <>{children}</>
 }
