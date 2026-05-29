@@ -1,20 +1,20 @@
-## Estado atual e handoff — sessão 28/mai/2026
+## Estado atual e handoff — sessão 29/mai/2026
 
 ### Onde estamos
-- Cachola OS v1.28.0 em produção.
-- RBAC Fase 3 leva 1 deployada 28/mai/2026 (commit main 90ee836).
-- 11 conversões (foundation Etapa 0 + 10 módulos) + bug fix /manutencao/fornecedores.
-- Auditoria D1: 7 overrides reais aceitos (A) — detalhes na seção "Deploy Fase 3 leva 1 — D1 auditoria em produção".
+- Cachola OS v1.29.0 em produção.
+- RBAC Fase 3 — Checklist Comercial convertido e deployado 29/mai/2026 (PR #53, commit main 11e753f).
+- A camada de banco do módulo já fora convertida na Fase 2 (migration 117). A FASE B desta sessão foi apenas o guard do layout raiz /vendas/checklist: requireRoleServer(COMMERCIAL_CHECKLIST_ACCESS_ROLES) passou a requirePermissionServer('checklist_comercial', 'view').
+- Auditoria de produção (gate G6): 1 override dormindo — gerente Bruno Casaletti (conta gmail) com checklist_comercial.view granted — aceito como net-zero (opção A), pois a porta pai /vendas (role-based, VENDAS_MODULE_ROLES não inclui gerente) já o barra antes do layout filho. Lista B (perderiam acesso) vazia; backfill sem gaps.
+- FASE A e resultado da FASE B documentados em docs/rbac/fase-a-checklist-comercial.md.
 
 ### Próximo passo
-Checklist Comercial — FASE A levantamento read-only primeiro. Módulo pesado: 4 layouts + RPCs trigger_stage_automation e apply_commercial_template. Recomendação: Opus pra conversão.
+Vendas — FASE A levantamento read-only primeiro. 1 layout + 8 RPCs. Recomendação: Opus.
 
-### Fila Fase 3 após Checklist Comercial (ordem D4)
-1. Vendas (1 layout + 8 RPCs) — Opus
-2. BI (1 layout + 17 RPCs) — Opus
-3. Dashboard + Relatórios (Aprendizado 7 — toggle vira real quando convertido) — Sonnet
-4. Decoração — somente após Bruno estabilizar dev ativo (3 layouts + 14 APIs + 7 hasRole)
-5. Notificações (Aprendizado 6 owner-pattern user_id=auth.uid; toggle decorativo, sem conversão real)
+### Fila Fase 3 após Vendas (ordem D4)
+1. BI (1 layout + 17 RPCs) — Opus
+2. Dashboard + Relatórios (Aprendizado 7 — toggle vira real quando convertido) — Sonnet
+3. Decoração — somente após Bruno estabilizar dev ativo (3 layouts + 14 APIs + 7 hasRole)
+4. Notificações (Aprendizado 6 owner-pattern user_id=auth.uid; toggle decorativo, sem conversão real)
 
 ### Backlog de controles finos (kind='control', sub-fase após todas as rotas)
 - atas.publicar — D2-hold de POST /api/minutes/notify
@@ -23,15 +23,16 @@ Checklist Comercial — FASE A levantamento read-only primeiro. Módulo pesado: 
 - ploomes_config alignment — RLS hardcoded liberando gerente, SETTINGS_ROLES sem gerente (Aprendizado 4)
 
 ### Estado git pós-deploy
-- main: 90ee836 (PR #52 merged).
-- develop: 2 commits ahead (ebb7aec bump v1.28.0 + b145560 doc resultado do deploy). Vão pro main com a próxima PR de leva.
+- main: 11e753f (PR #53 merged).
+- develop: sincronizado com main (fast-forward para 11e753f).
 - pm2 prod: 2 instâncias online estáveis.
 
-### Aprendizados de workflow desta sessão
+### Aprendizados de workflow (acumulado)
 1. Revisão técnica de diff é responsabilidade do Claude advisor, não do dono (Bruno é não-técnico, não deve ser pedido a ler código). Antes de aprovar merge de qualquer PR de deploy, o advisor revisa o diff (em especial migrations e mudanças de lógica) e dá veredito explícito.
 2. Prompts pro Claude Code devem incluir git add + commit + push explícitos quando produzem mudanças. Só dizer "pode commitar" pro Bruno deixa working tree poluída (na Fase 3 leva 1, 9 PRs acumularam não-commitados antes do deploy).
 3. Audit-first em módulos não-triviais (Configurações, Prestadores, Checklists+Eventos foram modelo): FASE A read-only com classificação por categoria (Conversível/D2-hold/Estrutural/D3) + auditoria de overrides + risco de RLS unlock. FASE B só após decisões do dono.
 4. Deploy em prod requer auditoria-em-produção dos overrides (não local). Auditorias locais surfaceiam só @cachola.local; reais aparecem só rodando contra o banco de produção.
+5. Confirmações visuais (validação de tela/UX em qualquer ambiente) são SEMPRE delegadas ao Claude Code via MCP Chrome DevTools. O Claude advisor nunca executa confirmação visual por conta própria.
 
 ---
 
