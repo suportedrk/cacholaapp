@@ -155,6 +155,8 @@ módulo. As entries em `role_permissions`/`user_permissions` para esses módulos
 **Implicação para UI (Fase 3):** não expor toggles por cargo em `/admin/cargos/[code]` para
 módulos PROPRIETÁRIO. Não há o que configurar por cargo em dado pessoal.
 
+**Exemplo confirmado:** Notificações (FASE A em docs/rbac/fase-a-notificacoes.md) — owner-pattern puro (RLS user_id=auth.uid), sem rota, sininho universal; 'notificacoes' é toggle decorativo. NUNCA gatear por check_permission — quebraria o recurso universal.
+
 ### Sub-caso AGREGAÇÃO/ROTA (ex.: `dashboard`, `relatorios`)
 
 Módulo sem tabela própria que apenas agrega dados de outras tabelas.

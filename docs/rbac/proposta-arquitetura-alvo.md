@@ -2,14 +2,14 @@
 
 ### Onde estamos
 - Cachola OS v1.32.0 em produção.
-- RBAC Fase 3 — Dashboard + Relatórios convertidos e deployados 29/mai/2026 (PR #59, commit main a935c78). Dois módulos layout-only: dashboard → check_permission('dashboard','view') (backfill mig 126, 8 cargos) e relatorios → check_permission('relatorios','view') (módulo PRÓPRIO, não bi; as 13 RPCs report_* são SECURITY INVOKER/RLS, não convertidas). Limpeza (mig 127) dos overrides dormentes de relatorios das 2 contas de teste do dono (gmail/hotmail); diretores Carol/Vinícius honrados (view+export). Conversão invisível nos dois.
-- Concluídos anteriormente: BI (v1.31.0), Vendas (v1.30.0), Checklist Comercial (v1.29.0).
+- RBAC Fase 3 — frente de CONVERSÕES CONCLUÍDA para todos os módulos convertíveis: Checklist Comercial (v1.29.0), Vendas (v1.30.0), BI (v1.31.0), Dashboard+Relatórios (v1.32.0).
+- Notificações: AUDITADO e ENCERRADO sem FASE B — sub-caso PROPRIETÁRIO (owner-pattern). Sem rota /notificacoes; sininho universal (sem hasRole); RLS notifications = user_id=auth.uid() (3 policies); create_notification/mark_all (DEFINER, sem guard de cargo). O módulo 'notificacoes' do catálogo é toggle DECORATIVO por design (Aprendizado 6) — NÃO gatear por check_permission (quebraria o sininho de quem não tivesse o grant). Relatório: docs/rbac/fase-a-notificacoes.md. (Backlog fora-de-RBAC: confirmar que create_notification valida caller/target.)
 
-### Próximo passo
-Notificações — FASE A levantamento read-only. Aprendizado 6: owner-pattern (user_id=auth.uid), toggle provavelmente decorativo — verificar se há conversão real ou só confirmação. Conversão leve. Recomendação: Sonnet.
+### Próximo passo / único pendente
+Decoração — BLOQUEADO. Converter só após (a) Bruno estabilizar o dev ativo do módulo e (b) fechar com o pessoal de decoração a definição de categoria (balões vs itens de decoração = uma categoria ou duas). Escopo estimado: 3 layouts + 14 APIs + 7 hasRole.
 
-### Fila Fase 3 restante
-1. Decoração — SOMENTE após Bruno estabilizar o dev ativo. Não converter antes.
+### Fila Fase 3
+- Vazia, exceto Decoração (bloqueada acima).
 
 ### Backlog de controles finos (kind='control', sub-fase após todas as rotas)
 - atas.publicar — D2-hold de POST /api/minutes/notify
@@ -18,8 +18,8 @@ Notificações — FASE A levantamento read-only. Aprendizado 6: owner-pattern (
 - ploomes_config alignment — RLS hardcoded liberando gerente, SETTINGS_ROLES sem gerente (Aprendizado 4)
 
 ### Estado git pós-deploy
-- main: a935c78 (PR #59 merged).
-- develop: sincronizado com main.
+- main: a935c78 (último deploy, v1.32.0).
+- develop: à frente com commits de documentação.
 - pm2 prod: 2 instâncias online, v1.32.0.
 
 ### Aprendizados de workflow (acumulado)
