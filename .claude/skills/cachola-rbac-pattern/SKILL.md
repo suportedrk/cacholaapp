@@ -323,3 +323,6 @@ Auditorias de overrides escondidos (Aprendizado 8) rodadas no banco local (Docke
 
 **6. Ao converter guards de RPCs: extrair corpo via pg_get_functiondef do banco vivo, não da migration original.**
 Usar `pg_get_functiondef` no banco de produção (ou local após sincronia) garante que hotfixes posteriores à migration original (ex.: receita trocada para `SUM(pop.total)` na v1.8.0, filtros de período ajustados) sejam preservados. Copiar da migration original pode reintroduzir versões antigas do corpo — regressão silenciosa. Trocar só o bloco de guarda; adicionar pós-condição estrutural na migration verificando que cada função convertida contém `check_permission_or_raise` e zero `role IN` remanescente.
+
+**7. Comentários de cargo em guards de layout ficam STALE — confiar na constante, nunca no comentário.**
+Visto em `/vendas` (comentário dizia "gerente e vendedora", constante era `vendedora+pos_vendas`) e em `/bi` (comentário dizia 4 cargos, `BI_ACCESS_ROLES` era só `super_admin+diretor`). SEMPRE confiar no valor da constante em `src/config/roles.ts`, nunca no comentário do arquivo. Ao converter um guard, corrigir o comentário stale de passagem.
