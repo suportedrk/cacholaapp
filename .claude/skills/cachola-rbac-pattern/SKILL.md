@@ -326,3 +326,6 @@ Usar `pg_get_functiondef` no banco de produção (ou local após sincronia) gara
 
 **7. Comentários de cargo em guards de layout ficam STALE — confiar na constante, nunca no comentário.**
 Visto em `/vendas` (comentário dizia "gerente e vendedora", constante era `vendedora+pos_vendas`) e em `/bi` (comentário dizia 4 cargos, `BI_ACCESS_ROLES` era só `super_admin+diretor`). SEMPRE confiar no valor da constante em `src/config/roles.ts`, nunca no comentário do arquivo. Ao converter um guard, corrigir o comentário stale de passagem.
+
+**8. Decisão "honrar vs limpar" de overrides dormentes DEVE ser ancorada na realidade de PRODUÇÃO, nunca só no template ou no comentário do guard.**
+Em Dashboard+Relatórios, o comentário stale ("gerente e financeiro") + os overrides locais sugeriam intenção de dar Relatórios a gerente/financeiro — recomendação inicial: honrar. A auditoria de produção revelou: zero financeiro ativo, e os overrides de gerente eram as contas de teste do próprio dono (brunocasaletti@gmail.com e @hotmail.com) — a mesma conta limpa no BI e Vendas. Premissa caiu, decisão revertida para limpar. SEMPRE auditar em produção QUEM detém o override (query (C) da §5.5) antes de decidir honrar.

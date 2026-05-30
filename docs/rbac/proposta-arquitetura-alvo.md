@@ -1,16 +1,15 @@
 ## Estado atual e handoff — sessão 29/mai/2026
 
 ### Onde estamos
-- Cachola OS v1.31.0 em produção.
-- RBAC Fase 3 — BI convertido e deployado 29/mai/2026 (PR #57, commit main 3360779). Duas partes: migration 124 (backfill bi/bi_atendimento/bi_vendas.view para diretor, neutra) + migration 125 (limpeza do override dormente do gerente gmail [15 grants], remoção de gerente/financeiro do template bi_vendas, conversão dos 17 RPCs aos 3 módulos certos, e layout /bi → requirePermissionServer('bi','view')). Decisão G2=C: os 3 módulos BI ficam super_admin+diretor; gerente/financeiro saem (acesso vestigial via JWT fechado). 17/17 RPCs convertidos, 0 gaps, confirmação visual em produção OK.
-- Vendas (v1.30.0) e Checklist Comercial (v1.29.0) concluídos anteriormente.
+- Cachola OS v1.32.0 em produção.
+- RBAC Fase 3 — Dashboard + Relatórios convertidos e deployados 29/mai/2026 (PR #59, commit main a935c78). Dois módulos layout-only: dashboard → check_permission('dashboard','view') (backfill mig 126, 8 cargos) e relatorios → check_permission('relatorios','view') (módulo PRÓPRIO, não bi; as 13 RPCs report_* são SECURITY INVOKER/RLS, não convertidas). Limpeza (mig 127) dos overrides dormentes de relatorios das 2 contas de teste do dono (gmail/hotmail); diretores Carol/Vinícius honrados (view+export). Conversão invisível nos dois.
+- Concluídos anteriormente: BI (v1.31.0), Vendas (v1.30.0), Checklist Comercial (v1.29.0).
 
 ### Próximo passo
-Dashboard + Relatórios — FASE A levantamento read-only primeiro. Aprendizado 7 (o toggle vira real quando convertido). Tratar também os 3 overrides em 'relatorios' achados na FASE A do BI (financeiro view+export, gerente view). Recomendação: Sonnet (mais simples que BI).
+Notificações — FASE A levantamento read-only. Aprendizado 6: owner-pattern (user_id=auth.uid), toggle provavelmente decorativo — verificar se há conversão real ou só confirmação. Conversão leve. Recomendação: Sonnet.
 
-### Fila Fase 3 após Dashboard+Relatórios (ordem D4)
-1. Decoração — somente após estabilizar dev ativo
-2. Notificações (toggle decorativo)
+### Fila Fase 3 restante
+1. Decoração — SOMENTE após Bruno estabilizar o dev ativo. Não converter antes.
 
 ### Backlog de controles finos (kind='control', sub-fase após todas as rotas)
 - atas.publicar — D2-hold de POST /api/minutes/notify
@@ -19,9 +18,9 @@ Dashboard + Relatórios — FASE A levantamento read-only primeiro. Aprendizado 
 - ploomes_config alignment — RLS hardcoded liberando gerente, SETTINGS_ROLES sem gerente (Aprendizado 4)
 
 ### Estado git pós-deploy
-- main: 3360779 (PR #57 merged).
+- main: a935c78 (PR #59 merged).
 - develop: sincronizado com main.
-- pm2 prod: 2 instâncias online, v1.31.0.
+- pm2 prod: 2 instâncias online, v1.32.0.
 
 ### Aprendizados de workflow (acumulado)
 1. Revisão técnica de diff é responsabilidade do Claude advisor, não do dono (Bruno é não-técnico, não deve ser pedido a ler código). Antes de aprovar merge de qualquer PR de deploy, o advisor revisa o diff (em especial migrations e mudanças de lógica) e dá veredito explícito.
