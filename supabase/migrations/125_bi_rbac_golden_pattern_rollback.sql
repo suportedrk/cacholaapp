@@ -1041,12 +1041,16 @@ $function$
 ;
 
 -- ------------------------------------------------------------
--- 1b' — Re-adiciona gerente/financeiro ao template bi_vendas (5 ações)
+-- 1b' — Re-adiciona gerente/financeiro ao template bi_vendas.
+--       SOMENTE a ação 'view': pela auditoria FASE A §5.2, gerente e
+--       financeiro tinham APENAS bi_vendas.view (create/edit/delete/export
+--       eram exclusivos de super_admin). A 125/1b removeu exatamente 2
+--       linhas (gerente.view, financeiro.view); este rollback re-insere
+--       essas 2 — não as 5 ações, para não criar write-grants fantasmas.
 -- ------------------------------------------------------------
 INSERT INTO public.role_permissions (role_code, module_code, action, granted)
-SELECT r.role_code, 'bi_vendas', a.action, true
+SELECT r.role_code, 'bi_vendas', 'view', true
 FROM (VALUES ('gerente'),('financeiro')) AS r(role_code)
-CROSS JOIN (VALUES ('view'),('create'),('edit'),('delete'),('export')) AS a(action)
 ON CONFLICT (role_code, module_code, action) DO UPDATE SET granted = true;
 
 -- ------------------------------------------------------------
