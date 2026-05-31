@@ -1,27 +1,26 @@
 ## Estado atual e handoff — sessão 29/mai/2026
 
 ### Onde estamos
-- Cachola OS v1.31.0 em produção.
-- RBAC Fase 3 — BI convertido e deployado 29/mai/2026 (PR #57, commit main 3360779). Duas partes: migration 124 (backfill bi/bi_atendimento/bi_vendas.view para diretor, neutra) + migration 125 (limpeza do override dormente do gerente gmail [15 grants], remoção de gerente/financeiro do template bi_vendas, conversão dos 17 RPCs aos 3 módulos certos, e layout /bi → requirePermissionServer('bi','view')). Decisão G2=C: os 3 módulos BI ficam super_admin+diretor; gerente/financeiro saem (acesso vestigial via JWT fechado). 17/17 RPCs convertidos, 0 gaps, confirmação visual em produção OK.
-- Vendas (v1.30.0) e Checklist Comercial (v1.29.0) concluídos anteriormente.
+- Cachola OS v1.32.0 em produção.
+- RBAC Fase 3 — frente de CONVERSÕES concluída para todos os módulos convertíveis (Checklist Comercial v1.29.0, Vendas v1.30.0, BI v1.31.0, Dashboard+Relatórios v1.32.0). Notificações encerrado (owner-pattern).
+- Decoração — FASE A concluída (docs/rbac/fase-a-decoracao.md). ACHADO: já nasceu dourada na camada de DADOS — RLS (13 tabelas) + 5 RPCs INVOKER + backfill já em check_permission('decoracao',...) desde a migration 097. Falta só a CASCA: 3 layouts + 18 API routes (requireRoleServer/Api por DECORACAO_MANAGE_ROLES/DELETE_ROLES) + 6 hasRole (canDelete). DECISÕES CRAVADAS: (i) um módulo 'decoracao' (sem split; e-mail equipe 27/mai); (ii) gerente MANTÉM decoracao.view (conversão invisível); (iii) os 6 canDelete ficam como hasRole por ora (D3) — API/RLS já enforçam delete, sem buraco; converter depende de hook self-scoped no cliente (ver backlog); (iv) backfill provável no-op (097 já populou) — confirmar 097-106 em prod na FASE B; (v) FASE B BLOQUEADA até congelar o dev da Fase 2 (estoque/fornecedores/transferências) + re-scan de delta.
 
-### Próximo passo
-Dashboard + Relatórios — FASE A levantamento read-only primeiro. Aprendizado 7 (o toggle vira real quando convertido). Tratar também os 3 overrides em 'relatorios' achados na FASE A do BI (financeiro view+export, gerente view). Recomendação: Sonnet (mais simples que BI).
+### Próximo passo / único pendente
+Decoração FASE B — decisões prontas, BLOQUEADA pelo dev. Gatilho: Bruno sinaliza "Fase 2 congelada". Aí: re-scan de delta das superfícies → backfill (provável no-op) → swap de guards (3 layouts + 18 APIs: requireRole* → requirePermission*). Sem migration de RLS, sem SQL — o PR mais simples da Fase 3.
 
-### Fila Fase 3 após Dashboard+Relatórios (ordem D4)
-1. Decoração — somente após estabilizar dev ativo
-2. Notificações (toggle decorativo)
+### Fila Fase 3
+- Vazia. Só a FASE B da Decoração, aguardando o congelamento do dev.
 
 ### Backlog de controles finos (kind='control', sub-fase após todas as rotas)
 - atas.publicar — D2-hold de POST /api/minutes/notify
 - manutencao.gerenciar — D2-hold de /manutencao/dashboard, /manutencao/configuracoes, RPC guard_cost_approval, canApprove em chamados/[id]
 - manutencao.notify_emergency — D2-hold de POST /api/email/maintenance-emergency
 - ploomes_config alignment — RLS hardcoded liberando gerente, SETTINGS_ROLES sem gerente (Aprendizado 4)
+- Hook de permissão self-scoped no cliente (usuário CORRENTE): hoje só existe useUserPermissions(userId) em contexto admin. Um hook do usuário atual permitiria converter condicionais de UI que espelham permissão (ex.: os 6 canDelete da Decoração) e deixar toggles de AÇÃO 100% coerentes (UI + API + RLS). App-wide; pré-requisito para a conversão (iii) da Decoração.
 
-### Estado git pós-deploy
-- main: 3360779 (PR #57 merged).
-- develop: sincronizado com main.
-- pm2 prod: 2 instâncias online, v1.31.0.
+### Estado git
+- main: a935c78 (v1.32.0).
+- develop: à frente com commits de documentação.
 
 ### Aprendizados de workflow (acumulado)
 1. Revisão técnica de diff é responsabilidade do Claude advisor, não do dono (Bruno é não-técnico, não deve ser pedido a ler código). Antes de aprovar merge de qualquer PR de deploy, o advisor revisa o diff (em especial migrations e mudanças de lógica) e dá veredito explícito.

@@ -3,18 +3,28 @@
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import Image from 'next/image'
-import { RefreshCw, AlertCircle, Plus, Search, Boxes, Truck } from 'lucide-react'
+import { RefreshCw, AlertCircle, Plus, Search, Boxes, Truck, Tag } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { PageHeader } from '@/components/shared/page-header'
 import { useLoadingTimeout } from '@/hooks/use-loading-timeout'
 import { useDecoracaoItens } from '@/hooks/use-decoracao-itens'
+import { useDecoracaoCategorias } from '@/hooks/use-decoracao-categorias'
 import { useSignedUrls } from '@/hooks/use-signed-urls'
 import type { ItemFiltro } from '@/hooks/use-decoracao-itens'
 import { DECORACAO_BUCKETS, ROUTES } from '@/lib/constants'
 import { cn } from '@/lib/utils'
+
+const TODAS_CATEGORIAS = '__todas__'
 
 const FILTER_OPTIONS: { key: ItemFiltro; label: string }[] = [
   { key: 'ativos', label: 'Ativos' },
@@ -28,12 +38,15 @@ export function ItensClient() {
   const router = useRouter()
   const [filtro, setFiltro] = useState<ItemFiltro>('ativos')
   const [search, setSearch] = useState('')
+  const [categoriaId, setCategoriaId] = useState<string>(TODAS_CATEGORIAS)
 
   const { data: itens = [], isLoading, isError, refetch } = useDecoracaoItens(filtro)
+  const { data: categorias = [] } = useDecoracaoCategorias('ativos')
   const { isTimedOut, retry } = useLoadingTimeout(isLoading)
 
   const term = search.trim().toLowerCase()
   const filtered = itens.filter((it) => {
+    if (categoriaId !== TODAS_CATEGORIAS && it.categoria_id !== categoriaId) return false
     if (!term) return true
     return it.nome.toLowerCase().includes(term)
   })
@@ -131,6 +144,25 @@ export function ItensClient() {
             className="pl-8"
           />
         </div>
+
+        {/* Filtro por categoria */}
+        <Select value={categoriaId} onValueChange={(v) => setCategoriaId(v || TODAS_CATEGORIAS)}>
+          <SelectTrigger className="sm:max-w-[200px]">
+            <SelectValue>
+              {categoriaId === TODAS_CATEGORIAS
+                ? 'Todas as categorias'
+                : categorias.find((c) => c.id === categoriaId)?.nome ?? 'Todas as categorias'}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={TODAS_CATEGORIAS}>Todas as categorias</SelectItem>
+            {categorias.map((cat) => (
+              <SelectItem key={cat.id} value={cat.id}>
+                {cat.nome}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Lista */}
@@ -183,13 +215,19 @@ export function ItensClient() {
 
                     {/* Conteúdo */}
                     <div className="flex min-w-0 flex-1 flex-col gap-1">
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <span className="truncate text-sm font-medium">{it.nome}</span>
+                        {it.categoria_nome && (
+                          <Badge variant="default" className="shrink-0 text-xs">
+                            <Tag className="mr-1 h-3 w-3" />
+                            {it.categoria_nome}
+                          </Badge>
+                        )}
                         <Badge
-                          variant={it.tipo === 'proprio' ? 'default' : 'secondary'}
+                          variant={it.origem === 'acervo' ? 'secondary' : 'outline'}
                           className="shrink-0 text-xs"
                         >
-                          {it.tipo === 'proprio' ? 'Próprio' : 'Alugado'}
+                          {it.origem === 'acervo' ? 'Acervo' : 'Fornecedor'}
                         </Badge>
                         {!it.ativo && (
                           <Badge variant="outline" className="shrink-0 text-xs">
@@ -199,7 +237,7 @@ export function ItensClient() {
                       </div>
 
                       <div className="flex flex-wrap items-center gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
-                        {it.tipo === 'alugado' && it.fornecedor_nome && (
+                        {it.origem === 'fornecedor' && it.fornecedor_nome && (
                           <span className="flex items-center gap-1">
                             <Truck className="h-3 w-3 shrink-0" />
                             {it.fornecedor_nome}
