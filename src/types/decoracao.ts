@@ -61,6 +61,110 @@ export interface TemaFormInput {
   /** IDs das cores de forminha vinculadas ao tema. */
   forminha_cor_ids: string[]
   foto_url?: string | null
+  /** Receita do tema — variações + quantidade da "mesa padrão". */
+  receita: TemaReceitaInput[]
+}
+
+// ── Receita do tema (Bloco B — tema vira receita) ────────────
+
+/** Linha da receita persistida (decoracao_tema_itens). */
+export interface DecoracaoTemaItem {
+  id: string
+  tema_id: string
+  variacao_id: string
+  quantidade: number
+  ordem: number
+  created_at: string
+  updated_at: string
+}
+
+/** Linha da receita hidratada para exibição (variação + item + código). */
+export interface TemaReceitaLinha {
+  variacao_id: string
+  quantidade: number
+  ordem: number
+  codigo: string
+  tamanho: string | null
+  cor: string | null
+  detalhe: string | null
+  item_nome: string
+}
+
+/** Item da receita no input de gravação (RPC update_tema_receita). */
+export interface TemaReceitaInput {
+  variacao_id: string
+  quantidade: number
+  ordem: number
+}
+
+/** Variação achatada do catálogo (itens ativos) para o seletor da receita. */
+export interface VariacaoCatalogo {
+  variacao_id: string
+  codigo: string
+  tamanho: string | null
+  cor: string | null
+  detalhe: string | null
+  item_nome: string
+}
+
+// ── Decoração da festa (Bloco C — festa puxa o tema) ─────────
+
+/** Decoração vinculada a uma festa (1 por evento). */
+export interface DecoracaoFesta {
+  id: string
+  event_id: string
+  tema_id: string | null
+  foto_path: string | null
+  observacoes: string | null
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+/** Linha da lista da festa persistida (decoracao_festa_itens). */
+export interface DecoracaoFestaItem {
+  id: string
+  festa_decoracao_id: string
+  variacao_id: string
+  quantidade: number
+  ordem: number
+  created_at: string
+  updated_at: string
+}
+
+/** Linha da lista hidratada para exibição (variação + item + código). */
+export interface FestaItemLinha {
+  variacao_id: string
+  quantidade: number
+  ordem: number
+  codigo: string
+  tamanho: string | null
+  cor: string | null
+  detalhe: string | null
+  item_nome: string
+}
+
+/**
+ * Decoração da festa completa para a seção do evento: cabeçalho +
+ * tema (nome + foto modelo) + lista hidratada. `foto_path` é o override
+ * da festa; quando null, a UI herda `tema_foto_url`.
+ */
+export interface FestaDecoracaoCompleta {
+  id: string
+  event_id: string
+  tema_id: string | null
+  tema_nome: string | null
+  tema_foto_url: string | null
+  foto_path: string | null
+  observacoes: string | null
+  itens: FestaItemLinha[]
+}
+
+/** Item da lista no input de gravação (RPC update_festa_decoracao_itens). */
+export interface FestaItemInput {
+  variacao_id: string
+  quantidade: number
+  ordem: number
 }
 
 // ── Balões ───────────────────────────────────────────────────

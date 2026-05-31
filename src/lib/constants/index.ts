@@ -100,6 +100,7 @@ export const DECORACAO_BUCKETS = {
   temas: 'decoracao-temas',
   baloes: 'decoracao-baloes',
   itens: 'decoracao-itens',
+  festa: 'decoracao-festa',
 } as const
 
 // ============================================================
