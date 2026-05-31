@@ -157,6 +157,33 @@ Se algo não está documentado aqui, PERGUNTE antes de criar.
 > **REGRA ABSOLUTA**: Nunca usar cores primitivas (--gray-500, --brand-600, etc.) diretamente na UI.
 > Sempre usar os tokens semânticos (--text-primary, --surface-secondary, etc.).
 
+#### Estados selecionado/ativo em ambos os temas (Regra Dark Mode — contraste)
+
+**Problema**: chips e botões com estado "selecionado" frequentemente usam `bg-brand-50` + `text-text-primary`. Em dark mode, `text-text-primary` inverte para quase-branco (`oklch(0.985)`) e `bg-brand-50` mantém o mesmo fundo claro → texto branco sobre fundo branco, contraste ≈ 0.
+
+**Regra**: quando o fundo de um controle **inverte** na seleção (fica claro no light, fica ligeiramente mais claro no dark), a cor do texto/ícone deve inverter junto. Nunca assumir que `text-text-primary` ou `text-text-secondary` é legível sobre qualquer fundo de estado selecionado.
+
+**Padrão correto** (usa `--primary` que já tem variantes light/dark no tema):
+
+```tsx
+// ✅ CORRETO — text-primary é legível sobre bg-primary/10 nos dois temas
+selected
+  ? 'border-primary bg-primary/10 text-primary dark:bg-primary/20'
+  : 'border-border-default text-text-secondary hover:bg-surface-secondary'
+
+// ❌ ERRADO — bg-brand-50 fica claro nos dois temas; text-text-primary fica
+//   claro no dark → contraste ≈ 0
+selected
+  ? 'border-[var(--primary)] bg-brand-50 text-text-primary'
+  : '...'
+```
+
+**Referência real**: seletor de "Cores de forminha" em `tema-edit-sheet.tsx` (bug corrigido em Bloco B da Decoração, mai/2026). O mesmo padrão correto já era usado em `checklists/components/create-checklist-modal.tsx` e `manutencao/configuracoes/page.tsx`.
+
+**Candidatos a auditar (não corrigidos ainda)**:
+- `Step3Templates.tsx`, `Step4Equipe.tsx`, `Step5Prestadores.tsx` — `bg-primary/5` sem `text-primary` explícito (herdado do pai; pode estar ok ou não)
+- `checklists/templates/page.tsx:292` — `bg-primary/10 text-primary` sem `dark:bg-primary/20`
+
 ---
 
 ### 1.2 Tipografia
