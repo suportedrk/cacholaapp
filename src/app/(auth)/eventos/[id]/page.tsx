@@ -27,6 +27,7 @@ import { canViewFestaValues } from '@/config/roles'
 import { AccordionSection } from './components/AccordionSection'
 import { ProvidersSection } from './components/sections/ProvidersSection'
 import { EventSalesSection } from './components/sections/EventSalesSection'
+import { EventDecoracaoSection } from './components/sections/EventDecoracaoSection'
 import { UnitChip } from '@/components/shared/unit-chip'
 import { cn } from '@/lib/utils'
 import type { ChecklistForList } from '@/types/database.types'
@@ -624,6 +625,15 @@ export default function EventoDetailPage() {
 
         {/* S3e: Vendas */}
         <EventSalesSection eventId={id} />
+
+        {/* S3f: Decoração */}
+        <EventDecoracaoSection
+          eventId={id}
+          eventTitle={event.title ?? ''}
+          eventDate={event.date}
+          unitName={event.unit?.name ?? null}
+          clientName={event.client_name ?? null}
+        />
 
         {/* S4: Prestadores */}
         <ProvidersSection eventId={id} eventDate={event.date} eventTitle={event.title ?? ''} />

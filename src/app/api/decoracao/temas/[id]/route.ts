@@ -1,7 +1,13 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { requireRoleApi } from '@/lib/auth/require-role'
-import { DECORACAO_MANAGE_ROLES, DECORACAO_DELETE_ROLES } from '@/config/roles'
+import { requirePermissionApi } from '@/lib/auth/require-permission'
+import { sanitizeReceita } from '../receita-utils'
+
+interface TemaReceitaBodyItem {
+  variacao_id?: string
+  quantidade?: number
+  ordem?: number
+}
 
 interface TemaBody {
   nome?: string
@@ -12,15 +18,17 @@ interface TemaBody {
   decoradora_externa?: boolean
   forminha_cor_ids?: string[]
   foto_url?: string | null
+  receita?: TemaReceitaBodyItem[]
 }
 
-/** Edita um tema — aceita patch parcial. Quando forminha_cor_ids está presente, substitui o conjunto de vínculos. */
+/** Edita um tema — aceita patch parcial. Quando forminha_cor_ids ou receita estão presentes, substituem o conjunto correspondente. */
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const guard = await requireRoleApi(DECORACAO_MANAGE_ROLES)
+    // Convert-as-we-touch (Bloco B): guard por permissão configurável, não cargo.
+    const guard = await requirePermissionApi('decoracao', 'edit')
     if (!guard.ok) return guard.response
 
     const { id } = await params
@@ -41,8 +49,9 @@ export async function PATCH(
     if ('foto_url' in body) patch.foto_url = body.foto_url ?? null
 
     const updateForminhas = 'forminha_cor_ids' in body
+    const updateReceita = 'receita' in body
 
-    if (Object.keys(patch).length === 0 && !updateForminhas) {
+    if (Object.keys(patch).length === 0 && !updateForminhas && !updateReceita) {
       return NextResponse.json({ error: 'Nenhum campo para atualizar.' }, { status: 400 })
     }
 
@@ -79,6 +88,16 @@ export async function PATCH(
       }
     }
 
+    // Receita por último — gravação atômica via RPC (reconcilia numa transação).
+    if (updateReceita) {
+      const receita = sanitizeReceita(body.receita)
+      const { error: receitaErr } = await supabase.rpc('update_tema_receita', {
+        p_tema_id: id,
+        p_itens: receita,
+      })
+      if (receitaErr) throw receitaErr
+    }
+
     return NextResponse.json({ ok: true })
   } catch (err) {
     console.error('[PATCH /api/decoracao/temas/[id]]', err)
@@ -92,7 +111,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const guard = await requireRoleApi(DECORACAO_DELETE_ROLES)
+    const guard = await requirePermissionApi('decoracao', 'delete')
     if (!guard.ok) return guard.response
 
     const { id } = await params

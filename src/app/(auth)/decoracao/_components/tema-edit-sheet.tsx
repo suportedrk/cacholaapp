@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
-import { Loader2, AlertTriangle, Trash2 } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Loader2, AlertTriangle, Trash2, Plus } from 'lucide-react'
 import {
   Sheet,
   SheetContent,
@@ -14,12 +14,25 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/hooks/use-auth'
 import { hasRole, DECORACAO_DELETE_ROLES } from '@/config/roles'
 import { PhotoDropZone, PhotoThumb } from '@/components/shared/photo-upload'
 import { useSignedUrls } from '@/hooks/use-signed-urls'
-import { useCreateTema, useUpdateTema, useDeleteTema } from '@/hooks/use-decoracao'
+import {
+  useCreateTema,
+  useUpdateTema,
+  useDeleteTema,
+  useDecoracaoVariacoesCatalog,
+  useTemaReceita,
+} from '@/hooks/use-decoracao'
 import { createClient } from '@/lib/supabase/client'
 import { DECORACAO_BUCKETS } from '@/lib/constants'
 import { ForminhaColorDot } from './forminha-color-dot'
@@ -28,6 +41,21 @@ import type {
   DecoracaoTemaComForminhas,
   TemaFormInput,
 } from '@/types/decoracao'
+
+/** Linha da receita no estado local do form. */
+interface ReceitaLinhaForm {
+  variacao_id: string
+  quantidade: number
+}
+
+/** Descrição legível de uma variação (item — tamanho/cor/detalhe). */
+function variacaoDesc(
+  v: { item_nome: string; tamanho: string | null; cor: string | null; detalhe: string | null; codigo: string },
+): string {
+  const partes = [v.tamanho, v.cor, v.detalhe].filter(Boolean)
+  const desc = partes.length ? partes.join(' / ') : v.codigo
+  return `${v.item_nome} — ${desc}`
+}
 
 const BUCKET = DECORACAO_BUCKETS.temas
 
@@ -82,9 +110,18 @@ export function TemaEditSheet({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [fotoUrl, setFotoUrl] = useState<string | null>(null)
+  const [receita, setReceita] = useState<ReceitaLinhaForm[]>([])
 
   // Paths subidos durante esta edição e ainda não confirmados pelo Salvar.
   const pendingUploadsRef = useRef<string[]>([])
+  // Guard: hidrata a receita uma vez por abertura (tema.id ou 'create').
+  const receitaHydratedRef = useRef<string | null>(null)
+
+  // Catálogo de variações (itens ativos) para o seletor "Adicionar variação…".
+  const { data: variacoesCatalog = [] } = useDecoracaoVariacoesCatalog()
+  // Receita existente — lazy, só ao abrir em modo edição.
+  const receitaQuery = useTemaReceita(open && !createMode ? (tema?.id ?? null) : null)
+  const receitaData = useMemo(() => receitaQuery.data ?? [], [receitaQuery.data])
 
   const fotoPaths = fotoUrl ? [fotoUrl] : []
   const { data: signedUrls = {} } = useSignedUrls(BUCKET, fotoPaths)
@@ -103,6 +140,8 @@ export function TemaEditSheet({
       setDecoradoraExterna(false)
       setSelectedIds(new Set())
       setFotoUrl(null)
+      setReceita([])
+      receitaHydratedRef.current = 'create'
     } else if (tema) {
       setNome(tema.nome)
       setCategoria(tema.categoria ?? '')
@@ -112,9 +151,22 @@ export function TemaEditSheet({
       setDecoradoraExterna(tema.decoradora_externa)
       setSelectedIds(new Set(tema.forminhas.map((f) => f.id)))
       setFotoUrl(tema.foto_url)
+      // A receita é hidratada no efeito dedicado quando a query resolve.
+      receitaHydratedRef.current = null
     }
     /* eslint-enable react-hooks/set-state-in-effect */
   }, [open, createMode, tema])
+
+  // Hidrata a receita quando a query resolve (uma vez por abertura/tema).
+  useEffect(() => {
+    if (!open || createMode || !tema) return
+    if (!receitaQuery.isSuccess) return
+    if (receitaHydratedRef.current === tema.id) return
+    /* eslint-disable react-hooks/set-state-in-effect -- sincroniza query→form ao abrir */
+    setReceita(receitaData.map((r) => ({ variacao_id: r.variacao_id, quantidade: r.quantidade })))
+    receitaHydratedRef.current = tema.id
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, [open, createMode, tema, receitaQuery.isSuccess, receitaData])
 
   function toggleForminha(id: string) {
     setSelectedIds((prev) => {
@@ -135,7 +187,49 @@ export function TemaEditSheet({
       decoradora_externa: decoradoraExterna,
       forminha_cor_ids: [...selectedIds],
       foto_url: fotoUrl,
+      receita: receita.map((r, idx) => ({
+        variacao_id: r.variacao_id,
+        quantidade: r.quantidade,
+        ordem: idx,
+      })),
     }
+  }
+
+  // Mapa variacao_id → descrição, mesclando catálogo + linhas já carregadas
+  // (cobre variação cujo item foi desativado e não está mais no catálogo ativo).
+  const labelByVariacao = useMemo(() => {
+    const m = new Map<string, { desc: string; codigo: string }>()
+    for (const r of receitaData) {
+      m.set(r.variacao_id, { desc: variacaoDesc(r), codigo: r.codigo })
+    }
+    for (const v of variacoesCatalog) {
+      m.set(v.variacao_id, { desc: variacaoDesc(v), codigo: v.codigo })
+    }
+    return m
+  }, [receitaData, variacoesCatalog])
+
+  // Variações ainda não adicionadas à receita (repetição vira quantidade).
+  const variacoesDisponiveis = useMemo(
+    () => variacoesCatalog.filter((v) => !receita.some((r) => r.variacao_id === v.variacao_id)),
+    [variacoesCatalog, receita],
+  )
+
+  function adicionarVariacao(variacaoId: string) {
+    if (!variacaoId) return
+    if (receita.some((r) => r.variacao_id === variacaoId)) return
+    setReceita((prev) => [...prev, { variacao_id: variacaoId, quantidade: 1 }])
+  }
+
+  function removerReceita(variacaoId: string) {
+    setReceita((prev) => prev.filter((r) => r.variacao_id !== variacaoId))
+  }
+
+  function atualizarQuantidade(variacaoId: string, valor: string) {
+    const num = parseInt(valor, 10)
+    const q = isNaN(num) || num < 1 ? 1 : num
+    setReceita((prev) =>
+      prev.map((r) => (r.variacao_id === variacaoId ? { ...r, quantidade: q } : r)),
+    )
   }
 
   function handleFotoUpload(storagePath: string): Promise<void> {
@@ -294,7 +388,7 @@ export function TemaEditSheet({
                       className={cn(
                         'flex items-center gap-1.5 rounded-md border px-2 py-1.5 text-left text-xs transition-colors',
                         selected
-                          ? 'border-[var(--primary)] bg-brand-50 text-text-primary'
+                          ? 'border-primary bg-primary/10 text-primary dark:bg-primary/20'
                           : 'border-border-default text-text-secondary hover:bg-surface-secondary',
                         !f.ativo && 'opacity-60',
                       )}
@@ -313,6 +407,100 @@ export function TemaEditSheet({
                   )
                 })}
               </div>
+            </div>
+
+            {/* Itens padrão (receita) */}
+            <div className="space-y-2">
+              <div className="flex items-baseline justify-between">
+                <Label>Itens padrão (receita)</Label>
+                <span className="text-xs text-text-tertiary">
+                  {receita.length} {receita.length === 1 ? 'item' : 'itens'}
+                </span>
+              </div>
+              <p className="text-xs text-text-tertiary">
+                Variações que compõem a mesa padrão deste tema. A foto acima é a
+                foto modelo.
+              </p>
+
+              {!createMode && receitaQuery.isLoading ? (
+                <p className="text-xs text-text-tertiary">Carregando receita…</p>
+              ) : (
+                <>
+                  {receita.length > 0 && (
+                    <ul className="space-y-2">
+                      {receita.map((linha) => {
+                        const info = labelByVariacao.get(linha.variacao_id)
+                        return (
+                          <li
+                            key={linha.variacao_id}
+                            className="grid gap-2 rounded-md border border-border-default bg-surface-primary p-3 sm:grid-cols-[1fr_auto_auto] sm:items-center"
+                          >
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-medium">
+                                {info?.desc ?? '—'}
+                              </p>
+                              <p className="font-mono text-xs text-text-tertiary">
+                                {info?.codigo ?? '—'}
+                              </p>
+                            </div>
+                            <Input
+                              type="number"
+                              inputMode="numeric"
+                              min={1}
+                              value={linha.quantidade}
+                              onChange={(e) =>
+                                atualizarQuantidade(linha.variacao_id, e.target.value)
+                              }
+                              className="w-24 text-right"
+                              aria-label={`Quantidade de ${info?.desc ?? 'variação'}`}
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon-sm"
+                              onClick={() => removerReceita(linha.variacao_id)}
+                              aria-label="Remover da receita"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  )}
+
+                  {variacoesDisponiveis.length > 0 ? (
+                    <Select value="" onValueChange={(v) => adicionarVariacao(v ?? '')}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue>
+                          <span className="flex items-center gap-1.5 text-text-secondary">
+                            <Plus className="h-4 w-4" />
+                            Adicionar variação…
+                          </span>
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {variacoesDisponiveis.map((v) => (
+                          <SelectItem key={v.variacao_id} value={v.variacao_id}>
+                            <span className="flex w-full items-center justify-between gap-3">
+                              <span>{variacaoDesc(v)}</span>
+                              <span className="font-mono text-xs text-text-tertiary">
+                                {v.codigo}
+                              </span>
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <p className="text-xs text-text-tertiary">
+                      {variacoesCatalog.length === 0
+                        ? 'Nenhuma variação de item ativa no catálogo.'
+                        : 'Todas as variações do catálogo já estão na receita.'}
+                    </p>
+                  )}
+                </>
+              )}
             </div>
 
             {/* Observações */}
