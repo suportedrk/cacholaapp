@@ -273,6 +273,23 @@ export interface CriarTransferenciaInput {
   itens: { variacao_id: string; quantidade: number }[]
 }
 
+// ── Categorias de item ───────────────────────────────────────
+
+export interface DecoracaoCategoria {
+  id: string
+  nome: string
+  ordem: number
+  ativo: boolean
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface CategoriaFormInput {
+  nome: string
+  ativo: boolean
+}
+
 // ── Ordens de serviço (OS de balões) ─────────────────────────
 
 export type DecoracaoOSItemStatus = 'aguardando_prova' | 'aprovada' | 'realizada'
