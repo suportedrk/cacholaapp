@@ -109,6 +109,9 @@ export interface VariacaoCatalogo {
 
 // ── Decoração da festa (Bloco C — festa puxa o tema) ─────────
 
+/** Status do ciclo de vida da decoração da festa (Bloco D). */
+export type FestaStatus = 'aberta' | 'encerrada'
+
 /** Decoração vinculada a uma festa (1 por evento). */
 export interface DecoracaoFesta {
   id: string
@@ -116,6 +119,9 @@ export interface DecoracaoFesta {
   tema_id: string | null
   foto_path: string | null
   observacoes: string | null
+  status: FestaStatus
+  encerrada_em: string | null
+  encerrada_by: string | null
   created_by: string | null
   created_at: string
   updated_at: string
@@ -128,11 +134,19 @@ export interface DecoracaoFestaItem {
   variacao_id: string
   quantidade: number
   ordem: number
+  qtd_ok: number
+  qtd_quebrado: number
+  qtd_perdido: number
+  qtd_quarentena: number
   created_at: string
   updated_at: string
 }
 
-/** Linha da lista hidratada para exibição (variação + item + código). */
+/**
+ * Linha da lista hidratada para exibição (variação + item + código).
+ * Os campos de desfecho são 0 antes do encerramento; após, somam a
+ * `quantidade` da linha.
+ */
 export interface FestaItemLinha {
   variacao_id: string
   quantidade: number
@@ -142,6 +156,10 @@ export interface FestaItemLinha {
   cor: string | null
   detalhe: string | null
   item_nome: string
+  qtd_ok: number
+  qtd_quebrado: number
+  qtd_perdido: number
+  qtd_quarentena: number
 }
 
 /**
@@ -157,6 +175,8 @@ export interface FestaDecoracaoCompleta {
   tema_foto_url: string | null
   foto_path: string | null
   observacoes: string | null
+  status: FestaStatus
+  encerrada_em: string | null
   itens: FestaItemLinha[]
 }
 
@@ -165,6 +185,65 @@ export interface FestaItemInput {
   variacao_id: string
   quantidade: number
   ordem: number
+}
+
+// ── Encerramento da festa (Bloco D) ──────────────────────────
+
+/** Desfecho de uma linha no encerramento. Soma dos quatro = quantidade. */
+export interface EncerramentoLinhaInput {
+  variacao_id: string
+  qtd_ok: number
+  qtd_quebrado: number
+  qtd_perdido: number
+  qtd_quarentena: number
+  /** Motivo da quarentena (só relevante quando qtd_quarentena > 0). */
+  motivo?: string | null
+}
+
+/** Aviso não-bloqueante: a baixa excedeu o saldo do local e zerou. */
+export interface EncerramentoAviso {
+  variacao_id: string
+  baixa: number
+  saldo_antes: number
+}
+
+/** Retorno do RPC encerrar_festa_decoracao. */
+export interface EncerramentoResult {
+  festa_id: string
+  avisos: EncerramentoAviso[]
+}
+
+// ── Quarentena (Bloco D) ─────────────────────────────────────
+
+export type QuarentenaStatus = 'pendente' | 'resolvido'
+export type QuarentenaResolucao = 'consertado' | 'descartado'
+
+/** Linha de quarentena persistida (decoracao_quarentena). */
+export interface DecoracaoQuarentena {
+  id: string
+  variacao_id: string
+  quantidade: number
+  motivo: string
+  origem_festa_id: string | null
+  local_id: string
+  status: QuarentenaStatus
+  resolucao: QuarentenaResolucao | null
+  resolvido_em: string | null
+  resolvido_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+/** Linha de quarentena hidratada para a tela (variação + festa + local). */
+export interface QuarentenaResumo extends DecoracaoQuarentena {
+  codigo: string
+  tamanho: string | null
+  cor: string | null
+  detalhe: string | null
+  item_nome: string
+  local_nome: string
+  /** Identificação da festa de origem (cliente · data), quando houver. */
+  origem_festa_label: string | null
 }
 
 // ── Balões ───────────────────────────────────────────────────

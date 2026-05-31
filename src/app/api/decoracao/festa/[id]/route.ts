@@ -45,6 +45,24 @@ export async function PATCH(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const supabase = (await createClient()) as any
 
+    // Guard de integridade (Bloco D): festa encerrada é read-only. Sem isto,
+    // o resumo read-only da UI seria burlável via API.
+    const { data: festa, error: festaErr } = await supabase
+      .from('decoracao_festa')
+      .select('status')
+      .eq('id', id)
+      .maybeSingle()
+    if (festaErr) throw festaErr
+    if (!festa) {
+      return NextResponse.json({ error: 'Decoração não encontrada.' }, { status: 404 })
+    }
+    if (festa.status === 'encerrada') {
+      return NextResponse.json(
+        { error: 'Esta decoração já foi encerrada e não pode mais ser editada.' },
+        { status: 409 },
+      )
+    }
+
     if (Object.keys(patch).length > 0) {
       const { data: row, error } = await supabase
         .from('decoracao_festa')

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Sparkles, ChevronDown, Loader2, Plus, Trash2, Printer,
-  Link2, ImageOff, AlertTriangle,
+  Link2, ImageOff, AlertTriangle, Lock, CheckCircle2, Flag,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -31,7 +31,20 @@ import {
 } from '@/hooks/use-decoracao'
 import { cn } from '@/lib/utils'
 import { FestaRomaneioPrintDialog } from './FestaRomaneioPrintDialog'
+import { FestaEncerramentoDialog } from './FestaEncerramentoDialog'
 import type { FestaItemLinha } from '@/types/decoracao'
+
+function formatDataHora(iso: string | null): string {
+  if (!iso) return '—'
+  try {
+    return new Intl.DateTimeFormat('pt-BR', {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo',
+    }).format(new Date(iso))
+  } catch {
+    return '—'
+  }
+}
 
 const FESTA_BUCKET = DECORACAO_BUCKETS.festa
 const TEMA_BUCKET = DECORACAO_BUCKETS.temas
@@ -101,13 +114,15 @@ export function EventDecoracaoSection({
   // Uploads pendentes (override) ainda não confirmados pelo Salvar.
   const pendingUploadsRef = useRef<string[]>([])
 
-  // ── Picker de tema + confirmação de re-vínculo + romaneio ──
+  // ── Picker de tema + confirmação de re-vínculo + romaneio + encerramento ──
   const [pickerOpen, setPickerOpen] = useState(false)
   const [pickerTemaId, setPickerTemaId] = useState('')
   const [romaneioOpen, setRomaneioOpen] = useState(false)
+  const [encerrarOpen, setEncerrarOpen] = useState(false)
 
   const temasAtivos = useMemo(() => temas.filter((t) => t.ativo), [temas])
   const hasDecoracao = !!data
+  const isEncerrada = data?.status === 'encerrada'
 
   // Hidratação do form a partir da query.
   useEffect(() => {
@@ -286,6 +301,12 @@ export function EventDecoracaoSection({
         {!isLoading && hasDecoracao && data?.tema_nome && (
           <span className="text-xs text-text-tertiary truncate max-w-[140px]">{data.tema_nome}</span>
         )}
+        {!isLoading && isEncerrada && (
+          <span className="flex shrink-0 items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-text-secondary">
+            <Lock className="h-3 w-3" />
+            Encerrada
+          </span>
+        )}
         <ChevronDown className={cn('w-4 h-4 text-text-tertiary transition-transform duration-200', isOpen && 'rotate-180')} />
       </button>
 
@@ -345,17 +366,30 @@ export function EventDecoracaoSection({
                     <p className="mt-0.5 text-xs text-text-tertiary">
                       {fotoIsOverride ? 'Foto própria da festa' : 'Foto modelo do tema'}
                     </p>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={openPicker}>
-                        <Link2 className="w-3.5 h-3.5" />
-                        Vincular outro tema
-                      </Button>
-                    </div>
+                    {!isEncerrada && (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={openPicker}>
+                          <Link2 className="w-3.5 h-3.5" />
+                          Vincular outro tema
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                {/* Trocar foto (quando sem override) */}
-                {!fotoIsOverride && (
+                {/* Banner de encerrada */}
+                {isEncerrada && (
+                  <div className="flex items-start gap-2 rounded-lg border border-border-default bg-muted/40 px-3 py-2 text-xs text-text-secondary">
+                    <Lock className="mt-0.5 h-4 w-4 shrink-0 text-text-tertiary" />
+                    <span>
+                      Decoração <strong>encerrada</strong> em {formatDataHora(data.encerrada_em)}.
+                      A lista abaixo é o registro final dos desfechos (somente leitura).
+                    </span>
+                  </div>
+                )}
+
+                {/* Trocar foto (quando sem override) — só com festa aberta */}
+                {!isEncerrada && !fotoIsOverride && (
                   <div className="space-y-1.5">
                     <Label>Trocar foto na festa</Label>
                     <PhotoDropZone
@@ -372,7 +406,57 @@ export function EventDecoracaoSection({
                   </div>
                 )}
 
-                {/* Lista editável */}
+                {/* Resumo read-only dos desfechos (festa encerrada) */}
+                {isEncerrada && (
+                  <div className="space-y-2">
+                    <Label>Desfecho dos itens</Label>
+                    <ul className="space-y-2">
+                      {data.itens.map((l) => {
+                        const desc = [l.tamanho, l.cor, l.detalhe].filter(Boolean).join(' / ') || l.codigo
+                        const ocorrencias = l.qtd_quebrado + l.qtd_perdido + l.qtd_quarentena
+                        return (
+                          <li
+                            key={l.variacao_id}
+                            className="rounded-md border border-border-default bg-surface-primary p-3"
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-medium">{l.item_nome} — {desc}</p>
+                                <p className="font-mono text-xs text-text-tertiary">{l.codigo} · {l.quantidade} {l.quantidade === 1 ? 'peça' : 'peças'}</p>
+                              </div>
+                              {ocorrencias === 0 ? (
+                                <span className="flex shrink-0 items-center gap-1 text-xs text-green-600">
+                                  <CheckCircle2 className="h-3.5 w-3.5" />
+                                  Tudo OK
+                                </span>
+                              ) : (
+                                <span className="shrink-0 text-xs text-amber-600">
+                                  {l.qtd_ok} ok
+                                </span>
+                              )}
+                            </div>
+                            {ocorrencias > 0 && (
+                              <div className="mt-2 flex flex-wrap gap-1.5 text-xs">
+                                {l.qtd_quebrado > 0 && (
+                                  <span className="rounded-full border border-border-default px-2 py-0.5 text-text-secondary">Quebrou: {l.qtd_quebrado}</span>
+                                )}
+                                {l.qtd_perdido > 0 && (
+                                  <span className="rounded-full border border-border-default px-2 py-0.5 text-text-secondary">Sumiu: {l.qtd_perdido}</span>
+                                )}
+                                {l.qtd_quarentena > 0 && (
+                                  <span className="rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-700">Quarentena: {l.qtd_quarentena}</span>
+                                )}
+                              </div>
+                            )}
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Lista editável (festa aberta) */}
+                {!isEncerrada && (
                 <div className="space-y-2">
                   <div className="flex items-baseline justify-between">
                     <Label>Itens da decoração</Label>
@@ -447,48 +531,86 @@ export function EventDecoracaoSection({
                     </p>
                   )}
                 </div>
+                )}
 
-                {/* Observações */}
-                <div className="space-y-1.5">
-                  <Label htmlFor="festa-deco-obs">Observações</Label>
-                  <Textarea
-                    id="festa-deco-obs"
-                    value={observacoes}
-                    onChange={(e) => {
-                      setObservacoes(e.target.value)
-                      setDirty(true)
-                    }}
-                    rows={3}
-                    placeholder="Notas da decoração desta festa…"
-                  />
-                </div>
+                {/* Observações — editável (aberta) */}
+                {!isEncerrada && (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="festa-deco-obs">Observações</Label>
+                    <Textarea
+                      id="festa-deco-obs"
+                      value={observacoes}
+                      onChange={(e) => {
+                        setObservacoes(e.target.value)
+                        setDirty(true)
+                      }}
+                      rows={3}
+                      placeholder="Notas da decoração desta festa…"
+                    />
+                  </div>
+                )}
 
-                {/* Ações */}
-                <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border-default pt-3">
-                  <div className="flex items-center gap-2">
+                {/* Observações — read-only (encerrada, se houver) */}
+                {isEncerrada && data.observacoes && (
+                  <div className="space-y-1.5">
+                    <Label>Observações</Label>
+                    <p className="whitespace-pre-wrap rounded-md border border-border-default bg-surface-primary p-3 text-sm text-text-secondary">
+                      {data.observacoes}
+                    </p>
+                  </div>
+                )}
+
+                {/* Ações — festa encerrada (só romaneio) */}
+                {isEncerrada && (
+                  <div className="flex flex-wrap items-center gap-2 border-t border-border-default pt-3">
                     <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={() => setRomaneioOpen(true)}>
                       <Printer className="w-3.5 h-3.5" />
                       Imprimir romaneio
                     </Button>
-                    {canDelete && (
-                      <Button type="button" variant="ghost" size="sm" className="gap-1.5 text-destructive" onClick={handleDesvincular} disabled={isMutating}>
-                        <Trash2 className="w-3.5 h-3.5" />
-                        Desvincular
-                      </Button>
-                    )}
                   </div>
-                  <div className="flex items-center gap-2">
-                    {dirty && (
-                      <Button type="button" variant="outline" size="sm" onClick={handleCancelar} disabled={isMutating}>
-                        Cancelar
+                )}
+
+                {/* Ações — festa aberta */}
+                {!isEncerrada && (
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border-default pt-3">
+                    <div className="flex items-center gap-2">
+                      <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={() => setRomaneioOpen(true)}>
+                        <Printer className="w-3.5 h-3.5" />
+                        Imprimir romaneio
                       </Button>
-                    )}
-                    <Button type="button" size="sm" onClick={handleSalvar} disabled={!dirty || isMutating}>
-                      {update.isPending && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
-                      Salvar
-                    </Button>
+                      {canDelete && (
+                        <Button type="button" variant="ghost" size="sm" className="gap-1.5 text-destructive" onClick={handleDesvincular} disabled={isMutating}>
+                          <Trash2 className="w-3.5 h-3.5" />
+                          Desvincular
+                        </Button>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {dirty ? (
+                        <>
+                          <Button type="button" variant="outline" size="sm" onClick={handleCancelar} disabled={isMutating}>
+                            Cancelar
+                          </Button>
+                          <Button type="button" size="sm" onClick={handleSalvar} disabled={!dirty || isMutating}>
+                            {update.isPending && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
+                            Salvar
+                          </Button>
+                        </>
+                      ) : (
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="gap-1.5"
+                          onClick={() => setEncerrarOpen(true)}
+                          disabled={isMutating || itens.length === 0}
+                        >
+                          <Flag className="h-3.5 w-3.5" />
+                          Encerrar decoração
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                </div>
+                )}
               </>
             )}
           </div>
@@ -543,6 +665,18 @@ export function EventDecoracaoSection({
 
       {/* Romaneio */}
       <FestaRomaneioPrintDialog open={romaneioOpen} onOpenChange={setRomaneioOpen} data={romaneioData} />
+
+      {/* Encerramento item a item (Bloco D) */}
+      {data && (
+        <FestaEncerramentoDialog
+          open={encerrarOpen}
+          onOpenChange={setEncerrarOpen}
+          festaId={data.id}
+          eventId={eventId}
+          unitName={unitName}
+          itens={data.itens}
+        />
+      )}
     </div>
   )
 }

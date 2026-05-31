@@ -90,6 +90,7 @@ export const ROUTES = {
   decoracaoItemNovo: '/decoracao/itens/nova',
   decoracaoEstoque: '/decoracao/estoque',
   decoracaoTransferencias: '/decoracao/transferencias',
+  decoracaoQuarentena: '/decoracao/quarentena',
 } as const
 
 // ============================================================
