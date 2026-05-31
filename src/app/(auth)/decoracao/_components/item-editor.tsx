@@ -20,6 +20,7 @@ import { PageHeader } from '@/components/shared/page-header'
 import { PhotoDropZone, PhotoThumb } from '@/components/shared/photo-upload'
 import { useSignedUrls } from '@/hooks/use-signed-urls'
 import { useDecoracaoFornecedores } from '@/hooks/use-decoracao-fornecedores'
+import { useDecoracaoCategorias } from '@/hooks/use-decoracao-categorias'
 import {
   useDecoracaoItem,
   useCreateItem,
@@ -31,10 +32,11 @@ import { useAuth } from '@/hooks/use-auth'
 import { createClient } from '@/lib/supabase/client'
 import { useDecoracaoEstoquePorItem } from '@/hooks/use-decoracao-estoque'
 import { DECORACAO_BUCKETS, ROUTES } from '@/lib/constants'
+import { parseMoney, moneyDisplay } from '@/lib/utils/money-br'
 import { cn } from '@/lib/utils'
 import { VariacaoCard } from './variacao-card'
 import type {
-  DecoracaoItemTipo,
+  DecoracaoItemOrigem,
   ItemFormInput,
   VariacaoFormInput,
 } from '@/types/decoracao'
@@ -75,19 +77,26 @@ export function ItemEditor({ mode, itemId }: Props) {
   const deleteMutation = useDeleteItem()
 
   const { data: fornecedores = [] } = useDecoracaoFornecedores('ativos')
+  const { data: categorias = [] } = useDecoracaoCategorias('ativos')
   const { data: estoquePorItem = [] } = useDecoracaoEstoquePorItem(
     mode === 'edit' ? itemId : undefined,
   )
 
   const [form, setForm] = useState<ItemFormInput>({
     nome: '',
-    tipo: 'proprio',
+    origem: 'acervo',
     fornecedor_id: null,
+    categoria_id: null,
+    preco_custo: 0,
+    preco_venda: 0,
     foto_path: null,
     observacoes: null,
     ativo: true,
     variacoes: [newEmptyVariacao(0)],
   })
+  /** Strings cruas dos inputs de preço (formato BR), separadas do number do form. */
+  const [custoRaw, setCustoRaw] = useState('')
+  const [vendaRaw, setVendaRaw] = useState('')
   /** Mapa de codigos reais por índice da variação (para edição). Variações novas não têm. */
   const [codigos, setCodigos] = useState<Record<number, string>>({})
   const [deleteConfirm, setDeleteConfirm] = useState(false)
@@ -104,8 +113,11 @@ export function ItemEditor({ mode, itemId }: Props) {
     const d = detailQuery.data
     setForm({
       nome: d.nome,
-      tipo: d.tipo,
+      origem: d.origem,
       fornecedor_id: d.fornecedor_id,
+      categoria_id: d.categoria_id,
+      preco_custo: d.preco_custo,
+      preco_venda: d.preco_venda,
       foto_path: d.foto_path,
       observacoes: d.observacoes,
       ativo: d.ativo,
@@ -117,6 +129,8 @@ export function ItemEditor({ mode, itemId }: Props) {
         ordem: v.ordem,
       })),
     })
+    setCustoRaw(moneyDisplay(d.preco_custo))
+    setVendaRaw(moneyDisplay(d.preco_venda))
     setCodigos(
       Object.fromEntries(d.variacoes.map((v, i) => [i, v.codigo])),
     )
@@ -180,13 +194,18 @@ export function ItemEditor({ mode, itemId }: Props) {
 
     const nome = form.nome.trim()
     if (!nome) return
+    if (!form.categoria_id) return
+    if (form.origem === 'fornecedor' && !form.fornecedor_id) return
     if (form.variacoes.length === 0) return
     if (!form.variacoes.every(isVariacaoValida)) return
 
     const payload: ItemFormInput = {
       nome,
-      tipo: form.tipo,
-      fornecedor_id: form.tipo === 'alugado' ? form.fornecedor_id : null,
+      origem: form.origem,
+      fornecedor_id: form.origem === 'fornecedor' ? form.fornecedor_id : null,
+      categoria_id: form.categoria_id,
+      preco_custo: parseMoney(custoRaw) ?? 0,
+      preco_venda: parseMoney(vendaRaw) ?? 0,
       foto_path: form.foto_path,
       observacoes: form.observacoes?.trim() || null,
       ativo: form.ativo,
@@ -277,9 +296,12 @@ export function ItemEditor({ mode, itemId }: Props) {
 
   // ─── Validações para o botão Salvar ────────────────────────
   const nomeValido = form.nome.trim().length > 0
+  const categoriaValida = !!form.categoria_id
+  const origemValida = form.origem === 'acervo' || !!form.fornecedor_id
   const variacoesValidas =
     form.variacoes.length > 0 && form.variacoes.every(isVariacaoValida)
-  const canSubmit = nomeValido && variacoesValidas && !isPending
+  const canSubmit =
+    nomeValido && categoriaValida && origemValida && variacoesValidas && !isPending
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -317,37 +339,67 @@ export function ItemEditor({ mode, itemId }: Props) {
               />
             </div>
 
-            {/* Tipo — toggle pills */}
+            {/* Categoria — obrigatório */}
             <div className="space-y-1.5">
-              <Label>Tipo *</Label>
+              <Label htmlFor="item-categoria">Categoria *</Label>
+              <Select
+                value={form.categoria_id ?? ''}
+                onValueChange={(v) =>
+                  setForm((f) => ({ ...f, categoria_id: v || null }))
+                }
+                disabled={isPending}
+              >
+                <SelectTrigger id="item-categoria">
+                  <SelectValue placeholder="Selecione uma categoria">
+                    {categorias.find((c) => c.id === form.categoria_id)?.nome}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {categorias.length === 0 && (
+                    <div className="px-2 py-1.5 text-xs text-text-tertiary">
+                      Nenhuma categoria ativa cadastrada.
+                    </div>
+                  )}
+                  {categorias.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id}>
+                      {cat.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Origem — toggle pills */}
+            <div className="space-y-1.5">
+              <Label>Origem *</Label>
               <div className="flex gap-2">
-                {(['proprio', 'alugado'] as DecoracaoItemTipo[]).map((t) => (
+                {(['acervo', 'fornecedor'] as DecoracaoItemOrigem[]).map((o) => (
                   <button
-                    key={t}
+                    key={o}
                     type="button"
                     onClick={() => setForm((f) => ({
                       ...f,
-                      tipo: t,
-                      fornecedor_id: t === 'proprio' ? null : f.fornecedor_id,
+                      origem: o,
+                      fornecedor_id: o === 'acervo' ? null : f.fornecedor_id,
                     }))}
                     disabled={isPending}
                     className={cn(
                       'rounded-full border px-4 py-1.5 text-sm font-medium transition-colors',
-                      form.tipo === t
+                      form.origem === o
                         ? 'border-primary bg-primary text-primary-foreground'
                         : 'border-border-default bg-card text-text-secondary hover:bg-muted/40',
                     )}
                   >
-                    {t === 'proprio' ? 'Próprio' : 'Alugado'}
+                    {o === 'acervo' ? 'Acervo' : 'Fornecedor'}
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* Fornecedor — visível apenas quando alugado */}
-            {form.tipo === 'alugado' && (
+            {/* Fornecedor — visível apenas quando origem=fornecedor */}
+            {form.origem === 'fornecedor' && (
               <div className="space-y-1.5">
-                <Label htmlFor="item-fornecedor">Fornecedor</Label>
+                <Label htmlFor="item-fornecedor">Fornecedor *</Label>
                 <Select
                   value={form.fornecedor_id ?? ''}
                   onValueChange={(v) =>
@@ -356,7 +408,9 @@ export function ItemEditor({ mode, itemId }: Props) {
                   disabled={isPending}
                 >
                   <SelectTrigger id="item-fornecedor">
-                    <SelectValue placeholder="Selecione um fornecedor (opcional)" />
+                    <SelectValue placeholder="Selecione um fornecedor">
+                      {fornecedores.find((forn) => forn.id === form.fornecedor_id)?.nome}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {fornecedores.length === 0 && (
@@ -373,6 +427,40 @@ export function ItemEditor({ mode, itemId }: Props) {
                 </Select>
               </div>
             )}
+
+            {/* Preços */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="item-preco-custo">Preço de custo (R$)</Label>
+                <Input
+                  id="item-preco-custo"
+                  value={custoRaw}
+                  onChange={(e) => setCustoRaw(e.target.value)}
+                  onBlur={() => {
+                    const n = parseMoney(custoRaw)
+                    setCustoRaw(moneyDisplay(n))
+                  }}
+                  placeholder="0,00"
+                  inputMode="decimal"
+                  disabled={isPending}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="item-preco-venda">Preço de venda (R$)</Label>
+                <Input
+                  id="item-preco-venda"
+                  value={vendaRaw}
+                  onChange={(e) => setVendaRaw(e.target.value)}
+                  onBlur={() => {
+                    const n = parseMoney(vendaRaw)
+                    setVendaRaw(moneyDisplay(n))
+                  }}
+                  placeholder="0,00"
+                  inputMode="decimal"
+                  disabled={isPending}
+                />
+              </div>
+            </div>
 
             {/* Observações */}
             <div className="space-y-1.5">

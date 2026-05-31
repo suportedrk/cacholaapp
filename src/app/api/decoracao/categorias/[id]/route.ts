@@ -59,7 +59,16 @@ export async function DELETE(
       .delete()
       .eq('id', id)
 
-    if (error) throw error
+    if (error) {
+      // FK decoracao_itens.categoria_id ON DELETE RESTRICT (migration 129)
+      if (error.code === '23503') {
+        return NextResponse.json(
+          { error: 'Categoria em uso por itens. Desative-a em vez de excluir.' },
+          { status: 409 },
+        )
+      }
+      throw error
+    }
 
     return NextResponse.json({ ok: true })
   } catch (err) {

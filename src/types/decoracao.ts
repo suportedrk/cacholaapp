@@ -134,7 +134,7 @@ export interface LocalFormInput {
 
 // ── Itens com variações (Bloco 2 do estoque) ─────────────────
 
-export type DecoracaoItemTipo = 'proprio' | 'alugado'
+export type DecoracaoItemOrigem = 'acervo' | 'fornecedor'
 
 export interface DecoracaoItemVariacao {
   id: string
@@ -151,8 +151,11 @@ export interface DecoracaoItemVariacao {
 export interface DecoracaoItem {
   id: string
   nome: string
-  tipo: DecoracaoItemTipo
+  origem: DecoracaoItemOrigem
   fornecedor_id: string | null
+  categoria_id: string | null
+  preco_custo: number
+  preco_venda: number
   foto_path: string | null
   observacoes: string | null
   ativo: boolean
@@ -161,15 +164,17 @@ export interface DecoracaoItem {
   updated_at: string
 }
 
-/** Item com fornecedor resolvido e variações já carregadas. */
+/** Item com fornecedor + categoria resolvidos e variações já carregadas. */
 export interface DecoracaoItemComDetalhes extends DecoracaoItem {
   fornecedor_nome: string | null
+  categoria_nome: string | null
   variacoes: DecoracaoItemVariacao[]
 }
 
-/** Resumo para listagem: foto, tipo, fornecedor, contagem de variações. */
+/** Resumo para listagem: foto, origem, categoria, fornecedor, contagem de variações. */
 export interface DecoracaoItemResumo extends DecoracaoItem {
   fornecedor_nome: string | null
+  categoria_nome: string | null
   variacoes_count: number
 }
 
@@ -184,8 +189,11 @@ export interface VariacaoFormInput {
 
 export interface ItemFormInput {
   nome: string
-  tipo: DecoracaoItemTipo
+  origem: DecoracaoItemOrigem
   fornecedor_id: string | null
+  categoria_id: string | null
+  preco_custo: number
+  preco_venda: number
   foto_path: string | null
   observacoes: string | null
   ativo: boolean

@@ -32,8 +32,11 @@ export type ItemFiltro = 'ativos' | 'inativos' | 'todos'
 interface ItemListaRow {
   id: string
   nome: string
-  tipo: 'proprio' | 'alugado'
+  origem: 'acervo' | 'fornecedor'
   fornecedor_id: string | null
+  categoria_id: string | null
+  preco_custo: number
+  preco_venda: number
   foto_path: string | null
   observacoes: string | null
   ativo: boolean
@@ -41,6 +44,7 @@ interface ItemListaRow {
   created_at: string
   updated_at: string
   fornecedor: { nome: string } | null
+  categoria: { nome: string } | null
   variacoes: { id: string }[]
 }
 
@@ -56,7 +60,7 @@ export function useDecoracaoItens(filtro: ItemFiltro = 'ativos') {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let query = (supabase as any)
         .from('decoracao_itens')
-        .select('*, fornecedor:decoracao_fornecedores(nome), variacoes:decoracao_item_variacoes(id)')
+        .select('*, fornecedor:decoracao_fornecedores(nome), categoria:decoracao_categorias(nome), variacoes:decoracao_item_variacoes(id)')
         .order('nome', { ascending: true })
 
       if (filtro === 'ativos') query = query.eq('ativo', true)
@@ -68,8 +72,11 @@ export function useDecoracaoItens(filtro: ItemFiltro = 'ativos') {
       return rows.map((r) => ({
         id: r.id,
         nome: r.nome,
-        tipo: r.tipo,
+        origem: r.origem,
         fornecedor_id: r.fornecedor_id,
+        categoria_id: r.categoria_id,
+        preco_custo: r.preco_custo,
+        preco_venda: r.preco_venda,
         foto_path: r.foto_path,
         observacoes: r.observacoes,
         ativo: r.ativo,
@@ -77,6 +84,7 @@ export function useDecoracaoItens(filtro: ItemFiltro = 'ativos') {
         created_at: r.created_at,
         updated_at: r.updated_at,
         fornecedor_nome: r.fornecedor?.nome ?? null,
+        categoria_nome: r.categoria?.nome ?? null,
         variacoes_count: r.variacoes?.length ?? 0,
       }))
     },
@@ -86,8 +94,11 @@ export function useDecoracaoItens(filtro: ItemFiltro = 'ativos') {
 interface ItemDetalheRow {
   id: string
   nome: string
-  tipo: 'proprio' | 'alugado'
+  origem: 'acervo' | 'fornecedor'
   fornecedor_id: string | null
+  categoria_id: string | null
+  preco_custo: number
+  preco_venda: number
   foto_path: string | null
   observacoes: string | null
   ativo: boolean
@@ -95,6 +106,7 @@ interface ItemDetalheRow {
   created_at: string
   updated_at: string
   fornecedor: { nome: string } | null
+  categoria: { nome: string } | null
   variacoes: DecoracaoItemVariacao[]
 }
 
@@ -110,7 +122,7 @@ export function useDecoracaoItem(id: string | null) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error } = await (supabase as any)
         .from('decoracao_itens')
-        .select('*, fornecedor:decoracao_fornecedores(nome), variacoes:decoracao_item_variacoes(*)')
+        .select('*, fornecedor:decoracao_fornecedores(nome), categoria:decoracao_categorias(nome), variacoes:decoracao_item_variacoes(*)')
         .eq('id', id)
         .order('ordem', { ascending: true, foreignTable: 'decoracao_item_variacoes' })
         .single()
@@ -119,8 +131,11 @@ export function useDecoracaoItem(id: string | null) {
       return {
         id: row.id,
         nome: row.nome,
-        tipo: row.tipo,
+        origem: row.origem,
         fornecedor_id: row.fornecedor_id,
+        categoria_id: row.categoria_id,
+        preco_custo: row.preco_custo,
+        preco_venda: row.preco_venda,
         foto_path: row.foto_path,
         observacoes: row.observacoes,
         ativo: row.ativo,
@@ -128,6 +143,7 @@ export function useDecoracaoItem(id: string | null) {
         created_at: row.created_at,
         updated_at: row.updated_at,
         fornecedor_nome: row.fornecedor?.nome ?? null,
+        categoria_nome: row.categoria?.nome ?? null,
         variacoes: (row.variacoes ?? []).sort((a, b) => a.ordem - b.ordem),
       }
     },
