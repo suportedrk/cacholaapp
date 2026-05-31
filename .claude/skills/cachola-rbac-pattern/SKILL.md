@@ -331,3 +331,9 @@ Visto em `/vendas` (comentário dizia "gerente e vendedora", constante era `vend
 
 **8. Decisão "honrar vs limpar" de overrides dormentes DEVE ser ancorada na realidade de PRODUÇÃO, nunca só no template ou no comentário do guard.**
 Em Dashboard+Relatórios, o comentário stale ("gerente e financeiro") + os overrides locais sugeriam intenção de dar Relatórios a gerente/financeiro — recomendação inicial: honrar. A auditoria de produção revelou: zero financeiro ativo, e os overrides de gerente eram as contas de teste do próprio dono (brunocasaletti@gmail.com e @hotmail.com) — a mesma conta limpa no BI e Vendas. Premissa caiu, decisão revertida para limpar. SEMPRE auditar em produção QUEM detém o override (query (C) da §5.5) antes de decidir honrar.
+
+**9. Módulo construído DURANTE a era RBAC pode já nascer dourado na camada de DADOS (RLS + RPCs em check_permission) mesmo com a casca (layouts/APIs/UI) ainda por cargo.**
+Antes de dimensionar uma conversão, confira a camada de dados — pode faltar só a casca. Exemplo: Decoração (RLS 13 tabelas + RPCs já em check_permission('decoracao') desde a mig 097; FASE B vira só swap de guards, sem SQL).
+
+**10. Condicionais de UI que ESPELHAM uma ação de permissão (ex.: canDelete = hasRole(DELETE_ROLES)) NÃO são D3 genuíno — são espelhos convertíveis.**
+Deixá-las chumbadas é SEGURO se a API/RLS já enforçam (sem buraco de segurança), mas quebra a coerência do toggle (o botão aparece/some errado quando se liga/desliga a ação em /admin/cargos). Converter exige um hook de permissão self-scoped no cliente; sem ele, é decisão consciente deixar como está + registrar o hook no backlog.
