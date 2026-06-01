@@ -273,6 +273,8 @@ export type ExecutionInsert = {
   description?:        string | null
   cost?:               number
   status?:             ExecutionStatus
+  scheduled_at?:       string | null
+  estimated_duration_minutes?: number | null
 }
 
 export function useAddExecution(onSuccess?: () => void) {

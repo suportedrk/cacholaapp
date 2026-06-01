@@ -3,6 +3,7 @@ import {
   Home,
   LayoutDashboard,
   CalendarDays,
+  CalendarClock,
   ClipboardList,
   ListTodo,
   Wrench,
@@ -139,6 +140,8 @@ export const NAV_GROUPS: NavGroup[] = [
         children: [
           { label: 'Dashboard',     href: ROUTES.maintenanceDashboard, icon: LayoutDashboard, module: 'manutencao',    allowedRoles: [...MAINTENANCE_ADMIN_ROLES]   },
           { label: 'Chamados',      href: ROUTES.maintenanceChamados,  icon: ClipboardList,   module: 'manutencao',    allowedRoles: [...MAINTENANCE_MODULE_ROLES]  },
+          { label: 'Agenda',        href: ROUTES.maintenanceAgenda,    icon: CalendarClock,   module: 'manutencao',    allowedRoles: [...MAINTENANCE_ADMIN_ROLES]   },
+          { label: 'Minhas Tarefas', href: ROUTES.maintenanceMinhasTarefas, icon: ListTodo,   module: 'manutencao',    allowedRoles: [...MAINTENANCE_MODULE_ROLES]  },
           { label: 'Equipamentos',  href: ROUTES.equipment,            icon: Package,         module: 'equipamentos',  allowedRoles: [...MAINTENANCE_MODULE_ROLES]  },
           { label: 'Configurações', href: ROUTES.maintenanceConfig,    icon: Settings2,       module: 'manutencao',    allowedRoles: [...MAINTENANCE_ADMIN_ROLES]   },
         ],
