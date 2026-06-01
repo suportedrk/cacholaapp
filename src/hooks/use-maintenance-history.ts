@@ -9,7 +9,7 @@ import type { HistorySummaryResponse } from '@/app/api/maintenance/history-summa
 // ─────────────────────────────────────────────────────────────
 // TYPES
 // ─────────────────────────────────────────────────────────────
-export type MaintenanceNature = 'emergencial' | 'pontual' | 'agendado' | 'preventivo'
+export type MaintenanceNature = 'preventiva' | 'corretiva' | 'emergencial' | 'melhoria_estetica'
 
 export type HistoryFilters = {
   date_from?:  string

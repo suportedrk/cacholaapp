@@ -121,6 +121,8 @@ export interface Database {
       apply_commercial_template:     { Args: { p_template_id: string; p_assignee_id: string; p_base_date: string }; Returns: number }
       trigger_stage_automation:      { Args: { p_ploomes_deal_id: number }; Returns: number }
       get_ploomes_stages:            { Args: Record<string, never>; Returns: { stage_id: number; stage_name: string }[] }
+      // ── Manutenção — seletor de solicitante (Migration 136) ──────────────────
+      get_maintenance_requester_options: { Args: { p_unit_id?: string | null }; Returns: { id: string; name: string; role: string }[] }
     }
     Enums: Record<string, never>
   }
@@ -274,13 +276,14 @@ export type MaintenanceTicket = {
   description?: string | null
   sector_id?: string | null
   category_id?: string | null
-  nature: 'emergencial' | 'pontual' | 'agendado' | 'preventivo'
+  nature: 'preventiva' | 'corretiva' | 'emergencial' | 'melhoria_estetica'
   urgency: 'critical' | 'high' | 'medium' | 'low'
   status: 'open' | 'in_progress' | 'waiting_part' | 'concluded' | 'cancelled'
   scheduled_date?: string | null
   concluded_at?: string | null
   due_at?: string | null
   opened_by: string
+  created_by_user_id?: string | null
   equipment_id?: string | null
   total_cost: number
   created_at: string
@@ -325,7 +328,7 @@ export type MaintenanceSla = {
 // ─────────────────────────────────────────────────────────────
 // MANUTENÇÃO — CHAMADOS (Migration 031)
 // ─────────────────────────────────────────────────────────────
-export type TicketNature  = 'emergencial' | 'pontual' | 'agendado' | 'preventivo'
+export type TicketNature  = 'preventiva' | 'corretiva' | 'emergencial' | 'melhoria_estetica'
 export type TicketUrgency = 'critical' | 'high' | 'medium' | 'low'
 export type TicketStatus  = 'open' | 'in_progress' | 'waiting_part' | 'concluded' | 'cancelled'
 export type ExecutorType  = 'internal' | 'external'

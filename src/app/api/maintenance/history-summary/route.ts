@@ -7,7 +7,7 @@ import { ptBR } from 'date-fns/locale'
 import { requirePermissionApi } from '@/lib/auth/require-permission'
 import { getEffectiveUnitIds } from '@/lib/auth/effective-unit-ids'
 
-type TicketNature = 'emergencial' | 'pontual' | 'agendado' | 'preventivo'
+type TicketNature = 'preventiva' | 'corretiva' | 'emergencial' | 'melhoria_estetica'
 
 export interface HistorySummaryResponse {
   kpis: {

@@ -21,17 +21,19 @@ import { useCreateTicket, type TicketInsert } from '@/hooks/use-tickets'
 import { useSectors } from '@/hooks/use-sectors'
 import { useMaintenanceCategories } from '@/hooks/use-maintenance-categories'
 import { useEquipment } from '@/hooks/use-equipment'
-import { useFormUnitSelection } from '@/hooks/use-form-unit-selection'
+import { useActiveUsersForUnit } from '@/hooks/use-users-for-unit'
+import { useAuth } from '@/hooks/use-auth'
+import { useUnitStore } from '@/stores/unit-store'
 import type { TicketNature, TicketUrgency } from '@/types/database.types'
 
 // ─────────────────────────────────────────────────────────────
 // CONSTANTES
 // ─────────────────────────────────────────────────────────────
 const NATURE_OPTIONS: { value: TicketNature; label: string }[] = [
-  { value: 'emergencial', label: 'Emergencial' },
-  { value: 'pontual',     label: 'Pontual'     },
-  { value: 'agendado',    label: 'Agendado'    },
-  { value: 'preventivo',  label: 'Preventivo'  },
+  { value: 'preventiva',        label: 'Preventiva'        },
+  { value: 'corretiva',         label: 'Corretiva'         },
+  { value: 'emergencial',       label: 'Emergencial'       },
+  { value: 'melhoria_estetica', label: 'Melhoria/Estética' },
 ]
 
 const URGENCY_OPTIONS: { value: TicketUrgency; label: string }[] = [
@@ -45,27 +47,27 @@ const URGENCY_OPTIONS: { value: TicketUrgency; label: string }[] = [
 // FORM STATE
 // ─────────────────────────────────────────────────────────────
 type FormState = {
-  title:          string
-  description:    string
-  unit_id:        string
-  sector_id:      string
-  category_id:    string
-  equipment_id:   string
-  nature:         TicketNature
-  urgency:        TicketUrgency
-  scheduled_date: string
+  title:        string
+  description:  string
+  unit_id:      string
+  sector_id:    string
+  category_id:  string
+  equipment_id: string
+  nature:       TicketNature
+  urgency:      TicketUrgency
+  opened_by:    string  // solicitante (default = usuário logado, editável)
 }
 
 const INITIAL: FormState = {
-  title:          '',
-  description:    '',
-  unit_id:        '',
-  sector_id:      '',
-  category_id:    '',
-  equipment_id:   '',
-  nature:         'pontual',
-  urgency:        'medium',
-  scheduled_date: '',
+  title:        '',
+  description:  '',
+  unit_id:      '',
+  sector_id:    '',
+  category_id:  '',
+  equipment_id: '',
+  nature:       'corretiva',
+  urgency:      'medium',
+  opened_by:    '',
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -81,30 +83,42 @@ export function TicketFormModal({ open, onClose, onCreated }: TicketFormModalPro
   const [form, setForm]     = useState<FormState>(INITIAL)
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({})
 
-  const { requiresUnitSelection, effectiveUnitId, availableUnits } =
-    useFormUnitSelection(form.unit_id || null)
+  const { profile } = useAuth()
+  const activeUnitId = useUnitStore((s) => s.activeUnitId)
+  const availableUnits = useUnitStore((s) => s.userUnits)
 
-  // Dropdowns dependentes filtram pela unidade EFETIVA (form quando "Todas", store caso contrário).
-  // Quando requiresUnitSelection && !effectiveUnitId, passamos null → hook não emite eq('unit_id')
-  // e a query depende apenas da RLS (o que é equivalente a "lista vazia" enquanto a unidade não é escolhida).
+  // Seletor de unidade sempre visível quando o usuário acessa >1 unidade.
+  const showUnitSelector = availableUnits.length > 1
+
+  // Unidade efetiva: escolha do form > unidade ativa do store > única unidade do usuário.
+  const effectiveUnitId =
+    form.unit_id ||
+    activeUnitId ||
+    (availableUnits.length === 1 ? availableUnits[0].unit_id : null)
+
+  // Dropdowns dependentes filtram pela unidade efetiva.
   const { data: sectors    = [] } = useSectors(true, effectiveUnitId)
   const { data: categories = [] } = useMaintenanceCategories(true, effectiveUnitId)
   const { data: equipments = [] } = useEquipment({ status: ['active', 'in_repair'] }, effectiveUnitId)
+
+  // Solicitantes via RPC SECURITY DEFINER (a RLS de users só deixa o técnico ver a si mesmo).
+  const { data: requesters = [] } = useActiveUsersForUnit(effectiveUnitId)
 
   const createTicket = useCreateTicket((ticket) => {
     onClose()
     onCreated?.(ticket.id)
   })
 
-  // Reset form when dialog opens
+  // Reset form when dialog opens — solicitante default = usuário logado;
+  // unidade pré-selecionada com a ativa do store (multi-unidade pode trocar).
   useEffect(() => {
     if (open) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setForm(INITIAL)
+      setForm({ ...INITIAL, opened_by: profile?.id ?? '', unit_id: activeUnitId ?? '' })
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setErrors({})
     }
-  }, [open])
+  }, [open, profile?.id, activeUnitId])
 
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => {
@@ -119,6 +133,8 @@ export function TicketFormModal({ open, onClose, onCreated }: TicketFormModalPro
           sector_id:    '',
           category_id:  '',
           equipment_id: '',
+          // Solicitante volta ao usuário logado: a lista é por unidade.
+          opened_by:    profile?.id ?? '',
         }
       }
       return { ...prev, [key]: value }
@@ -131,7 +147,7 @@ export function TicketFormModal({ open, onClose, onCreated }: TicketFormModalPro
     if (!form.title.trim())   e.title  = 'Título é obrigatório'
     if (!form.nature)         e.nature  = 'Natureza é obrigatória'
     if (!form.urgency)        e.urgency = 'Urgência é obrigatória'
-    if (requiresUnitSelection && !form.unit_id) {
+    if (!effectiveUnitId) {
       e.unit_id = 'Unidade é obrigatória'
     }
     setErrors(e)
@@ -152,10 +168,8 @@ export function TicketFormModal({ open, onClose, onCreated }: TicketFormModalPro
       sector_id:    form.sector_id    || null,
       category_id:  form.category_id  || null,
       equipment_id: form.equipment_id || null,
-      scheduled_date:
-        form.nature === 'agendado' && form.scheduled_date
-          ? new Date(form.scheduled_date).toISOString()
-          : null,
+      // Solicitante: escolha do form, ou usuário logado como fallback.
+      opened_by:    form.opened_by || profile?.id || undefined,
     }
 
     createTicket.mutate(payload)
@@ -163,7 +177,7 @@ export function TicketFormModal({ open, onClose, onCreated }: TicketFormModalPro
 
   const submitDisabled =
     createTicket.isPending ||
-    (requiresUnitSelection && !form.unit_id)
+    !effectiveUnitId
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
@@ -178,8 +192,8 @@ export function TicketFormModal({ open, onClose, onCreated }: TicketFormModalPro
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
           <div className="overflow-y-auto flex-1 px-6 pb-4 space-y-4 pt-2">
 
-          {/* Unidade — visível somente quando seletor global está em "Todas" */}
-          {requiresUnitSelection && (
+          {/* Unidade — sempre visível quando o usuário acessa mais de uma unidade */}
+          {showUnitSelector && (
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-text-primary">
                 Unidade <span className="text-destructive">*</span>
@@ -204,12 +218,8 @@ export function TicketFormModal({ open, onClose, onCreated }: TicketFormModalPro
                   ))}
                 </SelectContent>
               </Select>
-              {errors.unit_id ? (
+              {errors.unit_id && (
                 <p className="text-xs text-destructive">{errors.unit_id}</p>
-              ) : (
-                <p className="text-xs text-text-tertiary">
-                  Seletor global está em &quot;Todas as unidades&quot; — escolha a unidade do chamado.
-                </p>
               )}
             </div>
           )}
@@ -296,21 +306,33 @@ export function TicketFormModal({ open, onClose, onCreated }: TicketFormModalPro
             </div>
           </div>
 
-          {/* Data agendada — só quando natureza = agendado */}
-          {form.nature === 'agendado' && (
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-text-primary">
-                Data agendada
-              </label>
-              <input
-                type="date"
-                value={form.scheduled_date}
-                onChange={(e) => set('scheduled_date', e.target.value)}
-                min={new Date().toISOString().split('T')[0]}
-                className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm focus:outline-none focus:border-border-focus transition-colors"
-              />
-            </div>
-          )}
+          {/* Solicitante — quem pediu o reparo. Default = usuário logado, editável. */}
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-text-primary">Solicitante</label>
+            <Select
+              value={form.opened_by || 'none'}
+              onValueChange={(v) => set('opened_by', v === 'none' ? '' : (v ?? ''))}
+            >
+              <SelectTrigger className="w-full">
+                <span data-slot="select-value">
+                  {form.opened_by
+                    ? (requesters.find((u) => u.id === form.opened_by)?.name ?? 'Eu')
+                    : 'Eu'}
+                </span>
+              </SelectTrigger>
+              <SelectContent>
+                {requesters.length === 0 && (
+                  <SelectItem value="none" disabled>Carregando usuários...</SelectItem>
+                )}
+                {requesters.map((u) => (
+                  <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-text-tertiary">
+              Quem reportou o problema. Por padrão, você.
+            </p>
+          </div>
 
           {/* Setor */}
           <div className="space-y-1.5">

@@ -31,10 +31,10 @@ export const URGENCY_CONFIG: Record<string, { label: string; badge: string }> = 
 }
 
 export const NATURE_CONFIG: Record<string, { label: string; badge: string; borderLeft: string }> = {
-  emergencial: { label: 'Emergencial', badge: 'badge-red border',    borderLeft: 'border-l-red-400'    },
-  pontual:     { label: 'Pontual',     badge: 'badge-blue border',   borderLeft: 'border-l-blue-400'   },
-  agendado:    { label: 'Agendado',    badge: 'badge-purple border', borderLeft: 'border-l-purple-400' },
-  preventivo:  { label: 'Preventivo',  badge: 'badge-teal border',   borderLeft: 'border-l-teal-400'   },
+  preventiva:        { label: 'Preventiva',        badge: 'badge-teal border',   borderLeft: 'border-l-teal-400'   },
+  corretiva:         { label: 'Corretiva',         badge: 'badge-blue border',   borderLeft: 'border-l-blue-400'   },
+  emergencial:       { label: 'Emergencial',       badge: 'badge-red border',    borderLeft: 'border-l-red-400'    },
+  melhoria_estetica: { label: 'Melhoria/Estética', badge: 'badge-purple border', borderLeft: 'border-l-purple-400' },
 }
 
 export const STATUS_CONFIG: Record<TicketStatus, { label: string; badge: string; icon: React.ElementType }> = {
@@ -64,7 +64,7 @@ export const TicketCard = memo(function TicketCard({ ticket, onClick }: TicketCa
   const updateStatus  = useUpdateTicketStatus()
 
   const urgency   = URGENCY_CONFIG[ticket.urgency]   ?? URGENCY_CONFIG.medium
-  const nature    = NATURE_CONFIG[ticket.nature]     ?? NATURE_CONFIG.pontual
+  const nature    = NATURE_CONFIG[ticket.nature]     ?? NATURE_CONFIG.corretiva
   const statusCfg = STATUS_CONFIG[ticket.status]     ?? STATUS_CONFIG.open
   const StatusIcon = statusCfg.icon
 

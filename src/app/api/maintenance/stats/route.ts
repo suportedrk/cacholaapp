@@ -25,10 +25,10 @@ export interface MaintenanceStatsResponse {
 }
 
 const TYPE_LABELS: Record<string, string> = {
-  emergencial: 'Emergencial',
-  pontual:     'Pontual',
-  agendado:    'Agendado',
-  preventivo:  'Preventiva',
+  preventiva:        'Preventiva',
+  corretiva:         'Corretiva',
+  emergencial:       'Emergencial',
+  melhoria_estetica: 'Melhoria/Estética',
 }
 
 export async function GET(req: NextRequest) {
@@ -210,10 +210,10 @@ export async function GET(req: NextRequest) {
 
     // ── Process by_nature ──────────────────────────────────────────
     const natureCounts: Record<string, number> = {
-      emergencial: 0,
-      pontual:     0,
-      agendado:    0,
-      preventivo:  0,
+      preventiva:        0,
+      corretiva:         0,
+      emergencial:       0,
+      melhoria_estetica: 0,
     }
     for (const t of byNatureResult.data ?? []) {
       if (t.nature && t.nature in natureCounts) natureCounts[t.nature]++

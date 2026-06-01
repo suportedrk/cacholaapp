@@ -135,22 +135,23 @@ export async function GET(request: Request) {
   }
 
   // ─────────────────────────────────────────────────────────────
-  // 3. Chamados de manutenção atrasados → alertar quem abriu
+  // 3. Chamados de manutenção atrasados → alertar o CRIADOR real (técnico)
+  //    created_by_user_id (não opened_by, que agora é o solicitante selecionável).
   // ─────────────────────────────────────────────────────────────
   try {
     const { data: overdueTickets, error } = await supabase
       .from('maintenance_tickets')
-      .select('id, title, opened_by')
+      .select('id, title, created_by_user_id')
       .lt('due_at', `${todayStr}T00:00:00`)
       .not('status', 'in', '("concluded","cancelled")')
-      .not('opened_by', 'is', null)
+      .not('created_by_user_id', 'is', null)
 
     if (error) throw error
 
     for (const ticket of overdueTickets ?? []) {
-      if (!ticket.opened_by) continue
+      if (!ticket.created_by_user_id) continue
       const { error: rpcErr } = await supabase.rpc('create_notification', {
-        p_user_id: ticket.opened_by,
+        p_user_id: ticket.created_by_user_id,
         p_type:    'maintenance_overdue',
         p_title:   'Chamado atrasado',
         p_body:    `O chamado "${ticket.title}" está atrasado. Verifique o prazo.`,
@@ -159,7 +160,7 @@ export async function GET(request: Request) {
       if (!rpcErr) created++
 
       // E-mail
-      const email = await getUserEmail(ticket.opened_by)
+      const email = await getUserEmail(ticket.created_by_user_id)
       if (email) {
         const { subject, html } = tplMaintenanceOverdue({ orderTitle: ticket.title, orderId: ticket.id })
         await sendEmail(email, subject, html)
