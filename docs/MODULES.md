@@ -125,6 +125,59 @@
 
 ---
 
+## DECORAÇÃO
+
+**Rota base:** `/decoracao` (catálogo, categorias, temas, estoque, transferências, quarentena) + seção "Decoração" no detalhe do evento `/eventos/[id]`.
+
+**Estado:** v1.37.0 — fase "Mari" completa (Blocos A–F em produção). Módulo nasceu com a camada de dados dourada (RLS + RPCs via `check_permission('decoracao', action)`) desde a migration 097.
+
+### O que cada bloco entregou
+| Bloco | Migration | Entrega |
+|-------|-----------|---------|
+| A | 128–129 | Itens repaginados: `decoracao_categorias` (10 categorias seed: balões, boleiras, mobiliário, displays, objetos decorativos, personagens 3D, bolos falsos, vasos e cestos, tecidos, tapetes), `categoria_id` + `preco_custo`/`preco_venda` nos itens, refator `tipo`→`origem` (acervo/fornecedor) |
+| B | 130 | Tema vira "receita": `decoracao_tema_itens` (tema → variações + quantidade). Tema tem foto modelo em `decoracao_temas.foto_url` |
+| C | 131 | Festa puxa o tema: `decoracao_festa` + `decoracao_festa_itens` (snapshot da receita, editável na festa, SEM reserva de estoque), romaneio de separação imprimível, foto override por festa, bucket `decoracao-festa` |
+| D | 132 | Encerramento item a item (qtd_ok/quebrado/perdido/quarentena) com baixa `GREATEST(0,…)` no saldo + aba Quarentena (`decoracao_quarentena`, resolver consertado/descartado). Guard de integridade: festa encerrada → 409 em PATCH e em vincular |
+| E | 133 | Galeria de fotos da montagem por festa (`decoracao_festa_fotos`, multi-upload, lightbox, legenda) — o registro; distinta da foto modelo/override |
+| F | (sem migration) | Sugestão de transferência: na área de Transferências, compara lista da festa × saldo do local e sugere o que trazer da outra unidade; pré-preenche a Nova Transferência |
+
+### Tabelas (RLS dourado via `check_permission('decoracao', action)`)
+`decoracao_categorias`, `decoracao_itens` (+ variações), `decoracao_temas`, `decoracao_tema_itens`, `decoracao_festa`, `decoracao_festa_itens`, `decoracao_quarentena`, `decoracao_festa_fotos` + infraestrutura de estoque pré-existente (`decoracao_estoque_saldo`, locais, transferências via RPC `criar_transferencia`).
+
+### Arquivos-chave
+| Arquivo | Função |
+|---------|--------|
+| `src/app/(auth)/eventos/[id]/components/sections/EventDecoracaoSection.tsx` | Seção Decoração na festa (vincular tema, lista editável, foto, galeria) |
+| `src/app/(auth)/eventos/[id]/components/sections/FestaFotosGaleria.tsx` | Galeria de fotos da montagem (Bloco E) |
+| `src/app/(auth)/decoracao/_components/sugerir-pela-festa-sheet.tsx` | Sugestão de transferência pela festa (Bloco F) |
+| `src/app/(auth)/decoracao/_components/nova-transferencia-sheet.tsx` | Nova transferência (aceita `initialSeed` via key-remount) |
+| `src/app/(auth)/decoracao/_components/transferencias-client.tsx` | Área de transferências + botão "Sugerir pela festa" |
+| `src/hooks/use-decoracao.ts` | Hooks do módulo (categorias, itens, temas, festa, fotos, quarentena) |
+| `src/hooks/use-sugestao-transferencia.ts` | `useFestasComDecoracao`, `useSugestaoTransferencia` (cálculo client, read-path dourado) |
+| `src/types/decoracao.ts` | Tipos do módulo |
+| `src/config/roles.ts` | `DECORACAO_MANAGE_ROLES` = [super_admin, diretor, gerente, decoracao]; `DECORACAO_DELETE_ROLES` = [super_admin, diretor] |
+
+### Decisões e padrões
+- **Sem reserva de estoque ao vincular tema** — a baixa só acontece no encerramento (Bloco D). Vincular gera lista + romaneio, não mexe em saldo.
+- **Encerramento usa `GREATEST(0, saldo − consumo)`** — nunca trava por saldo insuficiente; aviso não-bloqueante quando zera.
+- **Guard de integridade** — festa encerrada não pode ser editada nem re-vinculada (409). Re-vincular re-snapshota = "reabrir" disfarçado.
+- **Sugestão de transferência (Bloco F) = read-path puro** — sem migration/RPC; lê `decoracao_festa_itens` + `decoracao_estoque_saldo` (ambas RLS view), nasce dourada. Lógica: `falta = max(0, precisa − tem)`; `sugerido = min(falta, saldo origem)`. Default de origem assume 2 locais (o Select cobre mais).
+- **Pré-preenchimento da transferência** via `key`-remount + estado inicial (NÃO effect-hydration — evita clobber do `resetForm`/`handleOrigemChange`).
+- **RLS de tabela-filha** — INSERT/UPDATE/DELETE gateados por `'edit'` (não `'delete'`): remover linha de uma lista é editar o pai. Vale para `festa_itens`, `tema_itens`, `festa_fotos`.
+
+### RBAC
+- Camada de dados dourada desde a migration 097. O backfill da 097 deu grants individuais a todos os usuários gerente/decoracao/diretor/super_admin — por isso essas contas aparecem com grants próprios na auditoria; são **redundantes com o cargo, NÃO overrides**.
+- Decoradora (role `decoracao`) acessa por estar em `DECORACAO_MANAGE_ROLES` e em `EVENTOS_ACCESS_ROLES`.
+- **Auditoria de overrides (gate de deploy):** conjunto CORRETO é `NOT IN ('super_admin','diretor','gerente','decoracao')` para view/create/edit e `NOT IN ('super_admin','diretor')` para delete. Usar só super_admin+diretor gera FALSO POSITIVO com as contas gerente.
+
+### Pendências
+- **Pergunta dos balões (com Mari — e-mail enviado em jun/2026):** unificar catálogo/OS de balões dentro de Itens, OU a categoria "Balões" basta e a OS de balões segue separada? A resposta dela define se há migração da OS de balões. **NÃO mexer na OS de balões até a resposta.**
+- **FASE B (RBAC):** converter os guards por cargo restantes para permissão — layout pai `/decoracao` e tela `/transferencias` (hoje `requireRoleServer(DECORACAO_MANAGE_ROLES)`). Re-scan delta antes.
+- **Default de origem da sugestão** assume 2 locais; revisitar quando surgir um 3º local permanente.
+- Backlog: "reabrir/desfazer" encerramento; órfãos de storage da decoração.
+
+---
+
 ## PLOOMES CRM
 
 **Integração:** Sincroniza deals do Ploomes → eventos no sistema.
