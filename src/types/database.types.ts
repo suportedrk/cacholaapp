@@ -349,6 +349,8 @@ export type MaintenanceExecution = {
   cost_approved_by: string | null
   cost_approved_at: string | null
   status: ExecutionStatus
+  scheduled_at: string | null
+  estimated_duration_minutes: number | null
   started_at: string | null
   concluded_at: string | null
   created_at: string

@@ -35,7 +35,6 @@ import { useEquipment } from '@/hooks/use-equipment'
 import { useSignedUrls } from '@/hooks/use-signed-urls'
 import { useProviders } from '@/hooks/use-providers'
 import { useMaintenanceExecutorOptions } from '@/hooks/use-maintenance-executors'
-import { useActiveUsersForUnit } from '@/hooks/use-users-for-unit'
 import { useAuth } from '@/hooks/use-auth'
 import { URGENCY_CONFIG, NATURE_CONFIG, STATUS_CONFIG } from '@/components/features/maintenance/ticket-card'
 import { useLoadingTimeout } from '@/hooks/use-loading-timeout'
@@ -326,12 +325,15 @@ function AddExecutionModal({
   const [description, setDescription] = useState('')
   const [costStr, setCostStr] = useState('')
   const [execStatus, setExecStatus] = useState<ExecutionStatus>('assigned')
+  const [scheduledAt, setScheduledAt] = useState('')   // datetime-local (horário de Brasília)
+  const [durationStr, setDurationStr] = useState('')   // minutos
   const [error, setError] = useState<string | null>(null)
 
   // Executor interno = equipe de manutenção (RPC com check_permission view + escopo unidade).
   const { data: executors = [] } = useMaintenanceExecutorOptions(unitId)
-  // Responsável interno do serviço externo = qualquer usuário ativo da unidade (RPC solicitante).
-  const { data: responsibles = [] } = useActiveUsersForUnit(unitId)
+  // Responsável interno do serviço externo: também da EQUIPE de manutenção (D6) —
+  // precisa de manutencao.view para enxergar a própria tarefa pela RLS.
+  const { data: responsibles = [] } = useMaintenanceExecutorOptions(unitId)
   // Prestadores filtrados pela unidade do TICKET — em "Todas" no seletor global,
   // o store estaria em null e o hook listaria prestadores de todas as unidades.
   const { data: providers = [] } = useProviders({ status: 'active' }, unitId)
@@ -367,6 +369,11 @@ function AddExecutionModal({
       description:         description.trim() || null,
       cost:               parseFloat(costStr.replace(',', '.')) || 0,
       status:             execStatus,
+      // datetime-local é "naive" — fixamos o fuso de Brasília (UTC-3, sem horário
+      // de verão) em vez de depender do fuso do dispositivo. '2026-06-15T14:30'
+      // → '2026-06-15T14:30:00-03:00' → toISOString() grava o UTC correto.
+      scheduled_at:        scheduledAt ? new Date(`${scheduledAt}:00-03:00`).toISOString() : null,
+      estimated_duration_minutes: durationStr ? parseInt(durationStr, 10) || null : null,
     } as Parameters<typeof addExecution>[0])
   }
 
@@ -488,6 +495,34 @@ function AddExecutionModal({
             <option value="concluded">Concluída</option>
           </select>
         </div>
+
+        {/* Agendamento — opcional. Gera o lançamento na agenda e na lista de tarefas. */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground">Data e hora</label>
+            <input
+              type="datetime-local"
+              value={scheduledAt}
+              onChange={(e) => setScheduledAt(e.target.value)}
+              className="w-full h-10 rounded-lg border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground">Duração (min)</label>
+            <input
+              type="number"
+              inputMode="numeric"
+              min={0}
+              value={durationStr}
+              onChange={(e) => setDurationStr(e.target.value)}
+              placeholder="ex: 60"
+              className="w-full h-10 rounded-lg border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Agendar gera a tarefa para o designado e o lançamento na agenda. Opcional.
+        </p>
 
         {error && <p className="text-xs text-destructive">{error}</p>}
 
