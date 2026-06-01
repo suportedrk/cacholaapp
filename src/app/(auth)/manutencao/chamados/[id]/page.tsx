@@ -708,7 +708,6 @@ export default function ChamadoDetailPage() {
       <div className="bg-card border border-border rounded-xl p-5 divide-y divide-border">
         <InfoRow icon={MapPin}   label="Setor"       value={typedTicket.sector?.name} />
         <InfoRow icon={Tag}      label="Categoria"   value={typedTicket.category?.name} />
-        <InfoRow icon={Wrench}   label="Item/Local"  value={typedTicket.item?.name} />
         <EquipmentRow
           ticketId={typedTicket.id}
           ticketUnitId={typedTicket.unit_id}

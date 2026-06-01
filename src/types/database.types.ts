@@ -34,7 +34,6 @@ export interface Database {
       // Manutenção — Schema 031/032 (tabelas novas)
       maintenance_sectors:    { Row: Sector;                Insert: Partial<Sector>;                Update: Partial<Sector>;                Relationships: [] }
       maintenance_categories: { Row: MaintenanceCategory;   Insert: Partial<MaintenanceCategory>;   Update: Partial<MaintenanceCategory>;   Relationships: [] }
-      maintenance_items:      { Row: MaintenanceItem;       Insert: Partial<MaintenanceItem>;       Update: Partial<MaintenanceItem>;       Relationships: [] }
       maintenance_sla:        { Row: MaintenanceSla;        Insert: Partial<MaintenanceSla>;        Update: Partial<MaintenanceSla>;        Relationships: [] }
       maintenance_tickets:          { Row: MaintenanceTicket;          Insert: Partial<MaintenanceTicket>;          Update: Partial<MaintenanceTicket>;          Relationships: [] }
       maintenance_executions:       { Row: MaintenanceExecution;       Insert: Partial<MaintenanceExecution>;       Update: Partial<MaintenanceExecution>;       Relationships: [] }
@@ -275,7 +274,6 @@ export type MaintenanceTicket = {
   description?: string | null
   sector_id?: string | null
   category_id?: string | null
-  item_id?: string | null
   nature: 'emergencial' | 'pontual' | 'agendado' | 'preventivo'
   urgency: 'critical' | 'high' | 'medium' | 'low'
   status: 'open' | 'in_progress' | 'waiting_part' | 'concluded' | 'cancelled'
@@ -312,22 +310,6 @@ export type MaintenanceCategory = {
   sort_order: number
   created_at: string
   updated_at: string
-}
-
-export type MaintenanceItem = {
-  id: string
-  unit_id: string
-  sector_id: string | null
-  name: string
-  description: string | null
-  is_active: boolean
-  sort_order: number
-  created_at: string
-  updated_at: string
-}
-
-export type MaintenanceItemWithSector = MaintenanceItem & {
-  sector: Pick<Sector, 'id' | 'name'> | null
 }
 
 export type MaintenanceSla = {
@@ -397,7 +379,6 @@ export type MaintenanceTicketForList = MaintenanceTicket & {
 export type MaintenanceTicketWithDetails = MaintenanceTicket & {
   sector:    Pick<Sector, 'id' | 'name'> | null
   category:  Pick<MaintenanceCategory, 'id' | 'name' | 'color' | 'icon'> | null
-  item:      Pick<MaintenanceItem, 'id' | 'name'> | null
   equipment: Pick<Equipment, 'id' | 'name' | 'category'> | null
   executions: (MaintenanceExecution & {
     internal_user: Pick<User, 'id' | 'name' | 'avatar_url'> | null
