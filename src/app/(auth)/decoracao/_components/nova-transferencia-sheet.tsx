@@ -29,14 +29,26 @@ import {
 import { ROUTES } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 
-interface NovaTransferenciaSheetProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-}
-
 interface ItemLinha {
   variacao_id: string
   quantidade: number
+}
+
+/**
+ * Pré-preenchimento vindo da sugestão pela festa (Bloco F). O pai força
+ * remount via `key` ao injetar um seed — por isso o estado inicial lê o seed
+ * uma única vez (sem effect-hydration, que brigaria com handleOrigemChange).
+ */
+export interface NovaTransferenciaSeed {
+  origem: string
+  destino: string
+  itens: ItemLinha[]
+}
+
+interface NovaTransferenciaSheetProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  initialSeed?: NovaTransferenciaSeed
 }
 
 function variacaoLabel(v: VariacaoComSaldoNaOrigem): string {
@@ -45,12 +57,17 @@ function variacaoLabel(v: VariacaoComSaldoNaOrigem): string {
   return `${v.item_nome} — ${desc}`
 }
 
-export function NovaTransferenciaSheet({ open, onOpenChange }: NovaTransferenciaSheetProps) {
+export function NovaTransferenciaSheet({
+  open,
+  onOpenChange,
+  initialSeed,
+}: NovaTransferenciaSheetProps) {
   const router = useRouter()
-  const [origem, setOrigem] = useState<string>('')
-  const [destino, setDestino] = useState<string>('')
+  // Estado inicial lê o seed uma vez (remount via key no pai). Sem seed → vazio.
+  const [origem, setOrigem] = useState<string>(() => initialSeed?.origem ?? '')
+  const [destino, setDestino] = useState<string>(() => initialSeed?.destino ?? '')
   const [observacoes, setObservacoes] = useState('')
-  const [itens, setItens] = useState<ItemLinha[]>([])
+  const [itens, setItens] = useState<ItemLinha[]>(() => initialSeed?.itens ?? [])
 
   const { data: locais = [] } = useDecoracaoLocais('ativos')
   const { data: saldosOrigem = [], isLoading: loadingSaldos } = useEstoqueSaldoOrigem(

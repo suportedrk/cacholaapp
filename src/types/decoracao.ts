@@ -213,6 +213,43 @@ export interface EncerramentoResult {
   avisos: EncerramentoAviso[]
 }
 
+// ── Sugestão de transferência pela festa (Bloco F) ───────────
+
+/**
+ * Festa com decoração aberta — candidata do seletor de sugestão.
+ * Hidratada com dados do evento (título, data, cliente, unidade).
+ */
+export interface FestaComDecoracaoResumo {
+  festa_decoracao_id: string
+  event_id: string
+  event_title: string | null
+  client_name: string | null
+  event_date: string | null
+  unit_name: string | null
+  unit_slug: string | null
+  tema_nome: string | null
+}
+
+/**
+ * Linha da tabela de sugestão de transferência. Calculada no cliente
+ * a partir dos itens da festa e do saldo nos locais destino/origem.
+ * `sugerido = min(falta, saldo_origem)`; quando a origem não cobre,
+ * `sugerido = 0` e a linha é apenas informativa (não pré-enche).
+ */
+export interface LinhaSugestaoTransferencia {
+  variacao_id: string
+  codigo: string
+  item_nome: string
+  tamanho: string | null
+  cor: string | null
+  detalhe: string | null
+  precisa: number
+  tem: number
+  falta: number
+  saldo_origem: number
+  sugerido: number
+}
+
 // ── Quarentena (Bloco D) ─────────────────────────────────────
 
 export type QuarentenaStatus = 'pendente' | 'resolvido'
