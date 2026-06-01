@@ -246,6 +246,27 @@ export interface QuarentenaResumo extends DecoracaoQuarentena {
   origem_festa_label: string | null
 }
 
+// ── Fotos da montagem (Bloco E) ──────────────────────────────
+
+/** Foto da galeria de montagem persistida (decoracao_festa_fotos). */
+export interface DecoracaoFestaFoto {
+  id: string
+  festa_decoracao_id: string
+  foto_path: string
+  legenda: string | null
+  ordem: number
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+/** Input para adicionar foto à galeria. */
+export interface FestaFotoInput {
+  foto_path: string
+  legenda?: string | null
+  ordem?: number
+}
+
 // ── Balões ───────────────────────────────────────────────────
 
 export interface DecoracaoBalaoModelo {

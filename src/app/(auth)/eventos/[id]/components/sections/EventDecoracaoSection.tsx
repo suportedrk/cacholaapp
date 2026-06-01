@@ -32,6 +32,7 @@ import {
 import { cn } from '@/lib/utils'
 import { FestaRomaneioPrintDialog } from './FestaRomaneioPrintDialog'
 import { FestaEncerramentoDialog } from './FestaEncerramentoDialog'
+import { FestaFotosGaleria } from './FestaFotosGaleria'
 import type { FestaItemLinha } from '@/types/decoracao'
 
 function formatDataHora(iso: string | null): string {
@@ -559,6 +560,16 @@ export function EventDecoracaoSection({
                     </p>
                   </div>
                 )}
+
+                {/* Fotos da montagem (Bloco E) */}
+                <div className="space-y-1.5">
+                  <Label>Fotos da montagem</Label>
+                  <FestaFotosGaleria
+                    festaDecoracaoId={data.id}
+                    isEncerrada={isEncerrada}
+                    canEdit={canUse}
+                  />
+                </div>
 
                 {/* Ações — festa encerrada (só romaneio) */}
                 {isEncerrada && (

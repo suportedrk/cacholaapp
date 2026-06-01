@@ -23,6 +23,7 @@ import type {
   QuarentenaResolucao,
   DecoracaoBalaoModelo,
   BalaoModeloFormInput,
+  DecoracaoFestaFoto,
 } from '@/types/decoracao'
 
 const retry = (count: number, err: unknown) => {
@@ -537,6 +538,84 @@ export function useResolverQuarentena() {
           ? 'Item consertado e devolvido ao estoque.'
           : 'Item descartado.',
       )
+    },
+    onError: (err: Error) => toast.error(err.message),
+  })
+}
+
+// ── Fotos da montagem (Bloco E) ──────────────────────────────
+
+/** Lista de fotos da galeria de uma festa, ordenada por ordem, created_at. */
+export function useFestaFotos(festaDecoracaoId: string | null) {
+  const isSessionReady = useAuthReadyStore((s: { isSessionReady: boolean }) => s.isSessionReady)
+  return useQuery({
+    queryKey: ['decoracao', 'festa-fotos', festaDecoracaoId],
+    enabled: isSessionReady && !!festaDecoracaoId,
+    staleTime: 0,
+    retry,
+    queryFn: async (): Promise<DecoracaoFestaFoto[]> => {
+      const supabase = createClient()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any)
+        .from('decoracao_festa_fotos')
+        .select('*')
+        .eq('festa_decoracao_id', festaDecoracaoId)
+        .order('ordem', { ascending: true })
+        .order('created_at', { ascending: true })
+      if (error) throw error
+      return (data ?? []) as DecoracaoFestaFoto[]
+    },
+  })
+}
+
+/** Adiciona uma foto à galeria da festa. */
+export function useAddFestaFoto() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ festaDecoracaoId, foto_path, legenda, ordem }: {
+      festaDecoracaoId: string
+      foto_path: string
+      legenda?: string | null
+      ordem?: number
+    }) => postJson(`/api/decoracao/festa/${festaDecoracaoId}/fotos`, 'POST', {
+      foto_path,
+      legenda: legenda ?? null,
+      ordem: ordem ?? 0,
+    }),
+    onSuccess: (_data, { festaDecoracaoId }) => {
+      queryClient.invalidateQueries({ queryKey: ['decoracao', 'festa-fotos', festaDecoracaoId] })
+    },
+    onError: (err: Error) => toast.error(err.message),
+  })
+}
+
+/** Remove uma foto da galeria (linha + arquivo no storage). */
+export function useRemoveFestaFoto() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ festaDecoracaoId, fotoId }: {
+      festaDecoracaoId: string
+      fotoId: string
+    }) => postJson(`/api/decoracao/festa/${festaDecoracaoId}/fotos/${fotoId}`, 'DELETE'),
+    onSuccess: (_data, { festaDecoracaoId }) => {
+      queryClient.invalidateQueries({ queryKey: ['decoracao', 'festa-fotos', festaDecoracaoId] })
+      toast.success('Foto removida.')
+    },
+    onError: (err: Error) => toast.error(err.message),
+  })
+}
+
+/** Atualiza a legenda de uma foto da galeria. */
+export function useUpdateFestaFotoLegenda() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ festaDecoracaoId, fotoId, legenda }: {
+      festaDecoracaoId: string
+      fotoId: string
+      legenda: string | null
+    }) => postJson(`/api/decoracao/festa/${festaDecoracaoId}/fotos/${fotoId}`, 'PATCH', { legenda }),
+    onSuccess: (_data, { festaDecoracaoId }) => {
+      queryClient.invalidateQueries({ queryKey: ['decoracao', 'festa-fotos', festaDecoracaoId] })
     },
     onError: (err: Error) => toast.error(err.message),
   })
