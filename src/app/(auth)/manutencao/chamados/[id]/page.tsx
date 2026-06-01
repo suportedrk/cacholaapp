@@ -19,6 +19,8 @@ import {
   Package,
   ArrowRightLeft,
   Pencil,
+  Phone,
+  MessageCircle,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -513,6 +515,19 @@ type RichExecution = MaintenanceExecution & {
   provider:         { id: string; name: string; contacts: ProviderContact[] } | null
 }
 
+// Escolhe o contato preferindo is_primary (mesmo critério do ProviderCard).
+function pickContact(contacts: ProviderContact[], type: 'phone' | 'whatsapp'): string | null {
+  const matches = contacts.filter((c) => c.type === type)
+  if (matches.length === 0) return null
+  return (matches.find((c) => c.is_primary) ?? matches[0]).value
+}
+
+// Normaliza para wa.me: só dígitos; prefixa 55 SÓ se ainda não tiver código do país.
+function waNumber(value: string): string {
+  const digits = value.replace(/\D/g, '')
+  return digits.startsWith('55') && digits.length >= 12 ? digits : `55${digits}`
+}
+
 function ExecutionRow({
   execution,
   ticketId,
@@ -547,6 +562,44 @@ function ExecutionRow({
           {execution.concluded_at && (
             <p className="text-xs text-muted-foreground">Concluída {formatRelative(execution.concluded_at)}</p>
           )}
+
+          {/* Serviço externo: responsável interno + contato do prestador */}
+          {!isInternal && execution.responsible_user && (
+            <p className="text-xs text-muted-foreground">
+              Responsável: <span className="text-foreground font-medium">{execution.responsible_user.name}</span>
+            </p>
+          )}
+          {!isInternal && execution.provider && (() => {
+            const wa  = pickContact(execution.provider.contacts ?? [], 'whatsapp')
+            const tel = pickContact(execution.provider.contacts ?? [], 'phone')
+            if (!wa && !tel) return null
+            return (
+              <div className="flex items-center gap-2 flex-wrap pt-1">
+                {wa && (
+                  <a
+                    href={`https://wa.me/${waNumber(wa)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`WhatsApp de ${execution.provider.name}`}
+                    className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md text-xs font-medium bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 dark:bg-green-950/30 dark:text-green-400 dark:border-green-800 transition-colors"
+                  >
+                    <MessageCircle className="w-3 h-3" aria-hidden="true" />
+                    WhatsApp
+                  </a>
+                )}
+                {tel && (
+                  <a
+                    href={`tel:${tel.replace(/\D/g, '')}`}
+                    aria-label={`Telefone de ${execution.provider.name}`}
+                    className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md text-xs font-medium bg-muted text-foreground border border-border hover:bg-muted/70 transition-colors"
+                  >
+                    <Phone className="w-3 h-3" aria-hidden="true" />
+                    Telefone
+                  </a>
+                )}
+              </div>
+            )
+          })()}
         </div>
 
         <div className="text-right shrink-0 space-y-1">
