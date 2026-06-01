@@ -31,10 +31,10 @@ const MAINT_STATUS: Record<string, { label: string; className: string }> = {
 }
 
 const MAINT_NATURE: Record<string, string> = {
-  emergencial: '🔴 Emergencial',
-  pontual:     '🟡 Pontual',
-  agendado:    '📅 Agendado',
-  preventivo:  '🔧 Preventivo',
+  preventiva:        '🛡️ Preventiva',
+  corretiva:         '🔧 Corretiva',
+  emergencial:       '🔴 Emergencial',
+  melhoria_estetica: '✨ Melhoria/Estética',
 }
 
 // ─────────────────────────────────────────────────────────────

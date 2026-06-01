@@ -31,11 +31,11 @@ import { BRAND_GREEN } from '@/lib/constants/brand-colors'
 // ─────────────────────────────────────────────────────────────
 // NATURE FILTER CHIPS
 // ─────────────────────────────────────────────────────────────
-const NATURE_CHIPS: { value: MaintenanceNature; label: string; color: 'red' | 'amber' | 'green' | 'blue' }[] = [
-  { value: 'emergencial', label: 'Emergencial', color: 'red'   },
-  { value: 'pontual',     label: 'Pontual',     color: 'amber' },
-  { value: 'agendado',    label: 'Agendado',    color: 'green' },
-  { value: 'preventivo',  label: 'Preventivo',  color: 'blue'  },
+const NATURE_CHIPS: { value: MaintenanceNature; label: string; color: 'red' | 'green' | 'blue' | 'purple' }[] = [
+  { value: 'preventiva',        label: 'Preventiva',        color: 'green'  },
+  { value: 'corretiva',         label: 'Corretiva',         color: 'blue'   },
+  { value: 'emergencial',       label: 'Emergencial',       color: 'red'    },
+  { value: 'melhoria_estetica', label: 'Melhoria/Estética', color: 'purple' },
 ]
 
 // ─────────────────────────────────────────────────────────────

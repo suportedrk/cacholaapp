@@ -25,16 +25,17 @@ export async function POST(request: Request) {
       { auth: { autoRefreshToken: false, persistSession: false } }
     )
 
-    // Fetch ticket
+    // Fetch ticket — created_by_user_id é o criador REAL (técnico), destinatário
+    // correto do alerta. opened_by agora é o solicitante (pode ser não-técnico).
     const { data: order } = await supabase
       .from('maintenance_tickets')
-      .select('title, opened_by')
+      .select('title, created_by_user_id')
       .eq('id', orderId)
       .single()
 
     if (!order) return Response.json({ ok: false, reason: 'ticket not found' })
 
-    // Fetch managers + directors + quem abriu
+    // Fetch managers + directors + criador real
     const { data: managers } = await supabase
       .from('users')
       .select('id, email, preferences')
@@ -44,7 +45,7 @@ export async function POST(request: Request) {
     const recipientIds = new Set<string>(
       (managers ?? []).map((u) => u.id)
     )
-    if (order.opened_by) recipientIds.add(order.opened_by)
+    if (order.created_by_user_id) recipientIds.add(order.created_by_user_id)
 
     // Resolve emails + check preferences
     const { data: users } = await supabase

@@ -150,6 +150,10 @@ export type TicketInsert = Pick<
   equipment_id?:   string | null
   scheduled_date?: string | null
   due_at?:         string | null
+  // Solicitante (quem pediu o reparo). Default = usuário logado, editável na UI.
+  // created_by_user_id (criador real) NÃO é enviado pelo client — trigger BEFORE
+  // INSERT no banco força auth.uid() (Migration 136).
+  opened_by?:      string
 }
 
 export function useCreateTicket(onSuccess?: (ticket: MaintenanceTicket) => void) {
@@ -165,7 +169,8 @@ export function useCreateTicket(onSuccess?: (ticket: MaintenanceTicket) => void)
         .from('maintenance_tickets')
         .insert({
           ...payload,
-          opened_by: user.id,
+          // Fallback defensivo: se a UI não enviar solicitante, usa o logado.
+          opened_by: payload.opened_by ?? user.id,
         })
         .select()
         .single()

@@ -2,7 +2,7 @@
 
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { Zap, Wrench, Clock, Shield } from 'lucide-react'
+import { Zap, Wrench, Shield, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { HistoryOrderItem } from '@/hooks/use-maintenance-history'
 import { calcResolutionHours, formatResolutionTime } from '@/hooks/use-maintenance-history'
@@ -13,13 +13,13 @@ import { calcResolutionHours, formatResolutionTime } from '@/hooks/use-maintenan
 const NATURE_CONFIG: Record<string, {
   icon: React.ElementType; label: string; dot: string; text: string
 }> = {
-  emergencial: { icon: Zap,    label: 'Emergencial', dot: 'bg-red-500',   text: 'text-red-600 dark:text-red-400'    },
-  pontual:     { icon: Wrench, label: 'Pontual',     dot: 'bg-amber-500', text: 'text-amber-600 dark:text-amber-400' },
-  agendado:    { icon: Clock,  label: 'Agendado',    dot: 'bg-green-500', text: 'text-green-600 dark:text-green-400' },
-  preventivo:  { icon: Shield, label: 'Preventivo',  dot: 'bg-blue-500',  text: 'text-blue-600 dark:text-blue-400'  },
+  preventiva:        { icon: Shield,   label: 'Preventiva',        dot: 'bg-teal-500',   text: 'text-teal-600 dark:text-teal-400'     },
+  corretiva:         { icon: Wrench,   label: 'Corretiva',         dot: 'bg-blue-500',   text: 'text-blue-600 dark:text-blue-400'     },
+  emergencial:       { icon: Zap,      label: 'Emergencial',       dot: 'bg-red-500',    text: 'text-red-600 dark:text-red-400'       },
+  melhoria_estetica: { icon: Sparkles, label: 'Melhoria/Estética', dot: 'bg-purple-500', text: 'text-purple-600 dark:text-purple-400' },
 }
 
-const DEFAULT_CFG = NATURE_CONFIG.pontual
+const DEFAULT_CFG = NATURE_CONFIG.corretiva
 
 // ─────────────────────────────────────────────────────────────
 // GROUP BY MONTH

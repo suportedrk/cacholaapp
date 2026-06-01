@@ -1,8 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { cn } from '@/lib/utils'
-import { ClipboardList } from 'lucide-react'
+import { ClipboardList, ImagePlus } from 'lucide-react'
+import { toast } from 'sonner'
+import { createClient } from '@/lib/supabase/client'
+import { compressImage, PhotoThumb } from '@/components/shared/photo-upload'
 import {
   Dialog,
   DialogContent,
@@ -21,17 +24,19 @@ import { useCreateTicket, type TicketInsert } from '@/hooks/use-tickets'
 import { useSectors } from '@/hooks/use-sectors'
 import { useMaintenanceCategories } from '@/hooks/use-maintenance-categories'
 import { useEquipment } from '@/hooks/use-equipment'
-import { useFormUnitSelection } from '@/hooks/use-form-unit-selection'
+import { useActiveUsersForUnit } from '@/hooks/use-users-for-unit'
+import { useAuth } from '@/hooks/use-auth'
+import { useUnitStore } from '@/stores/unit-store'
 import type { TicketNature, TicketUrgency } from '@/types/database.types'
 
 // ─────────────────────────────────────────────────────────────
 // CONSTANTES
 // ─────────────────────────────────────────────────────────────
 const NATURE_OPTIONS: { value: TicketNature; label: string }[] = [
-  { value: 'emergencial', label: 'Emergencial' },
-  { value: 'pontual',     label: 'Pontual'     },
-  { value: 'agendado',    label: 'Agendado'    },
-  { value: 'preventivo',  label: 'Preventivo'  },
+  { value: 'preventiva',        label: 'Preventiva'        },
+  { value: 'corretiva',         label: 'Corretiva'         },
+  { value: 'emergencial',       label: 'Emergencial'       },
+  { value: 'melhoria_estetica', label: 'Melhoria/Estética' },
 ]
 
 const URGENCY_OPTIONS: { value: TicketUrgency; label: string }[] = [
@@ -41,31 +46,37 @@ const URGENCY_OPTIONS: { value: TicketUrgency; label: string }[] = [
   { value: 'low',      label: 'Baixo'   },
 ]
 
+const MAX_PHOTOS = 5
+const PHOTO_BUCKET = 'maintenance-photos'
+
+// Foto em staging: comprimida em memória, com preview. Só sobe ao salvar o chamado.
+type StagedPhoto = { id: string; blob: Blob; previewUrl: string }
+
 // ─────────────────────────────────────────────────────────────
 // FORM STATE
 // ─────────────────────────────────────────────────────────────
 type FormState = {
-  title:          string
-  description:    string
-  unit_id:        string
-  sector_id:      string
-  category_id:    string
-  equipment_id:   string
-  nature:         TicketNature
-  urgency:        TicketUrgency
-  scheduled_date: string
+  title:        string
+  description:  string
+  unit_id:      string
+  sector_id:    string
+  category_id:  string
+  equipment_id: string
+  nature:       TicketNature
+  urgency:      TicketUrgency
+  opened_by:    string  // solicitante (default = usuário logado, editável)
 }
 
 const INITIAL: FormState = {
-  title:          '',
-  description:    '',
-  unit_id:        '',
-  sector_id:      '',
-  category_id:    '',
-  equipment_id:   '',
-  nature:         'pontual',
-  urgency:        'medium',
-  scheduled_date: '',
+  title:        '',
+  description:  '',
+  unit_id:      '',
+  sector_id:    '',
+  category_id:  '',
+  equipment_id: '',
+  nature:       'corretiva',
+  urgency:      'medium',
+  opened_by:    '',
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -81,30 +92,84 @@ export function TicketFormModal({ open, onClose, onCreated }: TicketFormModalPro
   const [form, setForm]     = useState<FormState>(INITIAL)
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({})
 
-  const { requiresUnitSelection, effectiveUnitId, availableUnits } =
-    useFormUnitSelection(form.unit_id || null)
+  const { profile } = useAuth()
+  const activeUnitId = useUnitStore((s) => s.activeUnitId)
+  const availableUnits = useUnitStore((s) => s.userUnits)
 
-  // Dropdowns dependentes filtram pela unidade EFETIVA (form quando "Todas", store caso contrário).
-  // Quando requiresUnitSelection && !effectiveUnitId, passamos null → hook não emite eq('unit_id')
-  // e a query depende apenas da RLS (o que é equivalente a "lista vazia" enquanto a unidade não é escolhida).
+  // Seletor de unidade sempre visível quando o usuário acessa >1 unidade.
+  const showUnitSelector = availableUnits.length > 1
+
+  // Unidade efetiva: escolha do form > unidade ativa do store > única unidade do usuário.
+  const effectiveUnitId =
+    form.unit_id ||
+    activeUnitId ||
+    (availableUnits.length === 1 ? availableUnits[0].unit_id : null)
+
+  // Dropdowns dependentes filtram pela unidade efetiva.
   const { data: sectors    = [] } = useSectors(true, effectiveUnitId)
   const { data: categories = [] } = useMaintenanceCategories(true, effectiveUnitId)
   const { data: equipments = [] } = useEquipment({ status: ['active', 'in_repair'] }, effectiveUnitId)
 
-  const createTicket = useCreateTicket((ticket) => {
-    onClose()
-    onCreated?.(ticket.id)
-  })
+  // Solicitantes via RPC SECURITY DEFINER (a RLS de users só deixa o técnico ver a si mesmo).
+  const { data: requesters = [] } = useActiveUsersForUnit(effectiveUnitId)
 
-  // Reset form when dialog opens
+  // Fotos em staging (memória) + flag de submit cobrindo criação + upload.
+  const [stagedPhotos, setStagedPhotos] = useState<StagedPhoto[]>([])
+  const [submitting, setSubmitting]     = useState(false)
+  const photoInputRef = useRef<HTMLInputElement>(null)
+  const stagedRef     = useRef<StagedPhoto[]>([])
+  const photoIdRef    = useRef(0)
+  stagedRef.current = stagedPhotos  // espelho p/ cleanup no unmount sem stale closure
+
+  // NÃO navega no callback do hook: navegação manual após upload das fotos.
+  const createTicket = useCreateTicket()
+
+  // Reset form when dialog opens — solicitante default = usuário logado;
+  // unidade pré-selecionada com a ativa do store (multi-unidade pode trocar).
   useEffect(() => {
     if (open) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setForm(INITIAL)
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setForm({ ...INITIAL, opened_by: profile?.id ?? '', unit_id: activeUnitId ?? '' })
       setErrors({})
+      // Limpa fotos de uma abertura anterior (revoga URLs antigas).
+      stagedRef.current.forEach((p) => URL.revokeObjectURL(p.previewUrl))
+      setStagedPhotos([])
     }
-  }, [open])
+  }, [open, profile?.id, activeUnitId])
+
+  // Cleanup no unmount: revoga todos os object URLs pendentes.
+  useEffect(() => {
+    return () => {
+      stagedRef.current.forEach((p) => URL.revokeObjectURL(p.previewUrl))
+    }
+  }, [])
+
+  async function handleAddPhotos(files: FileList | null) {
+    if (!files) return
+    for (const file of Array.from(files)) {
+      if (stagedRef.current.length >= MAX_PHOTOS) {
+        toast.error(`Máximo de ${MAX_PHOTOS} fotos por chamado.`)
+        break
+      }
+      try {
+        const blob = await compressImage(file, 1200, 0.8)
+        const previewUrl = URL.createObjectURL(blob)
+        photoIdRef.current += 1
+        const staged: StagedPhoto = { id: `p${photoIdRef.current}`, blob, previewUrl }
+        stagedRef.current = [...stagedRef.current, staged]
+        setStagedPhotos(stagedRef.current)
+      } catch {
+        toast.error('Não foi possível processar a imagem.')
+      }
+    }
+    if (photoInputRef.current) photoInputRef.current.value = ''
+  }
+
+  function removeStagedPhoto(id: string) {
+    const found = stagedRef.current.find((p) => p.id === id)
+    if (found) URL.revokeObjectURL(found.previewUrl)
+    stagedRef.current = stagedRef.current.filter((p) => p.id !== id)
+    setStagedPhotos(stagedRef.current)
+  }
 
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => {
@@ -119,6 +184,8 @@ export function TicketFormModal({ open, onClose, onCreated }: TicketFormModalPro
           sector_id:    '',
           category_id:  '',
           equipment_id: '',
+          // Solicitante volta ao usuário logado: a lista é por unidade.
+          opened_by:    profile?.id ?? '',
         }
       }
       return { ...prev, [key]: value }
@@ -131,16 +198,41 @@ export function TicketFormModal({ open, onClose, onCreated }: TicketFormModalPro
     if (!form.title.trim())   e.title  = 'Título é obrigatório'
     if (!form.nature)         e.nature  = 'Natureza é obrigatória'
     if (!form.urgency)        e.urgency = 'Urgência é obrigatória'
-    if (requiresUnitSelection && !form.unit_id) {
+    if (!effectiveUnitId) {
       e.unit_id = 'Unidade é obrigatória'
     }
     setErrors(e)
     return Object.keys(e).length === 0
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  // Sobe as fotos em staging após o ticket existir. Best-effort: retorna nº de falhas.
+  async function uploadStagedPhotos(ticketId: string, unitId: string): Promise<number> {
+    if (stagedRef.current.length === 0) return 0
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    let failed = 0
+    for (const photo of stagedRef.current) {
+      try {
+        photoIdRef.current += 1
+        const path = `${unitId}/${ticketId}/${photoIdRef.current}-${photo.id}.jpg`
+        const { error: upErr } = await supabase.storage
+          .from(PHOTO_BUCKET)
+          .upload(path, photo.blob, { contentType: 'image/jpeg', upsert: false })
+        if (upErr) throw upErr
+        const { error: insErr } = await supabase
+          .from('maintenance_ticket_photos')
+          .insert({ ticket_id: ticketId, url: path, uploaded_by: user?.id ?? null })
+        if (insErr) throw insErr
+      } catch {
+        failed++
+      }
+    }
+    return failed
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!validate() || createTicket.isPending) return
+    if (!validate() || submitting) return
     if (!effectiveUnitId) return  // guard final — submit desabilitado deveria impedir, mas defensivo
 
     const payload: TicketInsert = {
@@ -152,18 +244,37 @@ export function TicketFormModal({ open, onClose, onCreated }: TicketFormModalPro
       sector_id:    form.sector_id    || null,
       category_id:  form.category_id  || null,
       equipment_id: form.equipment_id || null,
-      scheduled_date:
-        form.nature === 'agendado' && form.scheduled_date
-          ? new Date(form.scheduled_date).toISOString()
-          : null,
+      // Solicitante: escolha do form, ou usuário logado como fallback.
+      opened_by:    form.opened_by || profile?.id || undefined,
     }
 
-    createTicket.mutate(payload)
+    setSubmitting(true)
+    try {
+      // 1. Cria o ticket (hook mostra toast de sucesso + auditLog).
+      const ticket = await createTicket.mutateAsync(payload)
+
+      // 2. Upload best-effort das fotos. Chamado nunca é perdido se a foto falhar.
+      const failed = await uploadStagedPhotos(ticket.id, effectiveUnitId)
+      if (failed > 0) {
+        toast.error(
+          `Chamado criado, mas ${failed} foto${failed !== 1 ? 's' : ''} não ${failed !== 1 ? 'subiram' : 'subiu'}. Reenvie no detalhe do chamado.`,
+          { duration: 6000 }
+        )
+      }
+
+      // 3. Cleanup + navega para o detalhe.
+      stagedRef.current.forEach((p) => URL.revokeObjectURL(p.previewUrl))
+      stagedRef.current = []
+      onClose()
+      onCreated?.(ticket.id)
+    } catch {
+      // createTicket.onError já mostrou o toast de erro do chamado.
+    } finally {
+      setSubmitting(false)
+    }
   }
 
-  const submitDisabled =
-    createTicket.isPending ||
-    (requiresUnitSelection && !form.unit_id)
+  const submitDisabled = submitting || !effectiveUnitId
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
@@ -178,8 +289,8 @@ export function TicketFormModal({ open, onClose, onCreated }: TicketFormModalPro
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
           <div className="overflow-y-auto flex-1 px-6 pb-4 space-y-4 pt-2">
 
-          {/* Unidade — visível somente quando seletor global está em "Todas" */}
-          {requiresUnitSelection && (
+          {/* Unidade — sempre visível quando o usuário acessa mais de uma unidade */}
+          {showUnitSelector && (
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-text-primary">
                 Unidade <span className="text-destructive">*</span>
@@ -204,12 +315,8 @@ export function TicketFormModal({ open, onClose, onCreated }: TicketFormModalPro
                   ))}
                 </SelectContent>
               </Select>
-              {errors.unit_id ? (
+              {errors.unit_id && (
                 <p className="text-xs text-destructive">{errors.unit_id}</p>
-              ) : (
-                <p className="text-xs text-text-tertiary">
-                  Seletor global está em &quot;Todas as unidades&quot; — escolha a unidade do chamado.
-                </p>
               )}
             </div>
           )}
@@ -296,21 +403,33 @@ export function TicketFormModal({ open, onClose, onCreated }: TicketFormModalPro
             </div>
           </div>
 
-          {/* Data agendada — só quando natureza = agendado */}
-          {form.nature === 'agendado' && (
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-text-primary">
-                Data agendada
-              </label>
-              <input
-                type="date"
-                value={form.scheduled_date}
-                onChange={(e) => set('scheduled_date', e.target.value)}
-                min={new Date().toISOString().split('T')[0]}
-                className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm focus:outline-none focus:border-border-focus transition-colors"
-              />
-            </div>
-          )}
+          {/* Solicitante — quem pediu o reparo. Default = usuário logado, editável. */}
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-text-primary">Solicitante</label>
+            <Select
+              value={form.opened_by || 'none'}
+              onValueChange={(v) => set('opened_by', v === 'none' ? '' : (v ?? ''))}
+            >
+              <SelectTrigger className="w-full">
+                <span data-slot="select-value">
+                  {form.opened_by
+                    ? (requesters.find((u) => u.id === form.opened_by)?.name ?? 'Eu')
+                    : 'Eu'}
+                </span>
+              </SelectTrigger>
+              <SelectContent>
+                {requesters.length === 0 && (
+                  <SelectItem value="none" disabled>Carregando usuários...</SelectItem>
+                )}
+                {requesters.map((u) => (
+                  <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-text-tertiary">
+              Quem reportou o problema. Por padrão, você.
+            </p>
+          </div>
 
           {/* Setor */}
           <div className="space-y-1.5">
@@ -395,18 +514,56 @@ export function TicketFormModal({ open, onClose, onCreated }: TicketFormModalPro
               </SelectContent>
             </Select>
           </div>
+
+          {/* Fotos de abertura — staging em memória, sobem ao salvar */}
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-text-primary">Fotos (abertura)</label>
+            <div className="grid grid-cols-3 gap-2">
+              {stagedPhotos.map((p) => (
+                <PhotoThumb
+                  key={p.id}
+                  src={p.previewUrl}
+                  alt="Foto do chamado"
+                  onRemove={submitting ? undefined : () => removeStagedPhoto(p.id)}
+                  disabled={submitting}
+                />
+              ))}
+              {stagedPhotos.length < MAX_PHOTOS && (
+                <button
+                  type="button"
+                  onClick={() => photoInputRef.current?.click()}
+                  disabled={submitting}
+                  className="aspect-[4/3] rounded-xl border-2 border-dashed border-border flex flex-col items-center justify-center gap-1 text-text-tertiary hover:border-border-focus hover:text-text-secondary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ImagePlus className="w-5 h-5" />
+                  <span className="text-xs">Adicionar</span>
+                </button>
+              )}
+            </div>
+            <input
+              ref={photoInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={(e) => handleAddPhotos(e.target.files)}
+            />
+            <p className="text-xs text-text-tertiary">
+              Até {MAX_PHOTOS} fotos. Enviadas ao abrir o chamado.
+            </p>
+          </div>
           </div>
         </form>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={createTicket.isPending}>
+          <Button variant="outline" onClick={onClose} disabled={submitting}>
             Cancelar
           </Button>
           <Button
             onClick={handleSubmit as any}
             disabled={submitDisabled}
           >
-            {createTicket.isPending ? 'Abrindo...' : 'Abrir Chamado'}
+            {submitting ? 'Abrindo...' : 'Abrir Chamado'}
           </Button>
         </DialogFooter>
       </DialogContent>

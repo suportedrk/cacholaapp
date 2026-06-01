@@ -29,11 +29,11 @@ const URGENCY_FILTER_OPTIONS = [
 ]
 
 const NATURE_FILTER_OPTIONS = [
-  { value: 'all',         label: 'Todas as naturezas' },
-  { value: 'emergencial', label: 'Emergencial'         },
-  { value: 'pontual',     label: 'Pontual'             },
-  { value: 'agendado',    label: 'Agendado'            },
-  { value: 'preventivo',  label: 'Preventivo'          },
+  { value: 'all',               label: 'Todas as naturezas' },
+  { value: 'preventiva',        label: 'Preventiva'         },
+  { value: 'corretiva',         label: 'Corretiva'          },
+  { value: 'emergencial',       label: 'Emergencial'        },
+  { value: 'melhoria_estetica', label: 'Melhoria/Estética'  },
 ]
 import { cn } from '@/lib/utils'
 import { useTickets, type TicketFilters } from '@/hooks/use-tickets'
