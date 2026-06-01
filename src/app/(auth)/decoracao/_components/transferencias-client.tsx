@@ -9,6 +9,7 @@ import {
   Truck,
   ArrowRight,
   Inbox,
+  Sparkles,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -19,7 +20,11 @@ import { ROUTES } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 import type { TransferenciaStatus } from '@/types/decoracao'
 import { TransferenciaStatusBadge } from './transferencia-status-badge'
-import { NovaTransferenciaSheet } from './nova-transferencia-sheet'
+import {
+  NovaTransferenciaSheet,
+  type NovaTransferenciaSeed,
+} from './nova-transferencia-sheet'
+import { SugerirPelaFestaSheet } from './sugerir-pela-festa-sheet'
 
 type StatusFilter = TransferenciaStatus | 'todas'
 
@@ -45,6 +50,25 @@ function formatDate(iso: string): string {
 export function TransferenciasClient() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('em_transito')
   const [novaOpen, setNovaOpen] = useState(false)
+  const [sugerirOpen, setSugerirOpen] = useState(false)
+  // Seed da sugestão + counter para forçar remount da NovaTransferenciaSheet
+  // (key-remount: estado inicial relê o seed sem effect-hydration).
+  const [seed, setSeed] = useState<NovaTransferenciaSeed | undefined>(undefined)
+  const [seedKey, setSeedKey] = useState(0)
+
+  function handleCriarComSugestao(s: NovaTransferenciaSeed) {
+    setSugerirOpen(false)
+    setSeed(s)
+    setSeedKey((k) => k + 1)
+    setNovaOpen(true)
+  }
+
+  // Abrir "Nova transferência" vazia: limpa seed e força remount limpo.
+  function handleNovaVazia() {
+    setSeed(undefined)
+    setSeedKey((k) => k + 1)
+    setNovaOpen(true)
+  }
 
   const {
     data: transferencias = [],
@@ -97,10 +121,16 @@ export function TransferenciasClient() {
         title="Transferências"
         description="Movimentações de peças entre locais de guarda."
         actions={
-          <Button onClick={() => setNovaOpen(true)}>
-            <Plus className="mr-1.5 h-4 w-4" />
-            Nova transferência
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={() => setSugerirOpen(true)}>
+              <Sparkles className="mr-1.5 h-4 w-4" />
+              Sugerir pela festa
+            </Button>
+            <Button onClick={handleNovaVazia}>
+              <Plus className="mr-1.5 h-4 w-4" />
+              Nova transferência
+            </Button>
+          </div>
         }
       />
 
@@ -134,7 +164,7 @@ export function TransferenciasClient() {
               : `Nenhuma transferência ${statusFilter === 'recebida' ? 'recebida' : 'cancelada'}.`}
           </p>
           {statusFilter === 'em_transito' && (
-            <Button variant="outline" size="sm" onClick={() => setNovaOpen(true)}>
+            <Button variant="outline" size="sm" onClick={handleNovaVazia}>
               <Plus className="mr-1.5 h-4 w-4" />
               Lançar nova
             </Button>
@@ -175,7 +205,18 @@ export function TransferenciasClient() {
         </ul>
       )}
 
-      <NovaTransferenciaSheet open={novaOpen} onOpenChange={setNovaOpen} />
+      <NovaTransferenciaSheet
+        key={seedKey}
+        open={novaOpen}
+        onOpenChange={setNovaOpen}
+        initialSeed={seed}
+      />
+
+      <SugerirPelaFestaSheet
+        open={sugerirOpen}
+        onOpenChange={setSugerirOpen}
+        onCriarTransferencia={handleCriarComSugestao}
+      />
     </div>
   )
 }
