@@ -58,6 +58,8 @@ export const ROUTES = {
   maintenanceDashboard: '/manutencao/dashboard',
   maintenanceChamados: '/manutencao/chamados',
   maintenanceConfig: '/manutencao/configuracoes',
+  maintenanceAgenda: '/manutencao/agenda',
+  maintenanceMinhasTarefas: '/manutencao/minhas-tarefas',
   checklists: '/checklists',
   users: '/admin/usuarios',
   units: '/admin/unidades',
