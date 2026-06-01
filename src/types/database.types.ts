@@ -123,6 +123,8 @@ export interface Database {
       get_ploomes_stages:            { Args: Record<string, never>; Returns: { stage_id: number; stage_name: string }[] }
       // ── Manutenção — seletor de solicitante (Migration 136) ──────────────────
       get_maintenance_requester_options: { Args: { p_unit_id?: string | null }; Returns: { id: string; name: string; role: string }[] }
+      // ── Manutenção — seletor de executor interno / equipe (Migration 137) ────
+      get_maintenance_executor_options:  { Args: { p_unit_id?: string | null }; Returns: { id: string; name: string; role: string }[] }
     }
     Enums: Record<string, never>
   }
@@ -340,6 +342,7 @@ export type MaintenanceExecution = {
   executor_type: ExecutorType
   internal_user_id: string | null
   provider_id: string | null
+  responsible_user_id: string | null
   description: string | null
   cost: number
   cost_approved: boolean

@@ -35,7 +35,11 @@ const TICKET_DETAIL_SELECT = `
   executions:maintenance_executions!ticket_id(
     *,
     internal_user:users!internal_user_id(id, name, avatar_url),
-    provider:service_providers!provider_id(id, name)
+    responsible_user:users!maintenance_executions_responsible_user_id_fkey(id, name),
+    provider:service_providers!provider_id(
+      id, name,
+      contacts:provider_contacts!provider_id(type, value, is_primary)
+    )
   ),
   photos:maintenance_ticket_photos!ticket_id(*),
   history:maintenance_status_history!ticket_id(
@@ -261,13 +265,14 @@ export function useUpdateTicketEquipment() {
 // ADICIONAR EXECUÇÃO
 // ─────────────────────────────────────────────────────────────
 export type ExecutionInsert = {
-  ticket_id:        string
-  executor_type:    'internal' | 'external'
-  internal_user_id?: string | null
-  provider_id?:     string | null
-  description?:     string | null
-  cost?:            number
-  status?:          ExecutionStatus
+  ticket_id:           string
+  executor_type:       'internal' | 'external'
+  internal_user_id?:   string | null
+  provider_id?:        string | null
+  responsible_user_id?: string | null
+  description?:        string | null
+  cost?:               number
+  status?:             ExecutionStatus
 }
 
 export function useAddExecution(onSuccess?: () => void) {

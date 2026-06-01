@@ -19,6 +19,8 @@ import {
   Package,
   ArrowRightLeft,
   Pencil,
+  Phone,
+  MessageCircle,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -32,7 +34,8 @@ import {
 import { useEquipment } from '@/hooks/use-equipment'
 import { useSignedUrls } from '@/hooks/use-signed-urls'
 import { useProviders } from '@/hooks/use-providers'
-import { useUnitUsers } from '@/hooks/use-units'
+import { useMaintenanceExecutorOptions } from '@/hooks/use-maintenance-executors'
+import { useActiveUsersForUnit } from '@/hooks/use-users-for-unit'
 import { useAuth } from '@/hooks/use-auth'
 import { URGENCY_CONFIG, NATURE_CONFIG, STATUS_CONFIG } from '@/components/features/maintenance/ticket-card'
 import { useLoadingTimeout } from '@/hooks/use-loading-timeout'
@@ -319,25 +322,51 @@ function AddExecutionModal({
   const [type, setType] = useState<'internal' | 'external'>('internal')
   const [userId, setUserId] = useState('')
   const [providerId, setProviderId] = useState('')
+  const [responsibleId, setResponsibleId] = useState('')
   const [description, setDescription] = useState('')
   const [costStr, setCostStr] = useState('')
   const [execStatus, setExecStatus] = useState<ExecutionStatus>('assigned')
+  const [error, setError] = useState<string | null>(null)
 
-  const { data: unitUsers = [] } = useUnitUsers(unitId)
+  // Executor interno = equipe de manutenção (RPC com check_permission view + escopo unidade).
+  const { data: executors = [] } = useMaintenanceExecutorOptions(unitId)
+  // Responsável interno do serviço externo = qualquer usuário ativo da unidade (RPC solicitante).
+  const { data: responsibles = [] } = useActiveUsersForUnit(unitId)
   // Prestadores filtrados pela unidade do TICKET — em "Todas" no seletor global,
   // o store estaria em null e o hook listaria prestadores de todas as unidades.
   const { data: providers = [] } = useProviders({ status: 'active' }, unitId)
   const { mutate: addExecution, isPending } = useAddExecution(onClose)
 
+  // Reset em cascata ao alternar interno/external: limpa os campos do outro tipo.
+  function switchType(t: 'internal' | 'external') {
+    setType(t)
+    setError(null)
+    if (t === 'internal') {
+      setProviderId('')
+      setResponsibleId('')
+    } else {
+      setUserId('')
+    }
+  }
+
   function handleSave() {
+    if (type === 'internal' && !userId) {
+      setError('Selecione o colaborador.')
+      return
+    }
+    if (type === 'external' && (!providerId || !responsibleId)) {
+      setError('Selecione o prestador e o responsável interno.')
+      return
+    }
     addExecution({
-      ticket_id:        ticketId,
-      executor_type:    type,
-      internal_user_id: type === 'internal' ? userId || null : null,
-      provider_id:      type === 'external' ? providerId || null : null,
-      description:      description.trim() || null,
-      cost:             parseFloat(costStr.replace(',', '.')) || 0,
-      status:           execStatus,
+      ticket_id:           ticketId,
+      executor_type:       type,
+      internal_user_id:    type === 'internal' ? userId || null : null,
+      provider_id:         type === 'external' ? providerId || null : null,
+      responsible_user_id: type === 'external' ? responsibleId || null : null,
+      description:         description.trim() || null,
+      cost:               parseFloat(costStr.replace(',', '.')) || 0,
+      status:             execStatus,
     } as Parameters<typeof addExecution>[0])
   }
 
@@ -362,7 +391,7 @@ function AddExecutionModal({
           {(['internal', 'external'] as const).map((t) => (
             <button
               key={t}
-              onClick={() => setType(t)}
+              onClick={() => switchType(t)}
               className={`flex-1 h-9 rounded-lg text-sm font-medium transition-colors border ${
                 type === t
                   ? 'bg-primary text-primary-foreground border-primary'
@@ -380,29 +409,45 @@ function AddExecutionModal({
             <label className="text-xs text-muted-foreground">Colaborador</label>
             <select
               value={userId}
-              onChange={(e) => setUserId(e.target.value)}
+              onChange={(e) => { setUserId(e.target.value); setError(null) }}
               className="w-full h-10 rounded-lg border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             >
               <option value="">Selecione...</option>
-              {unitUsers.map((u) => (
-                <option key={u.user.id} value={u.user.id}>{u.user.name}</option>
+              {executors.map((u) => (
+                <option key={u.id} value={u.id}>{u.name}</option>
               ))}
             </select>
           </div>
         ) : (
-          <div className="space-y-1">
-            <label className="text-xs text-muted-foreground">Prestador</label>
-            <select
-              value={providerId}
-              onChange={(e) => setProviderId(e.target.value)}
-              className="w-full h-10 rounded-lg border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-            >
-              <option value="">Selecione...</option>
-              {providers.map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
-          </div>
+          <>
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">Prestador</label>
+              <select
+                value={providerId}
+                onChange={(e) => { setProviderId(e.target.value); setError(null) }}
+                className="w-full h-10 rounded-lg border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="">Selecione...</option>
+                {providers.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">Responsável interno</label>
+              <select
+                value={responsibleId}
+                onChange={(e) => { setResponsibleId(e.target.value); setError(null) }}
+                className="w-full h-10 rounded-lg border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="">Selecione...</option>
+                {responsibles.map((u) => (
+                  <option key={u.id} value={u.id}>{u.name}</option>
+                ))}
+              </select>
+              <p className="text-xs text-muted-foreground">Quem acompanha o serviço do prestador.</p>
+            </div>
+          </>
         )}
 
         {/* Descrição */}
@@ -444,6 +489,8 @@ function AddExecutionModal({
           </select>
         </div>
 
+        {error && <p className="text-xs text-destructive">{error}</p>}
+
         <div className="flex gap-2">
           <Button variant="outline" size="sm" className="flex-1" onClick={onClose}>
             Cancelar
@@ -461,9 +508,24 @@ function AddExecutionModal({
 // ─────────────────────────────────────────────────────────────
 // ExecutionRow
 // ─────────────────────────────────────────────────────────────
+type ProviderContact = { type: 'phone' | 'email' | 'whatsapp'; value: string; is_primary: boolean | null }
 type RichExecution = MaintenanceExecution & {
-  internal_user: { id: string; name: string; avatar_url: string | null } | null
-  provider: { id: string; name: string } | null
+  internal_user:    { id: string; name: string; avatar_url: string | null } | null
+  responsible_user: { id: string; name: string } | null
+  provider:         { id: string; name: string; contacts: ProviderContact[] } | null
+}
+
+// Escolhe o contato preferindo is_primary (mesmo critério do ProviderCard).
+function pickContact(contacts: ProviderContact[], type: 'phone' | 'whatsapp'): string | null {
+  const matches = contacts.filter((c) => c.type === type)
+  if (matches.length === 0) return null
+  return (matches.find((c) => c.is_primary) ?? matches[0]).value
+}
+
+// Normaliza para wa.me: só dígitos; prefixa 55 SÓ se ainda não tiver código do país.
+function waNumber(value: string): string {
+  const digits = value.replace(/\D/g, '')
+  return digits.startsWith('55') && digits.length >= 12 ? digits : `55${digits}`
 }
 
 function ExecutionRow({
@@ -500,6 +562,44 @@ function ExecutionRow({
           {execution.concluded_at && (
             <p className="text-xs text-muted-foreground">Concluída {formatRelative(execution.concluded_at)}</p>
           )}
+
+          {/* Serviço externo: responsável interno + contato do prestador */}
+          {!isInternal && execution.responsible_user && (
+            <p className="text-xs text-muted-foreground">
+              Responsável: <span className="text-foreground font-medium">{execution.responsible_user.name}</span>
+            </p>
+          )}
+          {!isInternal && execution.provider && (() => {
+            const wa  = pickContact(execution.provider.contacts ?? [], 'whatsapp')
+            const tel = pickContact(execution.provider.contacts ?? [], 'phone')
+            if (!wa && !tel) return null
+            return (
+              <div className="flex items-center gap-2 flex-wrap pt-1">
+                {wa && (
+                  <a
+                    href={`https://wa.me/${waNumber(wa)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`WhatsApp de ${execution.provider.name}`}
+                    className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md text-xs font-medium bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 dark:bg-green-950/30 dark:text-green-400 dark:border-green-800 transition-colors"
+                  >
+                    <MessageCircle className="w-3 h-3" aria-hidden="true" />
+                    WhatsApp
+                  </a>
+                )}
+                {tel && (
+                  <a
+                    href={`tel:${tel.replace(/\D/g, '')}`}
+                    aria-label={`Telefone de ${execution.provider.name}`}
+                    className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md text-xs font-medium bg-muted text-foreground border border-border hover:bg-muted/70 transition-colors"
+                  >
+                    <Phone className="w-3 h-3" aria-hidden="true" />
+                    Telefone
+                  </a>
+                )}
+              </div>
+            )
+          })()}
         </div>
 
         <div className="text-right shrink-0 space-y-1">
