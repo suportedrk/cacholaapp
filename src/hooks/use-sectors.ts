@@ -36,12 +36,17 @@ export function useSectors(onlyActive = true, unitIdOverride?: string | null) {
 // Verifica se existe setor inativo com o mesmo nome (case-insensitive).
 // Se sim: reativa em vez de inserir — histórico de relatórios fica unificado.
 // Se não: insert normal.
+// mutationFn retorna void para manter compatibilidade com ConfigTable.onCreate.
+// Resultado (criado/reativado) é comunicado via closure variable.
 // ─────────────────────────────────────────────────────────────
 export function useCreateSector() {
   const qc = useQueryClient()
   const storeUnitId = useUnitStore((s) => s.activeUnitId)
+  let _wasReactivated = false
+
   return useMutation({
     mutationFn: async (data: { name: string; unit_id?: string | null }) => {
+      _wasReactivated = false
       const supabase = createClient()
       const targetUnitId = data.unit_id ?? storeUnitId
       const trimmedName = data.name.trim()
@@ -63,7 +68,8 @@ export function useCreateSector() {
           .update({ is_active: true, name: trimmedName })
           .eq('id', archived[0].id)
         if (error) throw error
-        return 'reactivated' as const
+        _wasReactivated = true
+        return
       }
 
       // Insert normal
@@ -75,11 +81,10 @@ export function useCreateSector() {
         .from('maintenance_sectors')
         .insert({ name: trimmedName, sort_order: nextOrder, unit_id: targetUnitId! })
       if (error) throw error
-      return 'created' as const
     },
-    onSuccess: (result) => {
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['sectors'] })
-      toast.success(result === 'reactivated' ? 'Setor reativado — histórico preservado.' : 'Setor criado.')
+      toast.success(_wasReactivated ? 'Setor reativado — histórico preservado.' : 'Setor criado.')
     },
     onError: (err) => toast.error(mapPgError(err, { activeUnitId: storeUnitId }, 'SECTOR_CREATE')),
   })
