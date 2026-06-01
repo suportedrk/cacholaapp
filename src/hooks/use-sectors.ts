@@ -42,11 +42,13 @@ export function useSectors(onlyActive = true, unitIdOverride?: string | null) {
 export function useCreateSector() {
   const qc = useQueryClient()
   const storeUnitId = useUnitStore((s) => s.activeUnitId)
-  let _wasReactivated = false
+  // Objeto mutable para comunicar resultado de mutationFn → onSuccess sem
+  // reatribuição de variável primitiva (evita regra ESLint no-outer-reassignment).
+  const _result = { reactivated: false }
 
   return useMutation({
     mutationFn: async (data: { name: string; unit_id?: string | null }) => {
-      _wasReactivated = false
+      _result.reactivated = false
       const supabase = createClient()
       const targetUnitId = data.unit_id ?? storeUnitId
       const trimmedName = data.name.trim()
@@ -68,7 +70,7 @@ export function useCreateSector() {
           .update({ is_active: true, name: trimmedName })
           .eq('id', archived[0].id)
         if (error) throw error
-        _wasReactivated = true
+        _result.reactivated = true
         return
       }
 
@@ -84,7 +86,7 @@ export function useCreateSector() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['sectors'] })
-      toast.success(_wasReactivated ? 'Setor reativado — histórico preservado.' : 'Setor criado.')
+      toast.success(_result.reactivated ? 'Setor reativado — histórico preservado.' : 'Setor criado.')
     },
     onError: (err) => toast.error(mapPgError(err, { activeUnitId: storeUnitId }, 'SECTOR_CREATE')),
   })
