@@ -35,6 +35,22 @@ export async function POST(request: Request) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const supabase = (await createClient()) as any
 
+    // Guard de integridade (Bloco D): re-vincular re-snapshota os itens
+    // (reset 0/0/0/0). Numa festa encerrada isso seria um "reabrir"
+    // disfarçado — bloqueia. Não há decoração ainda → segue (primeiro vínculo).
+    const { data: existente, error: lookupErr } = await supabase
+      .from('decoracao_festa')
+      .select('status')
+      .eq('event_id', eventId)
+      .maybeSingle()
+    if (lookupErr) throw lookupErr
+    if (existente?.status === 'encerrada') {
+      return NextResponse.json(
+        { error: 'A decoração desta festa já foi encerrada e não pode ser revinculada.' },
+        { status: 409 },
+      )
+    }
+
     const { data: festaId, error } = await supabase.rpc('vincular_tema_festa', {
       p_event_id: eventId,
       p_tema_id: temaId,
