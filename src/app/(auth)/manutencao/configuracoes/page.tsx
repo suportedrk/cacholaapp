@@ -22,11 +22,10 @@ import {
   useUpdateMaintenanceCategory,
   useDeleteMaintenanceCategory,
 } from '@/hooks/use-maintenance-categories'
-import { useMaintenanceItems, useCreateMaintenanceItem, useUpdateMaintenanceItem, useDeleteMaintenanceItem } from '@/hooks/use-maintenance-items'
 import { useMaintenanceSla, useUpsertMaintenanceSla } from '@/hooks/use-maintenance-sla'
 import { useFormUnitSelection } from '@/hooks/use-form-unit-selection'
 import { UnitPickerBanner } from '@/components/features/maintenance/unit-picker-banner'
-import type { MaintenanceCategory, MaintenanceItem } from '@/types/database.types'
+import type { MaintenanceCategory } from '@/types/database.types'
 import type { ConfigItem } from '@/components/features/settings/config-table'
 
 // ─────────────────────────────────────────────────────────────
@@ -88,7 +87,7 @@ function SetoresTab() {
   const { requiresUnitSelection, effectiveUnitId, availableUnits } =
     useFormUnitSelection(pickedUnitId || null)
 
-  const { data: sectors = [], isLoading } = useSectors(false, effectiveUnitId)
+  const { data: sectors = [], isLoading } = useSectors(true, effectiveUnitId)
   const create = useCreateSector()
   const update = useUpdateSector()
   const del    = useDeleteSector()
@@ -486,103 +485,6 @@ function CategoriasTab() {
 }
 
 // ─────────────────────────────────────────────────────────────
-// TAB: ITENS
-// ─────────────────────────────────────────────────────────────
-function ItensTab() {
-  const [pickedUnitId, setPickedUnitId] = useState('')
-  const { requiresUnitSelection, effectiveUnitId, availableUnits } =
-    useFormUnitSelection(pickedUnitId || null)
-
-  const { data: sectors = [] } = useSectors(true, effectiveUnitId)
-  const [filterSectorId, setFilterSectorId] = useState<string>('')
-
-  const { data: items = [], isLoading } = useMaintenanceItems(false, filterSectorId || null, effectiveUnitId)
-  const create = useCreateMaintenanceItem()
-  const update = useUpdateMaintenanceItem()
-  const del    = useDeleteMaintenanceItem()
-
-  const canCreate = !!effectiveUnitId
-
-  const configItems: ConfigItem[] = items.map((item) => ({
-    id: item.id,
-    name: item.name,
-    is_active: item.is_active,
-    sort_order: item.sort_order,
-    sector_name: (item as MaintenanceItem & { sector?: { name: string } | null }).sector?.name ?? '',
-  }))
-
-  return (
-    <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">
-        Itens são elementos específicos que podem precisar de manutenção dentro de um setor (ex: &quot;Geladeira&quot;, &quot;Torneira do Pia&quot;).
-      </p>
-
-      <div className="rounded-lg border border-border bg-surface-secondary p-4 space-y-2 text-sm text-text-secondary">
-        <p>
-          <span className="font-medium text-text-primary">📦 Equipamento</span> é um bem que você controla um por um: tem número de série, garantia, e você acompanha o estado dele ao longo do tempo (ex.: a piscina de bolinhas, o ar-condicionado da sala azul, a geladeira do buffet).
-        </p>
-        <p>
-          <span className="font-medium text-text-primary">📍 Item</span> é um lugar ou elemento mais simples do espaço, sem esse controle todo — serve pra dizer &quot;onde&quot; ou &quot;o quê&quot; do chamado (ex.: a pia da cozinha, a tomada do salão, a porta de entrada).
-        </p>
-        <p className="text-xs text-text-tertiary">
-          Na dúvida: precisa rastrear garantia/número de série? É <strong>Equipamento</strong>. É só pra localizar ou descrever? É <strong>Item</strong>.
-        </p>
-      </div>
-
-      {requiresUnitSelection && (
-        <UnitPickerBanner
-          value={pickedUnitId}
-          onChange={(v) => {
-            setPickedUnitId(v)
-            setFilterSectorId('')
-          }}
-          units={availableUnits}
-          contextLabel="criar itens"
-        />
-      )}
-
-      {/* Filtro por setor */}
-      <div className="flex items-center gap-2">
-        <label className="text-xs text-muted-foreground shrink-0">Filtrar por setor:</label>
-        <select
-          value={filterSectorId}
-          onChange={(e) => setFilterSectorId(e.target.value)}
-          className="h-8 rounded-md border border-border bg-background px-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-        >
-          <option value="">Todos os setores</option>
-          {sectors.map((s) => (
-            <option key={s.id} value={s.id}>{s.name}</option>
-          ))}
-          <option value="__no_sector__" disabled>Sem setor</option>
-        </select>
-      </div>
-
-      <ConfigTable
-        title="Item"
-        items={configItems}
-        isLoading={isLoading}
-        canCreate={canCreate}
-        extraField={{ key: 'sector_name', label: 'Setor', type: 'text' }}
-        onCreate={async (d) => {
-          if (!effectiveUnitId) return
-          // Encontrar setor pelo nome (ou usar filterSectorId)
-          const matchedSector = sectors.find((s) => s.name.toLowerCase() === String(d.sector_name ?? '').toLowerCase())
-          await create.mutateAsync({
-            name: d.name,
-            sector_id: matchedSector?.id ?? (filterSectorId || null),
-            unit_id: effectiveUnitId,
-          })
-        }}
-        onUpdate={async (id, d) => {
-          await update.mutateAsync({ id, name: d.name, is_active: d.is_active })
-        }}
-        onDelete={async (id) => { await del.mutateAsync(id) }}
-      />
-    </div>
-  )
-}
-
-// ─────────────────────────────────────────────────────────────
 // TAB: SLA
 // ─────────────────────────────────────────────────────────────
 type UrgencyKey = 'critical' | 'high' | 'medium' | 'low'
@@ -800,14 +702,13 @@ export default function ManutencaoConfiguracoesPage() {
     <div className="space-y-6">
       <PageHeader
         title="Configurações de Manutenção"
-        description="Gerencie setores, categorias, itens catalogados e regras de SLA para os chamados."
+        description="Gerencie setores, categorias e regras de SLA para os chamados."
       />
 
       <Tabs defaultValue="setores">
         <TabsList>
           <TabsTrigger value="setores">Setores</TabsTrigger>
           <TabsTrigger value="categorias">Categorias</TabsTrigger>
-          <TabsTrigger value="itens">Itens</TabsTrigger>
           <TabsTrigger value="sla">SLA</TabsTrigger>
         </TabsList>
 
@@ -817,10 +718,6 @@ export default function ManutencaoConfiguracoesPage() {
 
         <TabsContent value="categorias" className="mt-6">
           <CategoriasTab />
-        </TabsContent>
-
-        <TabsContent value="itens" className="mt-6">
-          <ItensTab />
         </TabsContent>
 
         <TabsContent value="sla" className="mt-6">

@@ -20,7 +20,6 @@ import {
 import { useCreateTicket, type TicketInsert } from '@/hooks/use-tickets'
 import { useSectors } from '@/hooks/use-sectors'
 import { useMaintenanceCategories } from '@/hooks/use-maintenance-categories'
-import { useMaintenanceItems } from '@/hooks/use-maintenance-items'
 import { useEquipment } from '@/hooks/use-equipment'
 import { useFormUnitSelection } from '@/hooks/use-form-unit-selection'
 import type { TicketNature, TicketUrgency } from '@/types/database.types'
@@ -51,7 +50,6 @@ type FormState = {
   unit_id:        string
   sector_id:      string
   category_id:    string
-  item_id:        string
   equipment_id:   string
   nature:         TicketNature
   urgency:        TicketUrgency
@@ -64,7 +62,6 @@ const INITIAL: FormState = {
   unit_id:        '',
   sector_id:      '',
   category_id:    '',
-  item_id:        '',
   equipment_id:   '',
   nature:         'pontual',
   urgency:        'medium',
@@ -92,7 +89,6 @@ export function TicketFormModal({ open, onClose, onCreated }: TicketFormModalPro
   // e a query depende apenas da RLS (o que é equivalente a "lista vazia" enquanto a unidade não é escolhida).
   const { data: sectors    = [] } = useSectors(true, effectiveUnitId)
   const { data: categories = [] } = useMaintenanceCategories(true, effectiveUnitId)
-  const { data: items      = [] } = useMaintenanceItems(true, form.sector_id || null, effectiveUnitId)
   const { data: equipments = [] } = useEquipment({ status: ['active', 'in_repair'] }, effectiveUnitId)
 
   const createTicket = useCreateTicket((ticket) => {
@@ -122,7 +118,6 @@ export function TicketFormModal({ open, onClose, onCreated }: TicketFormModalPro
           unit_id:      value as string,
           sector_id:    '',
           category_id:  '',
-          item_id:      '',
           equipment_id: '',
         }
       }
@@ -156,7 +151,6 @@ export function TicketFormModal({ open, onClose, onCreated }: TicketFormModalPro
       description:  form.description.trim() || null,
       sector_id:    form.sector_id    || null,
       category_id:  form.category_id  || null,
-      item_id:      form.item_id      || null,
       equipment_id: form.equipment_id || null,
       scheduled_date:
         form.nature === 'agendado' && form.scheduled_date
@@ -323,10 +317,7 @@ export function TicketFormModal({ open, onClose, onCreated }: TicketFormModalPro
             <label className="text-sm font-medium text-text-primary">Setor</label>
             <Select
               value={form.sector_id || 'none'}
-              onValueChange={(v) => {
-                set('sector_id', v === 'none' ? '' : (v ?? ''))
-                set('item_id', '') // reset item when sector changes
-              }}
+              onValueChange={(v) => set('sector_id', v === 'none' ? '' : (v ?? ''))}
             >
               <SelectTrigger className="w-full">
                 <span data-slot="select-value">
@@ -370,34 +361,6 @@ export function TicketFormModal({ open, onClose, onCreated }: TicketFormModalPro
                       {c.name}
                     </span>
                   </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Item/Local — filtrado pelo setor */}
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-text-primary">
-              Item / Local
-            </label>
-            <p className="text-xs text-muted-foreground">
-              Item = lugar/elemento simples do espaço. Para ativos com número de série/garantia, use Equipamento.
-            </p>
-            <Select
-              value={form.item_id || 'none'}
-              onValueChange={(v) => set('item_id', v === 'none' ? '' : (v ?? ''))}
-            >
-              <SelectTrigger className="w-full">
-                <span data-slot="select-value">
-                  {form.item_id
-                    ? (items.find((i) => i.id === form.item_id)?.name ?? 'Nenhum')
-                    : 'Nenhum'}
-                </span>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Nenhum</SelectItem>
-                {items.map((i) => (
-                  <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>

@@ -43,7 +43,7 @@ export function useMaintenanceCategories(onlyActive = false, unitIdOverride?: st
       let q = supabase
         .from('maintenance_categories')
         .select('*')
-        .order('sort_order', { ascending: true })
+        .order('name', { ascending: true })
 
       if (activeUnitId) q = q.eq('unit_id', activeUnitId)
       if (onlyActive) q = q.eq('is_active', true)
