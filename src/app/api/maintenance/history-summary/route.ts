@@ -125,23 +125,23 @@ export async function GET(req: NextRequest) {
 
     // ── Costs queries (need ticket IDs) ────────────────────────
     const [costsResult, monthlyCostsResult] = await Promise.all([
-      // Approved costs for filtered tickets
+      // Approved costs for filtered tickets — usa approved_cost
       filteredTicketIds.length > 0
         ? supabase
             .from('maintenance_executions')
-            .select('cost')
+            .select('approved_cost')
             .in('ticket_id', filteredTicketIds)
             .eq('cost_approved', true)
-        : Promise.resolve({ data: [] as { cost: number }[], error: null }),
+        : Promise.resolve({ data: [] as { approved_cost: number | null }[], error: null }),
 
-      // Monthly approved costs (last 12m)
+      // Monthly approved costs (last 12m) — usa approved_cost
       monthlyTicketIds.length > 0
         ? supabase
             .from('maintenance_executions')
-            .select('cost, ticket_id, created_at')
+            .select('approved_cost, ticket_id, created_at')
             .in('ticket_id', monthlyTicketIds)
             .eq('cost_approved', true)
-        : Promise.resolve({ data: [] as { cost: number; ticket_id: string; created_at: string }[], error: null }),
+        : Promise.resolve({ data: [] as { approved_cost: number | null; ticket_id: string; created_at: string }[], error: null }),
     ])
 
     // ── KPIs ───────────────────────────────────────────────────
@@ -161,9 +161,9 @@ export async function GET(req: NextRequest) {
       avg_resolution_hours = Math.round((durations.reduce((a, b) => a + b, 0) / durations.length) * 10) / 10
     }
 
-    // Total approved cost
+    // Total approved cost (valor aprovado)
     const total_cost_approved = (costsResult.data ?? []).reduce(
-      (sum: number, e) => sum + Number((e as { cost?: number | null }).cost ?? 0),
+      (sum: number, e) => sum + Number((e as { approved_cost?: number | null }).approved_cost ?? 0),
       0
     )
 
@@ -192,12 +192,12 @@ export async function GET(req: NextRequest) {
 
     // Costs bucketed by the ticket's concluded_at month (not execution created_at)
     for (const e of (monthlyCostsResult.data ?? [])) {
-      const ex = e as unknown as { cost?: number | null; ticket_id?: string; created_at?: string }
+      const ex = e as unknown as { approved_cost?: number | null; ticket_id?: string; created_at?: string }
       const ticketAt = ex.ticket_id ? ticketConcludedMap[ex.ticket_id] : null
       const at = ticketAt ?? ex.created_at
       if (!at) continue
       const key = format(new Date(at), 'yyyy-MM')
-      if (key in costBucket) costBucket[key] += Number(ex.cost ?? 0)
+      if (key in costBucket) costBucket[key] += Number(ex.approved_cost ?? 0)
     }
 
     const by_month = months.map((m) => ({

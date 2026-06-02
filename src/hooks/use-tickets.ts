@@ -386,20 +386,16 @@ export function useUploadTicketPhoto() {
 export function useApproveCost(ticketId: string) {
   const qc = useQueryClient()
 
+  // Aprova via RPC approve_execution_cost (gated por check_permission
+  // 'manutencao.approve'): grava approved_cost + quem + quando atomicamente.
+  // O gestor pode informar um valor aprovado distinto do estimado.
   return useMutation({
-    mutationFn: async (executionId: string) => {
+    mutationFn: async ({ executionId, approvedCost }: { executionId: string; approvedCost: number }) => {
       const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Não autenticado')
-
-      const { error } = await supabase
-        .from('maintenance_executions')
-        .update({
-          cost_approved: true,
-          cost_approved_by: user.id,
-          cost_approved_at: new Date().toISOString(),
-        })
-        .eq('id', executionId)
+      const { error } = await supabase.rpc('approve_execution_cost', {
+        p_execution_id: executionId,
+        p_approved_cost: approvedCost,
+      })
       if (error) throw error
     },
     onSuccess: () => {

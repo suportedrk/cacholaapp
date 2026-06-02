@@ -125,6 +125,8 @@ export interface Database {
       get_maintenance_requester_options: { Args: { p_unit_id?: string | null }; Returns: { id: string; name: string; role: string }[] }
       // ── Manutenção — seletor de executor interno / equipe (Migration 137) ────
       get_maintenance_executor_options:  { Args: { p_unit_id?: string | null }; Returns: { id: string; name: string; role: string }[] }
+      // ── Manutenção — aprovação de custo gated por permissão (Migration 139) ──
+      approve_execution_cost:            { Args: { p_execution_id: string; p_approved_cost: number }; Returns: void }
     }
     Enums: Record<string, never>
   }
@@ -345,6 +347,7 @@ export type MaintenanceExecution = {
   responsible_user_id: string | null
   description: string | null
   cost: number
+  approved_cost: number | null
   cost_approved: boolean
   cost_approved_by: string | null
   cost_approved_at: string | null

@@ -656,7 +656,7 @@ function ExecutionRow({
               size="sm"
               className="text-xs h-7 px-2"
               disabled={isPending}
-              onClick={() => approveCost(execution.id)}
+              onClick={() => approveCost({ executionId: execution.id, approvedCost: execution.cost })}
             >
               {isPending ? '...' : 'Aprovar'}
             </Button>
