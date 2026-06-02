@@ -288,6 +288,8 @@ export type MaintenanceTicket = {
   due_at?: string | null
   opened_by: string
   created_by_user_id?: string | null
+  concluded_by_user_id?: string | null
+  resolution_notes?: string | null
   equipment_id?: string | null
   total_cost: number
   created_at: string
@@ -366,6 +368,7 @@ export type MaintenanceTicketPhoto = {
   url: string
   caption: string | null
   uploaded_by: string | null
+  phase: 'abertura' | 'conclusao'
   created_at: string
 }
 

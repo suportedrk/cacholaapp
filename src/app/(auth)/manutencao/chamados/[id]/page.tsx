@@ -61,10 +61,12 @@ const STATUS_LABELS: Record<TicketStatus, string> = {
   cancelled:    'Cancelado',
 }
 
+// 'concluded' fora do seletor genérico: a conclusão acontece SÓ pelo fluxo
+// dedicado "Concluir chamado" (que exige a descrição da resolução).
 const STATUS_TRANSITIONS: Record<string, TicketStatus[]> = {
   open:         ['in_progress', 'cancelled'],
-  in_progress:  ['waiting_part', 'concluded', 'cancelled'],
-  waiting_part: ['in_progress', 'concluded', 'cancelled'],
+  in_progress:  ['waiting_part', 'cancelled'],
+  waiting_part: ['in_progress', 'cancelled'],
 }
 
 const STATUS_ICON: Record<string, React.ElementType> = {
