@@ -385,6 +385,7 @@ export interface DecoracaoItemVariacao {
   detalhe: string | null
   codigo: string
   ordem: number
+  foto_path: string | null
   created_at: string
   updated_at: string
 }
@@ -426,6 +427,7 @@ export interface VariacaoFormInput {
   cor: string | null
   detalhe: string | null
   ordem: number
+  foto_path?: string | null
 }
 
 export interface ItemFormInput {
