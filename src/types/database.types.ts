@@ -394,6 +394,7 @@ export type MaintenanceTicketWithDetails = MaintenanceTicket & {
   sector:    Pick<Sector, 'id' | 'name'> | null
   category:  Pick<MaintenanceCategory, 'id' | 'name' | 'color' | 'icon'> | null
   equipment: Pick<Equipment, 'id' | 'name' | 'category'> | null
+  concluded_by_user: { id: string; name: string } | null
   executions: (MaintenanceExecution & {
     internal_user: Pick<User, 'id' | 'name' | 'avatar_url'> | null
     provider:      { id: string; name: string } | null

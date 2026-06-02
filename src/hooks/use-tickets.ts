@@ -32,6 +32,7 @@ const TICKET_DETAIL_SELECT = `
   sector:maintenance_sectors!sector_id(id, name),
   category:maintenance_categories!category_id(id, name, color, icon),
   equipment:equipment!equipment_id(id, name, category),
+  concluded_by_user:users!concluded_by_user_id(id, name),
   executions:maintenance_executions!ticket_id(
     *,
     internal_user:users!internal_user_id(id, name, avatar_url),
