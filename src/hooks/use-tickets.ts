@@ -36,6 +36,7 @@ const TICKET_DETAIL_SELECT = `
     *,
     internal_user:users!internal_user_id(id, name, avatar_url),
     responsible_user:users!maintenance_executions_responsible_user_id_fkey(id, name),
+    cost_approved_by_user:users!cost_approved_by(id, name),
     provider:service_providers!provider_id(
       id, name,
       contacts:provider_contacts!provider_id(type, value, is_primary)
