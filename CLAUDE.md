@@ -1141,6 +1141,14 @@ Quando agregar produtos por deal, usar CTE pré-agregada (`prods`) para evitar e
 
 ---
 
+## Janelas de manutenção
+
+Índice de janelas de manutenção/infra registradas (apenas ponteiros — o conteúdo fica no doc em `docs/ops/`).
+
+- **02/jun/2026** — Backup (alerta falso positivo + `backup-verify` mudo) e kernel `6.8.0-124` → [`docs/ops/2026-06-02-janela-manutencao-backup-kernel.md`](docs/ops/2026-06-02-janela-manutencao-backup-kernel.md)
+
+---
+
 ## DÉBITOS TÉCNICOS
 
 - **Decoração — órfãos no storage quando a aba fecha:** os edit-sheets/dialog dos 3 catálogos
