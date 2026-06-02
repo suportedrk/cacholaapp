@@ -39,7 +39,7 @@ export type Module =
   | 'configuracoes'
   | 'notificacoes'
 
-export type Action = 'view' | 'create' | 'edit' | 'delete' | 'export'
+export type Action = 'view' | 'create' | 'edit' | 'delete' | 'export' | 'approve'
 
 /** Mapa de permissões: module → action → granted */
 export type PermissionMap = Record<Module, Record<Action, boolean>>

@@ -121,16 +121,16 @@ export async function GET(req: NextRequest) {
         .eq('nature', 'emergencial')
         .not('status', 'in', '(concluded,cancelled)'),
 
-      // 6. Total approved costs this month (via executions)
+      // 6. Total approved costs this month (via executions) — usa approved_cost
       ticketIds.length > 0
         ? supabase
             .from('maintenance_executions')
-            .select('cost')
+            .select('approved_cost')
             .in('ticket_id', ticketIds)
             .eq('cost_approved', true)
             .gte('created_at', monthStart)
             .lte('created_at', monthEnd)
-        : Promise.resolve({ data: [] as { cost: number }[], error: null }),
+        : Promise.resolve({ data: [] as { approved_cost: number | null }[], error: null }),
 
       // 7. Pending approvals (unapproved executions with cost > 0)
       ticketIds.length > 0
@@ -180,9 +180,9 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // ── Process total costs ────────────────────────────────────────
+    // ── Process total costs (valor aprovado) ───────────────────────
     const total_costs_month = (costsMonthResult.data ?? []).reduce(
-      (sum: number, e) => sum + Number((e as { cost?: number | null }).cost ?? 0),
+      (sum: number, e) => sum + Number((e as { approved_cost?: number | null }).approved_cost ?? 0),
       0
     )
 

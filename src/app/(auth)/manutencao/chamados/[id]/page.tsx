@@ -545,9 +545,10 @@ function AddExecutionModal({
 // ─────────────────────────────────────────────────────────────
 type ProviderContact = { type: 'phone' | 'email' | 'whatsapp'; value: string; is_primary: boolean | null }
 type RichExecution = MaintenanceExecution & {
-  internal_user:    { id: string; name: string; avatar_url: string | null } | null
-  responsible_user: { id: string; name: string } | null
-  provider:         { id: string; name: string; contacts: ProviderContact[] } | null
+  internal_user:         { id: string; name: string; avatar_url: string | null } | null
+  responsible_user:      { id: string; name: string } | null
+  cost_approved_by_user: { id: string; name: string } | null
+  provider:              { id: string; name: string; contacts: ProviderContact[] } | null
 }
 
 // Escolhe o contato preferindo is_primary (mesmo critério do ProviderCard).
@@ -573,10 +574,20 @@ function ExecutionRow({
   canApprove: boolean
 }) {
   const { mutate: approveCost, isPending } = useApproveCost(ticketId)
+  const [approving, setApproving]   = useState(false)
+  const [approvedStr, setApprovedStr] = useState(() => execution.cost.toFixed(2).replace('.', ','))
 
   const executorName = execution.internal_user?.name ?? execution.provider?.name ?? 'Não atribuído'
   const isInternal   = execution.executor_type === 'internal'
   const hasCost      = execution.cost > 0
+
+  // Data/hora da aprovação sempre em Brasília.
+  const approvedAtFmt = execution.cost_approved_at
+    ? new Intl.DateTimeFormat('pt-BR', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo',
+      }).format(new Date(execution.cost_approved_at))
+    : null
 
   return (
     <div className="py-3 border-b border-border last:border-0">
@@ -637,29 +648,64 @@ function ExecutionRow({
           })()}
         </div>
 
-        <div className="text-right shrink-0 space-y-1">
+        <div className="text-right shrink-0 space-y-1 min-w-[150px]">
           {hasCost && (
-            <p className="text-sm font-semibold">
-              R$ {execution.cost.toFixed(2).replace('.', ',')}
-            </p>
-          )}
-          {hasCost && (
-            execution.cost_approved ? (
-              <p className="text-xs text-green-600 dark:text-green-400 font-medium">Aprovado</p>
-            ) : (
-              <p className="text-xs text-amber-600 dark:text-amber-400">Pendente</p>
-            )
-          )}
-          {hasCost && !execution.cost_approved && canApprove && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-xs h-7 px-2"
-              disabled={isPending}
-              onClick={() => approveCost(execution.id)}
-            >
-              {isPending ? '...' : 'Aprovar'}
-            </Button>
+            <>
+              <p className="text-xs text-muted-foreground">
+                Estimado:{' '}
+                <span className="text-foreground font-medium">R$ {execution.cost.toFixed(2).replace('.', ',')}</span>
+              </p>
+              {execution.cost_approved && execution.approved_cost != null && (
+                <p className="text-xs text-muted-foreground">
+                  Aprovado:{' '}
+                  <span className="text-green-600 dark:text-green-400 font-semibold">
+                    R$ {Number(execution.approved_cost).toFixed(2).replace('.', ',')}
+                  </span>
+                </p>
+              )}
+
+              {execution.cost_approved ? (
+                <p className="text-[11px] text-muted-foreground">
+                  Aprovado por {execution.cost_approved_by_user?.name ?? '—'}
+                  {approvedAtFmt ? ` em ${approvedAtFmt}` : ''}
+                </p>
+              ) : (
+                <p className="text-xs text-amber-600 dark:text-amber-400">Pendente</p>
+              )}
+
+              {!execution.cost_approved && canApprove && (
+                approving ? (
+                  <div className="flex items-center gap-1 justify-end">
+                    <span className="text-xs text-muted-foreground">R$</span>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={approvedStr}
+                      onChange={(e) => setApprovedStr(e.target.value)}
+                      aria-label="Valor aprovado"
+                      className="w-20 h-7 rounded border border-border bg-background px-2 text-xs text-right focus:outline-none focus:ring-2 focus:ring-ring"
+                    />
+                    <Button
+                      size="sm"
+                      className="text-xs h-7 px-2"
+                      disabled={isPending}
+                      onClick={() => approveCost({ executionId: execution.id, approvedCost: parseFloat(approvedStr.replace(',', '.')) || 0 })}
+                    >
+                      {isPending ? '...' : 'Confirmar'}
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs h-7 px-2"
+                    onClick={() => setApproving(true)}
+                  >
+                    Aprovar
+                  </Button>
+                )
+              )}
+            </>
           )}
         </div>
       </div>
