@@ -38,13 +38,18 @@ log_verify_failure_row() {
   local fname="verify-failure_${TIMESTAMP}"
   local msg="${FAIL_MSGS:-Falha na verificação de backup}"
   msg="${msg//\'/\'\'}"   # dobra aspas simples para segurança no SQL
-  docker exec "${DB_CONTAINER}" psql -U "${DB_USER}" -d "${DB_NAME}" -q -c "
+  # O gravador NÃO pode falhar em silêncio (é justamente o que combatemos): se o
+  # INSERT não der certo, o erro do psql vai para o log e emitimos um warn — sem
+  # abortar, para o exit 1 da verificação continuar acontecendo.
+  if ! docker exec "${DB_CONTAINER}" psql -U "${DB_USER}" -d "${DB_NAME}" -q -c "
     INSERT INTO public.backup_log
       (kind, source, filename, status, started_at, completed_at, error_message)
     VALUES
       ('${kind}', 'verify', '${fname}', 'failed', now(), now(), '${msg}')
     ON CONFLICT (kind, source, filename) DO NOTHING;
-  " 2>/dev/null || true
+  " 2>>"${LOG_FILE}"; then
+    warn "Falha ao registrar linha de alerta em backup_log (a verificação ainda será reportada como falha)"
+  fi
 }
 
 ERRORS=0
