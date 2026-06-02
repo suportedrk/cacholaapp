@@ -42,19 +42,25 @@ export async function GET(request: Request) {
   const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000).toISOString()
   const todayStr = now.toISOString().split('T')[0]
 
-  // ── Condição 3: backup diário rodou hoje? (checar só após 04:00 local) ──
+  // ── Condição 3: algum backup local rodou hoje? (checar só após 04:00 local) ──
+  // Conta QUALQUER backup local bem-sucedido desde a meia-noite, sem filtrar por
+  // kind. O backup-full.sh rotula como 'weekly' aos domingos e 'monthly' no dia 1º,
+  // então filtrar por kind='daily' gerava falso positivo nesses dias (não existe
+  // linha 'daily'). source='local' cobre daily/weekly/monthly; o upload ao R2 usa
+  // source='r2_upload', que aqui é intencionalmente ignorado.
   const hourNow = now.getHours()
   let backupMissing = false
 
   if (hourNow >= 4) {
-    const { data: dailyToday } = await (supabase
+    const { data: localBackupToday } = await (supabase
       .from('backup_log' as never)
       .select('id')
-      .eq('kind', 'daily')
+      .eq('source', 'local')
+      .eq('status', 'success')
       .gte('started_at', midnightISO)
       .limit(1) as unknown as Promise<{ data: { id: string }[] | null }>)
 
-    backupMissing = (dailyToday?.length ?? 0) === 0
+    backupMissing = (localBackupToday?.length ?? 0) === 0
   }
 
   // ── Condição 1: falhas explícitas de hoje ──
