@@ -6,6 +6,7 @@ import { Trash2, Printer } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { PhotoDropZone, PhotoThumb } from '@/components/shared/photo-upload'
 import { QrPrintModal } from './qr-print-modal'
 import type { VariacaoFormInput } from '@/types/decoracao'
 
@@ -16,8 +17,16 @@ interface Props {
   /** Código real da variação (apenas quando já existe). Para variações novas, é null. */
   codigo: string | null
   disabled?: boolean
+  /** Bucket de storage onde a foto será armazenada (decoracao-itens). */
+  bucket: string
+  /** Pasta dentro do bucket para upload desta variação. */
+  folder: string
+  /** Signed URL da foto atual (undefined = sem foto ou URL ainda carregando). */
+  signedUrl?: string
   onChange: (next: VariacaoFormInput) => void
   onRemove: () => void
+  onFotoUpload: (path: string) => void
+  onFotoRemove: () => void
 }
 
 function descricaoVariacao(v: VariacaoFormInput): string {
@@ -34,8 +43,13 @@ export function VariacaoCard({
   itemNome,
   codigo,
   disabled,
+  bucket,
+  folder,
+  signedUrl,
   onChange,
   onRemove,
+  onFotoUpload,
+  onFotoRemove,
 }: Props) {
   const [printOpen, setPrintOpen] = useState(false)
   const [removeConfirm, setRemoveConfirm] = useState(false)
@@ -105,6 +119,34 @@ export function VariacaoCard({
             disabled={disabled}
           />
         </div>
+      </div>
+
+      {/* Foto da variação */}
+      <div className="space-y-1.5">
+        <Label className="text-xs">Foto da variação</Label>
+        {variacao.foto_path && signedUrl ? (
+          <div className="w-32">
+            <PhotoThumb
+              src={signedUrl}
+              alt={descricaoVariacao(variacao) || `Variação ${index + 1}`}
+              onRemove={disabled ? undefined : onFotoRemove}
+              disabled={disabled}
+            />
+          </div>
+        ) : (
+          <PhotoDropZone
+            bucket={bucket}
+            folder={folder}
+            maxFiles={1}
+            existingCount={0}
+            disabled={disabled}
+            onUploadComplete={(path) => {
+              onFotoUpload(path)
+              return Promise.resolve()
+            }}
+            className="max-w-xs"
+          />
+        )}
       </div>
 
       {/* QR + ações */}

@@ -49,7 +49,7 @@ interface Props {
 }
 
 function newEmptyVariacao(ordem: number): VariacaoFormInput {
-  return { tamanho: null, cor: null, detalhe: null, ordem }
+  return { tamanho: null, cor: null, detalhe: null, ordem, foto_path: null }
 }
 
 async function removeFromStorage(paths: string[]): Promise<void> {
@@ -102,8 +102,13 @@ export function ItemEditor({ mode, itemId }: Props) {
   const [deleteConfirm, setDeleteConfirm] = useState(false)
 
   const pendingUploadsRef = useRef<string[]>([])
-  const fotoPaths = form.foto_path ? [form.foto_path] : []
-  const { data: signedUrls = {} } = useSignedUrls(BUCKET, fotoPaths)
+
+  // Agrega todos os paths de foto (item + variações) numa única chamada de signed URLs
+  const allFotoPaths = [
+    ...(form.foto_path ? [form.foto_path] : []),
+    ...form.variacoes.flatMap((v) => (v.foto_path ? [v.foto_path] : [])),
+  ]
+  const { data: signedUrls = {} } = useSignedUrls(BUCKET, allFotoPaths)
 
   // Hidrata form em edit
   useEffect(() => {
@@ -127,6 +132,7 @@ export function ItemEditor({ mode, itemId }: Props) {
         cor: v.cor,
         detalhe: v.detalhe,
         ordem: v.ordem,
+        foto_path: v.foto_path ?? null,
       })),
     })
     setCustoRaw(moneyDisplay(d.preco_custo))
@@ -155,6 +161,22 @@ export function ItemEditor({ mode, itemId }: Props) {
     const toClean = pendingUploadsRef.current
     pendingUploadsRef.current = []
     if (toClean.length > 0) void removeFromStorage(toClean)
+  }
+
+  // ─── Foto por variação ─────────────────────────────────────
+  function handleVariacaoFotoUpload(index: number, path: string): void {
+    setForm((f) => ({
+      ...f,
+      variacoes: f.variacoes.map((v, i) => (i === index ? { ...v, foto_path: path } : v)),
+    }))
+    pendingUploadsRef.current = [...pendingUploadsRef.current, path]
+  }
+
+  function handleVariacaoFotoRemove(index: number): void {
+    setForm((f) => ({
+      ...f,
+      variacoes: f.variacoes.map((v, i) => (i === index ? { ...v, foto_path: null } : v)),
+    }))
   }
 
   // ─── Variações handlers ────────────────────────────────────
@@ -227,13 +249,24 @@ export function ItemEditor({ mode, itemId }: Props) {
         newId = itemId!
       }
 
-      // Sucesso: limpa órfãos
+      // Sucesso: limpa órfãos (item + variações)
       const originalFotoPath = detailQuery.data?.foto_path ?? null
+      const savedVariacaoPaths = new Set(
+        form.variacoes.flatMap((v) => (v.foto_path ? [v.foto_path] : [])),
+      )
       const orphans: string[] = []
       for (const p of pendingUploadsRef.current) {
-        if (p !== form.foto_path) orphans.push(p)
+        if (p !== form.foto_path && !savedVariacaoPaths.has(p)) orphans.push(p)
       }
       if (originalFotoPath && originalFotoPath !== form.foto_path) orphans.push(originalFotoPath)
+      // Fotos de variações que foram removidas durante a edição
+      if (detailQuery.data) {
+        for (const orig of detailQuery.data.variacoes) {
+          if (orig.foto_path && !savedVariacaoPaths.has(orig.foto_path)) {
+            orphans.push(orig.foto_path)
+          }
+        }
+      }
       pendingUploadsRef.current = []
       void removeFromStorage(orphans)
 
@@ -253,6 +286,9 @@ export function ItemEditor({ mode, itemId }: Props) {
       await deleteMutation.mutateAsync(itemId)
       const toClean: string[] = []
       if (detailQuery.data?.foto_path) toClean.push(detailQuery.data.foto_path)
+      for (const v of detailQuery.data?.variacoes ?? []) {
+        if (v.foto_path) toClean.push(v.foto_path)
+      }
       pendingUploadsRef.current.forEach((p) => {
         if (p !== detailQuery.data?.foto_path) toClean.push(p)
       })
@@ -544,8 +580,13 @@ export function ItemEditor({ mode, itemId }: Props) {
               itemNome={form.nome}
               codigo={codigos[i] ?? null}
               disabled={isPending}
+              bucket={BUCKET}
+              folder={`${itemId ?? 'tmp'}/variacoes/${i}`}
+              signedUrl={v.foto_path ? signedUrls[v.foto_path] : undefined}
               onChange={(next) => updateVariacao(i, next)}
               onRemove={() => removeVariacao(i)}
+              onFotoUpload={(path) => handleVariacaoFotoUpload(i, path)}
+              onFotoRemove={() => handleVariacaoFotoRemove(i)}
             />
           ))}
         </div>
