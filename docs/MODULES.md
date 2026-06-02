@@ -129,7 +129,7 @@
 
 **Rota base:** `/decoracao` (catálogo, categorias, temas, estoque, transferências, quarentena) + seção "Decoração" no detalhe do evento `/eventos/[id]`.
 
-**Estado:** v1.37.0 — fase "Mari" completa (Blocos A–F em produção). Módulo nasceu com a camada de dados dourada (RLS + RPCs via `check_permission('decoracao', action)`) desde a migration 097.
+**Estado:** fase "Mari" completa (Blocos A–F) + foto por variação (migration 142) — tudo em produção, app em v1.44.0. Módulo nasceu com a camada de dados dourada (RLS + RPCs via `check_permission('decoracao', action)`) desde a migration 097.
 
 ### O que cada bloco entregou
 | Bloco | Migration | Entrega |
@@ -141,8 +141,10 @@
 | E | 133 | Galeria de fotos da montagem por festa (`decoracao_festa_fotos`, multi-upload, lightbox, legenda) — o registro; distinta da foto modelo/override |
 | F | (sem migration) | Sugestão de transferência: na área de Transferências, compara lista da festa × saldo do local e sugere o que trazer da outra unidade; pré-preenche a Nova Transferência |
 
+**Pós-fase Mari — Foto por variação (migration 142, v1.44.0):** a pedido do diretor Vinícius, cada variação de item (`decoracao_item_variacoes`) ganhou `foto_path` (registro visual por tamanho/cor). Upload por variação no editor do item via PhotoDropZone, bucket `decoracao-itens`, miniatura via signed URL. As RPCs `create/update_decoracao_item_with_variacoes` (mig 104) foram recriadas (corpo verbatim + foto_path), sem mudança de assinatura.
+
 ### Tabelas (RLS dourado via `check_permission('decoracao', action)`)
-`decoracao_categorias`, `decoracao_itens` (+ variações), `decoracao_temas`, `decoracao_tema_itens`, `decoracao_festa`, `decoracao_festa_itens`, `decoracao_quarentena`, `decoracao_festa_fotos` + infraestrutura de estoque pré-existente (`decoracao_estoque_saldo`, locais, transferências via RPC `criar_transferencia`).
+`decoracao_categorias`, `decoracao_itens` (+ `decoracao_item_variacoes`, agora com `foto_path`), `decoracao_temas`, `decoracao_tema_itens`, `decoracao_festa`, `decoracao_festa_itens`, `decoracao_quarentena`, `decoracao_festa_fotos` + infraestrutura de estoque pré-existente (`decoracao_estoque_saldo`, locais, transferências via RPC `criar_transferencia`).
 
 ### Arquivos-chave
 | Arquivo | Função |
@@ -152,6 +154,8 @@
 | `src/app/(auth)/decoracao/_components/sugerir-pela-festa-sheet.tsx` | Sugestão de transferência pela festa (Bloco F) |
 | `src/app/(auth)/decoracao/_components/nova-transferencia-sheet.tsx` | Nova transferência (aceita `initialSeed` via key-remount) |
 | `src/app/(auth)/decoracao/_components/transferencias-client.tsx` | Área de transferências + botão "Sugerir pela festa" |
+| `src/app/(auth)/decoracao/_components/item-editor.tsx` | Editor de item + variações (foto por variação, signed URLs agregadas, orphan cleanup) |
+| `src/app/(auth)/decoracao/_components/variacao-card.tsx` | Card de variação (campo de foto via PhotoDropZone/PhotoThumb) |
 | `src/hooks/use-decoracao.ts` | Hooks do módulo (categorias, itens, temas, festa, fotos, quarentena) |
 | `src/hooks/use-sugestao-transferencia.ts` | `useFestasComDecoracao`, `useSugestaoTransferencia` (cálculo client, read-path dourado) |
 | `src/types/decoracao.ts` | Tipos do módulo |
@@ -171,7 +175,7 @@
 - **Auditoria de overrides (gate de deploy):** conjunto CORRETO é `NOT IN ('super_admin','diretor','gerente','decoracao')` para view/create/edit e `NOT IN ('super_admin','diretor')` para delete. Usar só super_admin+diretor gera FALSO POSITIVO com as contas gerente.
 
 ### Pendências
-- **Pergunta dos balões (com Mari — e-mail enviado em jun/2026):** unificar catálogo/OS de balões dentro de Itens, OU a categoria "Balões" basta e a OS de balões segue separada? A resposta dela define se há migração da OS de balões. **NÃO mexer na OS de balões até a resposta.**
+- **Balões — decisão em alinhamento (jun/2026):** o diretor Vinícius respondeu que prefere UNIFICAR (tratar balões como item de fornecedor terceiro, eliminar o submódulo de OS de balões, deixar só a categoria "Balões" em Itens). Aguardando a Mari alinhar (ela ainda não fechou). Quando confirmar, desenhar a migração com cuidado: mover os dados da OS de balões para Itens + aposentar o submódulo sem quebrar o que roda. **NÃO mexer na OS de balões até o alinhamento final.**
 - **FASE B (RBAC):** converter os guards por cargo restantes para permissão — layout pai `/decoracao` e tela `/transferencias` (hoje `requireRoleServer(DECORACAO_MANAGE_ROLES)`). Re-scan delta antes.
 - **Default de origem da sugestão** assume 2 locais; revisitar quando surgir um 3º local permanente.
 - Backlog: "reabrir/desfazer" encerramento; órfãos de storage da decoração.
