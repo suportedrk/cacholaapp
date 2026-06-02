@@ -10,12 +10,45 @@ TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 LOG_FILE="${BACKUP_ROOT}/logs/verify_${TIMESTAMP}.log"
 MIN_DB_SIZE=1048576   # 1 MB em bytes
 
+# Conexão com o banco (mesmo container/credenciais do backup-full.sh)
+DB_CONTAINER=supabase-db
+DB_NAME=postgres
+DB_USER=postgres
+
 log()  { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "${LOG_FILE}"; }
 ok()   { log "  ✔  $*"; }
 warn() { log "  ⚠  $*"; }
-fail() { log "  ✘  $*"; ERRORS=$((ERRORS + 1)); }
+fail() { log "  ✘  $*"; ERRORS=$((ERRORS + 1)); FAIL_MSGS="${FAIL_MSGS:+${FAIL_MSGS}; }$*"; }
+
+# Registra UMA linha status='failed' em public.backup_log quando a verificação
+# encontra falha REAL (gzip/tamanho/checksum) — nunca para warns (ex.: backup
+# "velho" aos domingos/dia 1º não conta como erro). Reaproveita o alerta já
+# existente (cron backup-check, condição status='failed', agnóstica de
+# kind/source), sem precisar de caminho de e-mail próprio no shell.
+#   - source='verify' (migration 141) evita colidir com a linha de sucesso do
+#     backup-full pelo índice único (kind, source, filename) + ON CONFLICT.
+#   - filename embute o TIMESTAMP único desta execução => nunca colide E faz o
+#     alerta reincidir a cada dia enquanto a corrupção persistir.
+log_verify_failure_row() {
+  local kind="daily"
+  case "${LATEST_DB:-}" in
+    *_weekly_*)  kind="weekly" ;;
+    *_monthly_*) kind="monthly" ;;
+  esac
+  local fname="verify-failure_${TIMESTAMP}"
+  local msg="${FAIL_MSGS:-Falha na verificação de backup}"
+  msg="${msg//\'/\'\'}"   # dobra aspas simples para segurança no SQL
+  docker exec "${DB_CONTAINER}" psql -U "${DB_USER}" -d "${DB_NAME}" -q -c "
+    INSERT INTO public.backup_log
+      (kind, source, filename, status, started_at, completed_at, error_message)
+    VALUES
+      ('${kind}', 'verify', '${fname}', 'failed', now(), now(), '${msg}')
+    ON CONFLICT (kind, source, filename) DO NOTHING;
+  " 2>/dev/null || true
+}
 
 ERRORS=0
+FAIL_MSGS=""
 
 log "=== VERIFICAÇÃO DE BACKUP - ${TIMESTAMP} ==="
 
@@ -95,5 +128,6 @@ if [ "${ERRORS}" -eq 0 ]; then
   exit 0
 else
   log "=== VERIFICAÇÃO FALHOU (${ERRORS} erro(s)) ==="
+  log_verify_failure_row
   exit 1
 fi
