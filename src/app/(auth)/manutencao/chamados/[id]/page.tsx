@@ -21,7 +21,9 @@ import {
   Pencil,
   Phone,
   MessageCircle,
+  ImagePlus,
 } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
   useTicket,
@@ -30,6 +32,7 @@ import {
   useAddExecution,
   useUploadTicketPhoto,
   useApproveCost,
+  useFinalizeTicket,
 } from '@/hooks/use-tickets'
 import { useEquipment } from '@/hooks/use-equipment'
 import { useSignedUrls } from '@/hooks/use-signed-urls'
@@ -61,10 +64,12 @@ const STATUS_LABELS: Record<TicketStatus, string> = {
   cancelled:    'Cancelado',
 }
 
+// 'concluded' fora do seletor genérico: a conclusão acontece SÓ pelo fluxo
+// dedicado "Concluir chamado" (que exige a descrição da resolução).
 const STATUS_TRANSITIONS: Record<string, TicketStatus[]> = {
   open:         ['in_progress', 'cancelled'],
-  in_progress:  ['waiting_part', 'concluded', 'cancelled'],
-  waiting_part: ['in_progress', 'concluded', 'cancelled'],
+  in_progress:  ['waiting_part', 'cancelled'],
+  waiting_part: ['in_progress', 'cancelled'],
 }
 
 const STATUS_ICON: Record<string, React.ElementType> = {
@@ -541,6 +546,156 @@ function AddExecutionModal({
 }
 
 // ─────────────────────────────────────────────────────────────
+// FinalizeModal — concluir chamado (resolução obrigatória + fotos 'conclusao')
+// ─────────────────────────────────────────────────────────────
+function nowLocalDatetime(): string {
+  // 'YYYY-MM-DDTHH:MM' no horário de Brasília, para o input datetime-local.
+  const parts = new Intl.DateTimeFormat('sv-SE', {
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo',
+  }).formatToParts(new Date())
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? '00'
+  return `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}`
+}
+
+function FinalizeModal({
+  ticketId,
+  unitId,
+  onClose,
+}: {
+  ticketId: string
+  unitId: string
+  onClose: () => void
+}) {
+  const [concludedAt, setConcludedAt] = useState(() => nowLocalDatetime())
+  const [resolution, setResolution]   = useState('')
+  const [error, setError]             = useState<string | null>(null)
+  const [submitting, setSubmitting]   = useState(false)
+
+  const { mutateAsync: finalize } = useFinalizeTicket(ticketId)
+  const { mutateAsync: uploadPhoto } = useUploadTicketPhoto()
+  const photoInputRef = useRef<HTMLInputElement>(null)
+  const [pendingFiles, setPendingFiles] = useState<File[]>([])
+
+  function handleAddFiles(files: FileList | null) {
+    if (!files) return
+    setPendingFiles((prev) => [...prev, ...Array.from(files)])
+    if (photoInputRef.current) photoInputRef.current.value = ''
+  }
+
+  async function handleConfirm() {
+    if (!resolution.trim()) {
+      setError('Descreva o que foi realizado.')
+      return
+    }
+    if (!concludedAt) {
+      setError('Informe a data e hora da conclusão.')
+      return
+    }
+    setSubmitting(true)
+    try {
+      // Offset Brasília fixo (-03:00), igual ao Bloco D.
+      const concludedAtISO = new Date(`${concludedAt}:00-03:00`).toISOString()
+      await finalize({ concludedAtISO, resolutionNotes: resolution.trim() })
+      // Upload best-effort das fotos do 'depois' (ticket já concluído, mas
+      // a foto é da fase conclusao). Falha de foto não desfaz a conclusão.
+      let failed = 0
+      for (const file of pendingFiles) {
+        try {
+          await uploadPhoto({ file, ticketId, unitId, phase: 'conclusao' })
+        } catch { failed++ }
+      }
+      if (failed > 0) {
+        toast.error(`Chamado concluído, mas ${failed} foto(s) não subiram. Reenvie no detalhe.`, { duration: 6000 })
+      }
+      onClose()
+    } catch {
+      // finalize.onError já mostrou o toast
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center sm:p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-card border border-border rounded-t-2xl sm:rounded-2xl p-6 w-full sm:max-w-md space-y-4 shadow-xl max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-semibold flex items-center gap-2">
+            <CheckCircle2 className="w-5 h-5 text-primary" />
+            Concluir chamado
+          </h2>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="space-y-1">
+          <label className="text-xs text-muted-foreground">Data e hora da conclusão</label>
+          <input
+            type="datetime-local"
+            value={concludedAt}
+            onChange={(e) => { setConcludedAt(e.target.value); setError(null) }}
+            className="w-full h-10 rounded-lg border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          />
+        </div>
+
+        <div className="space-y-1">
+          <label className="text-xs text-muted-foreground">
+            O que foi realizado <span className="text-destructive">*</span>
+          </label>
+          <textarea
+            value={resolution}
+            onChange={(e) => { setResolution(e.target.value); setError(null) }}
+            rows={4}
+            placeholder="Descreva o serviço executado..."
+            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+          />
+        </div>
+
+        <div className="space-y-1">
+          <label className="text-xs text-muted-foreground">Fotos do serviço concluído</label>
+          <button
+            type="button"
+            onClick={() => photoInputRef.current?.click()}
+            className="w-full h-10 rounded-lg border-2 border-dashed border-border flex items-center justify-center gap-1.5 text-xs text-text-tertiary hover:border-border-focus hover:text-text-secondary transition-colors"
+          >
+            <ImagePlus className="w-4 h-4" />
+            Anexar fotos {pendingFiles.length > 0 ? `(${pendingFiles.length})` : ''}
+          </button>
+          <input
+            ref={photoInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={(e) => handleAddFiles(e.target.files)}
+          />
+          <p className="text-xs text-text-tertiary">Recomendado, opcional.</p>
+        </div>
+
+        {error && <p className="text-xs text-destructive">{error}</p>}
+
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" className="flex-1" onClick={onClose} disabled={submitting}>
+            Cancelar
+          </Button>
+          <Button size="sm" className="flex-1" onClick={handleConfirm} disabled={submitting}>
+            {submitting ? 'Concluindo...' : 'Concluir'}
+          </Button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  )
+}
+
+// ─────────────────────────────────────────────────────────────
 // ExecutionRow
 // ─────────────────────────────────────────────────────────────
 type ProviderContact = { type: 'phone' | 'email' | 'whatsapp'; value: string; is_primary: boolean | null }
@@ -763,6 +918,7 @@ export default function ChamadoDetailPage() {
   const { isTimedOut } = useLoadingTimeout(isLoading, 20_000)
 
   const [statusModalOpen, setStatusModalOpen]   = useState(false)
+  const [finalizeOpen, setFinalizeOpen]         = useState(false)
   const [addExecOpen, setAddExecOpen]           = useState(false)
   const [lightboxIdx, setLightboxIdx]           = useState<number | null>(null)
   const [isUploading, setIsUploading]           = useState(false)
@@ -867,17 +1023,29 @@ export default function ChamadoDetailPage() {
               {status?.label ?? typedTicket.status}
             </span>
           </div>
-          {canEdit && nextStatuses.length > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-xs gap-1.5 shrink-0"
-              onClick={() => setStatusModalOpen(true)}
-            >
-              <ArrowRightLeft className="w-3.5 h-3.5" />
-              Alterar Status
-            </Button>
-          )}
+          <div className="flex items-center gap-2 shrink-0">
+            {canEdit && nextStatuses.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-xs gap-1.5"
+                onClick={() => setStatusModalOpen(true)}
+              >
+                <ArrowRightLeft className="w-3.5 h-3.5" />
+                Alterar Status
+              </Button>
+            )}
+            {canEdit && (typedTicket.status === 'in_progress' || typedTicket.status === 'waiting_part') && (
+              <Button
+                size="sm"
+                className="text-xs gap-1.5"
+                onClick={() => setFinalizeOpen(true)}
+              >
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                Concluir chamado
+              </Button>
+            )}
+          </div>
         </div>
         <h1 className="text-xl font-semibold text-foreground">{typedTicket.title}</h1>
         {typedTicket.description && (
@@ -900,7 +1068,18 @@ export default function ChamadoDetailPage() {
         {typedTicket.concluded_at && (
           <InfoRow icon={CheckCircle2} label="Concluído em" value={formatDate(typedTicket.concluded_at) ?? undefined} />
         )}
+        {typedTicket.concluded_by_user && (
+          <InfoRow icon={Wrench} label="Concluído por" value={typedTicket.concluded_by_user.name} />
+        )}
       </div>
+
+      {/* Resolução — o que foi realizado */}
+      {typedTicket.resolution_notes && (
+        <div className="bg-card border border-border rounded-xl p-5 space-y-1">
+          <h2 className="text-sm font-semibold text-foreground">Resolução</h2>
+          <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">{typedTicket.resolution_notes}</p>
+        </div>
+      )}
 
       {/* Fotos */}
       <div className="bg-card border border-border rounded-xl p-5">
@@ -925,26 +1104,42 @@ export default function ChamadoDetailPage() {
         {photos.length === 0 ? (
           <p className="text-xs text-muted-foreground">Nenhuma foto registrada</p>
         ) : (
-          <div className="grid grid-cols-3 gap-2">
-            {photos.map((photo: MaintenanceTicketPhoto, i: number) => (
-              <button
-                key={photo.id}
-                onClick={() => setLightboxIdx(i)}
-                className="aspect-square rounded-lg overflow-hidden border border-border bg-muted hover:opacity-80 transition-opacity"
-              >
-                {signedUrls[photo.url] ? (
-                  <img
-                    src={signedUrls[photo.url]}
-                    alt={photo.caption ?? `Foto ${i + 1}`}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <Camera className="w-6 h-6 text-muted-foreground" />
+          <div className="space-y-4">
+            {(['abertura', 'conclusao'] as const).map((ph) => {
+              const group = photos.filter((p: MaintenanceTicketPhoto) => (p.phase ?? 'abertura') === ph)
+              if (group.length === 0) return null
+              return (
+                <div key={ph} className="space-y-2">
+                  <h3 className="text-xs font-medium text-text-tertiary uppercase tracking-wide">
+                    {ph === 'abertura' ? 'Abertura' : 'Conclusão'}
+                  </h3>
+                  <div className="grid grid-cols-3 gap-2">
+                    {group.map((photo: MaintenanceTicketPhoto) => {
+                      const idx = photos.findIndex((p: MaintenanceTicketPhoto) => p.id === photo.id)
+                      return (
+                        <button
+                          key={photo.id}
+                          onClick={() => setLightboxIdx(idx)}
+                          className="aspect-square rounded-lg overflow-hidden border border-border bg-muted hover:opacity-80 transition-opacity"
+                        >
+                          {signedUrls[photo.url] ? (
+                            <img
+                              src={signedUrls[photo.url]}
+                              alt={photo.caption ?? 'Foto'}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <Camera className="w-6 h-6 text-muted-foreground" />
+                            </div>
+                          )}
+                        </button>
+                      )
+                    })}
                   </div>
-                )}
-              </button>
-            ))}
+                </div>
+              )
+            })}
           </div>
         )}
       </div>
@@ -1003,6 +1198,14 @@ export default function ChamadoDetailPage() {
           ticketId={typedTicket.id}
           unitId={typedTicket.unit_id}
           onClose={() => setAddExecOpen(false)}
+        />
+      )}
+
+      {finalizeOpen && (
+        <FinalizeModal
+          ticketId={typedTicket.id}
+          unitId={typedTicket.unit_id}
+          onClose={() => setFinalizeOpen(false)}
         />
       )}
 

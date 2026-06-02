@@ -221,7 +221,7 @@ export function TicketFormModal({ open, onClose, onCreated }: TicketFormModalPro
         if (upErr) throw upErr
         const { error: insErr } = await supabase
           .from('maintenance_ticket_photos')
-          .insert({ ticket_id: ticketId, url: path, uploaded_by: user?.id ?? null })
+          .insert({ ticket_id: ticketId, url: path, uploaded_by: user?.id ?? null, phase: 'abertura' })
         if (insErr) throw insErr
       } catch {
         failed++

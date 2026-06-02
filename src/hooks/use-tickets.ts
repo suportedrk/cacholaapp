@@ -32,6 +32,7 @@ const TICKET_DETAIL_SELECT = `
   sector:maintenance_sectors!sector_id(id, name),
   category:maintenance_categories!category_id(id, name, color, icon),
   equipment:equipment!equipment_id(id, name, category),
+  concluded_by_user:users!concluded_by_user_id(id, name),
   executions:maintenance_executions!ticket_id(
     *,
     internal_user:users!internal_user_id(id, name, avatar_url),
@@ -240,6 +241,41 @@ export function useUpdateTicketStatus() {
 }
 
 // ─────────────────────────────────────────────────────────────
+// FINALIZAR CHAMADO (caminho dedicado — exige resolução)
+// ─────────────────────────────────────────────────────────────
+// status='concluded' + concluded_at (editável, já em ISO com offset Brasília) +
+// resolution_notes. concluded_by_user_id NÃO é enviado: trigger BEFORE UPDATE
+// carimba auth.uid() na transição. concluded_at NÃO é tocado pelo trigger.
+export function useFinalizeTicket(ticketId: string) {
+  const qc = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ concludedAtISO, resolutionNotes }: { concludedAtISO: string; resolutionNotes: string }) => {
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from('maintenance_tickets')
+        .update({
+          status: 'concluded',
+          concluded_at: concludedAtISO,
+          resolution_notes: resolutionNotes,
+        })
+        .eq('id', ticketId)
+        .select()
+        .single()
+      if (error) throw error
+      return data as MaintenanceTicket
+    },
+    onSuccess: (ticket) => {
+      qc.invalidateQueries({ queryKey: ['tickets'] })
+      qc.invalidateQueries({ queryKey: ['ticket', ticket.id] })
+      auditLog({ action: 'status_change', module: 'maintenance', entityId: ticket.id, newData: { status: 'concluded' } })
+      toast.success('Chamado concluído')
+    },
+    onError: (err) => toast.error(mapPgError(err, {}, 'TICKET_FINALIZE')),
+  })
+}
+
+// ─────────────────────────────────────────────────────────────
 // ATUALIZAR EQUIPAMENTO DO TICKET
 // ─────────────────────────────────────────────────────────────
 export function useUpdateTicketEquipment() {
@@ -345,11 +381,13 @@ export function useUploadTicketPhoto() {
       ticketId,
       unitId,
       caption,
+      phase = 'abertura',
     }: {
       file: File
       ticketId: string
       unitId: string
       caption?: string
+      phase?: 'abertura' | 'conclusao'
     }) => {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
@@ -368,7 +406,7 @@ export function useUploadTicketPhoto() {
 
       const { error: insertError } = await supabase
         .from('maintenance_ticket_photos')
-        .insert({ ticket_id: ticketId, url: path, caption: caption ?? null, uploaded_by: user.id })
+        .insert({ ticket_id: ticketId, url: path, caption: caption ?? null, uploaded_by: user.id, phase })
       if (insertError) throw insertError
 
       return path

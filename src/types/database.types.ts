@@ -288,6 +288,8 @@ export type MaintenanceTicket = {
   due_at?: string | null
   opened_by: string
   created_by_user_id?: string | null
+  concluded_by_user_id?: string | null
+  resolution_notes?: string | null
   equipment_id?: string | null
   total_cost: number
   created_at: string
@@ -366,6 +368,7 @@ export type MaintenanceTicketPhoto = {
   url: string
   caption: string | null
   uploaded_by: string | null
+  phase: 'abertura' | 'conclusao'
   created_at: string
 }
 
@@ -391,6 +394,7 @@ export type MaintenanceTicketWithDetails = MaintenanceTicket & {
   sector:    Pick<Sector, 'id' | 'name'> | null
   category:  Pick<MaintenanceCategory, 'id' | 'name' | 'color' | 'icon'> | null
   equipment: Pick<Equipment, 'id' | 'name' | 'category'> | null
+  concluded_by_user: { id: string; name: string } | null
   executions: (MaintenanceExecution & {
     internal_user: Pick<User, 'id' | 'name' | 'avatar_url'> | null
     provider:      { id: string; name: string } | null
