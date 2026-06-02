@@ -1,0 +1,4 @@
+# Scripts shell de infraestrutura destinados ao Linux (VPS).
+# Forçar LF impede que core.autocrlf=true (Windows) introduza CRLF e quebre
+# o shebang ao copiar para a VPS (bash\r: bad interpreter).
+ops/backup/*.sh text eol=lf
