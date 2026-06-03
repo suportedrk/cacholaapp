@@ -40,6 +40,7 @@ export type Module =
   | 'vendedoras'
   | 'configuracoes'
   | 'notificacoes'
+  | 'central_servicos'
 
 export type Action = 'view' | 'create' | 'edit' | 'delete' | 'export' | 'approve'
 

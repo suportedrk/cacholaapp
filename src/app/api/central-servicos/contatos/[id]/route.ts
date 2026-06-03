@@ -1,0 +1,134 @@
+import { NextResponse } from 'next/server'
+import { requirePermissionApi } from '@/lib/auth/require-permission'
+import { createClient } from '@/lib/supabase/server'
+import { CONTATO_UNIDADES, CONTATO_TIPOS, CONTATOS_BUCKET, type ContatoFormInput } from '@/types/central-servicos'
+
+/**
+ * PATCH /api/central-servicos/contatos/[id] — edita um contato.
+ * Guard: check_permission('central_servicos', 'edit'). Inativar = setar ativo=false.
+ * Se a foto for trocada/removida, o arquivo antigo é apagado do storage.
+ */
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const guard = await requirePermissionApi('central_servicos', 'edit')
+    if (!guard.ok) return guard.response
+
+    const { id } = await params
+    const body = (await request.json()) as ContatoFormInput
+    const nome = body.nome?.trim()
+
+    if (!nome) return NextResponse.json({ error: 'Nome é obrigatório.' }, { status: 400 })
+    if (!CONTATO_UNIDADES.includes(body.unidade)) {
+      return NextResponse.json({ error: 'Unidade inválida.' }, { status: 400 })
+    }
+    if (!CONTATO_TIPOS.includes(body.tipo)) {
+      return NextResponse.json({ error: 'Tipo inválido.' }, { status: 400 })
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = (await createClient()) as any
+
+    // Foto antiga (para limpar) + tipo atual (para o guard de troca de tipo).
+    const { data: prev } = await supabase
+      .from('central_servicos_contatos')
+      .select('foto_path, tipo')
+      .eq('id', id)
+      .maybeSingle()
+
+    // Guard da troca de tipo (defesa além do trigger): se o tipo está mudando e
+    // o contato tem vínculos (grupo com membros, ou pessoa membro de algum grupo),
+    // rejeita com mensagem clara — é preciso limpar os vínculos antes.
+    if (prev && body.tipo !== prev.tipo) {
+      const { count } = await supabase
+        .from('central_servicos_grupo_membros')
+        .select('id', { count: 'exact', head: true })
+        .or(`grupo_id.eq.${id},membro_id.eq.${id}`)
+      if ((count ?? 0) > 0) {
+        return NextResponse.json(
+          { error: 'Remova os vínculos do grupo antes de mudar o tipo.' },
+          { status: 409 },
+        )
+      }
+    }
+
+    const newFoto = body.foto_path?.trim() || null
+
+    const { error } = await supabase
+      .from('central_servicos_contatos')
+      .update({
+        nome,
+        tipo: body.tipo,
+        setor: body.setor?.trim() || null,
+        cargo: body.cargo?.trim() || null,
+        unidade: body.unidade,
+        email: body.email?.trim() || null,
+        telefone: body.telefone?.trim() || null,
+        foto_path: newFoto,
+        ativo: body.ativo ?? true,
+      })
+      .eq('id', id)
+
+    if (error) throw error
+
+    // Limpeza confiável da foto antiga (dado pessoal — LGPD art. 16): só removemos
+    // o objeto antigo DEPOIS de a nova ter sido gravada com sucesso (update acima),
+    // e aguardamos a remoção (não fire-and-forget) para não deixar órfão.
+    const oldFoto = prev?.foto_path as string | null | undefined
+    if (oldFoto && oldFoto !== newFoto) {
+      const { error: rmErr } = await supabase.storage.from(CONTATOS_BUCKET).remove([oldFoto])
+      if (rmErr) console.error('[PATCH contato — falha ao remover foto antiga]', oldFoto, rmErr)
+    }
+
+    return NextResponse.json({ data: { id } })
+  } catch (err) {
+    console.error('[PATCH /api/central-servicos/contatos/[id]]', err)
+    return NextResponse.json({ error: 'Erro interno.' }, { status: 500 })
+  }
+}
+
+/**
+ * DELETE /api/central-servicos/contatos/[id] — exclui um contato em definitivo.
+ * Guard: check_permission('central_servicos', 'delete') (só Diretoria/super_admin).
+ * Inativar é o caminho normal de saída; exclusão é permanente.
+ */
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const guard = await requirePermissionApi('central_servicos', 'delete')
+    if (!guard.ok) return guard.response
+
+    const { id } = await params
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = (await createClient()) as any
+
+    const { data: prev } = await supabase
+      .from('central_servicos_contatos')
+      .select('foto_path')
+      .eq('id', id)
+      .maybeSingle()
+
+    const { error } = await supabase
+      .from('central_servicos_contatos')
+      .delete()
+      .eq('id', id)
+
+    if (error) throw error
+
+    // Remoção confiável da foto (dado pessoal) após excluir a linha.
+    const foto = prev?.foto_path as string | null | undefined
+    if (foto) {
+      const { error: rmErr } = await supabase.storage.from(CONTATOS_BUCKET).remove([foto])
+      if (rmErr) console.error('[DELETE contato — falha ao remover foto]', foto, rmErr)
+    }
+
+    return NextResponse.json({ ok: true })
+  } catch (err) {
+    console.error('[DELETE /api/central-servicos/contatos/[id]]', err)
+    return NextResponse.json({ error: 'Erro interno.' }, { status: 500 })
+  }
+}

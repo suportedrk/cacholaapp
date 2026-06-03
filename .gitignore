@@ -120,3 +120,8 @@ public/icons/*Copia*
 
 # MCP config (local, não rastrear)
 .mcp.json
+
+# ============================================================
+# SCREENSHOTS DE VALIDAÇÃO VISUAL (QA local — não rastrear)
+# ============================================================
+docs/screenshots/
