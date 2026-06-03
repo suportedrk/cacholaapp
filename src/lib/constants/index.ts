@@ -96,6 +96,7 @@ export const ROUTES = {
   decoracaoTransferencias: '/decoracao/transferencias',
   decoracaoQuarentena: '/decoracao/quarentena',
   centralServicos: '/central-servicos',
+  centralServicosLinks: '/central-servicos/links',
 } as const
 
 // ============================================================

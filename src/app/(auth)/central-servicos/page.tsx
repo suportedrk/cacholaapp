@@ -1,16 +1,18 @@
-import { LifeBuoy, Link2, Contact, Megaphone } from 'lucide-react'
+import Link from 'next/link'
+import { Link2, Contact, Megaphone, ChevronRight } from 'lucide-react'
 import { PageHeader } from '@/components/shared/page-header'
+import { ROUTES } from '@/lib/constants'
+import { cn } from '@/lib/utils'
 
 export const metadata = {
   title: 'Central de Serviços',
 }
 
 /**
- * Página inicial do módulo Central de Serviços (Bloco A — fundação).
+ * Página inicial (hub) do módulo Central de Serviços.
  *
- * Por enquanto exibe apenas o cabeçalho do módulo e um espaço reservado.
- * As funcionalidades (Links úteis, Agenda de Contatos e Mural de Avisos)
- * entram nos próximos blocos da Fase 1.
+ * Bloco B: a feature "Links úteis" está disponível. "Agenda de Contatos" e
+ * "Mural de Avisos" chegam nos próximos blocos da Fase 1.
  */
 export default function CentralServicosPage() {
   return (
@@ -20,33 +22,70 @@ export default function CentralServicosPage() {
         description="Área de uso geral da equipe — links úteis, contatos e avisos da empresa."
       />
 
-      {/* Espaço reservado: os blocos da Fase 1 entram aqui. */}
-      <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card px-6 py-14 text-center">
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-          <LifeBuoy className="h-6 w-6 text-primary" />
-        </div>
-        <h2 className="mt-4 text-base font-semibold text-foreground">
-          Em construção
-        </h2>
-        <p className="mt-1 max-w-md text-sm text-muted-foreground">
-          As funcionalidades da Central de Serviços chegam em breve. Por enquanto, este é
-          o espaço reservado do módulo.
-        </p>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {/* Links úteis — ativo */}
+        <Link
+          href={ROUTES.centralServicosLinks}
+          className={cn(
+            'group flex items-start gap-3 rounded-xl border border-border bg-card p-5',
+            'transition-shadow hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+          )}
+        >
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+            <Link2 className="h-5 w-5 text-primary" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="text-sm font-semibold text-foreground">Links úteis</h2>
+              <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+            </div>
+            <p className="mt-0.5 text-sm text-muted-foreground">
+              Atalhos para os sistemas e portais da empresa.
+            </p>
+          </div>
+        </Link>
 
-        <ul className="mt-6 flex flex-col gap-2 text-sm text-muted-foreground sm:flex-row sm:gap-6">
-          <li className="flex items-center justify-center gap-2">
-            <Link2 className="h-4 w-4 text-muted-foreground" />
-            Links úteis
-          </li>
-          <li className="flex items-center justify-center gap-2">
-            <Contact className="h-4 w-4 text-muted-foreground" />
-            Agenda de Contatos
-          </li>
-          <li className="flex items-center justify-center gap-2">
-            <Megaphone className="h-4 w-4 text-muted-foreground" />
-            Mural de Avisos
-          </li>
-        </ul>
+        {/* Agenda de Contatos — em breve */}
+        <div
+          aria-disabled="true"
+          className="flex items-start gap-3 rounded-xl border border-dashed border-border bg-card p-5 opacity-60"
+        >
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-secondary">
+            <Contact className="h-5 w-5 text-muted-foreground" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="text-sm font-semibold text-foreground">Agenda de Contatos</h2>
+              <span className="shrink-0 rounded-full bg-secondary px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                Em breve
+              </span>
+            </div>
+            <p className="mt-0.5 text-sm text-muted-foreground">
+              Contatos de fornecedores e parceiros.
+            </p>
+          </div>
+        </div>
+
+        {/* Mural de Avisos — em breve */}
+        <div
+          aria-disabled="true"
+          className="flex items-start gap-3 rounded-xl border border-dashed border-border bg-card p-5 opacity-60"
+        >
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-secondary">
+            <Megaphone className="h-5 w-5 text-muted-foreground" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="text-sm font-semibold text-foreground">Mural de Avisos</h2>
+              <span className="shrink-0 rounded-full bg-secondary px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                Em breve
+              </span>
+            </div>
+            <p className="mt-0.5 text-sm text-muted-foreground">
+              Comunicados e avisos internos.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   )
