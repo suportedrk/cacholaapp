@@ -1,11 +1,13 @@
 'use client'
 
-import { Mail, MessageCircle, Pencil } from 'lucide-react'
+import { useState } from 'react'
+import { Mail, MessageCircle, Pencil, Users, ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { buttonVariants } from '@/components/ui/button'
 import { ContatoAvatar } from './contato-avatar'
+import { GrupoMembrosList } from './grupo-membros-list'
 import {
   CONTATO_UNIDADE_LABELS,
   buildWhatsappUrl,
@@ -20,7 +22,9 @@ interface ContatoCardProps {
 }
 
 export function ContatoCard({ contato, signedUrl, canEdit, onEdit }: ContatoCardProps) {
-  const whatsapp = buildWhatsappUrl(contato.telefone)
+  const isGrupo = contato.tipo === 'grupo'
+  const whatsapp = isGrupo ? null : buildWhatsappUrl(contato.telefone)
+  const [expanded, setExpanded] = useState(false)
 
   return (
     <div
@@ -30,19 +34,25 @@ export function ContatoCard({ contato, signedUrl, canEdit, onEdit }: ContatoCard
       )}
     >
       <div className="flex items-start gap-3">
-        <ContatoAvatar src={signedUrl} nome={contato.nome} size={48} />
+        <ContatoAvatar src={signedUrl} nome={contato.nome} isGrupo={isGrupo} size={48} />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <h3 className="truncate text-sm font-semibold text-foreground">{contato.nome}</h3>
+            {isGrupo && (
+              <Badge variant="outline" className="shrink-0 gap-1">
+                <Users className="h-3 w-3" />
+                Grupo
+              </Badge>
+            )}
             {!contato.ativo && (
               <Badge variant="secondary" className="shrink-0">Inativo</Badge>
             )}
           </div>
-          {contato.cargo && (
+          {!isGrupo && contato.cargo && (
             <p className="truncate text-xs text-muted-foreground">{contato.cargo}</p>
           )}
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-            {contato.setor && (
+            {!isGrupo && contato.setor && (
               <span className="text-xs text-muted-foreground">{contato.setor}</span>
             )}
             <Badge variant="outline">{CONTATO_UNIDADE_LABELS[contato.unidade]}</Badge>
@@ -82,6 +92,26 @@ export function ContatoCard({ contato, signedUrl, canEdit, onEdit }: ContatoCard
               <MessageCircle className="mr-1.5 h-4 w-4" />
               WhatsApp
             </a>
+          )}
+        </div>
+      )}
+
+      {/* Quem recebe — expansível (grupos) */}
+      {isGrupo && (
+        <div className="border-t border-border pt-2">
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            aria-expanded={expanded}
+            className="flex w-full items-center justify-between text-xs font-medium text-muted-foreground hover:text-foreground"
+          >
+            Quem recebe
+            <ChevronDown className={cn('h-4 w-4 transition-transform', expanded && 'rotate-180')} />
+          </button>
+          {expanded && (
+            <div className="mt-2">
+              <GrupoMembrosList grupoId={contato.id} open={expanded} />
+            </div>
           )}
         </div>
       )}

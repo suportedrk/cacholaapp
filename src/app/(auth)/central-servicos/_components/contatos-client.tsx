@@ -1,8 +1,8 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { Fragment, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { Search, Plus, AlertCircle, Users, ArrowLeft, Mail, MessageCircle, Pencil } from 'lucide-react'
+import { Search, Plus, AlertCircle, Users, ArrowLeft, Mail, MessageCircle, Pencil, ChevronDown } from 'lucide-react'
 import { PageHeader } from '@/components/shared/page-header'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -31,6 +31,7 @@ import {
 import { ContatoAvatar } from './contato-avatar'
 import { ContatoCard } from './contato-card'
 import { ContatoEditSheet } from './contato-edit-sheet'
+import { GrupoMembrosList } from './grupo-membros-list'
 
 type UnidadeFiltro = 'all' | (typeof CONTATO_UNIDADES)[number]
 
@@ -48,6 +49,16 @@ export function ContatosClient() {
   const [sheetOpen, setSheetOpen] = useState(false)
   const [editing, setEditing] = useState<CentralServicosContato | null>(null)
   const [createMode, setCreateMode] = useState(false)
+  const [expandedGrupos, setExpandedGrupos] = useState<Set<string>>(new Set())
+
+  function toggleGrupo(id: string) {
+    setExpandedGrupos((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
 
   // Signed URLs em batch para todas as fotos.
   const fotoPaths = useMemo(
@@ -198,72 +209,101 @@ export function ContatosClient() {
               </thead>
               <tbody className="divide-y divide-border">
                 {filtrados.map((c) => {
-                  const whatsapp = buildWhatsappUrl(c.telefone)
+                  const isGrupo = c.tipo === 'grupo'
+                  const whatsapp = isGrupo ? null : buildWhatsappUrl(c.telefone)
+                  const isExpanded = expandedGrupos.has(c.id)
                   return (
-                    <tr key={c.id} className={cn('hover:bg-muted/40', !c.ativo && 'opacity-60')}>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <ContatoAvatar
-                            src={c.foto_path ? signedUrls[c.foto_path] : undefined}
-                            nome={c.nome}
-                            size={40}
-                          />
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="truncate font-medium text-foreground">{c.nome}</span>
-                              {!c.ativo && <Badge variant="secondary">Inativo</Badge>}
+                    <Fragment key={c.id}>
+                      <tr className={cn('hover:bg-muted/40', !c.ativo && 'opacity-60')}>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <ContatoAvatar
+                              src={c.foto_path ? signedUrls[c.foto_path] : undefined}
+                              nome={c.nome}
+                              isGrupo={isGrupo}
+                              size={40}
+                            />
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="truncate font-medium text-foreground">{c.nome}</span>
+                                {isGrupo && (
+                                  <Badge variant="outline" className="gap-1">
+                                    <Users className="h-3 w-3" />
+                                    Grupo
+                                  </Badge>
+                                )}
+                                {!c.ativo && <Badge variant="secondary">Inativo</Badge>}
+                              </div>
+                              {!isGrupo && c.cargo && (
+                                <span className="truncate text-xs text-muted-foreground">{c.cargo}</span>
+                              )}
+                              {isGrupo && (
+                                <button
+                                  type="button"
+                                  onClick={() => toggleGrupo(c.id)}
+                                  aria-expanded={isExpanded}
+                                  className="mt-0.5 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+                                >
+                                  Quem recebe
+                                  <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', isExpanded && 'rotate-180')} />
+                                </button>
+                              )}
                             </div>
-                            {c.cargo && (
-                              <span className="truncate text-xs text-muted-foreground">{c.cargo}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground">{isGrupo ? '—' : (c.setor ?? '—')}</td>
+                        <td className="px-4 py-3">
+                          <Badge variant="outline">{CONTATO_UNIDADE_LABELS[c.unidade]}</Badge>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            {c.email ? (
+                              <a
+                                href={`mailto:${c.email}`}
+                                className="inline-flex items-center gap-1.5 text-text-link hover:underline"
+                              >
+                                <Mail className="h-4 w-4" />
+                                <span className="truncate">{c.email}</span>
+                              </a>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                            {whatsapp && (
+                              <a
+                                href={whatsapp}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className={cn(buttonVariants({ size: 'xs', variant: 'outline' }))}
+                                aria-label={`WhatsApp de ${c.nome}`}
+                              >
+                                <MessageCircle className="mr-1 h-3.5 w-3.5" />
+                                WhatsApp
+                              </a>
                             )}
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground">{c.setor ?? '—'}</td>
-                      <td className="px-4 py-3">
-                        <Badge variant="outline">{CONTATO_UNIDADE_LABELS[c.unidade]}</Badge>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          {c.email ? (
-                            <a
-                              href={`mailto:${c.email}`}
-                              className="inline-flex items-center gap-1.5 text-text-link hover:underline"
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          {canEdit && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openEdit(c)}
+                              aria-label={`Editar ${c.nome}`}
                             >
-                              <Mail className="h-4 w-4" />
-                              <span className="truncate">{c.email}</span>
-                            </a>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
                           )}
-                          {whatsapp && (
-                            <a
-                              href={whatsapp}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className={cn(buttonVariants({ size: 'xs', variant: 'outline' }))}
-                              aria-label={`WhatsApp de ${c.nome}`}
-                            >
-                              <MessageCircle className="mr-1 h-3.5 w-3.5" />
-                              WhatsApp
-                            </a>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        {canEdit && (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => openEdit(c)}
-                            aria-label={`Editar ${c.nome}`}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </td>
-                    </tr>
+                        </td>
+                      </tr>
+                      {isGrupo && isExpanded && (
+                        <tr className="bg-surface-secondary/40">
+                          <td colSpan={5} className="px-4 py-3">
+                            <GrupoMembrosList grupoId={c.id} open={isExpanded} />
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
                   )
                 })}
               </tbody>

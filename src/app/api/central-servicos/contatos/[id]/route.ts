@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { requirePermissionApi } from '@/lib/auth/require-permission'
 import { createClient } from '@/lib/supabase/server'
-import { CONTATO_UNIDADES, CONTATOS_BUCKET, type ContatoFormInput } from '@/types/central-servicos'
+import { CONTATO_UNIDADES, CONTATO_TIPOS, CONTATOS_BUCKET, type ContatoFormInput } from '@/types/central-servicos'
 
 /**
  * PATCH /api/central-servicos/contatos/[id] — edita um contato.
@@ -24,6 +24,9 @@ export async function PATCH(
     if (!CONTATO_UNIDADES.includes(body.unidade)) {
       return NextResponse.json({ error: 'Unidade inválida.' }, { status: 400 })
     }
+    if (!CONTATO_TIPOS.includes(body.tipo)) {
+      return NextResponse.json({ error: 'Tipo inválido.' }, { status: 400 })
+    }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const supabase = (await createClient()) as any
@@ -41,6 +44,7 @@ export async function PATCH(
       .from('central_servicos_contatos')
       .update({
         nome,
+        tipo: body.tipo,
         setor: body.setor?.trim() || null,
         cargo: body.cargo?.trim() || null,
         unidade: body.unidade,
@@ -53,13 +57,13 @@ export async function PATCH(
 
     if (error) throw error
 
+    // Limpeza confiável da foto antiga (dado pessoal — LGPD art. 16): só removemos
+    // o objeto antigo DEPOIS de a nova ter sido gravada com sucesso (update acima),
+    // e aguardamos a remoção (não fire-and-forget) para não deixar órfão.
     const oldFoto = prev?.foto_path as string | null | undefined
     if (oldFoto && oldFoto !== newFoto) {
-      supabase.storage
-        .from(CONTATOS_BUCKET)
-        .remove([oldFoto])
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .catch((e: any) => console.warn('[PATCH contato — limpar foto antiga]', oldFoto, e))
+      const { error: rmErr } = await supabase.storage.from(CONTATOS_BUCKET).remove([oldFoto])
+      if (rmErr) console.error('[PATCH contato — falha ao remover foto antiga]', oldFoto, rmErr)
     }
 
     return NextResponse.json({ data: { id } })
@@ -99,13 +103,11 @@ export async function DELETE(
 
     if (error) throw error
 
+    // Remoção confiável da foto (dado pessoal) após excluir a linha.
     const foto = prev?.foto_path as string | null | undefined
     if (foto) {
-      supabase.storage
-        .from(CONTATOS_BUCKET)
-        .remove([foto])
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .catch((e: any) => console.warn('[DELETE contato — limpar foto]', foto, e))
+      const { error: rmErr } = await supabase.storage.from(CONTATOS_BUCKET).remove([foto])
+      if (rmErr) console.error('[DELETE contato — falha ao remover foto]', foto, rmErr)
     }
 
     return NextResponse.json({ ok: true })

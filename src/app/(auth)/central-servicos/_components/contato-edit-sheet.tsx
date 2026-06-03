@@ -24,6 +24,7 @@ import { PhotoDropZone } from '@/components/shared/photo-upload'
 import { createClient } from '@/lib/supabase/client'
 import { useSignedUrls } from '@/hooks/use-signed-urls'
 import { ContatoAvatar } from './contato-avatar'
+import { GrupoMembrosEditor } from './grupo-membros-editor'
 import {
   useCreateContato,
   useUpdateContato,
@@ -32,14 +33,18 @@ import {
 import {
   CONTATO_UNIDADES,
   CONTATO_UNIDADE_LABELS,
+  CONTATO_TIPOS,
+  CONTATO_TIPO_LABELS,
   CONTATOS_BUCKET,
   type CentralServicosContato,
   type ContatoFormInput,
   type ContatoUnidade,
+  type ContatoTipo,
 } from '@/types/central-servicos'
 
 const EMPTY: ContatoFormInput = {
   nome: '',
+  tipo: 'pessoa',
   setor: null,
   cargo: null,
   unidade: 'geral',
@@ -81,6 +86,7 @@ export function ContatoEditSheet({ open, onOpenChange, contato, createMode, canD
     } else {
       setForm({
         nome: contato.nome,
+        tipo: contato.tipo,
         setor: contato.setor,
         cargo: contato.cargo,
         unidade: contato.unidade,
@@ -178,12 +184,29 @@ export function ContatoEditSheet({ open, onOpenChange, contato, createMode, canD
         </SheetHeader>
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-5 px-1">
+          {/* Tipo */}
+          <div className="space-y-1.5">
+            <Label htmlFor="contato-tipo">Tipo</Label>
+            <Select value={form.tipo} onValueChange={(v) => set('tipo', v as ContatoTipo)}>
+              <SelectTrigger id="contato-tipo" className="w-full">
+                <SelectValue>{CONTATO_TIPO_LABELS[form.tipo]}</SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {CONTATO_TIPOS.map((t) => (
+                  <SelectItem key={t} value={t}>
+                    {CONTATO_TIPO_LABELS[t]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Foto */}
           <div className="space-y-2">
             <Label>Foto</Label>
             {form.foto_path ? (
               <div className="flex items-center gap-3">
-                <ContatoAvatar src={signedUrls[form.foto_path]} nome={form.nome || 'Contato'} size={64} />
+                <ContatoAvatar src={signedUrls[form.foto_path]} nome={form.nome || 'Contato'} isGrupo={form.tipo === 'grupo'} size={64} />
                 <Button type="button" variant="outline" size="sm" onClick={handleRemovePhoto}>
                   <X className="mr-1.5 h-4 w-4" />
                   Remover foto
@@ -264,18 +287,21 @@ export function ContatoEditSheet({ open, onOpenChange, contato, createMode, canD
               placeholder="email@cachola.cloud"
             />
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="contato-telefone">Telefone</Label>
-            <Input
-              id="contato-telefone"
-              value={form.telefone ?? ''}
-              onChange={(e) => set('telefone', e.target.value)}
-              placeholder="(11) 99999-9999"
-            />
-            <p className="text-xs text-muted-foreground">
-              Usado para o botão de WhatsApp.
-            </p>
-          </div>
+          {/* Telefone — só para pessoas (grupos não têm WhatsApp) */}
+          {form.tipo === 'pessoa' && (
+            <div className="space-y-1.5">
+              <Label htmlFor="contato-telefone">Telefone</Label>
+              <Input
+                id="contato-telefone"
+                value={form.telefone ?? ''}
+                onChange={(e) => set('telefone', e.target.value)}
+                placeholder="(11) 99999-9999"
+              />
+              <p className="text-xs text-muted-foreground">
+                Usado para o botão de WhatsApp.
+              </p>
+            </div>
+          )}
 
           {/* Ativo */}
           <div className="flex items-center justify-between rounded-lg border border-border p-3">
@@ -287,6 +313,17 @@ export function ContatoEditSheet({ open, onOpenChange, contato, createMode, canD
             </div>
             <Switch checked={form.ativo} onCheckedChange={(v) => set('ativo', v)} />
           </div>
+
+          {/* Quem recebe — só para grupos já salvos */}
+          {form.tipo === 'grupo' && (
+            createMode ? (
+              <p className="rounded-lg border border-dashed border-border p-3 text-xs text-muted-foreground">
+                Salve o grupo para gerenciar quem recebe.
+              </p>
+            ) : (
+              <GrupoMembrosEditor grupoId={contato!.id} />
+            )
+          )}
 
           <SheetFooter className="flex-col gap-2 pt-2 sm:flex-row sm:justify-between">
             {!createMode && canDelete && (

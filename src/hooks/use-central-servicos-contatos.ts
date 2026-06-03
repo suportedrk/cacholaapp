@@ -4,7 +4,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { useAuthReadyStore } from '@/stores/auth-store'
-import type { CentralServicosContato, ContatoFormInput } from '@/types/central-servicos'
+import type {
+  CentralServicosContato,
+  ContatoFormInput,
+  GrupoMembro,
+} from '@/types/central-servicos'
+
+const MEMBRO_FIELDS =
+  'id,nome,tipo,setor,cargo,unidade,email,telefone,foto_path,ativo,ordem,created_at,updated_at,created_by'
 
 const retry = (count: number, err: unknown) => {
   const status = (err as { status?: number })?.status
@@ -48,6 +55,63 @@ export function useCentralServicosContatos() {
       if (error) throw error
       return (data ?? []) as CentralServicosContato[]
     },
+  })
+}
+
+/**
+ * Membros ("quem recebe") de um grupo. Monta a lista por JOIN à tabela de
+ * contatos (membro) com `!inner` — assim a RLS reforçada do C1 esconde
+ * automaticamente membros INATIVOS de quem só tem view, e a RLS da tabela de
+ * membros esconde tudo se o próprio grupo estiver inativo.
+ */
+export function useGrupoMembros(grupoId: string | null, enabled = true) {
+  const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
+
+  return useQuery({
+    queryKey: ['central-servicos', 'grupo-membros', grupoId],
+    enabled: isSessionReady && !!grupoId && enabled,
+    staleTime: 60 * 1000,
+    retry,
+    queryFn: async () => {
+      const supabase = createClient()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any)
+        .from('central_servicos_grupo_membros')
+        .select(`id, membro:membro_id!inner(${MEMBRO_FIELDS})`)
+        .eq('grupo_id', grupoId)
+        .order('created_at', { ascending: true })
+
+      if (error) throw error
+      return (data ?? []) as GrupoMembro[]
+    },
+  })
+}
+
+export function useAddMembro() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ grupoId, membroId }: { grupoId: string; membroId: string }) => {
+      await callJson(`/api/central-servicos/contatos/${grupoId}/membros`, 'POST', {
+        membro_id: membroId,
+      })
+    },
+    onSuccess: (_d, { grupoId }) => {
+      queryClient.invalidateQueries({ queryKey: ['central-servicos', 'grupo-membros', grupoId] })
+    },
+    onError: (err: Error) => toast.error(err.message),
+  })
+}
+
+export function useRemoveMembro() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ grupoId, membroId }: { grupoId: string; membroId: string }) => {
+      await callJson(`/api/central-servicos/contatos/${grupoId}/membros/${membroId}`, 'DELETE')
+    },
+    onSuccess: (_d, { grupoId }) => {
+      queryClient.invalidateQueries({ queryKey: ['central-servicos', 'grupo-membros', grupoId] })
+    },
+    onError: (err: Error) => toast.error(err.message),
   })
 }
 

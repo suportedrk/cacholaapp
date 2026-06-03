@@ -59,6 +59,16 @@ export type LinkFiltroStatus = 'ativos' | 'todos'
 // Agenda de Contatos (Bloco C1)
 // ============================================================
 
+/** Tipo do contato: pessoa individual ou grupo (lista de distribuição). */
+export const CONTATO_TIPOS = ['pessoa', 'grupo'] as const
+
+export type ContatoTipo = (typeof CONTATO_TIPOS)[number]
+
+export const CONTATO_TIPO_LABELS: Record<ContatoTipo, string> = {
+  pessoa: 'Pessoa',
+  grupo: 'Grupo',
+}
+
 /** Unidades possíveis de um contato (apenas informativo — nunca trava de segurança). */
 export const CONTATO_UNIDADES = ['geral', 'pinheiros', 'moema'] as const
 
@@ -73,6 +83,7 @@ export const CONTATO_UNIDADE_LABELS: Record<ContatoUnidade, string> = {
 export interface CentralServicosContato {
   id: string
   nome: string
+  tipo: ContatoTipo
   setor: string | null
   cargo: string | null
   unidade: ContatoUnidade
@@ -89,6 +100,7 @@ export interface CentralServicosContato {
 /** Payload do formulário de criação/edição de contato. */
 export interface ContatoFormInput {
   nome: string
+  tipo: ContatoTipo
   setor: string | null
   cargo: string | null
   unidade: ContatoUnidade
@@ -96,6 +108,12 @@ export interface ContatoFormInput {
   telefone: string | null
   foto_path: string | null
   ativo: boolean
+}
+
+/** Linha de membro de grupo com o contato (pessoa) embutido via JOIN. */
+export interface GrupoMembro {
+  id: string
+  membro: CentralServicosContato
 }
 
 /** Bucket privado das fotos dos contatos. */

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { requirePermissionApi } from '@/lib/auth/require-permission'
 import { createClient } from '@/lib/supabase/server'
-import { CONTATO_UNIDADES, type ContatoFormInput } from '@/types/central-servicos'
+import { CONTATO_UNIDADES, CONTATO_TIPOS, type ContatoFormInput } from '@/types/central-servicos'
 
 /**
  * POST /api/central-servicos/contatos — cria um contato.
@@ -18,6 +18,9 @@ export async function POST(request: Request) {
     if (!nome) return NextResponse.json({ error: 'Nome é obrigatório.' }, { status: 400 })
     if (!CONTATO_UNIDADES.includes(body.unidade)) {
       return NextResponse.json({ error: 'Unidade inválida.' }, { status: 400 })
+    }
+    if (!CONTATO_TIPOS.includes(body.tipo)) {
+      return NextResponse.json({ error: 'Tipo inválido.' }, { status: 400 })
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -39,6 +42,7 @@ export async function POST(request: Request) {
       .from('central_servicos_contatos')
       .insert({
         nome,
+        tipo: body.tipo,
         setor: body.setor?.trim() || null,
         cargo: body.cargo?.trim() || null,
         unidade: body.unidade,
