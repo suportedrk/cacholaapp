@@ -15,6 +15,8 @@ export type Role =
   | 'freelancer'
   | 'entregador'
   | 'pos_vendas'
+  | 'operacional'
+  | 'operacional_eventos'
 
 export type Module =
   | 'dashboard'

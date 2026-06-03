@@ -149,6 +149,22 @@ export const MAINTENANCE_MODULE_ROLES = [
   'diretor',
   'gerente',
   'manutencao',
+  'operacional',
+  'operacional_eventos',
+] as const satisfies readonly Role[]
+
+/**
+ * Visibilidade do item de MENU "Equipamentos" (sub-item de Manutenção).
+ * Separado de MAINTENANCE_MODULE_ROLES porque os cargos operacionais veem
+ * Manutenção/Chamados/Minhas Tarefas mas NÃO Equipamentos (não têm
+ * `equipamentos.view` no template — o item apareceria e cairia em /403).
+ * Mantém o conjunto original de MAINTENANCE_MODULE_ROLES antes da v1.44.0.
+ */
+export const EQUIPAMENTOS_MENU_ROLES = [
+  'super_admin',
+  'diretor',
+  'gerente',
+  'manutencao',
 ] as const satisfies readonly Role[]
 
 /**
@@ -204,6 +220,8 @@ export const OPERATIONAL_CHECKLIST_ROLES = [
   'decoracao',
   'freelancer',
   'entregador',
+  'operacional',
+  'operacional_eventos',
 ] as const satisfies readonly Role[]
 
 /**
@@ -259,6 +277,7 @@ export const EVENTOS_ACCESS_ROLES = [
   'pos_vendas',
   'decoracao',
   'rh',
+  'operacional_eventos',
 ] as const satisfies readonly Role[]
 
 /**
@@ -274,6 +293,8 @@ export const ATAS_ACCESS_ROLES = [
   'pos_vendas',
   'decoracao',
   'rh',
+  'operacional',
+  'operacional_eventos',
 ] as const satisfies readonly Role[]
 
 /**
@@ -300,6 +321,8 @@ export const DASHBOARD_ACCESS_ROLES = [
   'pos_vendas',
   'decoracao',
   'rh',
+  'operacional',
+  'operacional_eventos',
 ] as const satisfies readonly Role[]
 
 // ──────────────────────────────────────────────────────────────
@@ -384,6 +407,7 @@ export const ROLES_CAN_VIEW_FESTA_VALUES = [
   'pos_vendas',
   'decoracao',
   'financeiro',
+  'operacional_eventos',
 ] as const satisfies readonly Role[]
 
 /**
