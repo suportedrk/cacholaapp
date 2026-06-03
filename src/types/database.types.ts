@@ -139,6 +139,7 @@ export type UserRole =
   | 'super_admin' | 'diretor' | 'gerente' | 'vendedora'
   | 'decoracao' | 'manutencao' | 'financeiro' | 'rh'
   | 'freelancer' | 'entregador' | 'pos_vendas'
+  | 'operacional' | 'operacional_eventos'
 
 // Fase 1: enum atualizado (migration 006)
 // draft→pending, completed→finished, cancelado removido, adding preparing e post_event

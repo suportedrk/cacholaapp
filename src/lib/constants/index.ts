@@ -20,6 +20,8 @@ export const ROLE_LABELS: Record<string, string> = {
   rh: 'RH',
   freelancer: 'Freelancer',
   entregador: 'Entregador',
+  operacional: 'Operacional',
+  operacional_eventos: 'Operacional + Eventos',
 }
 
 // ============================================================
