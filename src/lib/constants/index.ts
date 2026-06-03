@@ -97,6 +97,7 @@ export const ROUTES = {
   decoracaoQuarentena: '/decoracao/quarentena',
   centralServicos: '/central-servicos',
   centralServicosLinks: '/central-servicos/links',
+  centralServicosContatos: '/central-servicos/contatos',
 } as const
 
 // ============================================================

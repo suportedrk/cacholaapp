@@ -54,3 +54,62 @@ export interface LinkFormInput {
 
 /** Filtro de status na listagem. */
 export type LinkFiltroStatus = 'ativos' | 'todos'
+
+// ============================================================
+// Agenda de Contatos (Bloco C1)
+// ============================================================
+
+/** Unidades possíveis de um contato (apenas informativo — nunca trava de segurança). */
+export const CONTATO_UNIDADES = ['geral', 'pinheiros', 'moema'] as const
+
+export type ContatoUnidade = (typeof CONTATO_UNIDADES)[number]
+
+export const CONTATO_UNIDADE_LABELS: Record<ContatoUnidade, string> = {
+  geral: 'Geral',
+  pinheiros: 'Pinheiros',
+  moema: 'Moema',
+}
+
+export interface CentralServicosContato {
+  id: string
+  nome: string
+  setor: string | null
+  cargo: string | null
+  unidade: ContatoUnidade
+  email: string | null
+  telefone: string | null
+  foto_path: string | null
+  ativo: boolean
+  ordem: number
+  created_at: string
+  updated_at: string
+  created_by: string | null
+}
+
+/** Payload do formulário de criação/edição de contato. */
+export interface ContatoFormInput {
+  nome: string
+  setor: string | null
+  cargo: string | null
+  unidade: ContatoUnidade
+  email: string | null
+  telefone: string | null
+  foto_path: string | null
+  ativo: boolean
+}
+
+/** Bucket privado das fotos dos contatos. */
+export const CONTATOS_BUCKET = 'central-servicos-contatos'
+
+/**
+ * Monta o link de WhatsApp a partir de um telefone.
+ * Remove tudo que não for dígito; se não começar com 55, prefixa 55.
+ * Retorna null se não houver dígitos suficientes.
+ */
+export function buildWhatsappUrl(telefone: string | null | undefined): string | null {
+  if (!telefone) return null
+  let digits = telefone.replace(/\D/g, '')
+  if (digits.length < 8) return null
+  if (!digits.startsWith('55')) digits = `55${digits}`
+  return `https://wa.me/${digits}`
+}
