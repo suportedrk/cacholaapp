@@ -95,6 +95,7 @@ export const ROUTES = {
   decoracaoEstoque: '/decoracao/estoque',
   decoracaoTransferencias: '/decoracao/transferencias',
   decoracaoQuarentena: '/decoracao/quarentena',
+  centralServicos: '/central-servicos',
 } as const
 
 // ============================================================
