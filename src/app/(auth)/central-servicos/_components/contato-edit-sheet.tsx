@@ -29,6 +29,7 @@ import {
   useCreateContato,
   useUpdateContato,
   useDeleteContato,
+  useContatoVinculosCount,
 } from '@/hooks/use-central-servicos-contatos'
 import {
   CONTATO_UNIDADES,
@@ -102,6 +103,11 @@ export function ContatoEditSheet({ open, onOpenChange, contato, createMode, canD
   // Preview da foto atual (signed URL do bucket privado).
   const fotoPaths = form.foto_path ? [form.foto_path] : []
   const { data: signedUrls = {} } = useSignedUrls(CONTATOS_BUCKET, fotoPaths)
+
+  // Guard de troca de tipo: bloqueia o campo "Tipo" quando o contato tem vínculos
+  // (grupo com membros, ou pessoa membro de algum grupo). Reforçado por API + trigger.
+  const { data: vinculos = 0 } = useContatoVinculosCount(contato?.id ?? null, open && !createMode)
+  const tipoLocked = !createMode && vinculos > 0
 
   const isPending =
     createMutation.isPending || updateMutation.isPending || deleteMutation.isPending
@@ -187,7 +193,11 @@ export function ContatoEditSheet({ open, onOpenChange, contato, createMode, canD
           {/* Tipo */}
           <div className="space-y-1.5">
             <Label htmlFor="contato-tipo">Tipo</Label>
-            <Select value={form.tipo} onValueChange={(v) => set('tipo', v as ContatoTipo)}>
+            <Select
+              value={form.tipo}
+              onValueChange={(v) => set('tipo', v as ContatoTipo)}
+              disabled={tipoLocked}
+            >
               <SelectTrigger id="contato-tipo" className="w-full">
                 <SelectValue>{CONTATO_TIPO_LABELS[form.tipo]}</SelectValue>
               </SelectTrigger>
@@ -199,6 +209,12 @@ export function ContatoEditSheet({ open, onOpenChange, contato, createMode, canD
                 ))}
               </SelectContent>
             </Select>
+            {tipoLocked && (
+              <p className="text-xs text-status-warning-text">
+                Não é possível mudar o tipo: este contato tem vínculos de grupo. Remova os
+                vínculos (em &ldquo;Quem recebe&rdquo;, ou no grupo onde ele é membro) antes.
+              </p>
+            )}
           </div>
 
           {/* Foto */}

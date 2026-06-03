@@ -116,6 +116,73 @@ export interface GrupoMembro {
   membro: CentralServicosContato
 }
 
+// ============================================================
+// Mural de Avisos (Bloco D)
+// ============================================================
+
+export const AVISO_CATEGORIAS = [
+  'informativo',
+  'manutencao',
+  'ti',
+  'rh',
+  'operacional',
+  'eventos',
+] as const
+
+export type AvisoCategoria = (typeof AVISO_CATEGORIAS)[number]
+
+export const AVISO_CATEGORIA_LABELS: Record<AvisoCategoria, string> = {
+  informativo: 'Informativo',
+  manutencao: 'Manutenção',
+  ti: 'TI',
+  rh: 'RH',
+  operacional: 'Operacional',
+  eventos: 'Eventos',
+}
+
+export const AVISO_PRIORIDADES = ['normal', 'alta'] as const
+
+export type AvisoPrioridade = (typeof AVISO_PRIORIDADES)[number]
+
+export const AVISO_PRIORIDADE_LABELS: Record<AvisoPrioridade, string> = {
+  normal: 'Normal',
+  alta: 'Alta',
+}
+
+export interface CentralServicosAviso {
+  id: string
+  titulo: string
+  conteudo: string
+  categoria: AvisoCategoria
+  prioridade: AvisoPrioridade
+  unidade: ContatoUnidade // mesmo conjunto geral/pinheiros/moema (rótulo informativo)
+  publicado_em: string
+  expira_em: string | null
+  created_at: string
+  updated_at: string
+  created_by: string | null
+}
+
+/** Payload do formulário de criação/edição de aviso. */
+export interface AvisoFormInput {
+  titulo: string
+  conteudo: string
+  categoria: AvisoCategoria
+  prioridade: AvisoPrioridade
+  unidade: ContatoUnidade
+  publicado_em: string
+  expira_em: string | null
+}
+
+/** Estado de vigência de um aviso (derivado no cliente para a UI). */
+export type AvisoEstado = 'vigente' | 'futuro' | 'expirado'
+
+export function avisoEstado(aviso: CentralServicosAviso, now = new Date()): AvisoEstado {
+  if (new Date(aviso.publicado_em) > now) return 'futuro'
+  if (aviso.expira_em && new Date(aviso.expira_em) <= now) return 'expirado'
+  return 'vigente'
+}
+
 /** Bucket privado das fotos dos contatos. */
 export const CONTATOS_BUCKET = 'central-servicos-contatos'
 

@@ -31,12 +31,28 @@ export async function PATCH(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const supabase = (await createClient()) as any
 
-    // Foto antiga, para limpar do storage se foi trocada/removida.
+    // Foto antiga (para limpar) + tipo atual (para o guard de troca de tipo).
     const { data: prev } = await supabase
       .from('central_servicos_contatos')
-      .select('foto_path')
+      .select('foto_path, tipo')
       .eq('id', id)
       .maybeSingle()
+
+    // Guard da troca de tipo (defesa além do trigger): se o tipo está mudando e
+    // o contato tem vínculos (grupo com membros, ou pessoa membro de algum grupo),
+    // rejeita com mensagem clara — é preciso limpar os vínculos antes.
+    if (prev && body.tipo !== prev.tipo) {
+      const { count } = await supabase
+        .from('central_servicos_grupo_membros')
+        .select('id', { count: 'exact', head: true })
+        .or(`grupo_id.eq.${id},membro_id.eq.${id}`)
+      if ((count ?? 0) > 0) {
+        return NextResponse.json(
+          { error: 'Remova os vínculos do grupo antes de mudar o tipo.' },
+          { status: 409 },
+        )
+      }
+    }
 
     const newFoto = body.foto_path?.trim() || null
 

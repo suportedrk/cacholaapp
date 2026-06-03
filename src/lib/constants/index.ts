@@ -98,6 +98,7 @@ export const ROUTES = {
   centralServicos: '/central-servicos',
   centralServicosLinks: '/central-servicos/links',
   centralServicosContatos: '/central-servicos/contatos',
+  centralServicosAvisos: '/central-servicos/avisos',
 } as const
 
 // ============================================================

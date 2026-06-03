@@ -115,6 +115,31 @@ export function useRemoveMembro() {
   })
 }
 
+/**
+ * Quantidade de vínculos de um contato em grupos (como grupo-com-membros OU
+ * como pessoa-membro). > 0 bloqueia a troca de `tipo` (invariante grupo×pessoa).
+ */
+export function useContatoVinculosCount(contatoId: string | null, enabled = true) {
+  const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
+
+  return useQuery({
+    queryKey: ['central-servicos', 'contato-vinculos', contatoId],
+    enabled: isSessionReady && !!contatoId && enabled,
+    staleTime: 60 * 1000,
+    retry,
+    queryFn: async () => {
+      const supabase = createClient()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { count, error } = await (supabase as any)
+        .from('central_servicos_grupo_membros')
+        .select('id', { count: 'exact', head: true })
+        .or(`grupo_id.eq.${contatoId},membro_id.eq.${contatoId}`)
+      if (error) throw error
+      return (count ?? 0) as number
+    },
+  })
+}
+
 export function useCreateContato() {
   const queryClient = useQueryClient()
   return useMutation({
