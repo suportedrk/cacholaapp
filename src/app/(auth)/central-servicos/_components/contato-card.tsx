@@ -18,9 +18,11 @@ interface ContatoCardProps {
   signedUrl?: string
   canEdit: boolean
   onEdit: (c: CentralServicosContato) => void
+  /** Abre a foto ampliada (só efetivo quando o contato tem foto). */
+  onPhotoClick?: () => void
 }
 
-export function ContatoCard({ contato, signedUrl, canEdit, onEdit }: ContatoCardProps) {
+export function ContatoCard({ contato, signedUrl, canEdit, onEdit, onPhotoClick }: ContatoCardProps) {
   const isGrupo = contato.tipo === 'grupo'
   const [expanded, setExpanded] = useState(false)
 
@@ -32,7 +34,7 @@ export function ContatoCard({ contato, signedUrl, canEdit, onEdit }: ContatoCard
       )}
     >
       <div className="flex items-start gap-3">
-        <ContatoAvatar src={signedUrl} nome={contato.nome} isGrupo={isGrupo} size={48} />
+        <ContatoAvatar src={signedUrl} nome={contato.nome} isGrupo={isGrupo} size={48} onClick={onPhotoClick} />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <h3 className="truncate text-sm font-semibold text-foreground">{contato.nome}</h3>

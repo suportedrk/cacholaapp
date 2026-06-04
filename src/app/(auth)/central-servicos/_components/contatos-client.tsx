@@ -26,6 +26,7 @@ import {
   CONTATOS_BUCKET,
   type CentralServicosContato,
 } from '@/types/central-servicos'
+import { PhotoLightbox } from '@/components/shared/photo-lightbox'
 import { ContatoAvatar } from './contato-avatar'
 import { ContatoCard } from './contato-card'
 import { ContatoEditSheet } from './contato-edit-sheet'
@@ -49,6 +50,8 @@ export function ContatosClient() {
   const [editing, setEditing] = useState<CentralServicosContato | null>(null)
   const [createMode, setCreateMode] = useState(false)
   const [expandedGrupos, setExpandedGrupos] = useState<Set<string>>(new Set())
+  // Foto ampliada (lightbox em modo foto única — sem navegação entre contatos).
+  const [lightboxPhoto, setLightboxPhoto] = useState<{ id: string; signedUrl: string; label: string } | null>(null)
 
   function toggleGrupo(id: string) {
     setExpandedGrupos((prev) => {
@@ -75,6 +78,13 @@ export function ContatosClient() {
     setEditing(c)
     setCreateMode(false)
     setSheetOpen(true)
+  }
+
+  // Abre a foto ampliada — reaproveita a signed URL já carregada (sem nova requisição).
+  function openPhoto(c: CentralServicosContato) {
+    const url = c.foto_path ? signedUrls[c.foto_path] : undefined
+    if (!url) return
+    setLightboxPhoto({ id: c.id, signedUrl: url, label: c.nome })
   }
 
   const filtrados = useMemo(() => {
@@ -194,6 +204,7 @@ export function ContatosClient() {
                 signedUrl={c.foto_path ? signedUrls[c.foto_path] : undefined}
                 canEdit={canEdit}
                 onEdit={openEdit}
+                onPhotoClick={() => openPhoto(c)}
               />
             ))}
           </div>
@@ -225,6 +236,7 @@ export function ContatosClient() {
                               nome={c.nome}
                               isGrupo={isGrupo}
                               size={40}
+                              onClick={() => openPhoto(c)}
                             />
                             <div className="min-w-0">
                               <div className="flex items-center gap-2">
@@ -313,6 +325,15 @@ export function ContatosClient() {
           canDelete={canDelete}
         />
       )}
+
+      {/* Foto ampliada — modo foto única (sem setas entre contatos). */}
+      <PhotoLightbox
+        photos={lightboxPhoto ? [lightboxPhoto] : []}
+        open={!!lightboxPhoto}
+        currentIndex={0}
+        onIndexChange={() => {}}
+        onClose={() => setLightboxPhoto(null)}
+      />
     </div>
   )
 }
