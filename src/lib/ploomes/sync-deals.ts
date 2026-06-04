@@ -11,7 +11,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database.types'
 import { ploomesGet } from './client'
 import { parseDeal } from './field-mapping'
-import { loadPloomesConfig, resolveUnitId } from './sync'
+import { loadPloomesConfig, resolveUnitId, resolveUnitIdStrict } from './sync'
 import type { PloomesDeal, DealsBISyncResult } from './types'
 
 type AdminClient = SupabaseClient<Database>
@@ -20,6 +20,11 @@ type AdminClient = SupabaseClient<Database>
 // Trocado de 'Unidade Escolhida da Festa' (deal_A583075F, só preenchida em estágios avançados)
 // para 'Unidade da festa pretendida' (deal_BD9C4B07) em mai/2026 após investigação de bug nos KPIs.
 const FIELD_KEY_UNIT = 'deal_BD9C4B07-20E5-458A-8273-6BA271A6DEBD'
+
+// Campo "Unidade Escolhida da Festa" (deal_A583075F) — nível 2 da hierarquia
+// canônica da festa (Order chosen > Escolhida > Pretendida). Persistido em
+// ploomes_deals.escolhida_unit_id para as RPCs do BI (Fase 3) resolverem a festa.
+const FIELD_KEY_ESCOLHIDA = 'deal_A583075F-D19C-4034-A479-36625C621660'
 
 // Status IDs do Ploomes
 const STATUS_NAMES: Record<number, string> = {
@@ -34,6 +39,11 @@ function getStatusName(statusId: number): string {
 
 function extractUnitName(deal: PloomesDeal): string | undefined {
   const prop = deal.OtherProperties?.find((p) => p.FieldKey === FIELD_KEY_UNIT)
+  return prop?.ObjectValueName ?? undefined
+}
+
+function extractEscolhidaName(deal: PloomesDeal): string | undefined {
+  const prop = deal.OtherProperties?.find((p) => p.FieldKey === FIELD_KEY_ESCOLHIDA)
   return prop?.ObjectValueName ?? undefined
 }
 
@@ -112,6 +122,8 @@ export async function syncDealsForBI(
 
         const unitName  = extractUnitName(deal)
         const dealUnitId = await resolveUnitId(supabase, unitName)
+        // Nível 2 da hierarquia da festa (Escolhida): strict → null quando vazio
+        const escolhidaUnitId = await resolveUnitIdStrict(supabase, extractEscolhidaName(deal))
 
         // Se sync scoped a uma unidade, pular deals de outras unidades
         if (unitId && dealUnitId !== unitId) continue
@@ -140,6 +152,7 @@ export async function syncDealsForBI(
               status_id:          deal.StatusId,
               status_name:        getStatusName(deal.StatusId),
               unit_id:             dealUnitId,
+              escolhida_unit_id:   escolhidaUnitId,
               unit_option_name:    unitName ?? null,
               ploomes_create_date: deal.CreateDate,
               ploomes_last_update: deal.LastUpdateDate ?? null,
@@ -222,6 +235,8 @@ export async function syncSingleDealToBI(
     // 3. Resolver unit_id
     const unitName   = extractUnitName(deal)
     const dealUnitId = await resolveUnitId(supabase, unitName)
+    // Nível 2 da hierarquia da festa (Escolhida): strict → null quando vazio
+    const escolhidaUnitId = await resolveUnitIdStrict(supabase, extractEscolhidaName(deal))
 
     // 4. Extrair datas, horários e birthday
     const { event_date, start_time, end_time, aniversariante_birthday } = extractDealFields(deal)
@@ -249,6 +264,7 @@ export async function syncSingleDealToBI(
           status_id:           deal.StatusId,
           status_name:         getStatusName(deal.StatusId),
           unit_id:             dealUnitId,
+          escolhida_unit_id:   escolhidaUnitId,
           unit_option_name:    unitName ?? null,
           ploomes_create_date: deal.CreateDate,
           ploomes_last_update: deal.LastUpdateDate ?? null,

@@ -50,3 +50,37 @@ export function resolveEffectiveUnitId(
 ): string | null {
   return orderChosenUnitId ?? dealUnitId ?? null
 }
+
+/**
+ * Resolve a unidade efetiva da festa pela hierarquia canônica de 3 níveis:
+ * `chosen (Order) > Escolhida (deal_A583075F) > Pretendida (deal_BD9C4B07)`.
+ *
+ * Paridade EXATA com a função SQL `public.resolve_festa_unit(uuid,uuid,uuid)`
+ * (migration 149): ambas são `COALESCE(chosen, escolhida, pretendida)`. O
+ * fallback final é a Pretendida — NUNCA "primeira unidade ativa".
+ *
+ * Os overloads preservam o estreitamento de tipo dos call sites: quando a
+ * Pretendida é garantidamente não-nula (coluna NOT NULL de destino), o retorno
+ * é `string`; quando pode ser nula, é `string | null`.
+ *
+ * @param chosen     UUID da unidade escolhida no Order, ou `null`/`undefined`.
+ * @param escolhida  UUID da unidade Escolhida do Deal (deal_A583075F), ou `null`.
+ * @param pretendida UUID da unidade Pretendida do Deal (deal_BD9C4B07).
+ */
+export function resolveFestaUnit(
+  chosen: string | null | undefined,
+  escolhida: string | null | undefined,
+  pretendida: string,
+): string
+export function resolveFestaUnit(
+  chosen: string | null | undefined,
+  escolhida: string | null | undefined,
+  pretendida: string | null,
+): string | null
+export function resolveFestaUnit(
+  chosen: string | null | undefined,
+  escolhida: string | null | undefined,
+  pretendida: string | null,
+): string | null {
+  return chosen ?? escolhida ?? pretendida ?? null
+}

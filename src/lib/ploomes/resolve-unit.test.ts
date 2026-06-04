@@ -13,10 +13,11 @@
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { resolveEffectiveUnitId } from './resolve-unit'
+import { resolveEffectiveUnitId, resolveFestaUnit } from './resolve-unit'
 
 const MOEMA = 'df2e4286-4615-420f-b311-fd8289596511'
 const PINHEIROS = '36d3b2e5-42fd-4094-a726-258c0a643986'
+const ESCOLHIDA = 'aaaaaaaa-0000-0000-0000-000000000001'
 
 test('(a) Order com chosen_unit_id preenchido → vence o Deal', () => {
   // Caso MATTEO: Order escolhida = Moema, Deal = Pinheiros → Moema.
@@ -38,4 +39,32 @@ test('(c) ambos ausentes → null (comportamento seguro definido)', () => {
 
 test('chosen e deal iguais → retorna a mesma unidade (sem efeito colateral)', () => {
   assert.equal(resolveEffectiveUnitId(MOEMA, MOEMA), MOEMA)
+})
+
+// ── resolveFestaUnit (3 níveis: chosen > Escolhida > Pretendida) ──────────
+// Paridade exata com SQL public.resolve_festa_unit = COALESCE(chosen, escolhida, pretendida).
+
+test('festa: só chosen presente → vence todos', () => {
+  assert.equal(resolveFestaUnit(MOEMA, ESCOLHIDA, PINHEIROS), MOEMA)
+})
+
+test('festa: sem chosen → cai na Escolhida', () => {
+  assert.equal(resolveFestaUnit(null, ESCOLHIDA, PINHEIROS), ESCOLHIDA)
+  assert.equal(resolveFestaUnit(undefined, ESCOLHIDA, PINHEIROS), ESCOLHIDA)
+})
+
+test('festa: sem chosen e sem Escolhida → cai na Pretendida (nunca primeira-ativa)', () => {
+  assert.equal(resolveFestaUnit(null, null, PINHEIROS), PINHEIROS)
+  assert.equal(resolveFestaUnit(undefined, undefined, PINHEIROS), PINHEIROS)
+})
+
+test('festa: todos ausentes → null (comportamento seguro)', () => {
+  assert.equal(resolveFestaUnit(null, null, null), null)
+  assert.equal(resolveFestaUnit(undefined, undefined, null), null)
+})
+
+test('festa: paridade COALESCE — primeiro não-nulo na ordem chosen,escolhida,pretendida', () => {
+  // espelha COALESCE: chosen ?? escolhida ?? pretendida
+  assert.equal(resolveFestaUnit(null, ESCOLHIDA, PINHEIROS), ESCOLHIDA)
+  assert.equal(resolveFestaUnit(MOEMA, null, PINHEIROS), MOEMA)
 })
