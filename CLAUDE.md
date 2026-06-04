@@ -12,7 +12,7 @@
 
 - **Metodologia:** Vibe Coding — Claude planeja + implementa, Bruno testa + valida
 - **Problema resolvido:** Informações espalhadas em WhatsApp, planilhas e cadernos
-- **Versão atual:** v1.8.0 (prod, PR #17 mergeado 08/mai/2026). v1.8.0 substituiu deal_amount por SUM(ploomes_order_products.total) em 11 RPCs de BI/Vendas (Fase C) — receita BI +54%, ticket médio +54%. v1.7.0 (PR #16, 07/mai/2026) corrigiu filtros de período no BI, adicionou 16 tooltips informativos e novo componente BIBreakdownByUnit. v1.5.13 corrigiu destino do clique no Recompra (de `/deal/` para `/contact/`).
+- **Versão atual:** v1.46.0 (prod, PR #60 mergeado 03/jun/2026, merge `e9d6fc7`). v1.46.0 publicou a **Fase 1 do módulo Central de Serviços** (Links úteis, Agenda de Contatos com pessoas e grupos, Mural de Avisos) — módulo GLOBAL reaproveitando o RBAC `central_servicos` (view = todos os cargos; create/edit/delete = super_admin+diretor); migrations 144–148; go-live em 2 etapas (migrations em prod antes do deploy de código). Detalhes em `docs/MODULES.md#central-de-serviços`. Última migration: **148**.
 
 ---
 
@@ -671,6 +671,7 @@ export const GLOBAL_VIEWER_ROLES = ['super_admin', 'diretor'] as const satisfies
 | Multi-unidade | `use-units.ts` | `stores/unit-store.ts` |
 | Notificações | `use-notifications.ts` | `components/layout/notification-bell.tsx` |
 | Início (ex-Dashboard) | `use-dashboard.ts` | `components/features/dashboard/` |
+| Central de Serviços | `use-central-servicos-links.ts` / `-contatos.ts` / `-avisos.ts` | `app/(auth)/central-servicos/_components/` |
 
 **Tabela ploomes_deals — Dados para BI (Migration 040):**
 - Tabela: `ploomes_deals` — todos os deals do pipeline (all stages, sem filtro StageId)
