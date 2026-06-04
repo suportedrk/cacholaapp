@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useCallback } from 'react'
+import { useEffect, useCallback, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -28,6 +29,13 @@ export function PhotoLightbox({
 }: PhotoLightboxProps) {
   const photo = photos[currentIndex]
 
+  // Guard de SSR: createPortal precisa de document (só existe no cliente).
+  // O componente retorna null no servidor e até o primeiro mount, evitando
+  // erros de hydration em todos os 4 usos existentes.
+  const [mounted, setMounted] = useState(false)
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- mount guard para createPortal (SSR safe)
+  useEffect(() => { setMounted(true) }, [])
+
   const prev = useCallback(() => {
     onIndexChange((currentIndex - 1 + photos.length) % photos.length)
   }, [currentIndex, photos.length, onIndexChange])
@@ -48,9 +56,12 @@ export function PhotoLightbox({
     return () => document.removeEventListener('keydown', onKey)
   }, [open, onClose, prev, next])
 
-  if (!open || !photo) return null
+  if (!mounted || !open || !photo) return null
 
-  return (
+  // createPortal renderiza o overlay diretamente em document.body, escapando de
+  // qualquer ancestral com transform (como o animate-page-enter do app-layout).
+  // Isso garante que position:fixed seja relativo ao viewport em qualquer página.
+  return createPortal(
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90"
       onClick={onClose}
@@ -121,6 +132,7 @@ export function PhotoLightbox({
           <ChevronRight className="w-5 h-5" />
         </button>
       )}
-    </div>
+    </div>,
+    document.body,
   )
 }
