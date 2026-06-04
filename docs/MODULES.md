@@ -397,7 +397,7 @@ Guard de rota: `requirePermissionServer('central_servicos','view')` em `(auth)/c
 - Hooks: `hooks/use-central-servicos-links.ts` (+ `useCentralServicosPermissions`), `use-central-servicos-contatos.ts` (+ `useGrupoMembros`, `useContatoVinculosCount`), `use-central-servicos-avisos.ts`
 - APIs: `app/api/central-servicos/{links,contatos,contatos/[id]/membros,avisos}/`
 - Tipos/constantes: `types/central-servicos.ts`, `ROUTES.centralServicos*` em `lib/constants/index.ts`
-- Reuso: `components/shared/photo-upload.tsx` (PhotoDropZone), `hooks/use-signed-urls.ts`
+- Reuso: `components/shared/photo-upload.tsx` (PhotoDropZone), `hooks/use-signed-urls.ts`, `components/shared/photo-lightbox.tsx` (PhotoLightbox — modo foto única, avatar clicável quando há foto real; v1.46.2)
 
 ### LGPD (Contatos = dado pessoal)
 Agenda interna de trabalho (legítimo interesse / execução do contrato — art. 7), **sem tela de consentimento**. Minimização (art. 6 III): só contatos corporativos. Retenção (art. 16): saída = **inativar** (some para todos); exclusão definitiva só Diretoria. Foto antiga removida do bucket de forma confiável na troca/exclusão (sem órfão).
@@ -431,4 +431,4 @@ Agenda interna de trabalho (legítimo interesse / execução do contrato — art
 | 022 | Ploomes unit mapping |
 | 028–029 | Bloqueio OAuth não autorizado |
 | … | (sequência completa em `supabase/migrations/`; ordem é estrita NNN_) |
-| 144–148 | **Central de Serviços** (v1.46.0): 144 fundação RBAC · 145 Links · 146 Contatos + bucket privado · 147 Grupos + triggers · 148 Avisos + guard de troca de tipo |
+| 144–148 | **Central de Serviços** (v1.46.0–1.46.2): 144 fundação RBAC · 145 Links · 146 Contatos + bucket privado · 147 Grupos + triggers · 148 Avisos + guard de troca de tipo. v1.46.1–1.46.2 frontend-only (sem migration): UX Agenda + lightbox de foto (createPortal fix) |

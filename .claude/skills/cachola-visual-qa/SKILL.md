@@ -29,3 +29,13 @@ O chrome-devtools-mcp LANCA O PROPRIO Chrome dele, com perfil dedicado e persist
 
 ## Lembrete local
 Apos re-seed do banco local, test users nascem sem grants — re-aplicar a migration de backfill relevante antes de qualquer prova de toggle.
+
+## Armadilha: viewport estreito da janela automatizada do MCP
+
+A janela do Chrome controlada pelo MCP tem viewport próprio, tipicamente mais estreito/atípico que o de um navegador normal. Isso pode **esconder elementos que existem no produto** — ex.: botão no rodapé de um modal que sai da área visível no viewport do MCP.
+
+**Antes de reportar um elemento "sumido" como bug**, confirme em navegador normal ou redimensione a janela com `mcp__chrome-devtools__resize_page`.
+
+**Caso real (v1.46.1, Agenda de Contatos):** o botão "Salvar" do formulário de contato não aparecia na janela do MCP, gerando um falso diagnóstico de "não salva". No navegador normal do Bruno o botão estava presente e funcionava corretamente — o bug não existia.
+
+**Consequência:** nunca declarar "o produto não tem esse elemento/funcionalidade" baseado apenas na janela do MCP sem antes verificar com viewport padrão.

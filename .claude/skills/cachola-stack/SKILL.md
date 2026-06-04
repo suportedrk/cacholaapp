@@ -21,6 +21,7 @@ Esta skill consolida as regras específicas do Cachola que **divergem do óbvio*
 | Tarefa | Leia |
 |---|---|
 | Criar/editar componente UI (Select, Dialog, Tabs, etc.) | `references/base-ui-quirks.md` |
+| Criar overlay/modal/lightbox com `position:fixed` de tela cheia | `references/base-ui-quirks.md` (seção 8 — createPortal obrigatório) |
 | Adicionar/editar gráfico ou chart | `references/recharts-fixed-pixels.md` |
 | Mexer em login, sessão, hook que precisa de user/unit, queries com `enabled` | `references/auth-and-session.md` |
 | Aplicar cor, espaçamento, tipografia | `references/design-tokens.md` |
