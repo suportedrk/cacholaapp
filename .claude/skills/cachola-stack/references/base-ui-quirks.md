@@ -186,3 +186,35 @@ Atributos comuns:
 1. Olhar componentes existentes em `src/components/ui/` — provavelmente já tem o pattern certo.
 2. Conferir `node_modules/@base-ui/react/dist/` para a tipagem exata do componente.
 3. **Não** copiar exemplo de Radix da internet sem adaptar — a API é diferente em ~30% dos casos.
+
+---
+
+## 8. Overlays/modais/lightbox com `position:fixed` DEVEM usar `createPortal`
+
+**Causa raiz:** cada página é envolvida por `<div className="animate-page-enter">` em `app-layout.tsx:108`. A animação `page-enter` usa `fill: both` e termina com `transform: translateY(0)` — o transform **persiste** após a animação terminar. Em CSS, qualquer `transform` em um ancestral cria um novo containing block para `position: fixed`, fazendo o overlay se posicionar relativo a esse div (que começa abaixo do header) em vez do viewport.
+
+**Sintoma:** overlay/lightbox não centraliza, ancora deslocado — no mobile, a foto aparece no rodapé da tela em vez de no centro.
+
+**Solução obrigatória** para qualquer overlay de tela cheia (`fixed inset-0`):
+
+```tsx
+import { createPortal } from 'react-dom'
+
+// Guard de SSR: createPortal precisa de document (só existe no cliente)
+const [mounted, setMounted] = useState(false)
+// eslint-disable-next-line react-hooks/set-state-in-effect
+useEffect(() => { setMounted(true) }, [])
+
+if (!mounted || !open) return null
+
+return createPortal(
+  <div className="fixed inset-0 z-[100] flex items-center justify-center ...">
+    {/* conteúdo do overlay */}
+  </div>,
+  document.body,
+)
+```
+
+O guard `mounted` evita erros de hydration no SSR (Next.js App Router): o componente retorna `null` no servidor e até o primeiro mount no cliente.
+
+**Exemplo real:** `components/shared/photo-lightbox.tsx` — corrigido em v1.46.2. Consumidores: Agenda de Contatos, Eventos (FestaFotosGaleria), Manutenção, Checklists. Todos se beneficiaram do fix sem alterar seu próprio código.

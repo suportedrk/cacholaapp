@@ -18,6 +18,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database.types'
 import { ploomesGet } from './client'
 import { loadPloomesConfig, resolveUnitId } from './sync'
+import { resolveEffectiveUnitId } from './resolve-unit'
 import { refreshEventGuestCountFromLatestOrder } from './event-guest-sync'
 
 type AdminClient = SupabaseClient<Database>
@@ -382,7 +383,10 @@ export async function syncOrders(
                   ploomes_product_id: prod.Id,
                   order_id:           order.Id,
                   deal_id:            prod.DealId ?? order.DealId ?? null,
-                  unit_id:            unitId,
+                  // Hierarquia canônica Order > Deal (mesma fonte que events.unit_id):
+                  // a Unidade Escolhida do Order vence o Deal. chosenUnitId já foi
+                  // resolvido acima (passo 5b). Sem ela, cai no Deal (idempotente).
+                  unit_id:            resolveEffectiveUnitId(chosenUnitId, unitId),
                   product_id:         prod.ProductId ?? null,
                   product_name:       prod.ProductName ?? null,
                   product_code:       prod.ProductCode ?? null,

@@ -12,7 +12,7 @@
 
 - **Metodologia:** Vibe Coding — Claude planeja + implementa, Bruno testa + valida
 - **Problema resolvido:** Informações espalhadas em WhatsApp, planilhas e cadernos
-- **Versão atual:** v1.46.0 (prod, PR #60 mergeado 03/jun/2026, merge `e9d6fc7`). v1.46.0 publicou a **Fase 1 do módulo Central de Serviços** (Links úteis, Agenda de Contatos com pessoas e grupos, Mural de Avisos) — módulo GLOBAL reaproveitando o RBAC `central_servicos` (view = todos os cargos; create/edit/delete = super_admin+diretor); migrations 144–148; go-live em 2 etapas (migrations em prod antes do deploy de código). Detalhes em `docs/MODULES.md#central-de-serviços`. Última migration: **148**.
+- **Versão atual:** v1.46.2 (prod, 04/jun/2026, merge `fd20f63`). v1.46.0 publicou a **Fase 1 do módulo Central de Serviços** (Links úteis, Agenda de Contatos com pessoas e grupos, Mural de Avisos) — módulo GLOBAL reaproveitando o RBAC `central_servicos` (view = todos os cargos; create/edit/delete = super_admin+diretor); migrations 144–148; go-live em 2 etapas. v1.46.1–1.46.2: ajustes de UX + lightbox de foto na Agenda (clicar na foto do contato abre ampliada, modo foto única, reusa `PhotoLightbox`) + fix do `PhotoLightbox` compartilhado via `createPortal(document.body)`. Frontend-only; última migration: **148**. Detalhes em `docs/MODULES.md#central-de-serviços`.
 
 ---
 
