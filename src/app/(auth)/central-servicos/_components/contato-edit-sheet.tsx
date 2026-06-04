@@ -37,6 +37,7 @@ import {
   CONTATO_TIPOS,
   CONTATO_TIPO_LABELS,
   CONTATOS_BUCKET,
+  formatTelefone,
   type CentralServicosContato,
   type ContatoFormInput,
   type ContatoUnidade,
@@ -92,7 +93,7 @@ export function ContatoEditSheet({ open, onOpenChange, contato, createMode, canD
         cargo: contato.cargo,
         unidade: contato.unidade,
         email: contato.email,
-        telefone: contato.telefone,
+        telefone: contato.telefone ? formatTelefone(contato.telefone) : null,
         foto_path: contato.foto_path,
         ativo: contato.ativo,
       })
@@ -309,8 +310,11 @@ export function ContatoEditSheet({ open, onOpenChange, contato, createMode, canD
               <Label htmlFor="contato-telefone">Telefone</Label>
               <Input
                 id="contato-telefone"
+                type="tel"
+                inputMode="tel"
+                maxLength={15}
                 value={form.telefone ?? ''}
-                onChange={(e) => set('telefone', e.target.value)}
+                onChange={(e) => set('telefone', formatTelefone(e.target.value))}
                 placeholder="(11) 99999-9999"
               />
               <p className="text-xs text-muted-foreground">

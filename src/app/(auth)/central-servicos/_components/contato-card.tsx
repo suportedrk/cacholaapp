@@ -1,16 +1,15 @@
 'use client'
 
 import { useState } from 'react'
-import { Mail, MessageCircle, Pencil, Users, ChevronDown } from 'lucide-react'
+import { Mail, Pencil, Users, ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { buttonVariants } from '@/components/ui/button'
 import { ContatoAvatar } from './contato-avatar'
 import { GrupoMembrosList } from './grupo-membros-list'
+import { ContatoTelefoneAcoes } from './contato-telefone-acoes'
 import {
   CONTATO_UNIDADE_LABELS,
-  buildWhatsappUrl,
   type CentralServicosContato,
 } from '@/types/central-servicos'
 
@@ -23,7 +22,6 @@ interface ContatoCardProps {
 
 export function ContatoCard({ contato, signedUrl, canEdit, onEdit }: ContatoCardProps) {
   const isGrupo = contato.tipo === 'grupo'
-  const whatsapp = isGrupo ? null : buildWhatsappUrl(contato.telefone)
   const [expanded, setExpanded] = useState(false)
 
   return (
@@ -71,30 +69,24 @@ export function ContatoCard({ contato, signedUrl, canEdit, onEdit }: ContatoCard
         )}
       </div>
 
-      {(contato.email || whatsapp) && (
-        <div className="flex flex-wrap items-center gap-2">
-          {contato.email && (
-            <a
-              href={`mailto:${contato.email}`}
-              className="inline-flex items-center gap-1.5 text-xs text-text-link hover:underline"
-            >
-              <Mail className="h-3.5 w-3.5" />
-              <span className="truncate">{contato.email}</span>
-            </a>
-          )}
-          {whatsapp && (
-            <a
-              href={whatsapp}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={cn(buttonVariants({ size: 'sm', variant: 'outline' }), 'ml-auto')}
-            >
-              <MessageCircle className="mr-1.5 h-4 w-4" />
-              WhatsApp
-            </a>
-          )}
-        </div>
-      )}
+      <div className="flex items-center gap-2">
+        {contato.email ? (
+          <a
+            href={`mailto:${contato.email}`}
+            className="inline-flex min-w-0 items-center gap-1.5 text-xs text-text-link hover:underline"
+          >
+            <Mail className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate">{contato.email}</span>
+          </a>
+        ) : (
+          <span className="text-xs text-muted-foreground">Sem e-mail</span>
+        )}
+        <ContatoTelefoneAcoes
+          telefone={isGrupo ? null : contato.telefone}
+          nome={contato.nome}
+          className="ml-auto"
+        />
+      </div>
 
       {/* Quem recebe — expansível (grupos) */}
       {isGrupo && (
