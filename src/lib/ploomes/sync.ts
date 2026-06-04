@@ -13,6 +13,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database.types'
 import { ploomesGet } from './client'
 import { parseDeal } from './field-mapping'
+import { resolveEffectiveUnitId } from './resolve-unit'
 import type { PloomesDeal, SyncResult } from './types'
 import type { PloomesConfigRow } from '@/types/database.types'
 import { refreshEventGuestCountFromLatestOrder } from './event-guest-sync'
@@ -277,7 +278,7 @@ export async function syncDeals(
           .limit(1)
           .maybeSingle()
 
-        const unitId = orderUnit?.chosen_unit_id ?? dealUnitId
+        const unitId = resolveEffectiveUnitId(orderUnit?.chosen_unit_id, dealUnitId)
 
         // Montar payload do evento
         const eventDate = parsed.eventDate ?? new Date().toISOString().substring(0, 10)
