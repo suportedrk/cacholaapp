@@ -36,6 +36,9 @@ import {
   Tag,
   ShieldAlert,
   LifeBuoy,
+  Link2,
+  Contact,
+  Megaphone,
 } from 'lucide-react'
 import { ROUTES } from '@/lib/constants'
 import type { Module, Role } from '@/types/permissions'
@@ -132,11 +135,20 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: 'Checklist Operacional', href: ROUTES.checklists, icon: ClipboardList, module: 'checklists', allowedRoles: [...OPERATIONAL_CHECKLIST_ROLES] },
       { label: 'Minhas Tarefas',   href: ROUTES.myTasks,    icon: ListTodo,     module: 'checklists', allowedRoles: [...OPERATIONAL_CHECKLIST_ROLES] },
       { label: 'Tarefas da Equipe', href: ROUTES.teamTasks,  icon: UsersRound,   module: 'checklists', allowedRoles: [...TEAM_TASKS_ROLES] },
-      // Central de Serviços — área de uso geral. allowedRoles omitido de propósito:
-      // central_servicos.view é concedido a TODOS os cargos; o gate real de
-      // check_permission vive no layout (requirePermissionServer). A sidebar é só
-      // apresentação por cargo, então "todos veem" = allowedRoles undefined.
-      { label: 'Central de Serviços', href: ROUTES.centralServicos, icon: LifeBuoy, module: 'central_servicos' },
+      // Central de Serviços — área de uso geral. Grupo expansível (mesmo padrão de
+      // Manutenção): o pai alterna expand/colapso (a hub /central-servicos segue
+      // acessível por URL/breadcrumb, como /manutencao). allowedRoles omitido de
+      // propósito em pai e filhos: central_servicos.view é concedido a TODOS os
+      // cargos; o gate real de check_permission vive no layout. Nada de permissão
+      // muda aqui — só a navegação.
+      {
+        label: 'Central de Serviços', href: ROUTES.centralServicos, icon: LifeBuoy, module: 'central_servicos',
+        children: [
+          { label: 'Links úteis',        href: ROUTES.centralServicosLinks,    icon: Link2,     module: 'central_servicos' },
+          { label: 'Agenda de Contatos', href: ROUTES.centralServicosContatos, icon: Contact,   module: 'central_servicos' },
+          { label: 'Mural de Avisos',    href: ROUTES.centralServicosAvisos,   icon: Megaphone, module: 'central_servicos' },
+        ],
+      },
     ],
   },
   {

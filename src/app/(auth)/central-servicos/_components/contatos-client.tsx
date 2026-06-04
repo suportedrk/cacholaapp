@@ -2,13 +2,12 @@
 
 import { Fragment, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { Search, Plus, AlertCircle, Users, ArrowLeft, Mail, MessageCircle, Pencil, ChevronDown } from 'lucide-react'
+import { Search, Plus, AlertCircle, Users, ArrowLeft, Mail, Pencil, ChevronDown } from 'lucide-react'
 import { PageHeader } from '@/components/shared/page-header'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { buttonVariants } from '@/components/ui/button'
 import {
   Select,
   SelectContent,
@@ -25,13 +24,13 @@ import {
   CONTATO_UNIDADES,
   CONTATO_UNIDADE_LABELS,
   CONTATOS_BUCKET,
-  buildWhatsappUrl,
   type CentralServicosContato,
 } from '@/types/central-servicos'
 import { ContatoAvatar } from './contato-avatar'
 import { ContatoCard } from './contato-card'
 import { ContatoEditSheet } from './contato-edit-sheet'
 import { GrupoMembrosList } from './grupo-membros-list'
+import { ContatoTelefoneAcoes } from './contato-telefone-acoes'
 
 type UnidadeFiltro = 'all' | (typeof CONTATO_UNIDADES)[number]
 
@@ -80,15 +79,19 @@ export function ContatosClient() {
 
   const filtrados = useMemo(() => {
     const termo = busca.trim().toLowerCase()
-    return (contatos ?? []).filter((c) => {
-      if (unidade !== 'all' && c.unidade !== unidade) return false
-      if (!termo) return true
-      return (
-        c.nome.toLowerCase().includes(termo) ||
-        (c.setor?.toLowerCase().includes(termo) ?? false) ||
-        (c.cargo?.toLowerCase().includes(termo) ?? false)
-      )
-    })
+    return (contatos ?? [])
+      .filter((c) => {
+        if (unidade !== 'all' && c.unidade !== unidade) return false
+        if (!termo) return true
+        return (
+          c.nome.toLowerCase().includes(termo) ||
+          (c.setor?.toLowerCase().includes(termo) ?? false) ||
+          (c.cargo?.toLowerCase().includes(termo) ?? false)
+        )
+      })
+      // Sempre em ordem alfabética A→Z por nome, ciente de acentos (pt-BR),
+      // pessoas e grupos juntos — inclusive logo após criar/editar.
+      .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }))
   }, [contatos, busca, unidade])
 
   return (
@@ -203,14 +206,14 @@ export function ContatosClient() {
                   <th className="px-4 py-3 font-medium">Pessoa</th>
                   <th className="px-4 py-3 font-medium">Setor</th>
                   <th className="px-4 py-3 font-medium">Unidade</th>
-                  <th className="px-4 py-3 font-medium">Contato</th>
+                  <th className="px-4 py-3 font-medium">E-mail</th>
+                  <th className="px-4 py-3 font-medium">Telefone</th>
                   <th className="px-4 py-3" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {filtrados.map((c) => {
                   const isGrupo = c.tipo === 'grupo'
-                  const whatsapp = isGrupo ? null : buildWhatsappUrl(c.telefone)
                   const isExpanded = expandedGrupos.has(c.id)
                   return (
                     <Fragment key={c.id}>
@@ -256,31 +259,20 @@ export function ContatosClient() {
                           <Badge variant="outline">{CONTATO_UNIDADE_LABELS[c.unidade]}</Badge>
                         </td>
                         <td className="px-4 py-3">
-                          <div className="flex items-center gap-3">
-                            {c.email ? (
-                              <a
-                                href={`mailto:${c.email}`}
-                                className="inline-flex items-center gap-1.5 text-text-link hover:underline"
-                              >
-                                <Mail className="h-4 w-4" />
-                                <span className="truncate">{c.email}</span>
-                              </a>
-                            ) : (
-                              <span className="text-muted-foreground">—</span>
-                            )}
-                            {whatsapp && (
-                              <a
-                                href={whatsapp}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className={cn(buttonVariants({ size: 'xs', variant: 'outline' }))}
-                                aria-label={`WhatsApp de ${c.nome}`}
-                              >
-                                <MessageCircle className="mr-1 h-3.5 w-3.5" />
-                                WhatsApp
-                              </a>
-                            )}
-                          </div>
+                          {c.email ? (
+                            <a
+                              href={`mailto:${c.email}`}
+                              className="inline-flex items-center gap-1.5 text-text-link hover:underline"
+                            >
+                              <Mail className="h-4 w-4 shrink-0" />
+                              <span className="truncate">{c.email}</span>
+                            </a>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          <ContatoTelefoneAcoes telefone={isGrupo ? null : c.telefone} nome={c.nome} />
                         </td>
                         <td className="px-4 py-3 text-right">
                           {canEdit && (
@@ -298,7 +290,7 @@ export function ContatosClient() {
                       </tr>
                       {isGrupo && isExpanded && (
                         <tr className="bg-surface-secondary/40">
-                          <td colSpan={5} className="px-4 py-3">
+                          <td colSpan={6} className="px-4 py-3">
                             <GrupoMembrosList grupoId={c.id} open={isExpanded} />
                           </td>
                         </tr>

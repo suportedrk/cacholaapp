@@ -198,3 +198,33 @@ export function buildWhatsappUrl(telefone: string | null | undefined): string | 
   if (!digits.startsWith('55')) digits = `55${digits}`
   return `https://wa.me/${digits}`
 }
+
+/**
+ * Link para discar (tel:) a partir de um telefone. Remove não-dígitos e prefixa
+ * o código do Brasil (+55) quando ausente. Retorna null se não houver dígitos suficientes.
+ */
+export function buildTelUrl(telefone: string | null | undefined): string | null {
+  if (!telefone) return null
+  let digits = telefone.replace(/\D/g, '')
+  if (digits.length < 8) return null
+  if (!digits.startsWith('55')) digits = `55${digits}`
+  return `tel:+${digits}`
+}
+
+/**
+ * Máscara de telefone brasileiro, formatando enquanto digita:
+ * - 11 dígitos (celular): (XX) XXXXX-XXXX
+ * - 10 dígitos (fixo):    (XX) XXXX-XXXX
+ * Limita a 11 dígitos no total (DDD + número).
+ */
+export function formatTelefone(value: string): string {
+  const digits = value.replace(/\D/g, '').slice(0, 11)
+  if (digits.length === 0) return ''
+  const ddd = digits.slice(0, 2)
+  if (digits.length <= 2) return `(${ddd}`
+  const resto = digits.slice(2)
+  // Ponto do hífen: 5 para celular (8 dígitos após o DDD → 11 total), 4 para fixo.
+  const split = digits.length > 10 ? 5 : 4
+  if (resto.length <= split) return `(${ddd}) ${resto}`
+  return `(${ddd}) ${resto.slice(0, split)}-${resto.slice(split)}`
+}
