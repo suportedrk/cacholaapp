@@ -151,6 +151,8 @@ export type SyncResult = {
   dealsUpdated: number
   dealsMarkedLost: number
   dealsErrors: number
+  /** Deals pulados por não terem nenhum sinal de unidade (skip intencional, não é erro) */
+  dealsSkippedNoUnit: number
   typesCreated: number
   errorMessage?: string
   durationMs: number

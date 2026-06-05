@@ -257,6 +257,17 @@ export function BIUnitComparison({ rows, months }: Props) {
     <>
       {desktopTable}
       {mobileCards}
+      {/* Legenda da base mista de unidade (Fase 3): leads/conversão = pretendida; ganhos/receita = festa */}
+      <p className="text-[11px] leading-relaxed text-text-tertiary px-4 py-2.5 border-t border-border-default">
+        <span aria-hidden className="mr-1">ℹ️</span>
+        <strong className="font-semibold text-text-secondary">Leads</strong> e{' '}
+        <strong className="font-semibold text-text-secondary">Conversão</strong> usam a unidade{' '}
+        <strong>pretendida</strong> (origem do lead).{' '}
+        <strong className="font-semibold text-text-secondary">Ganhos</strong>,{' '}
+        <strong className="font-semibold text-text-secondary">Receita</strong> e{' '}
+        <strong className="font-semibold text-text-secondary">Ticket</strong> usam a unidade onde a{' '}
+        <strong>festa acontece</strong> — por isso a soma de leads por unidade pode não corresponder à de festas ganhas.
+      </p>
     </>
   )
 }
