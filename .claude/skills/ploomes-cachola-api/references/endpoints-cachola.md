@@ -114,6 +114,25 @@ A "venda" no Ploomes é a `Order` que veio de um `Deal` ganho. Para filtrar só 
 GET /Orders?$filter=Deal/StatusId eq 2&$expand=Deal($select=StatusId)
 ```
 
+### Reconciliação por deal (OBRIGATÓRIA no sync) — remover Orders excluídas
+
+O sync de Orders é **upsert-only**: ele só conhece o que a API retorna na janela de data. Orders **excluídas no Ploomes deixam de ser retornadas** e ficam **órfãs** no nosso banco, inflando o BI (ver `gotchas-cachola.md` §18). Por isso, **após o upsert da rodada**, reconcilie **por deal tocado**:
+
+```http
+GET /Orders?$filter=DealId eq {dealId}&$select=Id
+```
+
+Monte o conjunto de `Id` vivos e **remova** do nosso banco as Orders daquele deal ausentes nesse conjunto (os produtos saem por `ON DELETE CASCADE`).
+
+**Guardrails obrigatórios (é remoção automática de dado):**
+1. **Erro/timeout/resposta inválida** da consulta do deal → **NÃO remover nada** daquele deal nesta rodada; logar aviso.
+2. **Nunca remover 100%** das Orders locais de um deal (provável falha de API; exclusão real de todas é rara) → pular e logar para revisão manual.
+3. **Só deals efetivamente sincronizados na rodada** — nunca varrer/remover Orders de deals fora do escopo da chamada. **Não** fazer job periódico global sem aprovação.
+4. **Auditoria:** logar cada Order removida (`OrderId`, `DealId`, timestamp, motivo).
+5. **Rate limit:** a consulta por deal adiciona 1 GET por deal — sequenciar com respiração (~600ms) conforme o padrão de rate limit da skill.
+
+> Padrão para listar o universo vivo de uma vez (diagnóstico/varredura, fora do sync): `GET /Orders?$filter=Deal/PipelineId eq 60000636&$select=Id,DealId,Amount&$top=300&$skip=N` paginado — traz só as Orders do funil CACHOLA.
+
 ## 3. Contacts — clientes
 
 **Quem usa:** `sync-contacts.ts`, módulo Pré-venda, módulo Vendas (Upsell, Recompra).

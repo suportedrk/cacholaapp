@@ -132,6 +132,13 @@ Para gerar links públicos para deals/contacts, é `https://app10.ploomes.com/de
 ### 17. `GOTRUE_MAILER_EXTERNAL_HOSTS=api.cachola.cloud`
 Não é gotcha do Ploomes em si, mas relacionado: o GoTrue (Supabase auth) emite warning não-crítico no boot por causa de hosts externos. Setar essa env var suprime o warning. **Não confundir com erro real.**
 
+### 18. Sync de Orders é upsert-only — exclusões no Ploomes viram órfãs e inflam o BI
+O `sync-orders.ts` busca Orders por **janela de data** (`LastUpdateDate`/`CreateDate`) e faz **upsert**. Uma Order **excluída/substituída** no Ploomes simplesmente **deixa de ser retornada** pela API → o sync nunca a "vê" → ela **permanece para sempre** no nosso banco. Como o BI soma `ploomes_order_products.total`, essas Orders órfãs **inflam o faturamento**.
+
+**Como sangramos:** investigação jun/2026 achou 43 Orders órfãs (29 em deals ganhos, ~R$612k de inflação). Ex.: deal 602080951 (LUCCA MARIM) tinha 3 Orders no banco e só 1 viva no Ploomes; o relatório de "duplicatas" virou majoritariamente um artefato de órfãs (14 de 16 casos), chegando a sugerir cancelar a Order viva.
+
+**Padrão correto — reconciliação por deal (implementado no `sync-orders.ts`):** após o upsert da rodada, para **cada deal tocado**, consultar `GET /Orders?$filter=DealId eq {id}&$select=Id`, montar o conjunto de OrderIds vivos e **remover** as Orders locais do deal ausentes nesse conjunto (produtos saem por `ON DELETE CASCADE`). **Guardrails obrigatórios** (é remoção automática de dado): (a) erro/timeout/resposta inválida da API → NÃO remover nada do deal, logar aviso; (b) NUNCA remover se apagaria 100% das Orders locais do deal (provável falha de API) → pular para revisão manual; (c) só reconciliar deals efetivamente sincronizados na rodada — nunca varrer global. Ver `endpoints-cachola.md` §2 para o padrão detalhado. Mesmo padrão deve ser avaliado para `events`/`ploomes_deals` (deals excluídos também acumulam).
+
 ## Como adicionar um novo gotcha aqui
 
 Quando descobrir comportamento divergente do Ploomes:

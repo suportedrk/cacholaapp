@@ -115,6 +115,14 @@ export interface SyncOrdersResult {
   /** Orders com deal encontrado mas unit_id = NULL */
   skippedNullUnit: number
   errors: number
+  /** Orders órfãs removidas pela reconciliação (ausentes no Ploomes ao vivo) */
+  ordersRemovedReconcile: number
+  /** Deals efetivamente reconciliados (consulta ao Ploomes OK) */
+  dealsReconciled: number
+  /** Deals pulados na reconciliação por erro/timeout/resposta inválida da API */
+  reconcileSkippedApiError: number
+  /** Deals pulados por guardrail (reconciliação removeria 100% das Orders locais) */
+  reconcileSkippedAllOrphan: number
   durationMs: number
 }
 
@@ -197,8 +205,15 @@ export async function syncOrders(
     skippedNoDeal:   0,
     skippedNullUnit: 0,
     errors:          0,
+    ordersRemovedReconcile:    0,
+    dealsReconciled:           0,
+    reconcileSkippedApiError:  0,
+    reconcileSkippedAllOrphan: 0,
     durationMs:      0,
   }
+
+  // Deals efetivamente tocados nesta rodada (terão Orders reconciliadas ao fim).
+  const touchedDeals = new Set<number>()
 
   try {
     // 1. Carregar config (user_key)
@@ -345,6 +360,7 @@ export async function syncOrders(
           }
 
           result.ordersUpserted++
+          touchedDeals.add(order.DealId)
 
           // Propaga guest_count → events sempre a partir da Order mais recente do Deal
           if (order.DealId) {
@@ -425,6 +441,94 @@ export async function syncOrders(
       // Delay suave entre páginas (rate limit)
       await new Promise((r) => setTimeout(r, 200))
     }
+
+    // 10. Reconciliação por deal — remove Orders locais que NÃO existem mais no
+    // Ploomes (excluídas/substituídas). O sync é upsert-only e nunca enxerga
+    // exclusões; sem isso as Orders viram órfãs e inflam o BI. Produtos saem por
+    // ON DELETE CASCADE. Guardrails: só reconcilia deals tocados nesta rodada;
+    // pula em erro de API; nunca remove 100% das Orders locais de um deal.
+    for (const dealId of touchedDeals) {
+      // 10a. Conjunto de Orders VIVAS do deal no Ploomes (só Id)
+      let liveIds: Set<number>
+      try {
+        const resp = await ploomesGet<{ Id: number }>(
+          `Orders?$filter=DealId eq ${dealId}&$select=Id`,
+          userKey,
+        )
+        if (!resp || !Array.isArray(resp.value)) {
+          console.warn(`[Orders Sync][reconcile] Deal ${dealId}: resposta inválida do Ploomes — reconciliação pulada.`)
+          result.reconcileSkippedApiError++
+          continue
+        }
+        liveIds = new Set(
+          resp.value.map((o) => o.Id).filter((id): id is number => typeof id === 'number'),
+        )
+      } catch (err) {
+        // Guardrail: erro/timeout → NÃO remover nada deste deal nesta rodada.
+        console.warn(
+          `[Orders Sync][reconcile] Deal ${dealId}: erro ao consultar Ploomes — reconciliação pulada:`,
+          err instanceof Error ? err.message : err,
+        )
+        result.reconcileSkippedApiError++
+        continue
+      }
+
+      // 10b. Orders locais do deal
+      const { data: localRows, error: localErr } = await supabase
+        .from('ploomes_orders')
+        .select('ploomes_order_id')
+        .eq('deal_id', dealId)
+
+      if (localErr) {
+        console.error(`[Orders Sync][reconcile] Deal ${dealId}: erro ao ler Orders locais — pulado:`, localErr.message)
+        result.reconcileSkippedApiError++
+        continue
+      }
+
+      const localIds  = (localRows ?? []).map((r) => r.ploomes_order_id)
+      const orphanIds = localIds.filter((id) => !liveIds.has(id))
+
+      if (orphanIds.length === 0) {
+        result.dealsReconciled++
+        continue
+      }
+
+      // Guardrail: nunca remover 100% das Orders locais (provável falha de API).
+      if (orphanIds.length === localIds.length) {
+        console.warn(
+          `[Orders Sync][reconcile] Deal ${dealId}: reconciliação removeria TODAS as ${localIds.length} Order(s) locais ` +
+          `(provável falha de API; exclusão real de todas é rara) — PULADO para revisão manual. Candidatas: ${orphanIds.join(',')}`,
+        )
+        result.reconcileSkippedAllOrphan++
+        continue
+      }
+
+      // 10c. Remover órfãs (produtos saem por ON DELETE CASCADE)
+      const { error: delErr } = await supabase
+        .from('ploomes_orders')
+        .delete()
+        .in('ploomes_order_id', orphanIds)
+
+      if (delErr) {
+        console.error(`[Orders Sync][reconcile] Deal ${dealId}: erro ao remover órfãs — pulado:`, delErr.message)
+        result.reconcileSkippedApiError++
+        continue
+      }
+
+      // 10d. Auditoria: uma linha por Order removida
+      const ts = new Date().toISOString()
+      for (const oid of orphanIds) {
+        console.warn(
+          `[Orders Sync][reconcile][AUDIT] removida OrderId=${oid} DealId=${dealId} em=${ts} ` +
+          `motivo="ausente no Ploomes na reconciliação"`,
+        )
+      }
+      result.ordersRemovedReconcile += orphanIds.length
+      result.dealsReconciled++
+
+      // Rate limit: respiração entre deals (GET por deal adiciona chamadas)
+      await new Promise((r) => setTimeout(r, 600))
+    }
   } catch (err) {
     result.errors++
     console.error('[Orders Sync] Erro fatal:', err)
@@ -434,7 +538,9 @@ export async function syncOrders(
   console.info(
     `[Orders Sync] Concluído — orders:${result.ordersUpserted} products:${result.productsUpserted} ` +
     `skippedNoDeal:${result.skippedNoDeal} skippedNullUnit:${result.skippedNullUnit} ` +
-    `errors:${result.errors} (${result.durationMs}ms)`,
+    `errors:${result.errors} | reconcile: dealsOK:${result.dealsReconciled} ` +
+    `órfãsRemovidas:${result.ordersRemovedReconcile} pulosApiErro:${result.reconcileSkippedApiError} ` +
+    `pulos100%:${result.reconcileSkippedAllOrphan} (${result.durationMs}ms)`,
   )
   return result
 }
