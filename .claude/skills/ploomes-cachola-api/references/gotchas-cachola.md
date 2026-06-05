@@ -132,6 +132,24 @@ Para gerar links públicos para deals/contacts, é `https://app10.ploomes.com/de
 ### 17. `GOTRUE_MAILER_EXTERNAL_HOSTS=api.cachola.cloud`
 Não é gotcha do Ploomes em si, mas relacionado: o GoTrue (Supabase auth) emite warning não-crítico no boot por causa de hosts externos. Setar essa env var suprime o warning. **Não confundir com erro real.**
 
+### 18. Sync de Orders é upsert-only — exclusões no Ploomes viram órfãs e inflam o BI
+O `sync-orders.ts` busca Orders por **janela de data** (`LastUpdateDate`/`CreateDate`) e faz **upsert**. Uma Order **excluída/substituída** no Ploomes simplesmente **deixa de ser retornada** pela API → o sync nunca a "vê" → ela **permanece para sempre** no nosso banco. Como o BI soma `ploomes_order_products.total`, essas Orders órfãs **inflam o faturamento**.
+
+**Como sangramos:** investigação jun/2026 achou 43 Orders órfãs (29 em deals ganhos, ~R$612k de inflação). Ex.: deal 602080951 (LUCCA MARIM) tinha 3 Orders no banco e só 1 viva no Ploomes; o relatório de "duplicatas" virou majoritariamente um artefato de órfãs (14 de 16 casos), chegando a sugerir cancelar a Order viva.
+
+**Padrão correto — reconciliação por deal (`reconcileDealOrders` em `sync-orders.ts`):** após o upsert da rodada, para **cada deal tocado**, consultar `GET /Orders?$filter=DealId eq {id}&$select=Id&$top=300`, montar o conjunto de OrderIds vivos e **remover** as Orders locais do deal ausentes nesse conjunto (produtos saem por `ON DELETE CASCADE`).
+
+**Guardrail refinado para o caso "100% das Orders locais órfãs"** — distinguir erro de API de exclusão real (decisão de negócio gravada em jun/2026):
+- **Erro/timeout/resposta inválida** → NÃO remover nada (`skipped='api_error'`); jamais tratar como "0 vivas".
+- **`$top` ≥300** (possível truncamento) → pular por segurança.
+- **0 vivas CONFIRMADO + deal NÃO ganho** (`is_festa_ganha` falso) → **remover** (lixo inócuo; exclusão pura).
+- **0 vivas CONFIRMADO + deal É ganho** → **NÃO remover**; emitir SINAL `festa ganha sem venda viva — revisar no Ploomes` (`skipped='won_no_order'`). Anomalia de negócio (festa ganha sem documento de venda) — corrige-se **no Ploomes** (recriar a Order ou rever o ganho), **nunca** apagando do nosso banco (zeraria um deal que o Ploomes ainda chama de ganho). Casos conhecidos jun/2026: deals **601680105** e **604330200**.
+- **Tem vivas de IDs diferentes** (substituição em massa) → não remover, revisão manual (`skipped='all_orphan'`).
+
+**Varredura periódica de segurança (`reconcileAllOrders` + cron `/api/cron/orders-reconcile`):** a reconciliação por-deal só pega deals tocados na rodada; um deal cuja **única venda foi excluída** nunca mais aparece → precisa de varredura global. Ela pagina o universo vivo CACHOLA (`$filter=Deal/PipelineId eq 60000636`), compara com o banco e delega cada deal órfão ao mesmo `reconcileDealOrders`. **Guardrails reforçados (age global):** ABORTA sem remover nada se a listagem viva vier incompleta/implausível (piso 1.000) ou se removeria acima do teto de volume (100) — proteção contra API truncada. `?dryRun=1` valida em produção antes de ativar. Ver `endpoints-cachola.md` §2.
+
+> Mesmo padrão deve ser avaliado para `events`/`ploomes_deals` (deals excluídos também acumulam).
+
 ## Como adicionar um novo gotcha aqui
 
 Quando descobrir comportamento divergente do Ploomes:

@@ -114,6 +114,45 @@ A "venda" no Ploomes é a `Order` que veio de um `Deal` ganho. Para filtrar só 
 GET /Orders?$filter=Deal/StatusId eq 2&$expand=Deal($select=StatusId)
 ```
 
+### Reconciliação por deal (OBRIGATÓRIA no sync) — remover Orders excluídas
+
+O sync de Orders é **upsert-only**: ele só conhece o que a API retorna na janela de data. Orders **excluídas no Ploomes deixam de ser retornadas** e ficam **órfãs** no nosso banco, inflando o BI (ver `gotchas-cachola.md` §18). Por isso, **após o upsert da rodada**, reconcilie **por deal tocado** (`reconcileDealOrders` em `sync-orders.ts`):
+
+```http
+GET /Orders?$filter=DealId eq {dealId}&$select=Id&$top=300
+```
+
+Monte o conjunto de `Id` vivos e **remova** do nosso banco as Orders daquele deal ausentes nesse conjunto (os produtos saem por `ON DELETE CASCADE`).
+
+**Guardrails obrigatórios (é remoção automática de dado):**
+1. **Erro/timeout/resposta inválida** da consulta do deal → **NÃO remover nada** daquele deal nesta rodada; logar aviso (`skipped='api_error'`). **Nunca** confundir erro de API com "0 vivas confirmado".
+2. **`$top=300` com guarda de truncamento:** se a resposta vier com ≥300 itens, pode estar truncada → pular por segurança (não fabricar órfãs falsas).
+3. **Caso 100% das Orders locais órfãs — decidir pelo conjunto vivo (refinado):**
+   - **Tem Orders vivas de IDs diferentes** (substituição em massa atípica) → **NÃO remover**; revisão manual (`skipped='all_orphan'`).
+   - **0 Orders vivas CONFIRMADO** (API ok, lista vazia) **E deal NÃO ganho** (`is_festa_ganha` falso) → **REMOVER** as órfãs (lixo inócuo: exclusão pura sem substituição).
+   - **0 Orders vivas CONFIRMADO E deal É ganho** → **NÃO remover**; emitir **SINAL** `festa ganha sem venda viva — revisar no Ploomes` com `DealId` + título (`skipped='won_no_order'`). É anomalia de negócio (festa ganha sem documento de venda) que **não se resolve apagando** — corrige-se no Ploomes (recriar a Order ou rever o ganho).
+   - **Deal não encontrado em `ploomes_deals`** (não classificável) → conservador, não remove.
+4. **Auditoria:** logar cada Order removida (`OrderId`, `DealId`, timestamp, motivo) e cada SINAL emitido.
+5. **Rate limit:** a consulta por deal adiciona 1 GET por deal — sequenciar com respiração (~600ms).
+
+### Varredura periódica de segurança (global) — `reconcileAllOrders`
+
+A reconciliação por-deal só alcança deals **tocados na rodada** (com Order na janela de data). Um deal cuja **única venda foi excluída** no Ploomes nunca mais aparece em nenhuma rodada → jamais é reconciliado. Para cobrir esse caso há a **varredura periódica** (`reconcileAllOrders` + cron `GET /api/cron/orders-reconcile`):
+
+```http
+GET /Orders?$filter=Deal/PipelineId eq 60000636&$select=Id&$top=300&$skip=N&$orderby=Id
+```
+
+Pagina o **universo vivo CACHOLA** inteiro, compara com o banco e, para **cada deal com órfã**, delega ao mesmo `reconcileDealOrders` (mesma lógica refinada do item 3: remove não-ganho, sinaliza ganho, pula em erro).
+
+**Guardrails reforçados (age GLOBAL — mais defensiva que o sync):**
+- **Listagem completa e plausível:** a paginação precisa concluir sem erro **e** vir com contagem sã (piso `SWEEP_LIVE_MIN_PLAUSIBLE=1000`; universo real ~1.800). Qualquer sinal de incompletude → **ABORTA, nada é removido**, e loga erro p/ alerta.
+- **Sanity de volume:** se as órfãs candidatas excederem `SWEEP_VOLUME_CAP=100` numa execução → **ABORTA** (provável listagem incompleta inflando falsas órfãs) em vez de remover.
+- **Auditoria** por Order removida e por SINAL emitido.
+- **`?dryRun=1`** calcula e loga tudo sem remover — usar para validar em produção **antes** de ativar o agendamento.
+
+**Frequência:** 1x/dia, ~30min **após** o sync de Orders (evita competir por rate limit). O passivo histórico já foi limpo manualmente; em regime normal a varredura encontra ~0 órfã nova e só re-sinaliza os deals ganhos-sem-venda já conhecidos.
+
 ## 3. Contacts — clientes
 
 **Quem usa:** `sync-contacts.ts`, módulo Pré-venda, módulo Vendas (Upsell, Recompra).
