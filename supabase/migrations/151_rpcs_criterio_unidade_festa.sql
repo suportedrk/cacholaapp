@@ -323,9 +323,15 @@ BEGIN
   ),
   deals_by_owner AS (
     SELECT pd.owner_id,
-      COUNT(CASE WHEN is_festa_ganha(pd.status_id, pd.stage_id) THEN 1 END)::INTEGER AS deals_won,
-      COUNT(*)::INTEGER AS deals_total
+      -- EXIBIDO: ganhos pela unidade da FESTA (events.unit_id) quando filtrado — MESMA expressão do unit_comparison
+      COUNT(*) FILTER (WHERE is_festa_ganha(pd.status_id, pd.stage_id)
+                        AND (p_unit_id IS NULL OR COALESCE(e.unit_id, pd.unit_id) = p_unit_id))::INTEGER AS deals_won,
+      -- CONVERSÃO (base PRETENDIDA): numerador e denominador na mesma unidade pretendida
+      COUNT(*) FILTER (WHERE is_festa_ganha(pd.status_id, pd.stage_id)
+                        AND (p_unit_id IS NULL OR pd.unit_id = p_unit_id))::INTEGER AS won_pretendida,
+      COUNT(*) FILTER (WHERE (p_unit_id IS NULL OR pd.unit_id = p_unit_id))::INTEGER AS deals_total
     FROM public.ploomes_deals pd
+    LEFT JOIN public.events e ON e.ploomes_deal_id = pd.ploomes_deal_id::text
     WHERE pd.ploomes_create_date::date BETWEEN p_start_date AND p_end_date
     GROUP BY pd.owner_id
   )
@@ -333,7 +339,7 @@ BEGIN
     rs.seller_id, rs.seller_name, rs.total_revenue, rs.order_count,
     CASE WHEN rs.order_count > 0 THEN (rs.total_revenue / rs.order_count)::NUMERIC ELSE 0::NUMERIC END AS avg_ticket,
     COALESCE(dbo.deals_won, 0)::INTEGER AS deals_won,
-    CASE WHEN COALESCE(dbo.deals_total, 0) > 0 THEN (COALESCE(dbo.deals_won, 0)::NUMERIC / dbo.deals_total * 100)::NUMERIC ELSE 0::NUMERIC END AS conversion_rate
+    CASE WHEN COALESCE(dbo.deals_total, 0) > 0 THEN (COALESCE(dbo.won_pretendida, 0)::NUMERIC / dbo.deals_total * 100)::NUMERIC ELSE 0::NUMERIC END AS conversion_rate
   FROM ranked_sellers rs
   LEFT JOIN deals_by_owner dbo ON dbo.owner_id = rs.s_owner_id
   ORDER BY rs.total_revenue DESC;
@@ -365,19 +371,31 @@ BEGIN
     JOIN ploomes_order_products pop ON pop.order_id = po.ploomes_order_id
     GROUP BY po.deal_id, pop.unit_id
   ),
-  counts AS (
+  -- PRETENDIDA (pd.unit_id): leads por mês (funil de origem)
+  leads_pretendida AS (
     SELECT DATE_TRUNC('month', pd.ploomes_create_date) AS mon,
-      COUNT(*)::BIGINT AS leads_count,
-      COUNT(*) FILTER (WHERE is_festa_ganha(pd.status_id, pd.stage_id))::BIGINT AS won_count,
-      ROUND(AVG(EXTRACT(EPOCH FROM (pd.ploomes_last_update - pd.ploomes_create_date)) / 86400.0)
-            FILTER (WHERE is_festa_ganha(pd.status_id, pd.stage_id)), 1)::NUMERIC AS avg_days_to_close
+      COUNT(*)::BIGINT AS leads_count
     FROM public.ploomes_deals pd
     WHERE pd.owner_name = p_owner_name
       AND pd.ploomes_create_date >= v_start_date
       AND (p_unit_id IS NULL OR pd.unit_id = p_unit_id)
     GROUP BY DATE_TRUNC('month', pd.ploomes_create_date)
   ),
-  revenue AS (
+  -- FESTA 1-por-deal (events.unit_id): contagem de ganhos + tempo de fechamento — MESMA expressão do unit_comparison
+  festa_won AS (
+    SELECT DATE_TRUNC('month', pd.ploomes_create_date) AS mon,
+      COUNT(*) FILTER (WHERE is_festa_ganha(pd.status_id, pd.stage_id))::BIGINT AS won_count,
+      ROUND(AVG(EXTRACT(EPOCH FROM (pd.ploomes_last_update - pd.ploomes_create_date)) / 86400.0)
+            FILTER (WHERE is_festa_ganha(pd.status_id, pd.stage_id)), 1)::NUMERIC AS avg_days_to_close
+    FROM public.ploomes_deals pd
+    LEFT JOIN events e ON e.ploomes_deal_id = pd.ploomes_deal_id::text
+    WHERE pd.owner_name = p_owner_name
+      AND pd.ploomes_create_date >= v_start_date
+      AND (p_unit_id IS NULL OR COALESCE(e.unit_id, pd.unit_id) = p_unit_id)
+    GROUP BY DATE_TRUNC('month', pd.ploomes_create_date)
+  ),
+  -- FESTA por-produto (pop.unit_id): receita por mês
+  festa_rev AS (
     SELECT DATE_TRUNC('month', pd.ploomes_create_date) AS mon,
       COALESCE(SUM(pbu.val), 0) AS revenue
     FROM public.ploomes_deals pd
@@ -385,18 +403,26 @@ BEGIN
     WHERE pd.owner_name = p_owner_name
       AND pd.ploomes_create_date >= v_start_date
       AND is_festa_ganha(pd.status_id, pd.stage_id)
+      AND pbu.val > 0
       AND (p_unit_id IS NULL OR pbu.festa_unit = p_unit_id)
     GROUP BY DATE_TRUNC('month', pd.ploomes_create_date)
+  ),
+  all_months AS (
+    SELECT lp.mon FROM leads_pretendida lp
+    UNION SELECT fw.mon FROM festa_won fw
+    UNION SELECT fr.mon FROM festa_rev fr
   )
   SELECT
-    TO_CHAR(COALESCE(c.mon, r.mon), 'YYYY-MM') AS month_label,
-    COALESCE(c.leads_count, 0)::BIGINT AS leads_count,
-    COALESCE(c.won_count, 0)::BIGINT AS won_count,
-    COALESCE(r.revenue, 0)::NUMERIC AS revenue,
-    c.avg_days_to_close
-  FROM counts c
-  FULL JOIN revenue r ON r.mon = c.mon
-  ORDER BY COALESCE(c.mon, r.mon);
+    TO_CHAR(m.mon, 'YYYY-MM') AS month_label,
+    COALESCE(lp.leads_count, 0)::BIGINT AS leads_count,
+    COALESCE(fw.won_count, 0)::BIGINT AS won_count,         -- FESTA (bate com unit_comparison)
+    COALESCE(fr.revenue, 0)::NUMERIC AS revenue,
+    fw.avg_days_to_close
+  FROM all_months m
+  LEFT JOIN leads_pretendida lp ON lp.mon = m.mon
+  LEFT JOIN festa_won fw ON fw.mon = m.mon
+  LEFT JOIN festa_rev fr ON fr.mon = m.mon
+  ORDER BY m.mon;
 END;
 $function$;
 
@@ -421,10 +447,11 @@ BEGIN
     JOIN ploomes_order_products pop ON pop.order_id = po.ploomes_order_id
     GROUP BY po.deal_id, pop.unit_id
   ),
-  counts AS (
+  -- PRETENDIDA (pd.unit_id): leads, won-pretendida (só p/ conversão), lost, open
+  pretendida_counts AS (
     SELECT pd.owner_name,
       COUNT(*)::BIGINT AS leads_count,
-      COUNT(*) FILTER (WHERE is_festa_ganha(pd.status_id, pd.stage_id))::BIGINT AS won_count,
+      COUNT(*) FILTER (WHERE is_festa_ganha(pd.status_id, pd.stage_id))::BIGINT AS won_pretendida,
       COUNT(*) FILTER (WHERE pd.status_id = 3)::BIGINT AS lost_count,
       COUNT(*) FILTER (WHERE pd.status_id = 1 AND pd.stage_id <> 60004787)::BIGINT AS open_count
     FROM public.ploomes_deals pd
@@ -433,10 +460,20 @@ BEGIN
       AND (p_unit_id IS NULL OR pd.unit_id = p_unit_id)
     GROUP BY pd.owner_name
   ),
-  revenue AS (
+  -- FESTA 1-por-deal (events.unit_id): contagem de ganhos EXIBIDA — MESMA expressão do get_bi_unit_comparison
+  festa_won AS (
     SELECT pd.owner_name,
-      COALESCE(SUM(pbu.val), 0) AS total_revenue,
-      COUNT(DISTINCT pd.ploomes_deal_id) AS won_deals_with_rev
+      COUNT(*) FILTER (WHERE is_festa_ganha(pd.status_id, pd.stage_id))::BIGINT AS won_count
+    FROM public.ploomes_deals pd
+    LEFT JOIN events e ON e.ploomes_deal_id = pd.ploomes_deal_id::text
+    WHERE pd.owner_name IS NOT NULL
+      AND pd.ploomes_create_date >= v_start_date
+      AND (p_unit_id IS NULL OR COALESCE(e.unit_id, pd.unit_id) = p_unit_id)
+    GROUP BY pd.owner_name
+  ),
+  -- FESTA por-produto (pop.unit_id): receita
+  festa_rev AS (
+    SELECT pd.owner_name, COALESCE(SUM(pbu.val), 0) AS total_revenue
     FROM public.ploomes_deals pd
     JOIN prods_by_unit pbu ON pbu.deal_id = pd.ploomes_deal_id
     WHERE pd.owner_name IS NOT NULL
@@ -445,20 +482,29 @@ BEGIN
       AND pbu.val > 0
       AND (p_unit_id IS NULL OR pbu.festa_unit = p_unit_id)
     GROUP BY pd.owner_name
+  ),
+  all_owners AS (
+    SELECT pc.owner_name FROM pretendida_counts pc
+    UNION SELECT fw.owner_name FROM festa_won fw
+    UNION SELECT fr.owner_name FROM festa_rev fr
   )
   SELECT
-    COALESCE(c.owner_name, r.owner_name) AS owner_name,
-    COALESCE(c.leads_count, 0)::BIGINT AS leads_count,
-    COALESCE(c.won_count, 0)::BIGINT AS won_count,
-    COALESCE(c.lost_count, 0)::BIGINT AS lost_count,
-    COALESCE(c.open_count, 0)::BIGINT AS open_count,
-    CASE WHEN COALESCE(c.leads_count, 0) = 0 THEN 0
-         ELSE ROUND(COALESCE(c.won_count, 0)::NUMERIC / c.leads_count::NUMERIC * 100, 1) END AS conversion_rate,
-    CASE WHEN COALESCE(r.won_deals_with_rev, 0) = 0 THEN 0
-         ELSE (COALESCE(r.total_revenue, 0) / r.won_deals_with_rev)::NUMERIC END AS avg_ticket,
-    COALESCE(r.total_revenue, 0)::NUMERIC AS total_revenue
-  FROM counts c
-  FULL JOIN revenue r ON r.owner_name = c.owner_name
+    o.owner_name,
+    COALESCE(pc.leads_count, 0)::BIGINT AS leads_count,
+    COALESCE(fw.won_count, 0)::BIGINT AS won_count,          -- FESTA (bate com unit_comparison)
+    COALESCE(pc.lost_count, 0)::BIGINT AS lost_count,
+    COALESCE(pc.open_count, 0)::BIGINT AS open_count,
+    -- conversão: won e leads ambos na PRETENDIDA (base coerente)
+    CASE WHEN COALESCE(pc.leads_count, 0) = 0 THEN 0
+         ELSE ROUND(COALESCE(pc.won_pretendida, 0)::NUMERIC / pc.leads_count::NUMERIC * 100, 1) END AS conversion_rate,
+    -- ticket: receita-festa / contagem-festa (sem misturar com pretendida)
+    CASE WHEN COALESCE(fw.won_count, 0) = 0 THEN 0
+         ELSE (COALESCE(fr.total_revenue, 0) / fw.won_count)::NUMERIC END AS avg_ticket,
+    COALESCE(fr.total_revenue, 0)::NUMERIC AS total_revenue
+  FROM all_owners o
+  LEFT JOIN pretendida_counts pc ON pc.owner_name = o.owner_name
+  LEFT JOIN festa_won fw ON fw.owner_name = o.owner_name
+  LEFT JOIN festa_rev fr ON fr.owner_name = o.owner_name
   ORDER BY total_revenue DESC;
 END;
 $function$;
