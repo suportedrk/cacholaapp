@@ -194,6 +194,7 @@ export async function syncDeals(
     dealsUpdated: 0,
     dealsMarkedLost: 0,
     dealsErrors: 0,
+    dealsSkippedNoUnit: 0,
     typesCreated: 0,
     durationMs: 0,
   }
@@ -318,8 +319,10 @@ export async function syncDeals(
 
         const unitId = resolveFestaUnit(orderUnit?.chosen_unit_id, escolhidaUnit, pretendidaUnit)
         if (!unitId) {
-          console.warn(`[Ploomes sync] Deal ${deal.Id}: unidade da festa não resolvida (sem chosen/Escolhida/Pretendida), pulando.`)
-          result.dealsErrors++
+          // Skip intencional (não é erro): deal sem nenhum sinal de unidade
+          // (sem chosen/Escolhida/Pretendida). Contado à parte para não poluir
+          // o monitoramento de erros do cron. Log-resumo ao fim do sync.
+          result.dealsSkippedNoUnit++
           continue
         }
 
@@ -424,6 +427,10 @@ export async function syncDeals(
         console.error(`[Ploomes sync] Erro no deal ${deal.Id}:`, dealErr)
         result.dealsErrors++
       }
+    }
+
+    if (result.dealsSkippedNoUnit > 0) {
+      console.warn(`[Ploomes sync] ${result.dealsSkippedNoUnit} deal(s) pulado(s) por falta de unidade (sem chosen/Escolhida/Pretendida) — skip intencional, não é erro.`)
     }
 
     await finishLog('success')
