@@ -361,6 +361,15 @@ export const TEMPLATE_MANAGE_ROLES = [
 // ──────────────────────────────────────────────────────────────
 
 /**
+ * Roles que podem acessar módulos marcados como "Em breve" (comingSoon: true na nav).
+ * Todos os outros cargos que enxergam o item veem-no desabilitado com a plaquinha "Em breve".
+ */
+export const COMING_SOON_BYPASS_ROLES = [
+  'super_admin',
+  'diretor',
+] as const satisfies readonly Role[]
+
+/**
  * Roles autorizadas a impersonar outros usuários ("Ver como") para suporte e auditoria.
  * Hoje só super_admin; pode crescer no futuro (ex: diretor para auditoria).
  * Semanticamente diferente de SYSTEM_ONLY_ROLES — não consolidar sem revisão de produto.
