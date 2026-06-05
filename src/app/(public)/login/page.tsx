@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { useAuth } from '@/hooks/use-auth'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
+import { ROUTES } from '@/lib/constants'
 import { hasRole, OPERATIONAL_MOBILE_ROLES } from '@/config/roles'
 
 // ─────────────────────────────────────────────────────────────
@@ -261,7 +262,7 @@ function LoginForm() {
               .eq('id', authUser.id)
               .single()
             if (hasRole(profile?.role, OPERATIONAL_MOBILE_ROLES)) {
-              destination = '/checklists/minhas-tarefas'
+              destination = ROUTES.centralServicos
             }
           }
         } catch {
