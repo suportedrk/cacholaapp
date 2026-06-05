@@ -74,6 +74,8 @@ export interface NavItem {
   badgeText?: string
   /** Item desabilitado — exibe opacidade 50%, cursor not-allowed, não navega */
   disabled?: boolean
+  /** Marca o módulo como "Em breve" — sidebar deriva disabled/badgeText por cargo */
+  comingSoon?: boolean
   children?: NavItem[]
   /**
    * Roles que podem ver este item.
@@ -132,7 +134,6 @@ export const NAV_GROUPS: NavGroup[] = [
         ],
       },
       { label: 'Eventos',        href: ROUTES.events,     icon: CalendarDays,  module: 'eventos',   allowedRoles: [...EVENTOS_ACCESS_ROLES] },
-      { label: 'Checklist Operacional', href: ROUTES.checklists, icon: ClipboardList, module: 'checklists', allowedRoles: [...OPERATIONAL_CHECKLIST_ROLES] },
       { label: 'Minhas Tarefas',   href: ROUTES.myTasks,    icon: ListTodo,     module: 'checklists', allowedRoles: [...OPERATIONAL_CHECKLIST_ROLES] },
       { label: 'Tarefas da Equipe', href: ROUTES.teamTasks,  icon: UsersRound,   module: 'checklists', allowedRoles: [...TEAM_TASKS_ROLES] },
       // Central de Serviços — área de uso geral. Grupo expansível (mesmo padrão de
@@ -154,6 +155,7 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Operações',
     items: [
+      { label: 'Checklist Operacional', href: ROUTES.checklists, icon: ClipboardList, module: 'checklists', allowedRoles: [...OPERATIONAL_CHECKLIST_ROLES], comingSoon: true },
       {
         label: 'Manutenção', href: ROUTES.maintenance, icon: Wrench, module: 'manutencao', allowedRoles: [...MAINTENANCE_MODULE_ROLES],
         children: [

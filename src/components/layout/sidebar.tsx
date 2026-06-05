@@ -19,6 +19,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
 import { useUpsellCount } from '@/hooks/use-upsell'
 import { useRecompraCount } from '@/hooks/use-recompra'
+import { hasRole, COMING_SOON_BYPASS_ROLES } from '@/config/roles'
 import type { Role } from '@/types/permissions'
 
 interface SidebarProps {
@@ -87,6 +88,9 @@ export function Sidebar({ isOpen, isCollapsed, onClose, onToggleCollapse }: Side
   const { data: recompraCount } = useRecompraCount()
   const upsellTotal = (upsellCount?.total ?? 0) + (recompraCount?.total ?? 0)
 
+  // Roles que podem navegar para módulos marcados como "Em breve"
+  const canBypassComingSoon = hasRole(effectiveRole, COMING_SOON_BYPASS_ROLES)
+
   // Filtra grupos removendo itens que o role atual não pode ver.
   // Grupos que ficarem completamente vazios são omitidos.
   const visibleGroups = NAV_GROUPS.map((group) => ({
@@ -98,12 +102,17 @@ export function Sidebar({ isOpen, isCollapsed, onClose, onToggleCollapse }: Side
       })
       .map((item) => ({
         ...item,
-        // Inject upsell count badge into the Vendas nav item
         badge: item.href === '/vendas' && upsellTotal > 0 ? upsellTotal : item.badge,
+        badgeText: item.comingSoon ? 'Em breve' : item.badgeText,
+        disabled: item.comingSoon ? !canBypassComingSoon : item.disabled,
         children: item.children?.filter((child) => {
           if (!child.allowedRoles || child.allowedRoles.length === 0) return true
           return child.allowedRoles.includes(effectiveRole)
-        }),
+        }).map((child) => ({
+          ...child,
+          badgeText: child.comingSoon ? 'Em breve' : child.badgeText,
+          disabled: child.comingSoon ? !canBypassComingSoon : child.disabled,
+        })),
       })),
   })).filter((group) => group.items.length > 0)
 
@@ -312,22 +321,46 @@ export function Sidebar({ isOpen, isCollapsed, onClose, onToggleCollapse }: Side
                           <div className="ml-3 mt-0.5 pl-3 border-l border-border space-y-0.5">
                             {item.children!.map((child) => {
                               const childActive = child.href === activeHref
+                              const childDisabled = child.disabled === true
+                              const childCn = cn(
+                                'flex items-center gap-2.5 rounded-lg px-3 py-2 min-h-[40px]',
+                                'text-sm transition-all duration-150',
+                                childDisabled
+                                  ? 'opacity-50 cursor-not-allowed text-muted-foreground'
+                                  : childActive
+                                    ? 'text-primary font-medium bg-primary/5 dark:bg-primary/10'
+                                    : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                              )
+                              const childContent = (
+                                <>
+                                  <child.icon className="w-4 h-4 shrink-0" />
+                                  <span className="truncate">{child.label}</span>
+                                  {child.badgeText && (
+                                    <span className={cn(
+                                      'ml-auto text-[10px] font-medium rounded-full px-1.5 py-0.5 whitespace-nowrap',
+                                      'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400',
+                                    )}>
+                                      {child.badgeText}
+                                    </span>
+                                  )}
+                                </>
+                              )
+                              if (childDisabled) {
+                                return (
+                                  <div key={child.href} aria-disabled="true" className={childCn}>
+                                    {childContent}
+                                  </div>
+                                )
+                              }
                               return (
                                 <Link
                                   key={child.href}
                                   href={child.href}
                                   onClick={onClose}
                                   aria-current={childActive ? 'page' : undefined}
-                                  className={cn(
-                                    'flex items-center gap-2.5 rounded-lg px-3 py-2 min-h-[40px]',
-                                    'text-sm transition-all duration-150',
-                                    childActive
-                                      ? 'text-primary font-medium bg-primary/5 dark:bg-primary/10'
-                                      : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-                                  )}
+                                  className={childCn}
                                 >
-                                  <child.icon className="w-4 h-4 shrink-0" />
-                                  <span className="truncate">{child.label}</span>
+                                  {childContent}
                                 </Link>
                               )
                             })}
