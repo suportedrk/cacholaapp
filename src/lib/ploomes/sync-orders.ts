@@ -18,7 +18,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database.types'
 import { ploomesGet } from './client'
 import { loadPloomesConfig, resolveUnitId } from './sync'
-import { resolveEffectiveUnitId } from './resolve-unit'
+import { resolveFestaUnit } from './resolve-unit'
 import { refreshEventGuestCountFromLatestOrder } from './event-guest-sync'
 
 type AdminClient = SupabaseClient<Database>
@@ -159,19 +159,20 @@ async function loadProductCatalog(userKey: string): Promise<Map<number, ProductC
 // ── Resolução de unit_id ──────────────────────────────────────
 
 /**
- * Resolve unit_id de uma Order via DealId → ploomes_deals.
- * Retorna:
- *   { unitId: string }   — encontrado e resolvido
- *   { skip: 'no_deal' }  — DealId não está em ploomes_deals
- *   { skip: 'null_unit'} — deal existe mas unit_id = NULL
+ * Resolve unidade de uma Order via DealId → ploomes_deals.
+ * Retorna a Pretendida (unit_id) e a Escolhida (escolhida_unit_id) do deal,
+ * para o caller montar a hierarquia canônica da festa via resolveFestaUnit.
+ *   { unitId, escolhidaUnitId } — encontrado e resolvido
+ *   { skip: 'no_deal' }         — DealId não está em ploomes_deals
+ *   { skip: 'null_unit'}        — deal existe mas unit_id = NULL
  */
 async function resolveOrderUnit(
   supabase: AdminClient,
   dealId: number,
-): Promise<{ unitId: string } | { skip: 'no_deal' | 'null_unit' }> {
+): Promise<{ unitId: string; escolhidaUnitId: string | null } | { skip: 'no_deal' | 'null_unit' }> {
   const { data, error } = await supabase
     .from('ploomes_deals')
-    .select('unit_id')
+    .select('unit_id, escolhida_unit_id')
     .eq('ploomes_deal_id', dealId)
     .maybeSingle()
 
@@ -180,7 +181,7 @@ async function resolveOrderUnit(
   if (!data) return { skip: 'no_deal' }
   if (!data.unit_id) return { skip: 'null_unit' }
 
-  return { unitId: data.unit_id }
+  return { unitId: data.unit_id, escolhidaUnitId: data.escolhida_unit_id ?? null }
 }
 
 // ── Sync principal ────────────────────────────────────────────
@@ -288,6 +289,7 @@ export async function syncOrders(
           }
 
           const unitId = unitResult.unitId
+          const escolhidaUnitId = unitResult.escolhidaUnitId
 
           // 5b. Resolver chosen_unit_id (Unidade Escolhida do Order, FieldKey EDD14E93)
           const chosenUnitName = extractChosenUnitName(order)
@@ -383,10 +385,10 @@ export async function syncOrders(
                   ploomes_product_id: prod.Id,
                   order_id:           order.Id,
                   deal_id:            prod.DealId ?? order.DealId ?? null,
-                  // Hierarquia canônica Order > Deal (mesma fonte que events.unit_id):
-                  // a Unidade Escolhida do Order vence o Deal. chosenUnitId já foi
-                  // resolvido acima (passo 5b). Sem ela, cai no Deal (idempotente).
-                  unit_id:            resolveEffectiveUnitId(chosenUnitId, unitId),
+                  // Hierarquia canônica da festa (3 níveis, igual a events.unit_id e
+                  // à função SQL resolve_festa_unit): chosen (Order) > Escolhida do
+                  // Deal > Pretendida do Deal. Fallback final na Pretendida (unitId).
+                  unit_id:            resolveFestaUnit(chosenUnitId, escolhidaUnitId, unitId),
                   product_id:         prod.ProductId ?? null,
                   product_name:       prod.ProductName ?? null,
                   product_code:       prod.ProductCode ?? null,

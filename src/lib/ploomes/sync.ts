@@ -13,12 +13,22 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database.types'
 import { ploomesGet } from './client'
 import { parseDeal } from './field-mapping'
-import { resolveEffectiveUnitId } from './resolve-unit'
+import { resolveFestaUnit } from './resolve-unit'
 import type { PloomesDeal, SyncResult } from './types'
 import type { PloomesConfigRow } from '@/types/database.types'
 import { refreshEventGuestCountFromLatestOrder } from './event-guest-sync'
 
 type AdminClient = SupabaseClient<Database>
+
+// FieldKey "Unidade da festa pretendida" (deal_BD9C4B07) — nível 3 (fallback) da
+// hierarquia canônica da festa. parseDeal só extrai a Escolhida (deal_A583075F,
+// em parsed.unitName); a Pretendida é lida aqui direto de OtherProperties.
+const FIELD_KEY_PRETENDIDA = 'deal_BD9C4B07-20E5-458A-8273-6BA271A6DEBD'
+
+function extractPretendidaName(deal: PloomesDeal): string | undefined {
+  return deal.OtherProperties?.find((p) => p.FieldKey === FIELD_KEY_PRETENDIDA)
+    ?.ObjectValueName ?? undefined
+}
 
 // ── Config defaults (fallback quando não há ploomes_config no DB) ─
 
@@ -119,6 +129,40 @@ export async function resolveUnitId(
     .limit(1)
     .maybeSingle()
   return first?.id ?? null
+}
+
+/**
+ * Variante ESTRITA de resolveUnitId: resolve a unidade por mapeamento explícito
+ * ou por ilike em units.name, mas NÃO cai no fallback de "primeira unidade ativa"
+ * — retorna null quando não consegue resolver.
+ *
+ * Usada nos níveis intermediários da hierarquia canônica da festa (Escolhida e
+ * Pretendida), onde a ausência DEVE propagar como null para resolveFestaUnit
+ * decidir o próximo nível. O fallback arbitrário do resolveUnitId comum era a
+ * causa do bug "primeira unidade ativa = Moema" em events.unit_id.
+ */
+export async function resolveUnitIdStrict(
+  supabase: AdminClient,
+  unitName?: string,
+): Promise<string | null> {
+  if (!unitName) return null
+
+  const { data: mapped } = await supabase
+    .from('ploomes_unit_mapping')
+    .select('unit_id')
+    .eq('ploomes_value', unitName)
+    .eq('is_active', true)
+    .maybeSingle()
+  if (mapped?.unit_id) return mapped.unit_id
+
+  const { data } = await supabase
+    .from('units')
+    .select('id')
+    .ilike('name', `%${unitName}%`)
+    .eq('is_active', true)
+    .limit(1)
+    .maybeSingle()
+  return data?.id ?? null
 }
 
 
@@ -255,18 +299,12 @@ export async function syncDeals(
       try {
         const parsed = parseDeal(deal)
 
-        // Determinar a unidade do deal via mapeamento configurável
-        const dealUnitId = await resolveUnitId(supabase, parsed.unitName)
-        if (!dealUnitId) {
-          console.warn(`[Ploomes sync] Deal ${deal.Id}: unit_id não resolvido, pulando.`)
-          result.dealsErrors++
-          continue
-        }
-
-        // Se o sync é scoped a uma unidade específica, pular deals de outras unidades
-        if (options.unitId && dealUnitId !== options.unitId) {
-          continue
-        }
+        // Hierarquia canônica da unidade da festa: chosen (Order) > Escolhida
+        // (deal_A583075F, lida por parseDeal em parsed.unitName) > Pretendida
+        // (deal_BD9C4B07). resolveUnitIdStrict NÃO chuta "primeira unidade ativa":
+        // a ausência vira null e resolveFestaUnit decide o próximo nível.
+        const escolhidaUnit  = await resolveUnitIdStrict(supabase, parsed.unitName)
+        const pretendidaUnit = await resolveUnitIdStrict(supabase, extractPretendidaName(deal))
 
         // Preferir unidade do Order (fonte definitiva) quando disponível
         const { data: orderUnit } = await supabase
@@ -278,7 +316,17 @@ export async function syncDeals(
           .limit(1)
           .maybeSingle()
 
-        const unitId = resolveEffectiveUnitId(orderUnit?.chosen_unit_id, dealUnitId)
+        const unitId = resolveFestaUnit(orderUnit?.chosen_unit_id, escolhidaUnit, pretendidaUnit)
+        if (!unitId) {
+          console.warn(`[Ploomes sync] Deal ${deal.Id}: unidade da festa não resolvida (sem chosen/Escolhida/Pretendida), pulando.`)
+          result.dealsErrors++
+          continue
+        }
+
+        // Se o sync é scoped a uma unidade específica, pular deals de outras unidades
+        if (options.unitId && unitId !== options.unitId) {
+          continue
+        }
 
         // Montar payload do evento
         const eventDate = parsed.eventDate ?? new Date().toISOString().substring(0, 10)

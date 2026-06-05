@@ -944,6 +944,7 @@ export type PloomesDealsRow = {
   status_id: number
   status_name: string | null
   unit_id: string | null
+  escolhida_unit_id: string | null
   ploomes_create_date: string
   ploomes_last_update: string | null
   event_date: string | null
