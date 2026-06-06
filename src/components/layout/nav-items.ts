@@ -106,36 +106,41 @@ export const NAV_GROUPS: NavGroup[] = [
         href:  ROUTES.commercialChecklist,
         icon:  ClipboardCheck,
         allowedRoles: [...COMMERCIAL_CHECKLIST_ACCESS_ROLES],
+        comingSoon: true,
         children: [
           {
             label: 'Minhas Tarefas',
             href:  ROUTES.commercialChecklist,
             icon:  ClipboardCheck,
             allowedRoles: [...COMMERCIAL_CHECKLIST_ACCESS_ROLES],
+            comingSoon: true,
           },
           {
             label: 'Equipe Comercial',
             href:  ROUTES.commercialChecklistEquipe,
             icon:  UsersRound,
             allowedRoles: [...COMMERCIAL_CHECKLIST_MANAGE_ROLES],
+            comingSoon: true,
           },
           {
             label: 'Templates',
             href:  ROUTES.commercialChecklistTemplates,
             icon:  FileText,
             allowedRoles: [...COMMERCIAL_CHECKLIST_MANAGE_ROLES],
+            comingSoon: true,
           },
           {
             label: 'Automações',
             href:  ROUTES.commercialChecklistAutomacoes,
             icon:  Zap,
             allowedRoles: [...COMMERCIAL_CHECKLIST_MANAGE_ROLES],
+            comingSoon: true,
           },
         ],
       },
       { label: 'Eventos',        href: ROUTES.events,     icon: CalendarDays,  module: 'eventos',   allowedRoles: [...EVENTOS_ACCESS_ROLES] },
-      { label: 'Minhas Tarefas',   href: ROUTES.myTasks,    icon: ListTodo,     module: 'checklists', allowedRoles: [...OPERATIONAL_CHECKLIST_ROLES] },
-      { label: 'Tarefas da Equipe', href: ROUTES.teamTasks,  icon: UsersRound,   module: 'checklists', allowedRoles: [...TEAM_TASKS_ROLES] },
+      { label: 'Minhas Tarefas',   href: ROUTES.myTasks,    icon: ListTodo,     module: 'checklists', allowedRoles: [...OPERATIONAL_CHECKLIST_ROLES], comingSoon: true },
+      { label: 'Tarefas da Equipe', href: ROUTES.teamTasks,  icon: UsersRound,   module: 'checklists', allowedRoles: [...TEAM_TASKS_ROLES], comingSoon: true },
       // Central de Serviços — área de uso geral. Grupo expansível (mesmo padrão de
       // Manutenção): o pai alterna expand/colapso (a hub /central-servicos segue
       // acessível por URL/breadcrumb, como /manutencao). allowedRoles omitido de
@@ -157,17 +162,17 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: 'Checklist Operacional', href: ROUTES.checklists, icon: ClipboardList, module: 'checklists', allowedRoles: [...OPERATIONAL_CHECKLIST_ROLES], comingSoon: true },
       {
-        label: 'Manutenção', href: ROUTES.maintenance, icon: Wrench, module: 'manutencao', allowedRoles: [...MAINTENANCE_MODULE_ROLES],
+        label: 'Manutenção', href: ROUTES.maintenance, icon: Wrench, module: 'manutencao', allowedRoles: [...MAINTENANCE_MODULE_ROLES], comingSoon: true,
         children: [
-          { label: 'Dashboard',     href: ROUTES.maintenanceDashboard, icon: LayoutDashboard, module: 'manutencao',    allowedRoles: [...MAINTENANCE_ADMIN_ROLES]   },
-          { label: 'Chamados',      href: ROUTES.maintenanceChamados,  icon: ClipboardList,   module: 'manutencao',    allowedRoles: [...MAINTENANCE_MODULE_ROLES]  },
-          { label: 'Agenda',        href: ROUTES.maintenanceAgenda,    icon: CalendarClock,   module: 'manutencao',    allowedRoles: [...MAINTENANCE_ADMIN_ROLES]   },
-          { label: 'Minhas Tarefas', href: ROUTES.maintenanceMinhasTarefas, icon: ListTodo,   module: 'manutencao',    allowedRoles: [...MAINTENANCE_MODULE_ROLES]  },
-          { label: 'Equipamentos',  href: ROUTES.equipment,            icon: Package,         module: 'equipamentos',  allowedRoles: [...EQUIPAMENTOS_MENU_ROLES]   },
-          { label: 'Configurações', href: ROUTES.maintenanceConfig,    icon: Settings2,       module: 'manutencao',    allowedRoles: [...MAINTENANCE_ADMIN_ROLES]   },
+          { label: 'Dashboard',     href: ROUTES.maintenanceDashboard, icon: LayoutDashboard, module: 'manutencao',    allowedRoles: [...MAINTENANCE_ADMIN_ROLES],  comingSoon: true },
+          { label: 'Chamados',      href: ROUTES.maintenanceChamados,  icon: ClipboardList,   module: 'manutencao',    allowedRoles: [...MAINTENANCE_MODULE_ROLES], comingSoon: true },
+          { label: 'Agenda',        href: ROUTES.maintenanceAgenda,    icon: CalendarClock,   module: 'manutencao',    allowedRoles: [...MAINTENANCE_ADMIN_ROLES],  comingSoon: true },
+          { label: 'Minhas Tarefas', href: ROUTES.maintenanceMinhasTarefas, icon: ListTodo,   module: 'manutencao',    allowedRoles: [...MAINTENANCE_MODULE_ROLES], comingSoon: true },
+          { label: 'Equipamentos',  href: ROUTES.equipment,            icon: Package,         module: 'equipamentos',  allowedRoles: [...EQUIPAMENTOS_MENU_ROLES],  comingSoon: true },
+          { label: 'Configurações', href: ROUTES.maintenanceConfig,    icon: Settings2,       module: 'manutencao',    allowedRoles: [...MAINTENANCE_ADMIN_ROLES],  comingSoon: true },
         ],
       },
-      { label: 'Prestadores',  href: ROUTES.providers,   icon: Handshake, module: 'prestadores',  allowedRoles: [...PRESTADORES_ACCESS_ROLES]  },
+      { label: 'Prestadores',  href: ROUTES.providers,   icon: Handshake, module: 'prestadores',  allowedRoles: [...PRESTADORES_ACCESS_ROLES], comingSoon: true },
       {
         label: 'Decoração', href: ROUTES.decoracaoTemas, icon: Palette, module: 'decoracao', allowedRoles: [...DECORACAO_MANAGE_ROLES],
         children: [
@@ -184,8 +189,8 @@ export const NAV_GROUPS: NavGroup[] = [
           { label: 'Itens',              href: ROUTES.decoracaoItens,        icon: Boxes,   module: 'decoracao', allowedRoles: [...DECORACAO_MANAGE_ROLES] },
         ],
       },
-      { label: 'Atas',         href: ROUTES.minutes,     icon: FileText,  module: 'atas',         allowedRoles: [...ATAS_ACCESS_ROLES]  },
-      { label: 'Relatórios',   href: ROUTES.reports,     icon: BarChart3, module: 'relatorios',   allowedRoles: [...BI_ACCESS_ROLES] },
+      { label: 'Atas',         href: ROUTES.minutes,     icon: FileText,  module: 'atas',         allowedRoles: [...ATAS_ACCESS_ROLES], comingSoon: true  },
+      { label: 'Relatórios',   href: ROUTES.reports,     icon: BarChart3, module: 'relatorios',   allowedRoles: [...BI_ACCESS_ROLES], comingSoon: true },
     ],
   },
   {

@@ -266,6 +266,41 @@ export function Sidebar({ isOpen, isCollapsed, onClose, onToggleCollapse }: Side
 
                   // ── Item com subitens (accordion) ──────────────────────
                   if (hasChildren) {
+                    // Desabilitado (comingSoon + non-bypass role): div estático, sem chevron, sem filhos
+                    if (isDisabled) {
+                      if (isCollapsed) {
+                        return (
+                          <Tooltip key={item.href}>
+                            <TooltipTrigger
+                              render={<div aria-disabled="true" className={linkClassName} />}
+                            >
+                              {iconEl}
+                              {labelEl}
+                            </TooltipTrigger>
+                            <TooltipContent side="right" sideOffset={8}>
+                              {item.label}
+                            </TooltipContent>
+                          </Tooltip>
+                        )
+                      }
+                      return (
+                        <div key={item.href} aria-disabled="true" className={linkClassName}>
+                          {iconEl}
+                          {labelEl}
+                          {item.badgeText && (
+                            <span className={cn(
+                              'ml-auto text-[10px] font-medium rounded-full px-1.5 py-0.5 whitespace-nowrap',
+                              'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400',
+                              'transition-[opacity,width] duration-150 overflow-hidden',
+                              isCollapsed ? 'lg:opacity-0 lg:w-0 lg:px-0' : 'opacity-100',
+                            )}>
+                              {item.badgeText}
+                            </span>
+                          )}
+                        </div>
+                      )
+                    }
+
                     // Collapsed: mostra ícone com tooltip → navega para primeiro filho
                     if (isCollapsed) {
                       const firstChild = item.children![0]
@@ -310,6 +345,14 @@ export function Sidebar({ isOpen, isCollapsed, onClose, onToggleCollapse }: Side
                           <span className="text-sm font-medium truncate flex-1 text-left">
                             {item.label}
                           </span>
+                          {item.badgeText && (
+                            <span className={cn(
+                              'text-[10px] font-medium rounded-full px-1.5 py-0.5 whitespace-nowrap',
+                              'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400',
+                            )}>
+                              {item.badgeText}
+                            </span>
+                          )}
                           <ChevronDown className={cn(
                             'w-4 h-4 shrink-0 transition-transform duration-200',
                             isExpanded && 'rotate-180',

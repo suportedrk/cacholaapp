@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { ShieldX } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
+import { ROUTES } from '@/lib/constants'
 import { hasRole, OPERATIONAL_MOBILE_ROLES } from '@/config/roles'
 
 /**
@@ -8,7 +9,7 @@ import { hasRole, OPERATIONAL_MOBILE_ROLES } from '@/config/roles'
  *
  * Server Component — lê o role do usuário para determinar o destino
  * do link "Voltar". freelancer e entregador são redirecionados para
- * /checklists/minhas-tarefas (não têm acesso ao /dashboard).
+ * /central-servicos (não têm acesso ao /dashboard).
  * Usuários sem sessão recebem link para /login.
  */
 export default async function ForbiddenPage() {
@@ -28,8 +29,8 @@ export default async function ForbiddenPage() {
         .eq('id', user.id)
         .single()
       if (hasRole(profile?.role, OPERATIONAL_MOBILE_ROLES)) {
-        backHref = '/checklists/minhas-tarefas'
-        backLabel = 'Ir para Minhas Tarefas'
+        backHref = ROUTES.centralServicos
+        backLabel = 'Ir para Central de Serviços'
       }
     }
   } catch {
