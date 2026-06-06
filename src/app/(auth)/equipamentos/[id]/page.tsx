@@ -1,16 +1,24 @@
 'use client'
 
-import { use } from 'react'
+import { use, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { format, parseISO, isFuture, isPast } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import {
   ArrowLeft, Pencil, MapPin, Tag, Hash, Calendar, Plus,
-  ShieldCheck, ShieldAlert, Wrench, Package,
+  ShieldCheck, ShieldAlert, Wrench, Package, Trash2,
 } from 'lucide-react'
-import { buttonVariants } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { useEquipmentItem, useEquipmentMaintenanceHistory } from '@/hooks/use-equipment'
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+  DialogDescription, DialogFooter,
+} from '@/components/ui/dialog'
+import {
+  useEquipmentItem, useEquipmentMaintenanceHistory,
+  useDeleteEquipment, useEquipmentDeletePermission,
+} from '@/hooks/use-equipment'
 import { useSignedUrls } from '@/hooks/use-signed-urls'
 
 // ── Labels ─────────────────────────────────────────────────
@@ -43,8 +51,12 @@ const MAINT_NATURE: Record<string, string> = {
 
 export default function EquipamentoDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
+  const router = useRouter()
   const { data: equipment, isLoading, error } = useEquipmentItem(id)
   const { data: history = [], isLoading: historyLoading } = useEquipmentMaintenanceHistory(id)
+  const { data: canDelete = false } = useEquipmentDeletePermission()
+  const deleteEquipment = useDeleteEquipment()
+  const [deleteOpen, setDeleteOpen] = useState(false)
 
   const photoPath = equipment?.photo_url ? [equipment.photo_url] : []
   const { data: signedUrls = {} } = useSignedUrls('equipment-photos', photoPath)
@@ -94,6 +106,13 @@ export default function EquipamentoDetailPage({ params }: { params: Promise<{ id
           <Pencil className="w-3.5 h-3.5 mr-1.5" />
           Editar
         </Link>
+        {canDelete && (
+          <Button variant="outline" size="sm" onClick={() => setDeleteOpen(true)}
+            className="text-destructive border-destructive/40 hover:bg-destructive/10">
+            <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+            Excluir
+          </Button>
+        )}
       </div>
 
       {/* Card de detalhes */}
@@ -205,6 +224,38 @@ export default function EquipamentoDetailPage({ params }: { params: Promise<{ id
           </div>
         )}
       </div>
+
+      {/* Dialog de confirmação de exclusão */}
+      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Excluir equipamento</DialogTitle>
+            <DialogDescription>
+              Tem certeza que deseja excluir <strong>{equipment.name}</strong>?
+              Esta ação não pode ser desfeita.
+              Equipamentos com chamados vinculados não podem ser excluídos — use
+              &ldquo;Inativar&rdquo; para preservar o histórico.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteOpen(false)}>Cancelar</Button>
+            <Button
+              variant="destructive"
+              disabled={deleteEquipment.isPending}
+              onClick={() => {
+                deleteEquipment.mutate(id, {
+                  onSuccess: () => {
+                    setDeleteOpen(false)
+                    router.push('/equipamentos')
+                  },
+                })
+              }}
+            >
+              {deleteEquipment.isPending ? 'Excluindo…' : 'Excluir equipamento'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Histórico de manutenções */}
       <div className="rounded-xl border bg-card overflow-hidden">
