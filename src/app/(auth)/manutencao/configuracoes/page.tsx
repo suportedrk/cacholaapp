@@ -83,16 +83,11 @@ const SLA_CONFIG = {
 // TAB: SETORES
 // ─────────────────────────────────────────────────────────────
 function SetoresTab() {
-  const [pickedUnitId, setPickedUnitId] = useState('')
-  const { requiresUnitSelection, effectiveUnitId, availableUnits } =
-    useFormUnitSelection(pickedUnitId || null)
-
-  const { data: sectors = [], isLoading } = useSectors(true, effectiveUnitId)
+  // Setores são GLOBAIS (migration 152) — lista única para todas as unidades.
+  const { data: sectors = [], isLoading } = useSectors(true)
   const create = useCreateSector()
   const update = useUpdateSector()
   const del    = useDeleteSector()
-
-  const canCreate = !!effectiveUnitId
 
   const items: ConfigItem[] = sectors.map((s) => ({
     id: s.id,
@@ -104,26 +99,16 @@ function SetoresTab() {
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        Setores são as áreas físicas da sua unidade (Cozinha, Salão, Banheiros…). Cada chamado de manutenção é vinculado a um setor.
+        Setores são as áreas físicas do buffet (Cozinha, Salão, Banheiros…). Cada chamado de manutenção é vinculado a um setor. A lista é única e vale para todas as unidades.
       </p>
-
-      {requiresUnitSelection && (
-        <UnitPickerBanner
-          value={pickedUnitId}
-          onChange={setPickedUnitId}
-          units={availableUnits}
-          contextLabel="criar setores"
-        />
-      )}
 
       <ConfigTable
         title="Setor"
         items={items}
         isLoading={isLoading}
-        canCreate={canCreate}
+        disableDrag
         onCreate={async (d) => {
-          if (!effectiveUnitId) return
-          await create.mutateAsync({ name: d.name, unit_id: effectiveUnitId })
+          await create.mutateAsync({ name: d.name })
         }}
         onUpdate={async (id, d) => { await update.mutateAsync({ id, data: { name: d.name, is_active: d.is_active } }) }}
         onDelete={async (id) => { await del.mutateAsync(id) }}
@@ -302,11 +287,8 @@ function CategoryRow({
 }
 
 function CategoriasTab() {
-  const [pickedUnitId, setPickedUnitId] = useState('')
-  const { requiresUnitSelection, effectiveUnitId, availableUnits } =
-    useFormUnitSelection(pickedUnitId || null)
-
-  const { data: cats = [], isLoading } = useMaintenanceCategories(false, effectiveUnitId)
+  // Categorias são GLOBAIS (migration 152) — lista única para todas as unidades.
+  const { data: cats = [], isLoading } = useMaintenanceCategories(false)
   const create = useCreateMaintenanceCategory()
   const update = useUpdateMaintenanceCategory()
   const del    = useDeleteMaintenanceCategory()
@@ -316,18 +298,17 @@ function CategoriasTab() {
   const [savingNew, setSavingNew] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<MaintenanceCategory | null>(null)
 
-  const canCreate = !!effectiveUnitId
+  const canCreate = true
   const NewIcon = getIconComponent(newForm.icon)
 
   async function handleCreate() {
-    if (!newForm.name.trim() || !effectiveUnitId) return
+    if (!newForm.name.trim()) return
     setSavingNew(true)
     try {
       await create.mutateAsync({
         name: newForm.name.trim(),
         icon: newForm.icon,
         color: newForm.color,
-        unit_id: effectiveUnitId,
       })
       setNewForm(DEFAULT_CAT_FORM)
       setAdding(false)
@@ -357,17 +338,8 @@ function CategoriasTab() {
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        Categorias classificam os chamados por tipo de problema. Cada uma tem um ícone e uma cor para facilitar a identificação visual.
+        Categorias classificam os chamados por tipo de problema. Cada uma tem um ícone e uma cor para facilitar a identificação visual. A lista é única e vale para todas as unidades.
       </p>
-
-      {requiresUnitSelection && (
-        <UnitPickerBanner
-          value={pickedUnitId}
-          onChange={setPickedUnitId}
-          units={availableUnits}
-          contextLabel="criar categorias"
-        />
-      )}
 
       <div className="divide-y divide-border border border-border rounded-xl overflow-hidden">
         {cats.length === 0 && !adding && (

@@ -2,7 +2,6 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
-import { useUnitStore } from '@/stores/unit-store'
 import { useAuthReadyStore } from '@/stores/auth-store'
 import { toast } from 'sonner'
 import type { MaintenanceCategory } from '@/types/database.types'
@@ -17,21 +16,20 @@ export type CategoryInsert = {
   icon: string
   is_active?: boolean
   sort_order?: number
-  unit_id?: string | null
 }
 
-export type CategoryUpdate = Partial<Omit<CategoryInsert, 'unit_id'>>
+export type CategoryUpdate = Partial<CategoryInsert>
 
 // ─────────────────────────────────────────────────────────────
 // LIST
+// Migration 152: categorias são GLOBAIS (unit_id NULL) — lista única
+// válida para todas as unidades. Sem filtro por unidade; ordem alfabética.
 // ─────────────────────────────────────────────────────────────
-export function useMaintenanceCategories(onlyActive = false, unitIdOverride?: string | null) {
-  const storeUnitId = useUnitStore((s) => s.activeUnitId)
-  const activeUnitId = unitIdOverride !== undefined ? unitIdOverride : storeUnitId
+export function useMaintenanceCategories(onlyActive = false) {
   const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
 
   return useQuery<MaintenanceCategory[]>({
-    queryKey: ['maintenance-categories', activeUnitId, onlyActive],
+    queryKey: ['maintenance-categories', onlyActive],
     enabled: isSessionReady,
     staleTime: 5 * 60 * 1000,
     retry: (count, err: unknown) => {
@@ -45,7 +43,6 @@ export function useMaintenanceCategories(onlyActive = false, unitIdOverride?: st
         .select('*')
         .order('name', { ascending: true })
 
-      if (activeUnitId) q = q.eq('unit_id', activeUnitId)
       if (onlyActive) q = q.eq('is_active', true)
 
       const { data, error } = await q
@@ -60,18 +57,16 @@ export function useMaintenanceCategories(onlyActive = false, unitIdOverride?: st
 // ─────────────────────────────────────────────────────────────
 export function useCreateMaintenanceCategory() {
   const queryClient = useQueryClient()
-  const storeUnitId = useUnitStore((s) => s.activeUnitId)
 
   return useMutation({
+    // Migration 152: categoria nasce GLOBAL (unit_id NULL).
     mutationFn: async (payload: CategoryInsert) => {
       const supabase = createClient()
-      const { unit_id: payloadUnitId, ...rest } = payload
-      const targetUnitId = payloadUnitId ?? storeUnitId
 
+      // sort_order calculado sobre toda a lista (global)
       const { data: existing } = await supabase
         .from('maintenance_categories')
         .select('sort_order')
-        .eq('unit_id', targetUnitId ?? '')
         .order('sort_order', { ascending: false })
         .limit(1)
         .maybeSingle()
@@ -80,7 +75,7 @@ export function useCreateMaintenanceCategory() {
 
       const { data, error } = await supabase
         .from('maintenance_categories')
-        .insert({ ...rest, unit_id: targetUnitId ?? undefined, sort_order })
+        .insert({ ...payload, unit_id: null, sort_order })
         .select()
         .single()
 
@@ -93,8 +88,8 @@ export function useCreateMaintenanceCategory() {
     },
     onError: (err) => {
       const msg = (err as { code?: string })?.code === '23505'
-        ? 'Já existe uma categoria com esse nome nesta unidade.'
-        : mapPgError(err, { activeUnitId: storeUnitId }, 'CATEGORY_CREATE')
+        ? 'Já existe uma categoria com esse nome.'
+        : mapPgError(err, {}, 'CATEGORY_CREATE')
       toast.error(msg)
     },
   })

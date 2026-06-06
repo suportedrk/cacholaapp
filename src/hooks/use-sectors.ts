@@ -4,24 +4,22 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import type { Sector } from '@/types/database.types'
-import { useUnitStore } from '@/stores/unit-store'
 import { useAuthReadyStore } from '@/stores/auth-store'
 import { mapPgError } from '@/lib/errors/map-pg-error'
 
 // ─────────────────────────────────────────────────────────────
 // LISTAR SETORES
+// Migration 152: setores são GLOBAIS (unit_id NULL) — lista única válida
+// para todas as unidades. Sem filtro por unidade; ordem alfabética.
 // ─────────────────────────────────────────────────────────────
-export function useSectors(onlyActive = true, unitIdOverride?: string | null) {
-  const storeUnitId = useUnitStore((s) => s.activeUnitId)
-  const activeUnitId = unitIdOverride !== undefined ? unitIdOverride : storeUnitId
+export function useSectors(onlyActive = true) {
   const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
   return useQuery({
-    queryKey: ['sectors', onlyActive, activeUnitId],
+    queryKey: ['sectors', onlyActive],
     enabled: isSessionReady,
     queryFn: async () => {
       const supabase = createClient()
       let q = supabase.from('maintenance_sectors').select('*').order('name')
-      if (activeUnitId) q = q.eq('unit_id', activeUnitId)
       if (onlyActive) q = q.eq('is_active', true)
       const { data, error } = await q
       if (error) throw error
@@ -32,7 +30,8 @@ export function useSectors(onlyActive = true, unitIdOverride?: string | null) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// CRIAR SETOR
+// CRIAR SETOR (GLOBAL — migration 152)
+// Novo setor nasce global (unit_id NULL), válido para todas as unidades.
 // Verifica se existe setor inativo com o mesmo nome (case-insensitive).
 // Se sim: reativa em vez de inserir — histórico de relatórios fica unificado.
 // Se não: insert normal.
@@ -41,27 +40,23 @@ export function useSectors(onlyActive = true, unitIdOverride?: string | null) {
 // ─────────────────────────────────────────────────────────────
 export function useCreateSector() {
   const qc = useQueryClient()
-  const storeUnitId = useUnitStore((s) => s.activeUnitId)
   // Objeto mutable para comunicar resultado de mutationFn → onSuccess sem
   // reatribuição de variável primitiva (evita regra ESLint no-outer-reassignment).
   const _result = { reactivated: false }
 
   return useMutation({
-    mutationFn: async (data: { name: string; unit_id?: string | null }) => {
+    mutationFn: async (data: { name: string }) => {
       _result.reactivated = false
       const supabase = createClient()
-      const targetUnitId = data.unit_id ?? storeUnitId
       const trimmedName = data.name.trim()
 
-      // Verificar se existe setor arquivado com o mesmo nome (case-insensitive)
-      let checkQ = supabase
+      // Verificar se existe setor arquivado com o mesmo nome (case-insensitive) — global
+      const { data: archived } = await supabase
         .from('maintenance_sectors')
         .select('id')
         .eq('is_active', false)
         .ilike('name', trimmedName)
         .limit(1)
-      if (targetUnitId) checkQ = checkQ.eq('unit_id', targetUnitId)
-      const { data: archived } = await checkQ
 
       if (archived?.[0]) {
         // Reativar o registro existente — preserva o sector_id nos chamados históricos
@@ -74,21 +69,23 @@ export function useCreateSector() {
         return
       }
 
-      // Insert normal
-      let q = supabase.from('maintenance_sectors').select('sort_order').order('sort_order', { ascending: false }).limit(1)
-      if (targetUnitId) q = q.eq('unit_id', targetUnitId)
-      const { data: existing } = await q
+      // Insert normal — global (unit_id NULL); sort_order calculado sobre toda a lista
+      const { data: existing } = await supabase
+        .from('maintenance_sectors')
+        .select('sort_order')
+        .order('sort_order', { ascending: false })
+        .limit(1)
       const nextOrder = ((existing?.[0]?.sort_order ?? 0) as number) + 1
       const { error } = await supabase
         .from('maintenance_sectors')
-        .insert({ name: trimmedName, sort_order: nextOrder, unit_id: targetUnitId! })
+        .insert({ name: trimmedName, sort_order: nextOrder, unit_id: null })
       if (error) throw error
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['sectors'] })
       toast.success(_result.reactivated ? 'Setor reativado — histórico preservado.' : 'Setor criado.')
     },
-    onError: (err) => toast.error(mapPgError(err, { activeUnitId: storeUnitId }, 'SECTOR_CREATE')),
+    onError: (err) => toast.error(mapPgError(err, {}, 'SECTOR_CREATE')),
   })
 }
 

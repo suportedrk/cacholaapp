@@ -303,7 +303,7 @@ export type Sector = {
   id: string
   name: string
   description?: string | null
-  unit_id: string
+  unit_id: string | null   // NULL = global (migration 152: setores únicos nas 2 unidades)
   is_active: boolean
   sort_order: number
   created_at: string
@@ -312,7 +312,7 @@ export type Sector = {
 
 export type MaintenanceCategory = {
   id: string
-  unit_id: string
+  unit_id: string | null   // NULL = global (migration 152: categorias únicas nas 2 unidades)
   name: string
   color: string        // hex, ex: '#F59E0B'
   icon: string         // nome do ícone Lucide, ex: 'zap'
