@@ -233,8 +233,8 @@ export default function EquipamentoDetailPage({ params }: { params: Promise<{ id
             <DialogDescription>
               Tem certeza que deseja excluir <strong>{equipment.name}</strong>?
               Esta ação não pode ser desfeita.
-              Equipamentos com chamados vinculados não podem ser excluídos — use
-              &ldquo;Inativar&rdquo; para preservar o histórico.
+              Equipamentos com chamados vinculados não podem ser excluídos — altere o status para
+              &ldquo;Inativo&rdquo; para preservar o histórico.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

@@ -29,6 +29,8 @@ interface ConfigTableProps {
   }
   /** Quando false, esconde o botão "Adicionar". Útil quando uma unidade ainda não foi escolhida. */
   canCreate?: boolean
+  /** Quando true, oculta o handle de reordenação manual. Use para listas com ordenação fixa (ex: alfabética). */
+  disableDrag?: boolean
   onCreate: (data: { name: string; [key: string]: unknown }) => Promise<void>
   onUpdate: (id: string, data: Partial<ConfigItem>) => Promise<void>
   onDelete: (id: string) => Promise<void>
@@ -46,6 +48,7 @@ export function ConfigTable({
   isLoading,
   extraField,
   canCreate = true,
+  disableDrag = false,
   onCreate,
   onUpdate,
   onDelete,
@@ -131,7 +134,10 @@ export function ConfigTable({
                 !item.is_active && 'opacity-50'
               )}
             >
-              <GripVertical className="w-4 h-4 text-muted-foreground/40 shrink-0 cursor-grab" />
+              {disableDrag
+                ? <div className="w-4 shrink-0" />
+                : <GripVertical className="w-4 h-4 text-muted-foreground/40 shrink-0 cursor-grab" />
+              }
 
               {isEditing ? (
                 <>
