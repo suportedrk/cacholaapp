@@ -126,6 +126,7 @@ export default function ConfiguracoesPage() {
             title="Categoria"
             items={equipCats as ConfigItem[]}
             isLoading={loadingEquipCats}
+            disableDrag
             canCreate={!equipCatsUnit.requiresUnitSelection || !!equipCatsUnit.effectiveUnitId}
             onCreate={async (d) => {
               if (!equipCatsUnit.effectiveUnitId) return

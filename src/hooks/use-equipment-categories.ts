@@ -28,7 +28,6 @@ export function useEquipmentCategoryItems(
       let q = supabase
         .from('equipment_categories')
         .select('*')
-        .order('sort_order')
         .order('name')
       if (activeUnitId) q = q.eq('unit_id', activeUnitId)
       if (onlyActive)   q = q.eq('is_active', true)

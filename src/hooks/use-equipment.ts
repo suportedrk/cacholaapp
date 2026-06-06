@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { useUnitStore } from '@/stores/unit-store'
 import { useAuthReadyStore } from '@/stores/auth-store'
+import { useAuth } from '@/hooks/use-auth'
 import type { Equipment, EquipmentStatus } from '@/types/database.types'
 import { mapPgError } from '@/lib/errors/map-pg-error'
 
@@ -189,6 +190,66 @@ export function useChangeEquipmentStatus() {
       toast.success('Status do equipamento atualizado')
     },
     onError: (err) => toast.error(mapPgError(err, {}, 'EQUIPMENT_STATUS_UPDATE')),
+  })
+}
+
+// ─────────────────────────────────────────────────────────────
+// PERMISSÃO DE DELETE (via check_permission no banco)
+// ─────────────────────────────────────────────────────────────
+
+export function useEquipmentDeletePermission() {
+  const isSessionReady = useAuthReadyStore((s: { isSessionReady: boolean }) => s.isSessionReady)
+  const { profile } = useAuth()
+  const userId = profile?.id
+
+  return useQuery<boolean>({
+    queryKey: ['equipment-delete-permission', userId],
+    enabled: isSessionReady && !!userId,
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      const { data, error } = await createClient().rpc('check_permission', {
+        p_user_id: userId!,
+        p_module: 'equipamentos',
+        p_action: 'delete',
+      })
+      if (error) throw error
+      return data === true
+    },
+  })
+}
+
+// ─────────────────────────────────────────────────────────────
+// EXCLUIR EQUIPAMENTO
+// Protege histórico: não permite excluir se houver chamados vinculados.
+// ─────────────────────────────────────────────────────────────
+
+export function useDeleteEquipment() {
+  const qc = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const supabase = createClient()
+
+      const { count, error: countError } = await supabase
+        .from('maintenance_tickets')
+        .select('id', { count: 'exact', head: true })
+        .eq('equipment_id', id)
+      if (countError) throw countError
+
+      if ((count ?? 0) > 0) {
+        throw new Error(
+          `Este equipamento possui ${count} chamado${(count ?? 0) > 1 ? 's' : ''} vinculado${(count ?? 0) > 1 ? 's' : ''}. Desative-o em vez de excluir para preservar o histórico.`,
+        )
+      }
+
+      const { error } = await supabase.from('equipment').delete().eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['equipment'] })
+      toast.success('Equipamento excluído com sucesso')
+    },
+    onError: (err: Error) => toast.error(err.message),
   })
 }
 
