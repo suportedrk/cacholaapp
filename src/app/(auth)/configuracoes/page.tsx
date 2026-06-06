@@ -20,17 +20,15 @@ import {
 } from '@/hooks/use-equipment-categories'
 
 export default function ConfiguracoesPage() {
-  // Em "Todas as unidades", cada aba precisa de uma unidade explícita para criação.
-  // A escolha é por aba (cada lista é independente).
-  const [sectorsUnitId, setSectorsUnitId] = useState<string>('')
+  // Categorias de equipamento: em "Todas as unidades", a criação precisa de
+  // uma unidade explícita. Setores são globais (migration 152) — sem unidade.
   const [equipCatsUnitId, setEquipCatsUnitId] = useState<string>('')
 
-  const sectorsUnit = useFormUnitSelection(sectorsUnitId || null)
   const equipCatsUnit = useFormUnitSelection(equipCatsUnitId || null)
 
-  // ── Setores (manutenção) ─────────────────────────────────
+  // ── Setores (manutenção) — GLOBAIS (migration 152) ───────
   const { data: sectors = [], isLoading: loadingSectors, isError: errorSectors, refetch: refetchSectors } =
-    useSectors(false, sectorsUnit.effectiveUnitId)
+    useSectors(false)
   const createSector = useCreateSector()
   const updateSector = useUpdateSector()
   const deleteSector = useDeleteSector()
@@ -80,28 +78,19 @@ export default function ConfiguracoesPage() {
 
 
 
-        {/* ── Setores ── */}
+        {/* ── Setores (GLOBAIS — migration 152) ── */}
         <TabsContent value="setores" className="mt-4 space-y-3">
           <p className="text-sm text-muted-foreground">
-            Setores do buffet para vinculação das ordens de manutenção (ex: Cozinha, Salão Principal).
+            Setores do buffet para vinculação das ordens de manutenção (ex: Cozinha, Salão Principal). A lista é única e vale para todas as unidades.
           </p>
-          {sectorsUnit.requiresUnitSelection && (
-            <UnitPickerBanner
-              value={sectorsUnitId}
-              onChange={setSectorsUnitId}
-              units={sectorsUnit.availableUnits}
-              contextLabel="criar setores"
-            />
-          )}
           <ConfigTable
             title="Setor"
             items={sectors as ConfigItem[]}
             isLoading={loadingSectors}
-            canCreate={!sectorsUnit.requiresUnitSelection || !!sectorsUnit.effectiveUnitId}
+            disableDrag
             onCreate={(d) =>
               createSector.mutateAsync({
                 name: (d as { name: string }).name,
-                unit_id: sectorsUnit.effectiveUnitId,
               })
             }
             onUpdate={(id, d) => updateSector.mutateAsync({ id, data: d })}

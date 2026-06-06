@@ -105,9 +105,10 @@ export function TicketFormModal({ open, onClose, onCreated }: TicketFormModalPro
     activeUnitId ||
     (availableUnits.length === 1 ? availableUnits[0].unit_id : null)
 
-  // Dropdowns dependentes filtram pela unidade efetiva.
-  const { data: sectors    = [] } = useSectors(true, effectiveUnitId)
-  const { data: categories = [] } = useMaintenanceCategories(true, effectiveUnitId)
+  // Setores e categorias são globais (migration 152) — lista única para todas as unidades.
+  // Equipamentos continuam por unidade (filtram pela unidade efetiva).
+  const { data: sectors    = [] } = useSectors(true)
+  const { data: categories = [] } = useMaintenanceCategories(true)
   const { data: equipments = [] } = useEquipment({ status: ['active', 'in_repair'] }, effectiveUnitId)
 
   // Solicitantes via RPC SECURITY DEFINER (a RLS de users só deixa o técnico ver a si mesmo).
