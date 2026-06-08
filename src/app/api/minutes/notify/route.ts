@@ -1,8 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { sendEmail } from '@/lib/email'
 import { tplMeetingMinuteNotification } from '@/lib/email-templates/meeting-minute-notification'
-import { requireRoleApi } from '@/lib/auth/require-role'
-import { ATAS_MANAGE_ROLES } from '@/config/roles'
+import { requirePermissionApi } from '@/lib/auth/require-permission'
 
 /**
  * POST /api/minutes/notify
@@ -14,7 +13,7 @@ import { ATAS_MANAGE_ROLES } from '@/config/roles'
  */
 export async function POST(request: Request) {
   try {
-    const guard = await requireRoleApi(ATAS_MANAGE_ROLES)
+    const guard = await requirePermissionApi('atas', 'edit')
     if (!guard.ok) return guard.response
 
     const body = await request.json() as {

@@ -6,22 +6,23 @@ import { useAuthReadyStore } from '@/stores/auth-store'
 import { useUnitStore } from '@/stores/unit-store'
 import { useUnitUsers } from '@/hooks/use-units'
 import { useCreateMeetingMinute } from '@/hooks/use-meeting-minute-mutations'
+import { useAtasPermissions } from '@/hooks/use-atas-permissions'
 import { MeetingMinuteForm } from '../components/MeetingMinuteForm'
-import { ATAS_MANAGE_ROLES, hasRole } from '@/config/roles'
 import type { MeetingMinuteFormData } from '@/types/minutes'
 
 export default function NovaAtaPage() {
   const router   = useRouter()
-  const profile  = useAuthReadyStore((s) => s.profile)
   const user     = useAuthReadyStore((s) => s.user)
   const { activeUnitId } = useUnitStore()
 
   // ── Permission gate ────────────────────────────────────────
+  // Espera a permissão resolver antes de decidir o redirect (sem flicker).
+  const perms = useAtasPermissions()
   useEffect(() => {
-    if (profile && !hasRole(profile.role, ATAS_MANAGE_ROLES)) {
+    if (!perms.isLoading && !perms.canCreate) {
       router.replace('/atas')
     }
-  }, [profile, router])
+  }, [perms.isLoading, perms.canCreate, router])
 
   // ── Unit guard ─────────────────────────────────────────────
   const hasUnit = !!activeUnitId
@@ -50,6 +51,19 @@ export default function NovaAtaPage() {
   }
 
   // ── Render ─────────────────────────────────────────────────
+  // Enquanto a permissão não resolve, mostra carregando — não renderiza o
+  // formulário nem decide o redirect ainda.
+  if (perms.isLoading) {
+    return (
+      <div className="flex items-center justify-center py-24">
+        <span className="text-sm text-muted-foreground">Carregando…</span>
+      </div>
+    )
+  }
+
+  // Sem permissão de criar: o efeito acima já dispara o redirect; evita flash do form.
+  if (!perms.canCreate) return null
+
   if (!hasUnit) {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-3 text-center">

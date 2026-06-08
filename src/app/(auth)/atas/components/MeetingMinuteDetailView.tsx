@@ -26,8 +26,8 @@ interface MeetingMinuteDetailViewProps {
   currentUserId: string
   canEdit:       boolean
   canDelete:     boolean
-  canCreate:     boolean
-  isElevated:    boolean
+  canDuplicate:  boolean
+  canManage:     boolean
 }
 
 const statusBadgeClass: Record<string, string> = {
@@ -40,8 +40,8 @@ export function MeetingMinuteDetailView({
   currentUserId,
   canEdit,
   canDelete,
-  canCreate,
-  isElevated,
+  canDuplicate,
+  canManage,
 }: MeetingMinuteDetailViewProps) {
   const router         = useRouter()
   const deleteMinute   = useDeleteMeetingMinute()
@@ -170,7 +170,7 @@ export function MeetingMinuteDetailView({
               {isExporting ? 'Gerando PDF…' : 'Exportar PDF'}
             </DropdownMenuItem>
 
-            {canCreate && (
+            {canDuplicate && (
               <DropdownMenuItem
                 onClick={handleDuplicate}
                 disabled={isDuplicating}
@@ -234,7 +234,7 @@ export function MeetingMinuteDetailView({
           items={minute.action_items}
           meetingId={minute.id}
           currentUserId={currentUserId}
-          canToggleAll={isElevated || minute.created_by === currentUserId}
+          canToggleAll={canManage}
         />
       </section>
 

@@ -102,6 +102,18 @@ export const GLOBAL_VIEWER_ROLES = [
   'pos_vendas',
 ] as const satisfies readonly Role[]
 
+/**
+ * "Diretoria" — super_admin + diretor APENAS (sem pos_vendas).
+ * Espelha a função SQL `is_diretoria()` (migration 153). Usada no modelo de
+ * visibilidade do módulo Atas: diretoria edita atas gerais, duplica como geral
+ * e exclui atas de terceiros. Distinta de GLOBAL_VIEWER_ROLES (que inclui
+ * pos_vendas) e de ADMIN_ACCESS_ROLES (que nomeia acesso à área /admin).
+ */
+export const DIRETORIA_ROLES = [
+  'super_admin',
+  'diretor',
+] as const satisfies readonly Role[]
+
 // ──────────────────────────────────────────────────────────────
 // Administração (/admin/**)
 // ──────────────────────────────────────────────────────────────
