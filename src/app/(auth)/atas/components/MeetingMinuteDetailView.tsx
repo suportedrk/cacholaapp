@@ -51,7 +51,7 @@ export function MeetingMinuteDetailView({
   const [isExporting,  setIsExporting]  = useState(false)
   const [isDuplicating, setIsDuplicating] = useState(false)
 
-  const meetingDate = new Date(minute.meeting_date + 'T00:00:00').toLocaleDateString('pt-BR', {
+  const meetingDate = new Date(minute.meeting_date).toLocaleDateString('pt-BR', {
     weekday: 'long',
     day:     'numeric',
     month:   'long',
