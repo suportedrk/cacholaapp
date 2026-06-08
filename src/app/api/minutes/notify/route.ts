@@ -71,11 +71,12 @@ export async function POST(request: Request) {
     const creatorName = creator?.name ?? 'Um membro da equipe'
 
     // 5. Format date for email (pt-BR)
-    const meetingDate = new Date(minute.meeting_date + 'T00:00:00').toLocaleDateString('pt-BR', {
+    const meetingDate = new Date(minute.meeting_date).toLocaleDateString('pt-BR', {
       weekday: 'long',
       day:     'numeric',
       month:   'long',
       year:    'numeric',
+      timeZone: 'America/Sao_Paulo',
     })
 
     // 6. Count totals for summary card
