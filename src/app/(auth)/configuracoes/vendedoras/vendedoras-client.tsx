@@ -4,11 +4,19 @@
 'use client'
 
 import { useState } from 'react'
-import { Pencil, RefreshCw, AlertCircle } from 'lucide-react'
+import { Pencil, RefreshCw, AlertCircle, Users, Loader2 } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { PageHeader } from '@/components/shared/page-header'
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+  TooltipProvider,
+} from '@/components/ui/tooltip'
 import { useLoadingTimeout } from '@/hooks/use-loading-timeout'
 import { useSellers } from '@/hooks/use-sellers'
 import { useUnits } from '@/hooks/use-units'
@@ -18,7 +26,7 @@ import type { Seller } from '@/types/seller'
 import { cn } from '@/lib/utils'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { hasRole, TEMPLATE_MANAGE_ROLES } from '@/config/roles'
+import { hasRole, TEMPLATE_MANAGE_ROLES, SELLERS_MANAGE_ROLES } from '@/config/roles'
 
 type FilterKey = 'all' | 'active' | 'inactive' | 'system'
 
@@ -41,6 +49,7 @@ function formatDate(iso: string | null): string {
 export function VendedorasClient() {
   const { realProfile } = useAuth()
   const isSuperAdmin = hasRole(realProfile?.role, TEMPLATE_MANAGE_ROLES)
+  const canSyncSellers = hasRole(realProfile?.role, SELLERS_MANAGE_ROLES)
 
   const { data: sellers = [], isLoading, isError } = useSellers()
   const { data: units = [] } = useUnits()
@@ -49,6 +58,28 @@ export function VendedorasClient() {
   const [filter, setFilter] = useState<FilterKey>('all')
   const [editSeller, setEditSeller] = useState<Seller | null>(null)
   const [sheetOpen, setSheetOpen] = useState(false)
+  const [isSyncing, setIsSyncing] = useState(false)
+  const queryClient = useQueryClient()
+
+  async function handleSync() {
+    setIsSyncing(true)
+    try {
+      const res = await fetch('/api/ploomes/sync-sellers', { method: 'POST' })
+      const body = await res.json()
+      if (!res.ok) throw new Error(body.error ?? 'Erro desconhecido.')
+      const { created, updated } = body.result as { created: number; updated: number }
+      toast.success(
+        `${created} nova(s) vendedora(s) importada(s) e ${updated} atualizada(s).`,
+      )
+      queryClient.invalidateQueries({ queryKey: ['sellers'] })
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : 'Erro ao sincronizar com o Ploomes.',
+      )
+    } finally {
+      setIsSyncing(false)
+    }
+  }
 
   const unitMap = Object.fromEntries(units.map((u) => [u.id, u.name]))
 
@@ -98,7 +129,40 @@ export function VendedorasClient() {
   return (
     <>
       <div className="space-y-6">
-        <PageHeader title="Vendedoras" />
+        <PageHeader
+          title="Vendedoras"
+          actions={
+            canSyncSellers ? (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleSync}
+                        disabled={isSyncing}
+                      />
+                    }
+                  >
+                    {isSyncing ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Users className="mr-2 h-4 w-4" />
+                    )}
+                    Sincronizar do Ploomes
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="max-w-sm leading-normal">
+                    Traz para o sistema todas as pessoas cadastradas e ativas no Ploomes.
+                    Use quando entrar alguém novo no time de vendas e o nome dela ainda
+                    não aparecer nas listas (por exemplo, na hora de criar o usuário e
+                    vincular a vendedora). Quem já está aqui não é duplicado.
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ) : undefined
+          }
+        />
 
         {/* Filter pills */}
         <div className="flex flex-wrap gap-2">
