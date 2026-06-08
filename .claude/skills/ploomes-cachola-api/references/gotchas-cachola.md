@@ -124,7 +124,7 @@ Após N falhas consecutivas (5xx ou timeout), o Ploomes desativa o webhook silen
 **Se sumirem:** recriar via `POST /Webhooks` (não tem endpoint de "reativar").
 
 ### 15. Bruno Motta = vendedor inativo importante
-Vendedor com `Active = false` no Ploomes mas que ainda tem **322 contatos** atribuídos (deals históricos). Não filtre `Active = true` na hora de carregar `sellers` se a tela mostra histórico — vai sumir cliente.
+Vendedor com `Suspended = true` no Ploomes mas que ainda tem **322 contatos** atribuídos (deals históricos). Não filtre por usuário ativo na hora de carregar `sellers` se a tela mostra histórico — vai sumir cliente. (O campo de status correto é `Suspended`, não `Active` — ver gotcha #19.)
 
 ### 16. `app10.ploomes.com` é o domínio da nossa instância
 Para gerar links públicos para deals/contacts, é `https://app10.ploomes.com/deal/{id}` ou `/contact/{id}`. Outras instâncias do Ploomes usam outros números (`app1`, `app7`, etc.).
@@ -143,12 +143,19 @@ O `sync-orders.ts` busca Orders por **janela de data** (`LastUpdateDate`/`Create
 - **Erro/timeout/resposta inválida** → NÃO remover nada (`skipped='api_error'`); jamais tratar como "0 vivas".
 - **`$top` ≥300** (possível truncamento) → pular por segurança.
 - **0 vivas CONFIRMADO + deal NÃO ganho** (`is_festa_ganha` falso) → **remover** (lixo inócuo; exclusão pura).
-- **0 vivas CONFIRMADO + deal É ganho** → **NÃO remover**; emitir SINAL `festa ganha sem venda viva — revisar no Ploomes` (`skipped='won_no_order'`). Anomalia de negócio (festa ganha sem documento de venda) — corrige-se **no Ploomes** (recriar a Order ou rever o ganho), **nunca** apagando do nosso banco (zeraria um deal que o Ploomes ainda chama de ganho). Casos conhecidos jun/2026: deals **601680105** e **604330200**.
+- **0 vivas CONFIRMADO + deal É ganho** → **NÃO remover**; emitir SINAL `festa ganha sem venda viva — revisar no Ploomes` (`skipped='won_no_order'`). Anomalia de negócio (festa ganha sem documento de venda) — corrige-se **no Ploomes** (recriar a Order ou rever o ganho), **nunca** apagando do nosso banco (zeraria um deal que o Ploomes ainda chama de ganho). Casos conhecidos jun/2026: deals **601680105** e **604330200**. **O sinal não é escalado para notificação** — a equipe criou trava no Ploomes que impede fechar negócio sem documento (prevenção na origem); o sinal segue apenas como rede passiva em log/JSON.
 - **Tem vivas de IDs diferentes** (substituição em massa) → não remover, revisão manual (`skipped='all_orphan'`).
 
 **Varredura periódica de segurança (`reconcileAllOrders` + cron `/api/cron/orders-reconcile`):** a reconciliação por-deal só pega deals tocados na rodada; um deal cuja **única venda foi excluída** nunca mais aparece → precisa de varredura global. Ela pagina o universo vivo CACHOLA (`$filter=Deal/PipelineId eq 60000636`), compara com o banco e delega cada deal órfão ao mesmo `reconcileDealOrders`. **Guardrails reforçados (age global):** ABORTA sem remover nada se a listagem viva vier incompleta/implausível (piso 1.000) ou se removeria acima do teto de volume (100) — proteção contra API truncada. `?dryRun=1` valida em produção antes de ativar. Ver `endpoints-cachola.md` §2.
 
 > Mesmo padrão deve ser avaliado para `events`/`ploomes_deals` (deals excluídos também acumulam).
+
+### 19. `/Users` usa `Suspended`, não `Active` (e `$select=Active` dá HTTP 400)
+O endpoint `/Users` **não** expõe o campo `Active`. Pedir `GET /Users?$select=Id,Name,Email,Active` retorna **HTTP 400**. O campo de status real é `Suspended` (boolean): `false` = ativo, `true` = inativo/suspenso.
+
+**Solução adotada** (em `sync-sellers.ts`): **omitir `$select`** (traz o objeto inteiro) e filtrar `u.Suspended === false` em JavaScript — evita tanto o 400 quanto quirks de boolean em filtro OData.
+
+**Descoberto** jun/2026 no QA da feature "Sincronizar vendedoras do Ploomes". Confirma também que o `Id` do usuário em `/Users` é o mesmo número usado como `OwnerId` em deals/orders (base da ligação com a tabela `sellers`). Atenção: `/Users` ativos incluem **contas de integração** (Automação, Clicksign, Forms, WhatsApp, Neppo, etc.) — ao popular `sellers`, essas entram como ativas e devem ser marcadas como `is_system_account`/inativas manualmente.
 
 ## Como adicionar um novo gotcha aqui
 

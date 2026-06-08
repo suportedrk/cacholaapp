@@ -130,7 +130,7 @@ Monte o conjunto de `Id` vivos e **remova** do nosso banco as Orders daquele dea
 3. **Caso 100% das Orders locais órfãs — decidir pelo conjunto vivo (refinado):**
    - **Tem Orders vivas de IDs diferentes** (substituição em massa atípica) → **NÃO remover**; revisão manual (`skipped='all_orphan'`).
    - **0 Orders vivas CONFIRMADO** (API ok, lista vazia) **E deal NÃO ganho** (`is_festa_ganha` falso) → **REMOVER** as órfãs (lixo inócuo: exclusão pura sem substituição).
-   - **0 Orders vivas CONFIRMADO E deal É ganho** → **NÃO remover**; emitir **SINAL** `festa ganha sem venda viva — revisar no Ploomes` com `DealId` + título (`skipped='won_no_order'`). É anomalia de negócio (festa ganha sem documento de venda) que **não se resolve apagando** — corrige-se no Ploomes (recriar a Order ou rever o ganho).
+   - **0 Orders vivas CONFIRMADO E deal É ganho** → **NÃO remover**; emitir **SINAL** `festa ganha sem venda viva — revisar no Ploomes` com `DealId` + título (`skipped='won_no_order'`). É anomalia de negócio (festa ganha sem documento de venda) que **não se resolve apagando** — corrige-se no Ploomes (recriar a Order ou rever o ganho). O sinal **não é escalado para notificação**: a equipe criou trava no Ploomes que impede fechar negócio sem documento (prevenção na origem); segue apenas como rede passiva em log/JSON.
    - **Deal não encontrado em `ploomes_deals`** (não classificável) → conservador, não remove.
 4. **Auditoria:** logar cada Order removida (`OrderId`, `DealId`, timestamp, motivo) e cada SINAL emitido.
 5. **Rate limit:** a consulta por deal adiciona 1 GET por deal — sequenciar com respiração (~600ms).
@@ -249,13 +249,15 @@ Retorna nome da empresa, plano, limite de usuários, etc. Use só para debug ou 
 ## 7. Users — vendedores e operadores
 
 ```http
-GET /Users?$top=100&$select=Id,Name,Email,Active,ProfileId
+GET /Users?$top=100&$skip={N}
 ```
+
+> ⚠️ **NÃO** use `$select=...,Active`: o campo `Active` **não existe** em `/Users` e o request volta **HTTP 400**. O campo de status é `Suspended` (boolean; `false` = ativo). Na prática: **omita `$select`** e filtre `u.Suspended === false` em JS. Ver gotcha #19.
 
 **Use para:**
 - Popular tabela `sellers` no Cachola.
-- Mapear `OwnerId` retornado em deals/orders/contacts → nome real do vendedor.
-- Detectar usuário inativo no Ploomes (`Active = false`) — caso conhecido: Bruno Motta inativo desde X.
+- Mapear `OwnerId` retornado em deals/orders/contacts → nome real do vendedor (o `Id` do usuário **é** o `OwnerId`).
+- Detectar usuário inativo no Ploomes (`Suspended = true`) — caso conhecido: Bruno Motta.
 
 ## Endpoints que **NÃO** usamos no Cachola (não cobertos)
 
