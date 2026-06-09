@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
   ArrowLeft, MoreHorizontal, Pencil, Trash2,
-  Calendar, MapPin, User, FileDown, Copy, Loader2,
+  Calendar, MapPin, User, FileDown, Copy, Loader2, Globe,
 } from 'lucide-react'
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
@@ -121,6 +121,13 @@ export function MeetingMinuteDetailView({
               <Calendar className="w-4 h-4 shrink-0" />
               {meetingDate}
             </span>
+            {/* Rótulo "Geral" apenas para atas sem unidade (criadas pela diretoria) */}
+            {minute.unit_id == null && (
+              <span className="flex items-center gap-1.5">
+                <Globe className="w-4 h-4 shrink-0" />
+                Geral · todas as unidades
+              </span>
+            )}
             {minute.location && (
               <span className="flex items-center gap-1.5">
                 <MapPin className="w-4 h-4 shrink-0" />

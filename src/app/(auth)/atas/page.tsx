@@ -11,7 +11,7 @@ import { MeetingMinuteCard } from './components/MeetingMinuteCard'
 import { MeetingMinuteCardSkeleton } from './components/MeetingMinuteCardSkeleton'
 import { MeetingMinutesFiltersBar } from './components/MeetingMinutesFilters'
 import { MeetingMinutesEmptyState } from './components/MeetingMinutesEmptyState'
-import { ATAS_MANAGE_ROLES, hasRole } from '@/config/roles'
+import { DIRETORIA_ROLES, hasRole } from '@/config/roles'
 
 export default function AtasPage() {
   const router = useRouter()
@@ -34,7 +34,9 @@ export default function AtasPage() {
   const { isTimedOut, retry } = useLoadingTimeout(isLoading)
 
   const perms = useAtasPermissions()
-  const showOnlyMine = hasRole(profile?.role, ATAS_MANAGE_ROLES)
+  // Só a diretoria vê mais que as próprias atas — então só para ela o filtro
+  // "Minhas atas" faz sentido (demais cargos já veem apenas as suas via RLS).
+  const showOnlyMine = hasRole(profile?.role, DIRETORIA_ROLES)
 
   // ── Handlers ───────────────────────────────────────────────
   function handleCreate() {

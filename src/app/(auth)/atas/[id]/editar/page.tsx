@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation'
 import { useAuthReadyStore } from '@/stores/auth-store'
 import { useUnitStore } from '@/stores/unit-store'
 import { useUnitUsers } from '@/hooks/use-units'
+import { useUsers } from '@/hooks/use-users'
 import { useMeetingMinuteDetail } from '@/hooks/use-meeting-minute-detail'
 import { useUpdateMeetingMinute } from '@/hooks/use-meeting-minute-mutations'
 import { useAtasPermissions } from '@/hooks/use-atas-permissions'
@@ -35,6 +36,19 @@ export default function EditarAtaPage() {
     avatar_url: u.user.avatar_url,
     is_active:  u.user.is_active,
   }))
+
+  // Ata geral (unit_id null): participantes podem ser das duas unidades, então
+  // a lista precisa abranger ambas — senão o ParticipantSelector não encontra o
+  // colaborador da outra unidade e o chip some. Só a diretoria chega aqui (gate abaixo).
+  const { data: allActiveUsers = [] } = useUsers({ isActive: true })
+  const globalUsers = allActiveUsers.map((u) => ({
+    id:         u.id,
+    name:       u.name,
+    avatar_url: u.avatar_url,
+    is_active:  u.is_active,
+  }))
+
+  const formUsers = minute && minute.unit_id == null ? globalUsers : unitUsers
 
   // ── Permission gate ────────────────────────────────────────
   // Pode editar se: permissão de edit + (diretoria OU a ata não é geral).
@@ -95,7 +109,7 @@ export default function EditarAtaPage() {
   return (
     <MeetingMinuteForm
       minute={minute}
-      unitUsers={unitUsers}
+      unitUsers={formUsers}
       currentUserId={user.id}
       isEditMode={true}
       isSaving={updateMinute.isPending}

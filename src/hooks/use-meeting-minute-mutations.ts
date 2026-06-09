@@ -26,7 +26,7 @@ function db(supabase: ReturnType<typeof createClient>): any {
 // ─────────────────────────────────────────────────────────────
 
 interface CreatePayload {
-  unit_id: string
+  unit_id: string | null   // null = ata GERAL (diretoria); RLS exige is_diretoria() (migration 153)
   form:    MeetingMinuteFormData
   userId:  string
 }
@@ -345,7 +345,7 @@ export function useToggleActionItemStatus() {
 // ─────────────────────────────────────────────────────────────
 
 interface DuplicatePayload {
-  unitId:        string
+  unitId:        string | null   // null = ata GERAL (diretoria); RLS exige is_diretoria() (migration 153)
   title:         string
   location:      string | null
   participants:  Array<{ user_id: string; role: ParticipantRole }>

@@ -2,7 +2,7 @@
 
 import { memo } from 'react'
 import { useRouter } from 'next/navigation'
-import { MapPin, CheckSquare, CalendarDays } from 'lucide-react'
+import { MapPin, CheckSquare, CalendarDays, Globe } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { cn, getInitials, getAvatarColor } from '@/lib/utils'
@@ -131,6 +131,13 @@ export const MeetingMinuteCard = memo(function MeetingMinuteCard({
 
           {/* ── Row 2: data e local ── */}
           <div className="flex flex-col gap-1">
+            {/* Rótulo "Geral" apenas para atas sem unidade (criadas pela diretoria) */}
+            {minute.unit_id == null && (
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Globe className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                <span>Geral · todas as unidades</span>
+              </div>
+            )}
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <CalendarDays className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
               <span title={relativeDate}>{formattedDate}</span>
