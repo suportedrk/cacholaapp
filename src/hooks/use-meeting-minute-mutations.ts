@@ -4,6 +4,11 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import type { MeetingMinuteFormData, ParticipantDraft, ActionItemDraft, ActionItemStatus, MeetingMinuteDetail, ParticipantRole } from '@/types/minutes'
+import {
+  combineSaoPauloDateTimeToISO,
+  todaySaoPaulo,
+  DEFAULT_MEETING_TIME,
+} from '@/lib/utils/meeting-datetime'
 
 // ─────────────────────────────────────────────────────────────
 // Helpers — typed wrappers around untyped tables
@@ -40,7 +45,8 @@ export function useCreateMeetingMinute() {
         .insert({
           unit_id,
           title:        form.title.trim(),
-          meeting_date: form.meeting_date,
+          // Combina dia + hora interpretados como São Paulo → instante ISO (UTC).
+          meeting_date: combineSaoPauloDateTimeToISO(form.meeting_date, form.meeting_time),
           location:     form.location.trim() || null,
           summary:      form.summary.trim()  || null,
           notes:        form.notes.trim()    || null,
@@ -140,7 +146,8 @@ export function useUpdateMeetingMinute() {
         .from('meeting_minutes')
         .update({
           title:        form.title.trim(),
-          meeting_date: form.meeting_date,
+          // Combina dia + hora interpretados como São Paulo → instante ISO (UTC).
+          meeting_date: combineSaoPauloDateTimeToISO(form.meeting_date, form.meeting_time),
           location:     form.location.trim() || null,
           summary:      form.summary.trim()  || null,
           notes:        form.notes.trim()    || null,
@@ -353,7 +360,8 @@ export function useDuplicateMeetingMinute() {
       const supabase = createClient()
       const d = db(supabase)
 
-      const today = new Date().toISOString().slice(0, 10)
+      // Hoje em São Paulo + horário padrão → instante ISO (UTC), via o helper central.
+      const meetingDateISO = combineSaoPauloDateTimeToISO(todaySaoPaulo(), DEFAULT_MEETING_TIME)
 
       // 1. Insert new meeting_minutes as draft
       const { data: newMinute, error: minuteErr } = await d
@@ -361,7 +369,7 @@ export function useDuplicateMeetingMinute() {
         .insert({
           unit_id:      unitId,
           title,
-          meeting_date: today,
+          meeting_date: meetingDateISO,
           location,
           summary:      null,
           notes:        null,

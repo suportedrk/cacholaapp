@@ -129,7 +129,8 @@ export interface ActionItemDraft {
 
 export interface MeetingMinuteFormData {
   title:        string
-  meeting_date: string           // YYYY-MM-DD
+  meeting_date: string           // YYYY-MM-DD (dia em São Paulo; combinado com meeting_time na gravação)
+  meeting_time: string           // HH:mm (horário em São Paulo)
   location:     string
   summary:      string
   notes:        string

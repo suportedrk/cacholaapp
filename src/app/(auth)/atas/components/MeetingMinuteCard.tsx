@@ -3,11 +3,12 @@
 import { memo } from 'react'
 import { useRouter } from 'next/navigation'
 import { MapPin, CheckSquare, CalendarDays } from 'lucide-react'
-import { format, formatDistanceToNow } from 'date-fns'
+import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { cn, getInitials, getAvatarColor } from '@/lib/utils'
 import { MEETING_STATUS_LABELS } from '@/types/minutes'
 import type { MeetingMinuteForList } from '@/types/minutes'
+import { formatSaoPauloDateTimeShort } from '@/lib/utils/meeting-datetime'
 
 // ─────────────────────────────────────────────────────────────
 // Status badge
@@ -83,9 +84,9 @@ export const MeetingMinuteCard = memo(function MeetingMinuteCard({
   const statusBadgeClass = STATUS_BADGE[minute.status] ?? 'badge-gray border'
   const statusLabel = MEETING_STATUS_LABELS[minute.status] ?? minute.status
 
-  const meetingDate = new Date(minute.meeting_date)
-  const formattedDate = format(meetingDate, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })
-  const relativeDate = formatDistanceToNow(meetingDate, { addSuffix: true, locale: ptBR })
+  // Mesmo dia + hora de São Paulo exibido no detalhe. Ex.: "08/06/2026 às 21:00".
+  const formattedDate = formatSaoPauloDateTimeShort(minute.meeting_date)
+  const relativeDate = formatDistanceToNow(new Date(minute.meeting_date), { addSuffix: true, locale: ptBR })
 
   const actionItems = minute.action_items ?? []
   const totalItems = actionItems.length

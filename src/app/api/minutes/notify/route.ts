@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { sendEmail } from '@/lib/email'
 import { tplMeetingMinuteNotification } from '@/lib/email-templates/meeting-minute-notification'
 import { requirePermissionApi } from '@/lib/auth/require-permission'
+import { formatSaoPauloDateTimeLong } from '@/lib/utils/meeting-datetime'
 
 /**
  * POST /api/minutes/notify
@@ -69,14 +70,9 @@ export async function POST(request: Request) {
 
     const creatorName = creator?.name ?? 'Um membro da equipe'
 
-    // 5. Format date for email (pt-BR)
-    const meetingDate = new Date(minute.meeting_date).toLocaleDateString('pt-BR', {
-      weekday: 'long',
-      day:     'numeric',
-      month:   'long',
-      year:    'numeric',
-      timeZone: 'America/Sao_Paulo',
-    })
+    // 5. Format date + time for email (horário de São Paulo)
+    //    Ex.: "segunda-feira, 8 de junho de 2026 às 21:00".
+    const meetingDate = formatSaoPauloDateTimeLong(minute.meeting_date)
 
     // 6. Count totals for summary card
     const participantCount = (participants ?? []).length

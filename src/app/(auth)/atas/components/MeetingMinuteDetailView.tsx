@@ -20,6 +20,7 @@ import { generateMeetingMinutePDF } from '@/lib/utils/meeting-minute-pdf'
 import { MEETING_STATUS_LABELS } from '@/types/minutes'
 import type { MeetingMinuteDetail } from '@/types/minutes'
 import { cn } from '@/lib/utils'
+import { formatSaoPauloDateTimeLong } from '@/lib/utils/meeting-datetime'
 
 interface MeetingMinuteDetailViewProps {
   minute:        MeetingMinuteDetail
@@ -51,12 +52,9 @@ export function MeetingMinuteDetailView({
   const [isExporting,  setIsExporting]  = useState(false)
   const [isDuplicating, setIsDuplicating] = useState(false)
 
-  const meetingDate = new Date(minute.meeting_date).toLocaleDateString('pt-BR', {
-    weekday: 'long',
-    day:     'numeric',
-    month:   'long',
-    year:    'numeric',
-  })
+  // Dia + hora em horário de São Paulo (fixo, independe do fuso da máquina).
+  // Ex.: "segunda-feira, 8 de junho de 2026 às 21:00".
+  const meetingDate = formatSaoPauloDateTimeLong(minute.meeting_date)
 
   const createdAt = new Date(minute.created_at).toLocaleDateString('pt-BR', {
     day: 'numeric', month: 'short', year: 'numeric',
