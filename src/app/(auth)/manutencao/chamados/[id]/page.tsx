@@ -22,6 +22,7 @@ import {
   Phone,
   MessageCircle,
   ImagePlus,
+  User,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -29,6 +30,7 @@ import {
   useTicket,
   useUpdateTicketStatus,
   useUpdateTicketEquipment,
+  useUpdateTicketAssignee,
   useAddExecution,
   useUploadTicketPhoto,
   useApproveCost,
@@ -38,6 +40,7 @@ import { useEquipment } from '@/hooks/use-equipment'
 import { useSignedUrls } from '@/hooks/use-signed-urls'
 import { useProviders } from '@/hooks/use-providers'
 import { useMaintenanceExecutorOptions } from '@/hooks/use-maintenance-executors'
+import { UserAvatar } from '@/components/shared/user-avatar'
 import { useAuth } from '@/hooks/use-auth'
 import { URGENCY_CONFIG, NATURE_CONFIG, STATUS_CONFIG } from '@/components/features/maintenance/ticket-card'
 import { useLoadingTimeout } from '@/hooks/use-loading-timeout'
@@ -215,6 +218,107 @@ function EquipmentRow({
               onClick={() => setEditing(true)}
               className="text-muted-foreground hover:text-foreground transition-colors ml-auto shrink-0"
               aria-label="Editar equipamento"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────
+// AssigneeRow — edição inline do Responsável pelo chamado (dono/gestor)
+// ─────────────────────────────────────────────────────────────
+function AssigneeRow({
+  ticketId,
+  ticketUnitId,
+  currentAssignee,
+  canEdit,
+}: {
+  ticketId: string
+  ticketUnitId: string
+  currentAssignee: { id: string; name: string; avatar_url: string | null } | null
+  canEdit: boolean
+}) {
+  const [editing, setEditing] = useState(false)
+  const [selected, setSelected] = useState(currentAssignee?.id ?? '')
+
+  // Candidatos = equipe de manutenção da unidade do TICKET (RPC gated por
+  // manutencao 'edit' + check_permission view + escopo de unidade).
+  const { data: assignees = [] } = useMaintenanceExecutorOptions(ticketUnitId)
+  const { mutate: updateAssignee, isPending } = useUpdateTicketAssignee()
+
+  function handleConfirm() {
+    updateAssignee(
+      { id: ticketId, assigneeId: selected || null },
+      { onSuccess: () => setEditing(false) }
+    )
+  }
+
+  function handleCancel() {
+    setSelected(currentAssignee?.id ?? '')
+    setEditing(false)
+  }
+
+  if (editing) {
+    return (
+      <div className="flex items-start gap-3 py-2.5 border-b border-border last:border-0">
+        <User className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0" />
+        <div className="flex-1 min-w-0 space-y-2">
+          <p className="text-xs text-muted-foreground">Responsável pelo chamado</p>
+          <select
+            value={selected}
+            onChange={(e) => setSelected(e.target.value)}
+            className="w-full h-9 rounded-lg border border-border bg-background px-3 text-sm focus:outline-none focus:border-border-focus transition-colors"
+            autoFocus
+          >
+            <option value="">Sem responsável</option>
+            {assignees.map((u) => (
+              <option key={u.id} value={u.id}>{u.name}</option>
+            ))}
+          </select>
+          <div className="flex gap-2">
+            <button
+              onClick={handleConfirm}
+              disabled={isPending}
+              className="h-7 px-3 rounded-md bg-primary text-primary-foreground text-xs font-medium disabled:opacity-50 hover:bg-interactive-primary-hover transition-colors"
+            >
+              {isPending ? 'Salvando...' : 'Confirmar'}
+            </button>
+            <button
+              onClick={handleCancel}
+              disabled={isPending}
+              className="h-7 px-3 rounded-md border border-border text-xs text-muted-foreground hover:bg-muted transition-colors"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex items-start gap-3 py-2.5 border-b border-border last:border-0">
+      <User className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0" />
+      <div className="min-w-0 flex-1">
+        <p className="text-xs text-muted-foreground">Responsável pelo chamado</p>
+        <div className="flex items-center gap-2 mt-0.5">
+          {currentAssignee ? (
+            <div className="flex items-center gap-2 min-w-0">
+              <UserAvatar name={currentAssignee.name} avatarUrl={currentAssignee.avatar_url} size="sm" />
+              <p className="text-sm font-medium text-foreground truncate">{currentAssignee.name}</p>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">Sem responsável</p>
+          )}
+          {canEdit && (
+            <button
+              onClick={() => setEditing(true)}
+              className="text-muted-foreground hover:text-foreground transition-colors ml-auto shrink-0"
+              aria-label="Editar responsável pelo chamado"
             >
               <Pencil className="w-3.5 h-3.5" />
             </button>
@@ -1001,6 +1105,14 @@ export default function ChamadoDetailPage() {
 
   const nextStatuses = STATUS_TRANSITIONS[typedTicket.status] ?? []
 
+  // Carimbo "Aberto em": data/hora + nome do solicitante (opened_by), quando resolvido.
+  const openedStamp = (() => {
+    const when = formatDate(typedTicket.created_at)
+    if (!when) return undefined
+    const who = typedTicket.opened_by_user?.name
+    return who ? `${when} · por ${who}` : when
+  })()
+
   return (
     <div className="space-y-5 pb-8">
       {/* Back button */}
@@ -1063,8 +1175,14 @@ export default function ChamadoDetailPage() {
           currentEquipment={typedTicket.equipment ?? null}
           canEdit={canEdit}
         />
+        <AssigneeRow
+          ticketId={typedTicket.id}
+          ticketUnitId={typedTicket.unit_id}
+          currentAssignee={typedTicket.assigned_to_user ?? null}
+          canEdit={canEdit}
+        />
         <InfoRow icon={Calendar} label="Prazo"       value={formatDate(typedTicket.due_at) ?? undefined} />
-        <InfoRow icon={Clock}    label="Aberto em"   value={formatDate(typedTicket.created_at) ?? undefined} />
+        <InfoRow icon={Clock}    label="Aberto em"   value={openedStamp} />
         {typedTicket.concluded_at && (
           <InfoRow icon={CheckCircle2} label="Concluído em" value={formatDate(typedTicket.concluded_at) ?? undefined} />
         )}

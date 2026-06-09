@@ -290,6 +290,9 @@ export type MaintenanceTicket = {
   opened_by: string
   created_by_user_id?: string | null
   concluded_by_user_id?: string | null
+  // Responsável pelo chamado (dono/gestor) — migration 155. Distinto de opened_by,
+  // created_by_user_id e do executor em maintenance_executions. Nullable.
+  assigned_to_user_id?: string | null
   resolution_notes?: string | null
   equipment_id?: string | null
   total_cost: number
@@ -387,6 +390,9 @@ export type MaintenanceStatusHistory = {
 export type MaintenanceTicketForList = MaintenanceTicket & {
   sector:   Pick<Sector, 'id' | 'name'> | null
   category: Pick<MaintenanceCategory, 'id' | 'name' | 'color' | 'icon'> | null
+  // Responsável pelo chamado (migration 155). Tipo declarado aqui para a Fase B
+  // (cartões/listagem) — o SELECT da listagem ainda NÃO traz este join.
+  assigned_to_user?: Pick<User, 'id' | 'name' | 'avatar_url'> | null
   executions_count?: number
 }
 
@@ -396,6 +402,10 @@ export type MaintenanceTicketWithDetails = MaintenanceTicket & {
   category:  Pick<MaintenanceCategory, 'id' | 'name' | 'color' | 'icon'> | null
   equipment: Pick<Equipment, 'id' | 'name' | 'category'> | null
   concluded_by_user: { id: string; name: string } | null
+  // Solicitante (opened_by) resolvido — usado no carimbo "Aberto em" do detalhe.
+  opened_by_user: { id: string; name: string } | null
+  // Responsável pelo chamado (dono/gestor) — migration 155.
+  assigned_to_user: Pick<User, 'id' | 'name' | 'avatar_url'> | null
   executions: (MaintenanceExecution & {
     internal_user: Pick<User, 'id' | 'name' | 'avatar_url'> | null
     provider:      { id: string; name: string } | null

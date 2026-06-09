@@ -33,6 +33,8 @@ const TICKET_DETAIL_SELECT = `
   category:maintenance_categories!category_id(id, name, color, icon),
   equipment:equipment!equipment_id(id, name, category),
   concluded_by_user:users!concluded_by_user_id(id, name),
+  opened_by_user:users!opened_by(id, name),
+  assigned_to_user:users!assigned_to_user_id(id, name, avatar_url),
   executions:maintenance_executions!ticket_id(
     *,
     internal_user:users!internal_user_id(id, name, avatar_url),
@@ -160,6 +162,9 @@ export type TicketInsert = Pick<
   // created_by_user_id (criador real) NÃO é enviado pelo client — trigger BEFORE
   // INSERT no banco força auth.uid() (Migration 136).
   opened_by?:      string
+  // Responsável pelo chamado (dono/gestor) — opcional, designável na abertura
+  // ou depois na triagem (Migration 155). Gated por manutencao 'edit' na RLS.
+  assigned_to_user_id?: string | null
 }
 
 export function useCreateTicket(onSuccess?: (ticket: MaintenanceTicket) => void) {
@@ -295,6 +300,33 @@ export function useUpdateTicketEquipment() {
       toast.success('Equipamento atualizado')
     },
     onError: (err) => toast.error(mapPgError(err, {}, 'TICKET_EQUIPMENT_UPDATE')),
+  })
+}
+
+// ─────────────────────────────────────────────────────────────
+// ATUALIZAR RESPONSÁVEL PELO CHAMADO (dono/gestor)
+// ─────────────────────────────────────────────────────────────
+// Designar/trocar o responsável é uma edição do chamado, já gated por
+// manutencao 'edit' na RLS de UPDATE. Mutation focada (não há update genérico
+// do ticket), espelhando useUpdateTicketEquipment. assigneeId=null limpa.
+export function useUpdateTicketAssignee() {
+  const qc = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ id, assigneeId }: { id: string; assigneeId: string | null }) => {
+      const supabase = createClient()
+      const { error } = await supabase
+        .from('maintenance_tickets')
+        .update({ assigned_to_user_id: assigneeId })
+        .eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: (_, { id }) => {
+      qc.invalidateQueries({ queryKey: ['ticket', id] })
+      qc.invalidateQueries({ queryKey: ['tickets'] })
+      toast.success('Responsável atualizado')
+    },
+    onError: (err) => toast.error(mapPgError(err, {}, 'TICKET_ASSIGNEE_UPDATE')),
   })
 }
 
