@@ -55,6 +55,10 @@ Os mandamentos do Cachola para banco/infra. Cada um foi pago com sangue ou tempo
 
 11. **Antes de modificar qualquer RPC, consultar `references/rpc-data-source-mapping.md`** para verificar se a função tem gêmeas servindo o mesmo módulo que precisam ser alteradas em conjunto. Ignorar isso causa inconsistência visual (badge ≠ lista), como ocorreu na entrega 081 e foi corrigido na 082.
 
+## Contador e lista da mesma coisa = uma fonte de verdade só
+
+Quando uma tela mostra um CONTADOR (badge/chip) e uma LISTA dos mesmos itens vindos de superfícies SQL diferentes (ex.: um RPC que conta e uma view/query que lista), as duas TÊM que usar predicados idênticos — mesma resolução de unidade, mesma janela de datas, mesmos filtros de status/stage. Se divergirem, dá "conta X, mostra Y" e o usuário vê um alerta sem conseguir agir nele. Caso real (jun/2026, módulo Eventos): o chip "Conflito de horário" contava 4 e a tela mostrava 3 porque `get_pre_reserva_conflicts` e `pre_reservas_ploomes_view` resolviam a unidade de um deal de formas diferentes (migration 154).
+
 ## Anti-padrões (NUNCA fazer)
 
 - ❌ Editar migration já em produção. Sempre criar nova.
