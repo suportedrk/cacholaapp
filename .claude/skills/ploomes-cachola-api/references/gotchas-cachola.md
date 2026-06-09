@@ -157,6 +157,27 @@ O endpoint `/Users` **não** expõe o campo `Active`. Pedir `GET /Users?$select=
 
 **Descoberto** jun/2026 no QA da feature "Sincronizar vendedoras do Ploomes". Confirma também que o `Id` do usuário em `/Users` é o mesmo número usado como `OwnerId` em deals/orders (base da ligação com a tabela `sellers`). Atenção: `/Users` ativos incluem **contas de integração** (Automação, Clicksign, Forms, WhatsApp, Neppo, etc.) — ao popular `sellers`, essas entram como ativas e devem ser marcadas como `is_system_account`/inativas manualmente.
 
+### 20. Unidade de festa: SEMPRE `COALESCE(Order, deal)`, nunca `ploomes_deals.unit_id` cru
+
+A unidade real de uma festa **não** é `ploomes_deals.unit_id`. É `COALESCE(chosen_unit_id da Order mais recente do deal, ploomes_deals.unit_id)` — a Order vence (mesma regra de `events.unit_id`). O `ploomes_deals.unit_id` é só um fallback e frequentemente diverge da unidade escolhida pelo cliente.
+
+Consequência: QUALQUER view, função ou query que filtre/agrupe `ploomes_deals` por unidade tem que usar essa resolução, nunca o campo cru. Se uma superfície usa o cru e outra o canônico, elas discordam sobre a unidade da mesma festa.
+
+**Como sangramos** (jun/2026): a `pre_reservas_ploomes_view` usava o canônico e classificava a pré-reserva OLÍVIA em Moema; `get_pre_reserva_conflicts` usava o cru e a classificava em Pinheiros, gerando um conflito FALSO com a festa AURORA (Pinheiros) — salões diferentes. Inflava o contador de sobreposição e marcava a AURORA com badge sem par visível. Corrigido na **migration 154** alinhando a função à mesma resolução da view.
+
+**Padrão de resolução:**
+```sql
+COALESCE(
+  (SELECT o.chosen_unit_id
+     FROM ploomes_orders o
+    WHERE o.deal_id = pd.ploomes_deal_id
+      AND o.chosen_unit_id IS NOT NULL
+    ORDER BY o.created_at DESC
+    LIMIT 1),
+  pd.unit_id
+)
+```
+
 ## Como adicionar um novo gotcha aqui
 
 Quando descobrir comportamento divergente do Ploomes:
