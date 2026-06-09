@@ -2,12 +2,13 @@
 
 import { memo } from 'react'
 import { useRouter } from 'next/navigation'
-import { MapPin, CheckSquare, CalendarDays } from 'lucide-react'
-import { format, formatDistanceToNow } from 'date-fns'
+import { MapPin, CheckSquare, CalendarDays, Globe } from 'lucide-react'
+import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { cn, getInitials, getAvatarColor } from '@/lib/utils'
 import { MEETING_STATUS_LABELS } from '@/types/minutes'
 import type { MeetingMinuteForList } from '@/types/minutes'
+import { formatSaoPauloDateTimeShort } from '@/lib/utils/meeting-datetime'
 
 // ─────────────────────────────────────────────────────────────
 // Status badge
@@ -83,9 +84,9 @@ export const MeetingMinuteCard = memo(function MeetingMinuteCard({
   const statusBadgeClass = STATUS_BADGE[minute.status] ?? 'badge-gray border'
   const statusLabel = MEETING_STATUS_LABELS[minute.status] ?? minute.status
 
-  const meetingDate = new Date(minute.meeting_date)
-  const formattedDate = format(meetingDate, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })
-  const relativeDate = formatDistanceToNow(meetingDate, { addSuffix: true, locale: ptBR })
+  // Mesmo dia + hora de São Paulo exibido no detalhe. Ex.: "08/06/2026 às 21:00".
+  const formattedDate = formatSaoPauloDateTimeShort(minute.meeting_date)
+  const relativeDate = formatDistanceToNow(new Date(minute.meeting_date), { addSuffix: true, locale: ptBR })
 
   const actionItems = minute.action_items ?? []
   const totalItems = actionItems.length
@@ -130,6 +131,13 @@ export const MeetingMinuteCard = memo(function MeetingMinuteCard({
 
           {/* ── Row 2: data e local ── */}
           <div className="flex flex-col gap-1">
+            {/* Rótulo "Geral" apenas para atas sem unidade (criadas pela diretoria) */}
+            {minute.unit_id == null && (
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Globe className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                <span>Geral · todas as unidades</span>
+              </div>
+            )}
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <CalendarDays className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
               <span title={relativeDate}>{formattedDate}</span>

@@ -6,11 +6,12 @@ import { useMeetingMinutes } from '@/hooks/use-meeting-minutes'
 import { useMeetingMinutesFiltersStore } from '@/stores/meeting-minutes-filters-store'
 import { useLoadingTimeout } from '@/hooks/use-loading-timeout'
 import { useAuthReadyStore } from '@/stores/auth-store'
+import { useAtasPermissions } from '@/hooks/use-atas-permissions'
 import { MeetingMinuteCard } from './components/MeetingMinuteCard'
 import { MeetingMinuteCardSkeleton } from './components/MeetingMinuteCardSkeleton'
 import { MeetingMinutesFiltersBar } from './components/MeetingMinutesFilters'
 import { MeetingMinutesEmptyState } from './components/MeetingMinutesEmptyState'
-import { ATAS_MANAGE_ROLES, hasRole } from '@/config/roles'
+import { DIRETORIA_ROLES, hasRole } from '@/config/roles'
 
 export default function AtasPage() {
   const router = useRouter()
@@ -32,7 +33,10 @@ export default function AtasPage() {
 
   const { isTimedOut, retry } = useLoadingTimeout(isLoading)
 
-  const showOnlyMine = hasRole(profile?.role, ATAS_MANAGE_ROLES)
+  const perms = useAtasPermissions()
+  // Só a diretoria vê mais que as próprias atas — então só para ela o filtro
+  // "Minhas atas" faz sentido (demais cargos já veem apenas as suas via RLS).
+  const showOnlyMine = hasRole(profile?.role, DIRETORIA_ROLES)
 
   // ── Handlers ───────────────────────────────────────────────
   function handleCreate() {
@@ -50,14 +54,17 @@ export default function AtasPage() {
             Registre e acompanhe as atas e itens de ação das reuniões
           </p>
         </div>
-        <button
-          onClick={handleCreate}
-          className="shrink-0 inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 active:scale-[0.98] transition-all"
-        >
-          <Plus className="w-4 h-4" aria-hidden="true" />
-          <span className="hidden sm:inline">Nova Ata</span>
-          <span className="sm:hidden">Nova</span>
-        </button>
+        {/* Botão só aparece após a permissão resolver (evita flicker) */}
+        {!perms.isLoading && perms.canCreate && (
+          <button
+            onClick={handleCreate}
+            className="shrink-0 inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 active:scale-[0.98] transition-all"
+          >
+            <Plus className="w-4 h-4" aria-hidden="true" />
+            <span className="hidden sm:inline">Nova Ata</span>
+            <span className="sm:hidden">Nova</span>
+          </button>
+        )}
       </div>
 
       {/* ── Filters ───────────────────────────────────────── */}

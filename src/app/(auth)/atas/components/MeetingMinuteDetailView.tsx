@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
   ArrowLeft, MoreHorizontal, Pencil, Trash2,
-  Calendar, MapPin, User, FileDown, Copy, Loader2,
+  Calendar, MapPin, User, FileDown, Copy, Loader2, Globe,
 } from 'lucide-react'
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
@@ -20,14 +20,15 @@ import { generateMeetingMinutePDF } from '@/lib/utils/meeting-minute-pdf'
 import { MEETING_STATUS_LABELS } from '@/types/minutes'
 import type { MeetingMinuteDetail } from '@/types/minutes'
 import { cn } from '@/lib/utils'
+import { formatSaoPauloDateTimeLong } from '@/lib/utils/meeting-datetime'
 
 interface MeetingMinuteDetailViewProps {
   minute:        MeetingMinuteDetail
   currentUserId: string
   canEdit:       boolean
   canDelete:     boolean
-  canCreate:     boolean
-  isElevated:    boolean
+  canDuplicate:  boolean
+  canManage:     boolean
 }
 
 const statusBadgeClass: Record<string, string> = {
@@ -40,8 +41,8 @@ export function MeetingMinuteDetailView({
   currentUserId,
   canEdit,
   canDelete,
-  canCreate,
-  isElevated,
+  canDuplicate,
+  canManage,
 }: MeetingMinuteDetailViewProps) {
   const router         = useRouter()
   const deleteMinute   = useDeleteMeetingMinute()
@@ -51,12 +52,9 @@ export function MeetingMinuteDetailView({
   const [isExporting,  setIsExporting]  = useState(false)
   const [isDuplicating, setIsDuplicating] = useState(false)
 
-  const meetingDate = new Date(minute.meeting_date).toLocaleDateString('pt-BR', {
-    weekday: 'long',
-    day:     'numeric',
-    month:   'long',
-    year:    'numeric',
-  })
+  // Dia + hora em horário de São Paulo (fixo, independe do fuso da máquina).
+  // Ex.: "segunda-feira, 8 de junho de 2026 às 21:00".
+  const meetingDate = formatSaoPauloDateTimeLong(minute.meeting_date)
 
   const createdAt = new Date(minute.created_at).toLocaleDateString('pt-BR', {
     day: 'numeric', month: 'short', year: 'numeric',
@@ -123,6 +121,13 @@ export function MeetingMinuteDetailView({
               <Calendar className="w-4 h-4 shrink-0" />
               {meetingDate}
             </span>
+            {/* Rótulo "Geral" apenas para atas sem unidade (criadas pela diretoria) */}
+            {minute.unit_id == null && (
+              <span className="flex items-center gap-1.5">
+                <Globe className="w-4 h-4 shrink-0" />
+                Geral · todas as unidades
+              </span>
+            )}
             {minute.location && (
               <span className="flex items-center gap-1.5">
                 <MapPin className="w-4 h-4 shrink-0" />
@@ -170,7 +175,7 @@ export function MeetingMinuteDetailView({
               {isExporting ? 'Gerando PDF…' : 'Exportar PDF'}
             </DropdownMenuItem>
 
-            {canCreate && (
+            {canDuplicate && (
               <DropdownMenuItem
                 onClick={handleDuplicate}
                 disabled={isDuplicating}
@@ -234,7 +239,7 @@ export function MeetingMinuteDetailView({
           items={minute.action_items}
           meetingId={minute.id}
           currentUserId={currentUserId}
-          canToggleAll={isElevated || minute.created_by === currentUserId}
+          canToggleAll={canManage}
         />
       </section>
 

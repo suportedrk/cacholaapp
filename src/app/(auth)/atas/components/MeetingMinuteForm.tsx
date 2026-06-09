@@ -18,6 +18,12 @@ import type {
 import { ParticipantSelector } from './ParticipantSelector'
 import { ActionItemsEditor } from './ActionItemsEditor'
 import { DiscardChangesDialog } from './DiscardChangesDialog'
+import {
+  extractSaoPauloDate,
+  extractSaoPauloTime,
+  todaySaoPaulo,
+  DEFAULT_MEETING_TIME,
+} from '@/lib/utils/meeting-datetime'
 
 // ─────────────────────────────────────────────────────────────
 // Types
@@ -52,7 +58,10 @@ function buildInitialForm(
   if (minute) {
     return {
       title:        minute.title,
-      meeting_date: minute.meeting_date.slice(0, 10),
+      // Converte o instante armazenado para dia + hora de São Paulo (NUNCA slice(0,10)
+      // cru, que pega a parte UTC e erra o dia/hora ao cruzar a meia-noite).
+      meeting_date: extractSaoPauloDate(minute.meeting_date),
+      meeting_time: extractSaoPauloTime(minute.meeting_date),
       location:     minute.location ?? '',
       summary:      minute.summary  ?? '',
       notes:        minute.notes    ?? '',
@@ -73,11 +82,11 @@ function buildInitialForm(
     }
   }
 
-  // Create mode — today's date, current user as organizer
-  const today = new Date().toISOString().slice(0, 10)
+  // Create mode — hoje em São Paulo + horário padrão, current user as organizer
   return {
     title:        '',
-    meeting_date: today,
+    meeting_date: todaySaoPaulo(),
+    meeting_time: DEFAULT_MEETING_TIME,
     location:     '',
     summary:      '',
     notes:        '',
@@ -102,6 +111,7 @@ function formKey(form: MeetingMinuteFormData): string {
 interface FormErrors {
   title?:        string
   meeting_date?: string
+  meeting_time?: string
   action_items?: string
 }
 
@@ -109,6 +119,7 @@ function validate(form: MeetingMinuteFormData): FormErrors {
   const errs: FormErrors = {}
   if (!form.title.trim())        errs.title        = 'Título é obrigatório.'
   if (!form.meeting_date)        errs.meeting_date  = 'Data da reunião é obrigatória.'
+  if (!form.meeting_time)        errs.meeting_time  = 'Horário é obrigatório.'
   const emptyItem = form.action_items.find((a) => !a.description.trim())
   if (emptyItem) errs.action_items = 'Todos os itens de ação precisam de uma descrição.'
   return errs
@@ -253,7 +264,7 @@ export function MeetingMinuteForm({
             )}
           </div>
 
-          {/* Date + Location */}
+          {/* Date + Time */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label htmlFor="minute-date" className="block text-sm font-medium text-foreground mb-1">
@@ -278,23 +289,46 @@ export function MeetingMinuteForm({
             </div>
 
             <div>
-              <label htmlFor="minute-location" className="block text-sm font-medium text-foreground mb-1">
-                Local
+              <label htmlFor="minute-time" className="block text-sm font-medium text-foreground mb-1">
+                Horário <span className="text-destructive">*</span>
               </label>
               <input
-                id="minute-location"
-                type="text"
-                value={form.location}
-                onChange={(e) => setField('location', e.target.value)}
-                placeholder="Ex.: Sala de reuniões"
+                id="minute-time"
+                type="time"
+                value={form.meeting_time}
+                onChange={(e) => setField('meeting_time', e.target.value)}
                 className={cn(
-                  'w-full h-10 px-3 rounded-lg border border-border bg-background',
-                  'text-sm text-foreground placeholder:text-muted-foreground',
+                  'w-full h-10 px-3 rounded-lg border bg-background',
+                  'text-sm text-foreground',
                   'focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary',
                   'transition-colors',
+                  errors.meeting_time ? 'border-destructive' : 'border-border',
                 )}
               />
+              {errors.meeting_time && (
+                <p className="mt-1 text-xs text-destructive">{errors.meeting_time}</p>
+              )}
             </div>
+          </div>
+
+          {/* Location */}
+          <div>
+            <label htmlFor="minute-location" className="block text-sm font-medium text-foreground mb-1">
+              Local
+            </label>
+            <input
+              id="minute-location"
+              type="text"
+              value={form.location}
+              onChange={(e) => setField('location', e.target.value)}
+              placeholder="Ex.: Sala de reuniões"
+              className={cn(
+                'w-full h-10 px-3 rounded-lg border border-border bg-background',
+                'text-sm text-foreground placeholder:text-muted-foreground',
+                'focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary',
+                'transition-colors',
+              )}
+            />
           </div>
 
           {/* Summary */}

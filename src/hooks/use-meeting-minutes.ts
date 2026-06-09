@@ -48,7 +48,10 @@ export function useMeetingMinutes(filters?: Partial<MeetingMinutesFilters>) {
         .select(MINUTES_LIST_SELECT)
         .order('meeting_date', { ascending: false })
 
-      if (activeUnitId) query = query.eq('unit_id', activeUnitId)
+      // Inclui atas da unidade ativa E atas globais (unit_id NULL, criadas pela diretoria).
+      if (activeUnitId) {
+        query = query.or(`unit_id.eq.${activeUnitId},unit_id.is.null`)
+      }
 
       // Status filter
       if (filters?.status && filters.status !== 'all') {

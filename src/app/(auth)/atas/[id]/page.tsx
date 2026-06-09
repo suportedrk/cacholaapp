@@ -3,7 +3,8 @@
 import { useParams, useRouter } from 'next/navigation'
 import { useAuthReadyStore } from '@/stores/auth-store'
 import { useMeetingMinuteDetail } from '@/hooks/use-meeting-minute-detail'
-import { ATAS_MANAGE_ROLES, hasRole } from '@/config/roles'
+import { useAtasPermissions } from '@/hooks/use-atas-permissions'
+import { DIRETORIA_ROLES, hasRole } from '@/config/roles'
 import { MeetingMinuteDetailView } from '../components/MeetingMinuteDetailView'
 
 export default function AtaDetailPage() {
@@ -20,7 +21,9 @@ export default function AtaDetailPage() {
     isError,
   } = useMeetingMinuteDetail(id)
 
-  if (isLoading) {
+  const perms = useAtasPermissions()
+
+  if (isLoading || perms.isLoading) {
     return (
       <div className="flex items-center justify-center py-24">
         <span className="text-sm text-muted-foreground">Carregando ata…</span>
@@ -46,11 +49,14 @@ export default function AtaDetailPage() {
 
   if (!user || !profile) return null
 
-  const isElevated = hasRole(profile.role, ATAS_MANAGE_ROLES)
-  const isCreator  = minute.created_by === user.id
-  const canEdit    = isElevated || isCreator
-  const canDelete  = isElevated || isCreator
-  const canCreate  = isElevated
+  const isDiretoria  = hasRole(profile.role, DIRETORIA_ROLES)
+  const isCreator    = minute.created_by === user.id
+  const isGeneral    = minute.unit_id == null
+  const canEdit      = perms.canEdit   && (isDiretoria || !isGeneral)
+  const canDelete    = perms.canDelete && (isCreator || isDiretoria)
+  // Duplicar gera nova ata; ata geral só pode ser criada pela diretoria.
+  const canDuplicate = perms.canCreate && (isDiretoria || !isGeneral)
+  const canManage    = canEdit
 
   return (
     <MeetingMinuteDetailView
@@ -58,8 +64,8 @@ export default function AtaDetailPage() {
       currentUserId={user.id}
       canEdit={canEdit}
       canDelete={canDelete}
-      canCreate={canCreate}
-      isElevated={isElevated}
+      canDuplicate={canDuplicate}
+      canManage={canManage}
     />
   )
 }

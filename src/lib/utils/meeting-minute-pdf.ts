@@ -6,6 +6,7 @@
 
 import { PARTICIPANT_ROLE_LABELS, ACTION_ITEM_STATUS_LABELS } from '@/types/minutes'
 import type { MeetingMinuteDetail } from '@/types/minutes'
+import { formatSaoPauloDateTimeLong } from '@/lib/utils/meeting-datetime'
 
 // ─────────────────────────────────────────────────────────────
 // COLORS
@@ -117,9 +118,9 @@ export async function generateMeetingMinutePDF(minute: MeetingMinuteDetail): Pro
 
   y = drawSection(y, 'INFORMA\u00c7\u00d5ES GERAIS')
 
-  const meetingDate = parseDateOnly(minute.meeting_date).toLocaleDateString('pt-BR', {
-    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
-  })
+  // Usa o helper central para extrair dia + hora em horário de São Paulo (offset fixo -03:00).
+  // Ex.: "segunda-feira, 8 de junho de 2026 às 21:00"
+  const meetingDate = formatSaoPauloDateTimeLong(minute.meeting_date)
 
   const infoRows: [string, string][] = [
     ['Data',     meetingDate],

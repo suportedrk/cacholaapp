@@ -5,10 +5,12 @@ import { useRouter, useParams } from 'next/navigation'
 import { useAuthReadyStore } from '@/stores/auth-store'
 import { useUnitStore } from '@/stores/unit-store'
 import { useUnitUsers } from '@/hooks/use-units'
+import { useUsers } from '@/hooks/use-users'
 import { useMeetingMinuteDetail } from '@/hooks/use-meeting-minute-detail'
 import { useUpdateMeetingMinute } from '@/hooks/use-meeting-minute-mutations'
+import { useAtasPermissions } from '@/hooks/use-atas-permissions'
 import { MeetingMinuteForm, buildOriginalLists } from '../../components/MeetingMinuteForm'
-import { ATAS_MANAGE_ROLES, hasRole } from '@/config/roles'
+import { DIRETORIA_ROLES, hasRole } from '@/config/roles'
 import type { MeetingMinuteFormData } from '@/types/minutes'
 
 export default function EditarAtaPage() {
@@ -35,18 +37,31 @@ export default function EditarAtaPage() {
     is_active:  u.user.is_active,
   }))
 
+  // Ata geral (unit_id null): participantes podem ser das duas unidades, então
+  // a lista precisa abranger ambas — senão o ParticipantSelector não encontra o
+  // colaborador da outra unidade e o chip some. Só a diretoria chega aqui (gate abaixo).
+  const { data: allActiveUsers = [] } = useUsers({ isActive: true })
+  const globalUsers = allActiveUsers.map((u) => ({
+    id:         u.id,
+    name:       u.name,
+    avatar_url: u.avatar_url,
+    is_active:  u.is_active,
+  }))
+
+  const formUsers = minute && minute.unit_id == null ? globalUsers : unitUsers
+
   // ── Permission gate ────────────────────────────────────────
-  // Redirect if user doesn't have edit rights:
-  //  - elevated role (super_admin/diretor/gerente) OR
-  //  - is the creator of the minute
+  // Pode editar se: permissão de edit + (diretoria OU a ata não é geral).
+  // Espera a permissão E a ata carregarem antes de decidir o redirect.
+  const perms = useAtasPermissions()
   useEffect(() => {
-    if (!profile || !user || !minute) return
-    const isElevated = hasRole(profile.role, ATAS_MANAGE_ROLES)
-    const isCreator  = minute.created_by === user.id
-    if (!isElevated && !isCreator) {
+    if (perms.isLoading || isLoading || !minute || !profile) return
+    const isDiretoria = hasRole(profile.role, DIRETORIA_ROLES)
+    const canEdit = perms.canEdit && (isDiretoria || minute.unit_id != null)
+    if (!canEdit) {
       router.replace('/atas')
     }
-  }, [profile, user, minute, router])
+  }, [perms.isLoading, perms.canEdit, isLoading, minute, profile, router])
 
   // ── Mutation ───────────────────────────────────────────────
   const updateMinute = useUpdateMeetingMinute()
@@ -65,7 +80,7 @@ export default function EditarAtaPage() {
   }
 
   // ── Render ─────────────────────────────────────────────────
-  if (isLoading) {
+  if (isLoading || perms.isLoading) {
     return (
       <div className="flex items-center justify-center py-24">
         <span className="text-sm text-muted-foreground">Carregando ata…</span>
@@ -94,7 +109,7 @@ export default function EditarAtaPage() {
   return (
     <MeetingMinuteForm
       minute={minute}
-      unitUsers={unitUsers}
+      unitUsers={formUsers}
       currentUserId={user.id}
       isEditMode={true}
       isSaving={updateMinute.isPending}
