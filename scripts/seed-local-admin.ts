@@ -117,9 +117,9 @@ async function main() {
     for (let i = 0; i < units.length; i++) {
       const unit = units[i];
       psql(
-        `INSERT INTO public.user_units (user_id, unit_id, role, is_default) ` +
-        `VALUES ('${userId}', '${unit.id}', 'super_admin', ${i === 0}) ` +
-        `ON CONFLICT (user_id, unit_id) DO UPDATE SET role = 'super_admin'`
+        `INSERT INTO public.user_units (user_id, unit_id, is_default) ` +
+        `VALUES ('${userId}', '${unit.id}', ${i === 0}) ` +
+        `ON CONFLICT (user_id, unit_id) DO NOTHING`
       );
       console.log(`   ✅ Associado: ${unit.name}${i === 0 ? ' (default)' : ''}`);
     }
