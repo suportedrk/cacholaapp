@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation'
 import {
   MapPin, Tag, Calendar, Layers, AlertTriangle,
   Clock, CheckCircle2, XCircle, Wrench, MoreVertical,
-  ExternalLink,
+  ExternalLink, UserCheck, Building2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
@@ -17,8 +17,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { UserAvatar } from '@/components/shared/user-avatar'
 import { useUpdateTicketStatus } from '@/hooks/use-tickets'
-import type { MaintenanceTicketForList, TicketStatus } from '@/types/database.types'
+import type { MaintenanceTicketForList, ExecutionForList, TicketStatus } from '@/types/database.types'
+import type { MaintenancePeopleMap } from '@/hooks/use-maintenance-people'
 
 // ─────────────────────────────────────────────────────────────
 // BADGE CONFIGS
@@ -51,15 +53,24 @@ const STATUS_TRANSITIONS: Partial<Record<TicketStatus, TicketStatus[]>> = {
   waiting_part: ['in_progress', 'concluded', 'cancelled'],
 }
 
+// Retorna a execução mais recente (a "corrente") por created_at.
+export function getActiveExecution(executions: ExecutionForList[]): ExecutionForList | null {
+  if (!executions.length) return null
+  return executions.reduce((latest, e) =>
+    e.created_at > latest.created_at ? e : latest,
+  )
+}
+
 // ─────────────────────────────────────────────────────────────
 // TICKET CARD
 // ─────────────────────────────────────────────────────────────
 interface TicketCardProps {
-  ticket: MaintenanceTicketForList
+  ticket:  MaintenanceTicketForList
+  people?: MaintenancePeopleMap
   onClick?: () => void
 }
 
-export const TicketCard = memo(function TicketCard({ ticket, onClick }: TicketCardProps) {
+export const TicketCard = memo(function TicketCard({ ticket, people, onClick }: TicketCardProps) {
   const router        = useRouter()
   const updateStatus  = useUpdateTicketStatus()
 
@@ -76,9 +87,27 @@ export const TicketCard = memo(function TicketCard({ ticket, onClick }: TicketCa
   )
 
   const isConcluded = ticket.status === 'concluded'
-  const execCount   = Array.isArray((ticket as any).executions) ? (ticket as any).executions.length : 0
-
+  const executions  = ticket.executions ?? []
+  const execCount   = executions.length
   const nextStatuses = STATUS_TRANSITIONS[ticket.status] ?? []
+
+  // Nome do responsável pelo chamado — via Map (evita RLS NULL)
+  const assignedName = ticket.assigned_to_user_id
+    ? (people?.get(ticket.assigned_to_user_id)?.name ?? null)
+    : null
+
+  // Executor da execução mais recente
+  const activeExec = getActiveExecution(executions)
+  let execLabel: string | null = null
+  let execIsExternal = false
+  if (activeExec) {
+    if (activeExec.executor_type === 'internal' && activeExec.internal_user_id) {
+      execLabel = people?.get(activeExec.internal_user_id)?.name ?? null
+    } else if (activeExec.executor_type === 'external' && activeExec.provider) {
+      execLabel = activeExec.provider.name
+      execIsExternal = true
+    }
+  }
 
   function handleNavigate() {
     if (onClick) { onClick(); return }
@@ -167,10 +196,35 @@ export const TicketCard = memo(function TicketCard({ ticket, onClick }: TicketCa
           )}
         </div>
 
+        {/* Row 4 — responsáveis (omitido quando ambos ausentes) */}
+        {(assignedName || execLabel) && (
+          <div className="space-y-1.5">
+            {assignedName && (
+              <div className="flex items-center gap-1.5 text-xs text-text-secondary min-w-0">
+                <UserCheck className="w-3 h-3 shrink-0 text-text-tertiary" />
+                <UserAvatar name={assignedName} size="sm" className="w-5 h-5 text-[9px] shrink-0" />
+                <span className="truncate">{assignedName}</span>
+              </div>
+            )}
+            {execLabel && (
+              <div className="flex items-center gap-1.5 text-xs text-text-secondary min-w-0">
+                {execIsExternal
+                  ? <Building2 className="w-3 h-3 shrink-0 text-text-tertiary" />
+                  : <Wrench    className="w-3 h-3 shrink-0 text-text-tertiary" />
+                }
+                {!execIsExternal && (
+                  <UserAvatar name={execLabel} size="sm" className="w-5 h-5 text-[9px] shrink-0" />
+                )}
+                <span className="truncate">{execLabel}</span>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Divider */}
         <div className="border-t border-border" />
 
-        {/* Row 4 — status + date info */}
+        {/* Row 5 — status + date info */}
         <div className="flex items-center justify-between gap-2">
           <span className={cn('inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium', statusCfg.badge)}>
             <StatusIcon className="w-3 h-3" />

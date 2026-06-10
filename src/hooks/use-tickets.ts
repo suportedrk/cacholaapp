@@ -24,7 +24,7 @@ const TICKET_LIST_SELECT = `
   *,
   sector:maintenance_sectors!sector_id(id, name),
   category:maintenance_categories!category_id(id, name, color, icon),
-  executions:maintenance_executions!ticket_id(id)
+  executions:maintenance_executions!ticket_id(id, executor_type, status, created_at, internal_user_id, provider:service_providers!provider_id(id, name))
 ` as const
 
 const TICKET_DETAIL_SELECT = `

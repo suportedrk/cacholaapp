@@ -386,14 +386,23 @@ export type MaintenanceStatusHistory = {
   created_at: string
 }
 
+// Execução no contexto de listagem — campos mínimos para exibir o executor nos cartões.
+export type ExecutionForList = {
+  id:               string
+  executor_type:    ExecutorType
+  status:           ExecutionStatus
+  created_at:       string
+  internal_user_id: string | null
+  provider:         { id: string; name: string } | null
+}
+
 // Ticket com joins para listagem
 export type MaintenanceTicketForList = MaintenanceTicket & {
   sector:   Pick<Sector, 'id' | 'name'> | null
   category: Pick<MaintenanceCategory, 'id' | 'name' | 'color' | 'icon'> | null
-  // Responsável pelo chamado (migration 155). Tipo declarado aqui para a Fase B
-  // (cartões/listagem) — o SELECT da listagem ainda NÃO traz este join.
-  assigned_to_user?: Pick<User, 'id' | 'name' | 'avatar_url'> | null
-  executions_count?: number
+  // assigned_to_user_id vem via '*' do ticket — nome resolvido pelo Map (Fase B-1/B-2).
+  // O embed fica fora do SELECT da listagem (retornaria NULL para não-admin).
+  executions: ExecutionForList[]
 }
 
 // Ticket com joins completos para detalhe

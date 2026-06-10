@@ -19,11 +19,13 @@ import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
-import { MapPin, Zap, Wrench, Clock, CheckCircle2, MoreVertical } from 'lucide-react'
+import { MapPin, Zap, Wrench, Clock, CheckCircle2, MoreVertical, UserCheck, Building2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTickets, useUpdateTicketStatus, type TicketFilters } from '@/hooks/use-tickets'
 import { useUnitStore } from '@/stores/unit-store'
-import { URGENCY_CONFIG, NATURE_CONFIG } from './ticket-card'
+import { useMaintenancePeople, type MaintenancePeopleMap } from '@/hooks/use-maintenance-people'
+import { URGENCY_CONFIG, NATURE_CONFIG, getActiveExecution } from './ticket-card'
+import { UserAvatar } from '@/components/shared/user-avatar'
 import type { MaintenanceTicketForList, TicketStatus } from '@/types/database.types'
 
 // ─────────────────────────────────────────────────────────────
@@ -76,13 +78,33 @@ const COLUMNS: {
 // ─────────────────────────────────────────────────────────────
 function TicketKanbanCardContent({
   ticket,
+  people,
   shadow,
 }: {
-  ticket: MaintenanceTicketForList
+  ticket:  MaintenanceTicketForList
+  people?: MaintenancePeopleMap
   shadow?: boolean
 }) {
   const urgency = URGENCY_CONFIG[ticket.urgency] ?? URGENCY_CONFIG.medium
-  const nature  = NATURE_CONFIG[ticket.nature]   ?? NATURE_CONFIG.pontual
+  const nature  = NATURE_CONFIG[ticket.nature]   ?? NATURE_CONFIG.corretiva
+
+  // Nome do responsável pelo chamado via Map
+  const assignedName = ticket.assigned_to_user_id
+    ? (people?.get(ticket.assigned_to_user_id)?.name ?? null)
+    : null
+
+  // Executor da execução mais recente
+  const activeExec = getActiveExecution(ticket.executions ?? [])
+  let execLabel: string | null = null
+  let execIsExternal = false
+  if (activeExec) {
+    if (activeExec.executor_type === 'internal' && activeExec.internal_user_id) {
+      execLabel = people?.get(activeExec.internal_user_id)?.name ?? null
+    } else if (activeExec.executor_type === 'external' && activeExec.provider) {
+      execLabel = activeExec.provider.name
+      execIsExternal = true
+    }
+  }
 
   return (
     <article className={cn(
@@ -115,6 +137,31 @@ function TicketKanbanCardContent({
           </div>
         )}
 
+        {/* Responsáveis — omitido quando ausentes */}
+        {(assignedName || execLabel) && (
+          <div className="space-y-1 pt-0.5">
+            {assignedName && (
+              <div className="flex items-center gap-1 text-[10px] text-muted-foreground min-w-0">
+                <UserCheck className="w-2.5 h-2.5 shrink-0" />
+                <UserAvatar name={assignedName} size="sm" className="w-4 h-4 text-[8px] shrink-0" />
+                <span className="truncate">{assignedName}</span>
+              </div>
+            )}
+            {execLabel && (
+              <div className="flex items-center gap-1 text-[10px] text-muted-foreground min-w-0">
+                {execIsExternal
+                  ? <Building2 className="w-2.5 h-2.5 shrink-0" />
+                  : <Wrench    className="w-2.5 h-2.5 shrink-0" />
+                }
+                {!execIsExternal && (
+                  <UserAvatar name={execLabel} size="sm" className="w-4 h-4 text-[8px] shrink-0" />
+                )}
+                <span className="truncate">{execLabel}</span>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Date */}
         {ticket.due_at && (
           <div className="text-[10px] text-muted-foreground">
@@ -129,7 +176,7 @@ function TicketKanbanCardContent({
 // ─────────────────────────────────────────────────────────────
 // DRAGGABLE CARD
 // ─────────────────────────────────────────────────────────────
-function TicketKanbanCard({ ticket }: { ticket: MaintenanceTicketForList }) {
+function TicketKanbanCard({ ticket, people }: { ticket: MaintenanceTicketForList; people?: MaintenancePeopleMap }) {
   const router = useRouter()
   const { setNodeRef, attributes, listeners, isDragging, transform } = useDraggable({
     id:   ticket.id,
@@ -152,7 +199,7 @@ function TicketKanbanCard({ ticket }: { ticket: MaintenanceTicketForList }) {
         onClick={() => router.push(`/manutencao/chamados/${ticket.id}`)}
         className="focus:outline-none"
       >
-        <TicketKanbanCardContent ticket={ticket} />
+        <TicketKanbanCardContent ticket={ticket} people={people} />
       </div>
 
       {/* Quick menu */}
@@ -179,10 +226,12 @@ function TicketKanbanColumn({
   col,
   tickets,
   isOver,
+  people,
 }: {
-  col: typeof COLUMNS[number]
+  col:     typeof COLUMNS[number]
   tickets: MaintenanceTicketForList[]
-  isOver: boolean
+  isOver:  boolean
+  people?: MaintenancePeopleMap
 }) {
   const { setNodeRef } = useDroppable({ id: col.id })
   const Icon = col.icon
@@ -222,7 +271,7 @@ function TicketKanbanColumn({
             Sem chamados
           </div>
         ) : (
-          tickets.map((t) => <TicketKanbanCard key={t.id} ticket={t} />)
+          tickets.map((t) => <TicketKanbanCard key={t.id} ticket={t} people={people} />)
         )}
         <div className="h-2" />
       </div>
@@ -241,6 +290,10 @@ export function TicketKanbanBoard({ filters }: TicketKanbanBoardProps) {
   const qc            = useQueryClient()
   const { activeUnitId } = useUnitStore()
   const updateStatus  = useUpdateTicketStatus()
+
+  // React Query deduplica com a chamada equivalente em chamados/page.tsx (mesma queryKey)
+  const { data: peopleMap } = useMaintenancePeople(activeUnitId)
+  const people = peopleMap ?? new Map()
 
   const [activeTicket, setActiveTicket] = useState<MaintenanceTicketForList | null>(null)
   const [overId, setOverId]             = useState<string | null>(null)
@@ -318,6 +371,7 @@ export function TicketKanbanBoard({ filters }: TicketKanbanBoardProps) {
             col={col}
             tickets={columns[col.id] ?? []}
             isOver={overId === col.id}
+            people={people}
           />
         ))}
       </div>
@@ -326,7 +380,7 @@ export function TicketKanbanBoard({ filters }: TicketKanbanBoardProps) {
         <DragOverlay dropAnimation={{ duration: 150, easing: 'ease-out' }}>
           {activeTicket ? (
             <div className="w-[256px]">
-              <TicketKanbanCardContent ticket={activeTicket} shadow />
+              <TicketKanbanCardContent ticket={activeTicket} people={people} shadow />
             </div>
           ) : null}
         </DragOverlay>,
