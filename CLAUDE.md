@@ -97,20 +97,37 @@ EM QUALQUER DÚVIDA sobre qual categoria se aplica, trate como Categoria A e val
 
 Exemplo: "essa mudança em um hook compartilhado parece refactor, mas é usada em 3 componentes de UI". → Categoria A. Roda.
 
-### Regra de VPS / SSH
+### Regra de SSH — VPS de PRODUÇÃO (187.77.255.31)
 
-SSH na VPS é permitido APENAS para:
+> ⚠️ Estas regras protegem a PRODUÇÃO e nasceram do incidente de 24/abr/2026. São inderrogáveis.
+
+SSH na VPS de PRODUÇÃO é permitido APENAS para:
 - Diagnóstico (git status, pm2 logs, ls, docker exec … psql … SELECT)
 - Operações de infraestrutura (pm2 restart, docker restart, reindex, aplicar migration via docker exec)
 - Restauração em incidente (git checkout HEAD -- file após aprovação explícita do Bruno)
 
-SSH na VPS é PROIBIDO para:
+SSH na VPS de PRODUÇÃO é PROIBIDO para:
 - Editar arquivo de código-fonte (.ts, .tsx, .js, .yml, .json, .md)
 - Executar npm install (usar npm ci quando for o caso, sempre controlado pelo deploy.yml)
 - Criar, mover ou deletar arquivos rastreados pelo git
 - Fazer commit, git reset, git clean, git checkout em branch diferente de main
 
-Toda alteração de código vai obrigatoriamente pelo fluxo: editar em dev local → commit em develop → merge em main → deploy automático aplica na VPS.
+Toda alteração de código chega à produção obrigatoriamente pelo fluxo: editar na VPS de DEV → commit em develop → merge em main → deploy automático aplica na VPS de produção. NUNCA editar produção diretamente.
+
+### Regra de SSH — VPS de DEV (2.25.194.165)
+
+> A VPS de DEV substituiu o antigo ambiente local (Windows). É AQUI que o código é desenvolvido e editado.
+
+Na VPS de DEV é PERMITIDO (fluxo normal de trabalho):
+- Editar código via Claude Code (extensão do VS Code ou CLI) em ~/cacholaos, sempre no branch develop
+- Operar o dev server, que fica sempre no ar via PM2 (pm2 logs cachola-dev, pm2 restart cachola-dev)
+- docker compose / docker exec para o Supabase de DEV (banco de desenvolvimento)
+- git add / commit / push origin develop
+
+Disciplina obrigatória (a lição do incidente vale para qualquer VPS):
+- Toda mudança de código vira commit + push para develop — NUNCA deixar o disco da VPS de dev divergir do git
+- O branch da VPS de DEV é sempre develop (o da VPS de produção é sempre main)
+- Migrations e mudanças de schema seguem o mesmo fluxo via git
 
 ### Por que essas regras existem
 
