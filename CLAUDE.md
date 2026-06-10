@@ -154,7 +154,7 @@ No hotfix v1.5.7 (27/abr/2026), a migration 072 foi mergeada sem smoke test loca
 | PWA | @ducanh2912/next-pwa | latest |
 | Icons | Lucide React | latest |
 | Toasts | Sonner | latest |
-| Hosting dev | Docker Desktop (Windows 11) | — |
+| Hosting dev | VPS Hostinger Ubuntu 24.04 + Docker + PM2 | — |
 | Hosting prod | VPS Hostinger Ubuntu 24.04 + Nginx + PM2 | — |
 
 > ⚠️ Tailwind v4: config via `@theme inline {}` em `globals.css`. Sem `tailwind.config.ts`.
@@ -166,7 +166,8 @@ No hotfix v1.5.7 (27/abr/2026), a migration 072 foi mergeada sem smoke test loca
 - **GitHub:** `suportedrk/cacholaapp`
 - **Branch produção:** `main` | **Branch dev:** `develop`
 - **Credenciais:** Em `GITHUB_CREDENTIALS.MD` (NUNCA commitar)
-- **VPS:** `ssh root@187.77.255.31` (ver `docs/SSH VPS.txt`)
+- **VPS de produção:** `187.77.255.31` (alias `cacholaos-vps` na máquina do Bruno) — só recebe código via git → deploy; nunca editar por SSH (ver `docs/SSH VPS.txt`)
+- **VPS de dev:** `2.25.194.165` (alias `cacholaos-dev` na máquina do Bruno) — ambiente de desenvolvimento; app sempre no ar via PM2 (processo `cachola-dev`), Supabase de dev via Docker; Bruno acessa via VS Code Remote-SSH com encaminhamento das portas 3000 (app) e 8000 (Supabase)
 
 ---
 
