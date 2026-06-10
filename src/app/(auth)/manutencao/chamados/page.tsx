@@ -39,6 +39,8 @@ import { cn } from '@/lib/utils'
 import { useTickets, type TicketFilters } from '@/hooks/use-tickets'
 import { useSectors } from '@/hooks/use-sectors'
 import { useLoadingTimeout } from '@/hooks/use-loading-timeout'
+import { useMaintenancePeople } from '@/hooks/use-maintenance-people'
+import { useUnitStore } from '@/stores/unit-store'
 import { TicketCard, TicketCardSkeleton } from '@/components/features/maintenance/ticket-card'
 import { TicketFormModal } from '@/components/features/maintenance/ticket-form-modal'
 import { TicketKanbanBoard } from '@/components/features/maintenance/ticket-kanban-board'
@@ -139,6 +141,10 @@ function ChamadosContent() {
     setViewMode(m)
     localStorage.setItem(VIEW_KEY, m)
   }
+
+  const { activeUnitId } = useUnitStore()
+  const { data: peopleMap } = useMaintenancePeople(activeUnitId)
+  const people = peopleMap ?? new Map()
 
   const { data: sectors = [] } = useSectors(true)
 
@@ -381,6 +387,7 @@ function ChamadosContent() {
             <TicketCard
               key={ticket.id}
               ticket={ticket}
+              people={people}
               onClick={() => router.push(`/manutencao/chamados/${ticket.id}`)}
             />
           ))}

@@ -25,6 +25,7 @@ import { useSectors } from '@/hooks/use-sectors'
 import { useMaintenanceCategories } from '@/hooks/use-maintenance-categories'
 import { useEquipment } from '@/hooks/use-equipment'
 import { useActiveUsersForUnit } from '@/hooks/use-users-for-unit'
+import { useMaintenanceExecutorOptions } from '@/hooks/use-maintenance-executors'
 import { useAuth } from '@/hooks/use-auth'
 import { useUnitStore } from '@/stores/unit-store'
 import type { TicketNature, TicketUrgency } from '@/types/database.types'
@@ -65,6 +66,7 @@ type FormState = {
   nature:       TicketNature
   urgency:      TicketUrgency
   opened_by:    string  // solicitante (default = usuário logado, editável)
+  assigned_to_user_id: string  // responsável pelo chamado (dono/gestor, opcional)
 }
 
 const INITIAL: FormState = {
@@ -77,6 +79,7 @@ const INITIAL: FormState = {
   nature:       'corretiva',
   urgency:      'medium',
   opened_by:    '',
+  assigned_to_user_id: '',
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -113,6 +116,10 @@ export function TicketFormModal({ open, onClose, onCreated }: TicketFormModalPro
 
   // Solicitantes via RPC SECURITY DEFINER (a RLS de users só deixa o técnico ver a si mesmo).
   const { data: requesters = [] } = useActiveUsersForUnit(effectiveUnitId)
+  // Responsável pelo chamado: equipe de manutenção da unidade (RPC gated por
+  // manutencao 'edit'). Todo cargo que pode criar chamado também tem 'edit', então
+  // a lista nunca vem vazia por permissão na abertura.
+  const { data: assignees = [] } = useMaintenanceExecutorOptions(effectiveUnitId)
 
   // Fotos em staging (memória) + flag de submit cobrindo criação + upload.
   const [stagedPhotos, setStagedPhotos] = useState<StagedPhoto[]>([])
@@ -187,6 +194,8 @@ export function TicketFormModal({ open, onClose, onCreated }: TicketFormModalPro
           equipment_id: '',
           // Solicitante volta ao usuário logado: a lista é por unidade.
           opened_by:    profile?.id ?? '',
+          // Responsável também é por unidade — limpa ao trocar.
+          assigned_to_user_id: '',
         }
       }
       return { ...prev, [key]: value }
@@ -247,6 +256,8 @@ export function TicketFormModal({ open, onClose, onCreated }: TicketFormModalPro
       equipment_id: form.equipment_id || null,
       // Solicitante: escolha do form, ou usuário logado como fallback.
       opened_by:    form.opened_by || profile?.id || undefined,
+      // Responsável pelo chamado: opcional — null quando não designado.
+      assigned_to_user_id: form.assigned_to_user_id || null,
     }
 
     setSubmitting(true)
@@ -429,6 +440,32 @@ export function TicketFormModal({ open, onClose, onCreated }: TicketFormModalPro
             </Select>
             <p className="text-xs text-text-tertiary">
               Quem reportou o problema. Por padrão, você.
+            </p>
+          </div>
+
+          {/* Responsável pelo chamado — dono/gestor que conduz o chamado. Opcional. */}
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-text-primary">Responsável pelo chamado</label>
+            <Select
+              value={form.assigned_to_user_id || 'none'}
+              onValueChange={(v) => set('assigned_to_user_id', v === 'none' ? '' : (v ?? ''))}
+            >
+              <SelectTrigger className="w-full">
+                <span data-slot="select-value">
+                  {form.assigned_to_user_id
+                    ? (assignees.find((u) => u.id === form.assigned_to_user_id)?.name ?? 'Selecionar...')
+                    : 'Sem responsável'}
+                </span>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Sem responsável</SelectItem>
+                {assignees.map((u) => (
+                  <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-text-tertiary">
+              Quem vai conduzir o chamado. Pode ser definido depois, na triagem.
             </p>
           </div>
 
