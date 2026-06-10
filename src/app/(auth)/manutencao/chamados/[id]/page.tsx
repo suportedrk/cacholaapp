@@ -40,6 +40,7 @@ import { useEquipment } from '@/hooks/use-equipment'
 import { useSignedUrls } from '@/hooks/use-signed-urls'
 import { useProviders } from '@/hooks/use-providers'
 import { useMaintenanceExecutorOptions } from '@/hooks/use-maintenance-executors'
+import { useMaintenancePeople, type MaintenancePeopleMap } from '@/hooks/use-maintenance-people'
 import { UserAvatar } from '@/components/shared/user-avatar'
 import { useAuth } from '@/hooks/use-auth'
 import { URGENCY_CONFIG, NATURE_CONFIG, STATUS_CONFIG } from '@/components/features/maintenance/ticket-card'
@@ -827,16 +828,29 @@ function ExecutionRow({
   execution,
   ticketId,
   canApprove,
+  people,
 }: {
   execution: RichExecution
   ticketId: string
   canApprove: boolean
+  people: MaintenancePeopleMap
 }) {
   const { mutate: approveCost, isPending } = useApproveCost(ticketId)
   const [approving, setApproving]   = useState(false)
   const [approvedStr, setApprovedStr] = useState(() => execution.cost.toFixed(2).replace('.', ','))
 
-  const executorName = execution.internal_user?.name ?? execution.provider?.name ?? 'Não atribuído'
+  // Nomes de usuário resolvidos pela RPC (Map) — embed só como fallback (NULL p/ técnicos).
+  const internalName = execution.internal_user_id
+    ? (people.get(execution.internal_user_id)?.name ?? execution.internal_user?.name ?? null)
+    : null
+  const responsibleName = execution.responsible_user_id
+    ? (people.get(execution.responsible_user_id)?.name ?? execution.responsible_user?.name ?? null)
+    : null
+  const approvedByName = execution.cost_approved_by
+    ? (people.get(execution.cost_approved_by)?.name ?? execution.cost_approved_by_user?.name ?? null)
+    : null
+
+  const executorName = internalName ?? execution.provider?.name ?? 'Não atribuído'
   const isInternal   = execution.executor_type === 'internal'
   const hasCost      = execution.cost > 0
 
@@ -869,9 +883,9 @@ function ExecutionRow({
           )}
 
           {/* Serviço externo: responsável interno + contato do prestador */}
-          {!isInternal && execution.responsible_user && (
+          {!isInternal && responsibleName && (
             <p className="text-xs text-muted-foreground">
-              Responsável: <span className="text-foreground font-medium">{execution.responsible_user.name}</span>
+              Responsável: <span className="text-foreground font-medium">{responsibleName}</span>
             </p>
           )}
           {!isInternal && execution.provider && (() => {
@@ -925,7 +939,7 @@ function ExecutionRow({
 
               {execution.cost_approved ? (
                 <p className="text-[11px] text-muted-foreground">
-                  Aprovado por {execution.cost_approved_by_user?.name ?? '—'}
+                  Aprovado por {approvedByName ?? '—'}
                   {approvedAtFmt ? ` em ${approvedAtFmt}` : ''}
                 </p>
               ) : (
@@ -979,11 +993,16 @@ type RichHistory = MaintenanceStatusHistory & {
   changed_by_user: { name: string } | null
 }
 
-function HistoryItem({ item, isLast }: { item: RichHistory; isLast: boolean }) {
+function HistoryItem({ item, isLast, people }: { item: RichHistory; isLast: boolean; people: MaintenancePeopleMap }) {
   const StatusIcon = STATUS_ICON[item.to_status] ?? Clock
   const toLabel    = STATUS_LABELS[item.to_status as TicketStatus] ?? item.to_status
   const fromLabel  = item.from_status
     ? (STATUS_LABELS[item.from_status as TicketStatus] ?? item.from_status)
+    : null
+
+  // Autor da mudança resolvido pela RPC (Map); embed só como fallback.
+  const changedByName = item.changed_by
+    ? (people.get(item.changed_by)?.name ?? item.changed_by_user?.name ?? null)
     : null
 
   return (
@@ -1000,7 +1019,7 @@ function HistoryItem({ item, isLast }: { item: RichHistory; isLast: boolean }) {
         </p>
         {item.note && <p className="text-xs text-muted-foreground mt-0.5 italic">{item.note}</p>}
         <p className="text-xs text-muted-foreground mt-0.5">
-          {item.changed_by_user?.name ?? 'Sistema'} · {formatRelative(item.created_at)}
+          {changedByName ?? 'Sistema'} · {formatRelative(item.created_at)}
         </p>
       </div>
     </div>
@@ -1020,6 +1039,12 @@ export default function ChamadoDetailPage() {
   // (executions + photos + history em uma única query). Em produção lenta, 12s gera
   // falso positivo. P10/Fase 4b: 20s + mensagem suavizada + Tentar novamente que refetch.
   const { isTimedOut } = useLoadingTimeout(isLoading, 20_000)
+
+  // Nomes de usuário (responsável, solicitante, executor interno, aprovador, autor de
+  // status) via RPC SECURITY DEFINER — a RLS de public.users só deixa super_admin/diretor
+  // verem outros usuários, então os embeds voltam NULL para técnicos. O Map resolve por id.
+  const { data: peopleMap } = useMaintenancePeople(ticket?.unit_id ?? null)
+  const people: MaintenancePeopleMap = peopleMap ?? new Map()
 
   const [statusModalOpen, setStatusModalOpen]   = useState(false)
   const [finalizeOpen, setFinalizeOpen]         = useState(false)
@@ -1105,13 +1130,33 @@ export default function ChamadoDetailPage() {
 
   const nextStatuses = STATUS_TRANSITIONS[typedTicket.status] ?? []
 
-  // Carimbo "Aberto em": data/hora + nome do solicitante (opened_by), quando resolvido.
+  // Carimbo "Aberto em": data/hora + nome do solicitante (opened_by), resolvido pela RPC
+  // (Map), com o embed só como fallback.
   const openedStamp = (() => {
     const when = formatDate(typedTicket.created_at)
     if (!when) return undefined
-    const who = typedTicket.opened_by_user?.name
+    const who = (typedTicket.opened_by ? people.get(typedTicket.opened_by)?.name : null)
+      ?? typedTicket.opened_by_user?.name
     return who ? `${when} · por ${who}` : when
   })()
+
+  // Responsável pelo chamado resolvido pela RPC (Map) + fallback no embed.
+  const assignedPerson = typedTicket.assigned_to_user_id
+    ? {
+        id: typedTicket.assigned_to_user_id,
+        name: people.get(typedTicket.assigned_to_user_id)?.name
+          ?? typedTicket.assigned_to_user?.name
+          ?? '—',
+        avatar_url: people.get(typedTicket.assigned_to_user_id)?.avatar_url
+          ?? typedTicket.assigned_to_user?.avatar_url
+          ?? null,
+      }
+    : null
+
+  // "Concluído por" resolvido pela RPC (Map) + fallback no embed.
+  const concludedByName = typedTicket.concluded_by_user_id
+    ? (people.get(typedTicket.concluded_by_user_id)?.name ?? typedTicket.concluded_by_user?.name ?? null)
+    : null
 
   return (
     <div className="space-y-5 pb-8">
@@ -1178,7 +1223,7 @@ export default function ChamadoDetailPage() {
         <AssigneeRow
           ticketId={typedTicket.id}
           ticketUnitId={typedTicket.unit_id}
-          currentAssignee={typedTicket.assigned_to_user ?? null}
+          currentAssignee={assignedPerson}
           canEdit={canEdit}
         />
         <InfoRow icon={Calendar} label="Prazo"       value={formatDate(typedTicket.due_at) ?? undefined} />
@@ -1186,8 +1231,8 @@ export default function ChamadoDetailPage() {
         {typedTicket.concluded_at && (
           <InfoRow icon={CheckCircle2} label="Concluído em" value={formatDate(typedTicket.concluded_at) ?? undefined} />
         )}
-        {typedTicket.concluded_by_user && (
-          <InfoRow icon={Wrench} label="Concluído por" value={typedTicket.concluded_by_user.name} />
+        {concludedByName && (
+          <InfoRow icon={Wrench} label="Concluído por" value={concludedByName} />
         )}
       </div>
 
@@ -1285,6 +1330,7 @@ export default function ChamadoDetailPage() {
               execution={ex}
               ticketId={typedTicket.id}
               canApprove={canApprove}
+              people={people}
             />
           ))
         )}
@@ -1296,7 +1342,7 @@ export default function ChamadoDetailPage() {
           <h2 className="text-sm font-semibold text-foreground mb-4">Histórico de Status</h2>
           <div>
             {history.map((h, i) => (
-              <HistoryItem key={h.id} item={h} isLast={i === history.length - 1} />
+              <HistoryItem key={h.id} item={h} isLast={i === history.length - 1} people={people} />
             ))}
           </div>
         </div>
