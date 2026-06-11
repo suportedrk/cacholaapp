@@ -54,7 +54,7 @@
 
 1. git checkout develop && git pull origin develop (sempre começar sincronizado)
 2. Copiar .env.local se não existir
-3. Implementar a mudança em dev local (Windows do Bruno, pasta do projeto)
+3. Implementar a mudança no ambiente de dev (VPS de dev, pasta ~/cacholaos)
 4. CLASSIFICAR a mudança em uma das duas categorias abaixo
 5. Aplicar a regra correspondente à categoria
 6. npx tsc --noEmit | grep -v .next  →  obrigatório, deve estar limpo
@@ -373,11 +373,11 @@ git checkout develop
 ### Regras absolutas
 - NUNCA commitar diretamente em `main`
 - NUNCA mergear develop → main com CI vermelho
-- NUNCA `git pull origin develop` na VPS — VPS usa sempre `main`
+- NUNCA `git pull develop` na VPS de PRODUÇÃO — produção roda sempre `main`. A VPS de DEV roda `develop` (é onde desenvolvemos).
 - SEMPRE `--no-ff` no merge
 - SEMPRE tsc antes de commitar
 
-### Deploy VPS
+### Deploy VPS de PRODUÇÃO
 ```bash
 cd /opt/cacholaapp
 git pull origin main
@@ -499,7 +499,7 @@ npm run build        # Build produção (webpack — necessário para PWA)
 npm run lint
 npx tsc --noEmit     # Type check
 
-# Docker — Supabase local
+# Docker — Supabase (ambiente de dev, na VPS)
 docker compose up -d
 docker compose logs -f supabase-auth
 docker compose restart supabase-auth  # NÃO relê .env — usar --force-recreate para vars
