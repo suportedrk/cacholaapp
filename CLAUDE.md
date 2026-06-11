@@ -1672,11 +1672,10 @@ if (sessionStorage.getItem('sw-reloading')) {
 
 ---
 
-## CREDENCIAIS DEV LOCAL
+## CREDENCIAIS
 
-```
-Admin: admin@cacholaos.com.br / Admin2026cacholaos / super_admin
-VPS:   ssh root@187.77.255.31 / C@ch0l@1553#0S (ver docs/SSH VPS.txt)
-```
+> 🔒 Nenhuma senha no repositório. Todas as credenciais (admins de dev e produção e o acesso root SSH das VPSs) ficam no gerenciador de senhas da equipe.
 
-> ⚠️ NUNCA usar em produção.
+Acessos de dev úteis (sem senha — consultar o gerenciador de senhas):
+- App / admin de dev: admin@cachola.local
+- VPS de dev: alias cacholaos-dev (2.25.194.165)

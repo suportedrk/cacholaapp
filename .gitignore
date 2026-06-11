@@ -125,3 +125,6 @@ public/icons/*Copia*
 # SCREENSHOTS DE VALIDAÇÃO VISUAL (QA local — não rastrear)
 # ============================================================
 docs/screenshots/
+
+# Arquivos de credenciais nunca devem ser versionados
+docs/SSH VPS.txt
