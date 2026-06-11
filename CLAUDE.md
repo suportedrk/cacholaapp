@@ -648,16 +648,18 @@ export const GLOBAL_VIEWER_ROLES = ['super_admin', 'diretor'] as const satisfies
 
 ---
 
-## SERVIÇOS (DEV LOCAL)
+## SERVIÇOS (DEV — na VPS, via túnel SSH / port-forward do VS Code)
 
-| Serviço | URL |
-|---------|-----|
-| App Next.js | http://localhost:3000 |
+Esses serviços rodam na **VPS de dev**. Da sua máquina, os endereços `localhost` abaixo funcionam **quando a porta está encaminhada** — o VS Code Remote-SSH encaminha sob demanda pelo painel **PORTS** (3000 e 8000 já saem automáticos; Studio e Postgres, adicione se precisar).
+
+| Serviço | URL (via túnel) |
+|---------|-----------------|
+| App Next.js (PM2) | http://localhost:3000 |
 | Supabase API (Kong) | http://localhost:8000 |
 | Supabase Studio | http://localhost:3001 |
 | PostgreSQL | localhost:5432 |
 
-> Studio aparece como "unhealthy" no Docker — falso negativo, funciona normalmente.
+> Studio pode aparecer como "unhealthy" no Docker — falso negativo, funciona normalmente. Ele não é exposto publicamente; só chega por túnel SSH.
 
 ---
 
