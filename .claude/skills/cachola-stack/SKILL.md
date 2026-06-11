@@ -1,6 +1,6 @@
 ---
 name: cachola-stack
-description: Padrões reais e armadilhas do stack frontend e backend do Cachola OS — Next.js 14 App Router, @base-ui/react (NÃO confundir com Radix/shadcn), Recharts, TanStack Query, Zustand, Supabase self-hosted, Tailwind com tokens próprios (sage green/warm beige). Use SEMPRE que o trabalho envolver criar/editar componentes React, telas, formulários, gráficos, sessão/autenticação, cliente Supabase, middleware/proxy, controle de acesso por role, ou quando precisar de cor/tipografia/espaçamento do design system. Dispare também ao editar arquivos em `src/components/`, `src/hooks/`, `src/lib/`, `src/app/`, `proxy.ts`, ou ao escrever prompts para o Claude Code.
+description: Padrões reais e armadilhas do stack frontend e backend do Cachola OS — Next.js 16 App Router, @base-ui/react (NÃO confundir com Radix/shadcn), Recharts, TanStack Query, Zustand, Supabase self-hosted, Tailwind com tokens próprios (sage green/warm beige). Use SEMPRE que o trabalho envolver criar/editar componentes React, telas, formulários, gráficos, sessão/autenticação, cliente Supabase, middleware/proxy, controle de acesso por role, ou quando precisar de cor/tipografia/espaçamento do design system. Dispare também ao editar arquivos em `src/components/`, `src/hooks/`, `src/lib/`, `src/app/`, `proxy.ts`, ou ao escrever prompts para o Claude Code.
 ---
 
 # Cachola OS — Stack & Padrões
