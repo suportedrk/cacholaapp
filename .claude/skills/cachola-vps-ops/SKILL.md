@@ -7,6 +7,8 @@ description: Operações de infraestrutura da VPS de produção do Cachola OS �
 
 Esta skill cobre a camada de **infraestrutura do servidor de produção**: como acessar, como manter, como atualizar, e o que fazer quando algo dá errado. Complementa a `cachola-supabase-ops` (que cobre banco e deploy) — esta foca no servidor em si.
 
+> **Duas VPSs (jun/2026):** esta skill é da **VPS de PRODUÇÃO** (187.77.255.31). Existe também uma **VPS de DEV** separada, onde rodam o Docker/Supabase e o dev server (PM2 `cachola-dev`) — é onde se desenvolve. As regras abaixo (ex.: "nunca editar código na VPS") valem para **produção**; na VPS de dev o fluxo é editar → commitar no `develop`, sem deixar o disco divergir do git. Operações da VPS de dev não são cobertas aqui.
+
 ## Regras de Ouro
 
 Oito regras que valem mais do que qualquer documentação. Violar qualquer uma tem custo alto:
@@ -27,7 +29,7 @@ Oito regras que valem mais do que qualquer documentação. Violar qualquer uma t
 
 8. **Rollback de emergência: restaurar snapshot da Hostinger** (último recurso, restaura tudo ao estado pré-janela). Para rollback apenas do Node: `curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && apt-get install -y nodejs=20.20.2-1nodesource1`.
 
-## Referência Rápida — VPS
+## Referência Rápida — VPS de PRODUÇÃO
 
 | Item | Valor |
 |---|---|
