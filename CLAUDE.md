@@ -408,30 +408,17 @@ docker exec -i supabase-db psql -U postgres -d postgres \
 > Quebrar essa ordem causa `untracked working tree files would be overwritten by merge`
 > (incidente Sub-etapas A+B da tabela `sellers`, abr/2026).
 
-### Sync VPS → Banco Local (com anonimização LGPD)
+### Banco de dados de DEV — snapshot anonimizado (LGPD)
 
-```bash
-npm run db:sync-local
-# equivalente a: bash scripts/sync-db-local.sh
-```
+O banco da VPS de dev é um **retrato (snapshot) já anonimizado** da produção — não uma cópia ao vivo. É semeado **manualmente** e renovado só quando necessário; não há sincronização automática puxando dados da produção.
 
-**O que faz (3 etapas):**
-1. `pg_dump --schema=public` na VPS via SSH, excluindo `audit_logs` (1.3 GB) + `ploomes_webhook_log` + `ploomes_sync_log` (apenas dados) e `ploomes_order_products_backup_20260417` (tabela inteira). Dump resultante: ~35–45 MB.
-2. Restore no container Docker local (`docker compose exec supabase-db psql`).
-3. Executa `scripts/anonymize-local.sql` com `-v LOCAL_TOKEN=1` — anonimiza PII de clientes (nomes, e-mails, telefones, datas de nascimento) e trunca tabelas de texto livre.
+**Princípio da necessidade (LGPD art. 6º, III):** o ambiente de dev precisa de dados *realistas*, não dos dados *reais* dos clientes. Por isso a anonimização (remoção de PII — nomes, e-mails, telefones, datas de nascimento) acontece **antes** de os dados chegarem na VPS de dev. Nenhum dado pessoal real de cliente trafega ou repousa na VPS de dev. A lógica de anonimização vive em `scripts/anonymize-local.sql`.
 
-**Scripts:**
-- `scripts/sync-db-local.sh` — orquestrador (bash, rodar da raiz do projeto)
-- `scripts/anonymize-local.sql` — SQL de anonimização com guard `\if :{?LOCAL_TOKEN}` (aborta sem a variável → protege produção se executado por engano)
+**Preservado (para debug realista do BI):** `owner_name`, `users.name`, `sellers.name` (staff interno, não clientes) e valores financeiros (`amount`, `deal_amount`, `discount`, reais).
 
-**O que é preservado no banco local:**
-- `owner_name` (vendedoras) — necessário para debug do BI
-- `users.name`, `sellers.name` — staff interno, não são clientes
-- Valores financeiros (`amount`, `deal_amount`, `discount`) — necessários para BI realista
+> ⚠️ **CONFIDENCIALIDADE:** como os valores financeiros são reais, o banco de dev é **confidencial comercial** mesmo anonimizado. NÃO compartilhar dump, NÃO screenshotar BI em contexto público, NÃO expor via tunnel público. (A VPS de dev já é protegida: firewall fecha as portas; acesso só por túnel SSH.)
 
-> ⚠️ **BANCO LOCAL — REGRA DE CONFIDENCIALIDADE:** valores financeiros são mantidos **reais** para permitir debug realista do BI. Isso torna o banco local "confidencial comercial" mesmo após anonimização LGPD. **NÃO compartilhar dump**, **NÃO screenshotar BI em contextos públicos**, **NÃO expor via tunnel público**. Tratar o banco local com o mesmo cuidado de um backup de produção.
-
-**Pré-requisito:** containers Docker locais rodando (`docker compose up -d`).
+**Fluxo legado (aposentado):** `npm run db:sync-local` puxava a produção direto para o Docker no Windows do Bruno, anonimizando no caminho. Descontinuado junto com o ambiente Windows. Quando uma renovação do snapshot for necessária, o procedimento (gerar dump já anonimizado → carregar na VPS de dev) é detalhado na hora — sempre com a anonimização ocorrendo **antes** de os dados tocarem a VPS de dev.
 
 ### Backup Offsite — Cloudflare R2
 
