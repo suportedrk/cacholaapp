@@ -7,6 +7,8 @@ description: Padrões de banco, segurança e infraestrutura do Cachola OS — mi
 
 Esta skill cobre toda a camada **abaixo do código de aplicação**: banco de dados, segurança em nível de linha (RLS), pipeline de deploy, configuração da VPS, e o que fazer quando algo dá errado em produção.
 
+> **Nota de ambiente (jun/2026):** os comandos desta skill (ex.: `docker exec -i supabase-db psql`, fluxo de deploy) são da **PRODUÇÃO**. Na **VPS de dev** o contêiner do banco é `cacholaos-db` (não `supabase-db`) e as migrations são aplicadas localmente lá — ver a skill `cachola-dev-sync`.
+
 ## Filosofia
 
 - **Migrations são imutáveis depois de aplicadas.** Numeração `NNN_descritivo.sql`, jamais reescrever uma já em prod.
