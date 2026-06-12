@@ -125,21 +125,19 @@ view CLAUDE.md --view_range [234, 280]
 
 `CLAUDE.md` cresce. Edição **sempre** cirúrgica via `str_replace`, **nunca** rewrite completo. Se precisar reorganizar muita coisa, fazer em PR específico para reestruturação, separado de adições de conteúdo.
 
-## Dev local — Cachola
+## Dev (na VPS) — Cachola
 
-### Stack local
-- **Next.js**: roda **nativo no Windows** (`npm run dev` direto).
+### Stack
+- **Next.js**: roda **na VPS de dev**, gerido pelo PM2 (processo `cachola-dev` → `npm run dev`).
 - **Supabase**: Docker, com Kong na porta 8000.
 - **Não** rodar Next.js dentro de Docker em dev — perde HMR e tempo de build.
 
 ### Seeds para testar
 
-- Admin local: `npx tsx scripts/seed-local-admin.ts` cria `bruno.casaletti@grupodrk.com.br` (admin local).
-- 7 usuários de teste (1 por role): `npx tsx scripts/seed-test-users.ts`
-  - Padrão: `teste.<role>@cachola.local`
-  - Senha: `LocalTeste2026!`
-  - Senha alternativa do seed prod: `Teste@2026cacholaos!`
-- Limpeza: `npx tsx scripts/cleanup-test-users.ts`
+- Admin de dev: `npx tsx scripts/seed-local-admin.ts` → cria `admin@cachola.local` (super_admin).
+- Usuários de teste (10, um por role): `npx tsx scripts/seed-local-test-users.ts` → padrão `teste.<role>@cachola.local`. Idempotente, com guard-rail de localhost (não roda em produção).
+
+> As senhas ficam nos próprios scripts e valem só para dev. Nunca usar essas contas em produção.
 
 ### Variáveis ENV de dev local
 

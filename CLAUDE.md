@@ -54,7 +54,7 @@
 
 1. git checkout develop && git pull origin develop (sempre começar sincronizado)
 2. Copiar .env.local se não existir
-3. Implementar a mudança em dev local (Windows do Bruno, pasta do projeto)
+3. Implementar a mudança no ambiente de dev (VPS de dev, pasta ~/cacholaos)
 4. CLASSIFICAR a mudança em uma das duas categorias abaixo
 5. Aplicar a regra correspondente à categoria
 6. npx tsc --noEmit | grep -v .next  →  obrigatório, deve estar limpo
@@ -97,20 +97,37 @@ EM QUALQUER DÚVIDA sobre qual categoria se aplica, trate como Categoria A e val
 
 Exemplo: "essa mudança em um hook compartilhado parece refactor, mas é usada em 3 componentes de UI". → Categoria A. Roda.
 
-### Regra de VPS / SSH
+### Regra de SSH — VPS de PRODUÇÃO (187.77.255.31)
 
-SSH na VPS é permitido APENAS para:
+> ⚠️ Estas regras protegem a PRODUÇÃO e nasceram do incidente de 24/abr/2026. São inderrogáveis.
+
+SSH na VPS de PRODUÇÃO é permitido APENAS para:
 - Diagnóstico (git status, pm2 logs, ls, docker exec … psql … SELECT)
 - Operações de infraestrutura (pm2 restart, docker restart, reindex, aplicar migration via docker exec)
 - Restauração em incidente (git checkout HEAD -- file após aprovação explícita do Bruno)
 
-SSH na VPS é PROIBIDO para:
+SSH na VPS de PRODUÇÃO é PROIBIDO para:
 - Editar arquivo de código-fonte (.ts, .tsx, .js, .yml, .json, .md)
 - Executar npm install (usar npm ci quando for o caso, sempre controlado pelo deploy.yml)
 - Criar, mover ou deletar arquivos rastreados pelo git
 - Fazer commit, git reset, git clean, git checkout em branch diferente de main
 
-Toda alteração de código vai obrigatoriamente pelo fluxo: editar em dev local → commit em develop → merge em main → deploy automático aplica na VPS.
+Toda alteração de código chega à produção obrigatoriamente pelo fluxo: editar na VPS de DEV → commit em develop → merge em main → deploy automático aplica na VPS de produção. NUNCA editar produção diretamente.
+
+### Regra de SSH — VPS de DEV (2.25.194.165)
+
+> A VPS de DEV substituiu o antigo ambiente local (Windows). É AQUI que o código é desenvolvido e editado.
+
+Na VPS de DEV é PERMITIDO (fluxo normal de trabalho):
+- Editar código via Claude Code (extensão do VS Code ou CLI) em ~/cacholaos, sempre no branch develop
+- Operar o dev server, que fica sempre no ar via PM2 (pm2 logs cachola-dev, pm2 restart cachola-dev)
+- docker compose / docker exec para o Supabase de DEV (banco de desenvolvimento)
+- git add / commit / push origin develop
+
+Disciplina obrigatória (a lição do incidente vale para qualquer VPS):
+- Toda mudança de código vira commit + push para develop — NUNCA deixar o disco da VPS de dev divergir do git
+- O branch da VPS de DEV é sempre develop (o da VPS de produção é sempre main)
+- Migrations e mudanças de schema seguem o mesmo fluxo via git
 
 ### Por que essas regras existem
 
@@ -137,7 +154,7 @@ No hotfix v1.5.7 (27/abr/2026), a migration 072 foi mergeada sem smoke test loca
 | PWA | @ducanh2912/next-pwa | latest |
 | Icons | Lucide React | latest |
 | Toasts | Sonner | latest |
-| Hosting dev | Docker Desktop (Windows 11) | — |
+| Hosting dev | VPS Hostinger Ubuntu 24.04 + Docker + PM2 | — |
 | Hosting prod | VPS Hostinger Ubuntu 24.04 + Nginx + PM2 | — |
 
 > ⚠️ Tailwind v4: config via `@theme inline {}` em `globals.css`. Sem `tailwind.config.ts`.
@@ -149,7 +166,8 @@ No hotfix v1.5.7 (27/abr/2026), a migration 072 foi mergeada sem smoke test loca
 - **GitHub:** `suportedrk/cacholaapp`
 - **Branch produção:** `main` | **Branch dev:** `develop`
 - **Credenciais:** Em `GITHUB_CREDENTIALS.MD` (NUNCA commitar)
-- **VPS:** `ssh root@187.77.255.31` (ver `docs/SSH VPS.txt`)
+- **VPS de produção:** `187.77.255.31` (alias `cacholaos-vps` na máquina do Bruno) — só recebe código via git → deploy; nunca editar por SSH (ver `docs/SSH VPS.txt`)
+- **VPS de dev:** `2.25.194.165` (alias `cacholaos-dev` na máquina do Bruno) — ambiente de desenvolvimento; app sempre no ar via PM2 (processo `cachola-dev`), Supabase de dev via Docker; Bruno acessa via VS Code Remote-SSH com encaminhamento das portas 3000 (app) e 8000 (Supabase)
 
 ---
 
@@ -355,11 +373,11 @@ git checkout develop
 ### Regras absolutas
 - NUNCA commitar diretamente em `main`
 - NUNCA mergear develop → main com CI vermelho
-- NUNCA `git pull origin develop` na VPS — VPS usa sempre `main`
+- NUNCA `git pull develop` na VPS de PRODUÇÃO — produção roda sempre `main`. A VPS de DEV roda `develop` (é onde desenvolvemos).
 - SEMPRE `--no-ff` no merge
 - SEMPRE tsc antes de commitar
 
-### Deploy VPS
+### Deploy VPS de PRODUÇÃO
 ```bash
 cd /opt/cacholaapp
 git pull origin main
@@ -390,30 +408,17 @@ docker exec -i supabase-db psql -U postgres -d postgres \
 > Quebrar essa ordem causa `untracked working tree files would be overwritten by merge`
 > (incidente Sub-etapas A+B da tabela `sellers`, abr/2026).
 
-### Sync VPS → Banco Local (com anonimização LGPD)
+### Banco de dados de DEV — snapshot anonimizado (LGPD)
 
-```bash
-npm run db:sync-local
-# equivalente a: bash scripts/sync-db-local.sh
-```
+O banco da VPS de dev é um **retrato (snapshot) já anonimizado** da produção — não uma cópia ao vivo. É semeado **manualmente** e renovado só quando necessário; não há sincronização automática puxando dados da produção.
 
-**O que faz (3 etapas):**
-1. `pg_dump --schema=public` na VPS via SSH, excluindo `audit_logs` (1.3 GB) + `ploomes_webhook_log` + `ploomes_sync_log` (apenas dados) e `ploomes_order_products_backup_20260417` (tabela inteira). Dump resultante: ~35–45 MB.
-2. Restore no container Docker local (`docker compose exec supabase-db psql`).
-3. Executa `scripts/anonymize-local.sql` com `-v LOCAL_TOKEN=1` — anonimiza PII de clientes (nomes, e-mails, telefones, datas de nascimento) e trunca tabelas de texto livre.
+**Princípio da necessidade (LGPD art. 6º, III):** o ambiente de dev precisa de dados *realistas*, não dos dados *reais* dos clientes. Por isso a anonimização (remoção de PII — nomes, e-mails, telefones, datas de nascimento) acontece **antes** de os dados chegarem na VPS de dev. Nenhum dado pessoal real de cliente trafega ou repousa na VPS de dev. A lógica de anonimização vive em `scripts/anonymize-local.sql`.
 
-**Scripts:**
-- `scripts/sync-db-local.sh` — orquestrador (bash, rodar da raiz do projeto)
-- `scripts/anonymize-local.sql` — SQL de anonimização com guard `\if :{?LOCAL_TOKEN}` (aborta sem a variável → protege produção se executado por engano)
+**Preservado (para debug realista do BI):** `owner_name`, `users.name`, `sellers.name` (staff interno, não clientes) e valores financeiros (`amount`, `deal_amount`, `discount`, reais).
 
-**O que é preservado no banco local:**
-- `owner_name` (vendedoras) — necessário para debug do BI
-- `users.name`, `sellers.name` — staff interno, não são clientes
-- Valores financeiros (`amount`, `deal_amount`, `discount`) — necessários para BI realista
+> ⚠️ **CONFIDENCIALIDADE:** como os valores financeiros são reais, o banco de dev é **confidencial comercial** mesmo anonimizado. NÃO compartilhar dump, NÃO screenshotar BI em contexto público, NÃO expor via tunnel público. (A VPS de dev já é protegida: firewall fecha as portas; acesso só por túnel SSH.)
 
-> ⚠️ **BANCO LOCAL — REGRA DE CONFIDENCIALIDADE:** valores financeiros são mantidos **reais** para permitir debug realista do BI. Isso torna o banco local "confidencial comercial" mesmo após anonimização LGPD. **NÃO compartilhar dump**, **NÃO screenshotar BI em contextos públicos**, **NÃO expor via tunnel público**. Tratar o banco local com o mesmo cuidado de um backup de produção.
-
-**Pré-requisito:** containers Docker locais rodando (`docker compose up -d`).
+**Fluxo legado (aposentado):** `npm run db:sync-local` puxava a produção direto para o Docker no Windows do Bruno, anonimizando no caminho. Descontinuado junto com o ambiente Windows. Quando uma renovação do snapshot for necessária, o procedimento (gerar dump já anonimizado → carregar na VPS de dev) é detalhado na hora — sempre com a anonimização ocorrendo **antes** de os dados tocarem a VPS de dev.
 
 ### Backup Offsite — Cloudflare R2
 
@@ -481,7 +486,7 @@ npm run build        # Build produção (webpack — necessário para PWA)
 npm run lint
 npx tsc --noEmit     # Type check
 
-# Docker — Supabase local
+# Docker — Supabase (ambiente de dev, na VPS)
 docker compose up -d
 docker compose logs -f supabase-auth
 docker compose restart supabase-auth  # NÃO relê .env — usar --force-recreate para vars
@@ -643,16 +648,18 @@ export const GLOBAL_VIEWER_ROLES = ['super_admin', 'diretor'] as const satisfies
 
 ---
 
-## SERVIÇOS (DEV LOCAL)
+## SERVIÇOS (DEV — na VPS, via túnel SSH / port-forward do VS Code)
 
-| Serviço | URL |
-|---------|-----|
-| App Next.js | http://localhost:3000 |
+Esses serviços rodam na **VPS de dev**. Da sua máquina, os endereços `localhost` abaixo funcionam **quando a porta está encaminhada** — o VS Code Remote-SSH encaminha sob demanda pelo painel **PORTS** (3000 e 8000 já saem automáticos; Studio e Postgres, adicione se precisar).
+
+| Serviço | URL (via túnel) |
+|---------|-----------------|
+| App Next.js (PM2) | http://localhost:3000 |
 | Supabase API (Kong) | http://localhost:8000 |
 | Supabase Studio | http://localhost:3001 |
 | PostgreSQL | localhost:5432 |
 
-> Studio aparece como "unhealthy" no Docker — falso negativo, funciona normalmente.
+> Studio pode aparecer como "unhealthy" no Docker — falso negativo, funciona normalmente. Ele não é exposto publicamente; só chega por túnel SSH.
 
 ---
 
@@ -1654,11 +1661,10 @@ if (sessionStorage.getItem('sw-reloading')) {
 
 ---
 
-## CREDENCIAIS DEV LOCAL
+## CREDENCIAIS
 
-```
-Admin: admin@cacholaos.com.br / Admin2026cacholaos / super_admin
-VPS:   ssh root@187.77.255.31 / C@ch0l@1553#0S (ver docs/SSH VPS.txt)
-```
+> 🔒 Nenhuma senha no repositório. Todas as credenciais (admins de dev e produção e o acesso root SSH das VPSs) ficam no gerenciador de senhas da equipe.
 
-> ⚠️ NUNCA usar em produção.
+Acessos de dev úteis (sem senha — consultar o gerenciador de senhas):
+- App / admin de dev: admin@cachola.local
+- VPS de dev: alias cacholaos-dev (2.25.194.165)

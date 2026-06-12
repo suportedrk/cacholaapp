@@ -8,6 +8,8 @@ description: Verificar sincronia entre ambiente local (git, package.json, banco 
 > **Esta skill bloqueia o trabalho se o ambiente local não estiver alinhado com produção.**
 > Rode os 4 checks ANTES de criar branch, fazer commit, gerar plano de implementação ou qualquer outra ação que dependa de o ambiente local refletir a realidade de `origin/main`.
 
+> **Nota de ambiente (jun/2026):** o "ambiente local" / "Docker local" desta skill agora é a **VPS de dev** (não mais o Windows do Bruno). Os comandos rodam na VPS; o dev server é gerido pelo PM2 (processo `cachola-dev`).
+
 ---
 
 ## Quando usar
@@ -159,74 +161,38 @@ docker exec -i cacholaos-db psql -U postgres -d postgres -c "NOTIFY pgrst, 'relo
 
 ---
 
-### Check 4 — Dev server reiniciado após último git pull
+### Check 4 — Dev server (PM2) reiniciado após último git pull
 
-**O que verificamos:** Se o processo `next dev` em execução foi iniciado **antes** da última modificação do `package.json`. Detecta o caso de variáveis `NEXT_PUBLIC_*` "carimbadas" no bundle desatualizadas — sintoma: rodapé da app mostra versão antiga mesmo após `git pull` + hot-reload.
+**O que verificamos:** Se o processo PM2 `cachola-dev` foi reiniciado **depois** da última modificação do `package.json`. `NEXT_PUBLIC_APP_VERSION` é "carimbada" no startup do dev server; sintoma de drift: rodapé da app mostra versão antiga mesmo após `git pull`.
 
-**Comandos (Linux/WSL/Git Bash):**
+**Comando (na VPS de dev):**
 
 ```bash
-# Encontrar PID do processo next dev
-PID=$(pgrep -f "next dev" 2>/dev/null | head -1)
+# Início do processo PM2 cachola-dev (epoch em segundos)
+PM2_START_S=$(pm2 jlist | python3 -c "import sys,json;d=json.load(sys.stdin);p=[x for x in d if x['name']=='cachola-dev'];print(int(p[0]['pm2_env']['pm_uptime']/1000) if p else 0)")
+PKG_MTIME_EPOCH=$(stat -c %Y package.json)
 
-if [ -z "$PID" ]; then
-  echo "ℹ️  Dev server não está rodando — check 4 não aplicável"
+if [ "$PM2_START_S" -eq 0 ]; then
+  echo "ℹ️  cachola-dev não está rodando no PM2 — check 4 não aplicável"
+elif [ "$PKG_MTIME_EPOCH" -gt "$PM2_START_S" ]; then
+  echo "❌ Drift — cachola-dev iniciou ANTES da última modificação do package.json"
 else
-  PROCESS_START_EPOCH=$(ps -o lstart= -p "$PID" | xargs -I{} date -d "{}" +%s 2>/dev/null)
-  PKG_MTIME_EPOCH=$(stat -c %Y package.json 2>/dev/null)
-
-  echo "PID next dev: $PID"
-  echo "Início do processo (epoch): $PROCESS_START_EPOCH"
-  echo "Mtime do package.json (epoch): $PKG_MTIME_EPOCH"
-
-  if [ "$PKG_MTIME_EPOCH" -gt "$PROCESS_START_EPOCH" ]; then
-    echo "❌ Drift — dev server iniciou ANTES da última modificação do package.json"
-  else
-    echo "✅ Sync ok — dev server iniciado após o último pull"
-  fi
+  echo "✅ Sync ok — cachola-dev reiniciado após o último pull"
 fi
-```
-
-**Comandos (Windows PowerShell — alternativa):**
-
-```powershell
-$proc = Get-Process -Name "node" -ErrorAction SilentlyContinue |
-  Where-Object { $_.CommandLine -match "next dev" } |
-  Select-Object -First 1
-
-if (-not $proc) {
-  Write-Host "ℹ️  Dev server não está rodando — check 4 não aplicável"
-} else {
-  $pkgMtime = (Get-Item package.json).LastWriteTime
-  $procStart = $proc.StartTime
-
-  Write-Host "Início do processo: $procStart"
-  Write-Host "Mtime do package.json: $pkgMtime"
-
-  if ($pkgMtime -gt $procStart) {
-    Write-Host "❌ Drift — dev server iniciou ANTES da última modificação do package.json"
-  } else {
-    Write-Host "✅ Sync ok"
-  }
-}
 ```
 
 **Critério de aprovação:**
 
 | Condição | Resultado |
 |---|---|
-| Dev server não está rodando | ℹ️ N/A — pular check |
-| `mtime(package.json) <= startTime(next dev)` | ✅ Sync ok |
-| `mtime(package.json) > startTime(next dev)` | ❌ Drift — env vars stale |
+| `cachola-dev` não está rodando no PM2 | ℹ️ N/A — pular check |
+| `mtime(package.json) <= início do cachola-dev` | ✅ Sync ok |
+| `mtime(package.json) > início do cachola-dev` | ❌ Drift — env vars stale |
 
 **Correção sugerida quando falhar:**
 
 ```bash
-# Mate o processo dev server (Ctrl+C no terminal onde está rodando, ou):
-pkill -f "next dev"
-
-# Reinicie:
-npm run dev
+pm2 restart cachola-dev --update-env
 ```
 
 ---
