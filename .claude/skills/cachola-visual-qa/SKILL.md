@@ -1,6 +1,6 @@
 ---
 name: cachola-visual-qa
-description: Confirmacao visual de telas do Cachola OS via chrome-devtools-mcp. Use sempre que precisar validar visualmente uma rota ou UI em producao (cachola.cloud) ou local (localhost:3000) — screenshots, checagem de carregamento, /403. Define o fluxo correto para NAO ficar pedindo flags de Chrome ao dono.
+description: Confirmacao visual de telas do Cachola OS via chrome-devtools-mcp. Use sempre que precisar validar visualmente uma rota ou UI em producao (cachola.cloud) ou dev (localhost:3000) — screenshots, checagem de carregamento, /403. Define o fluxo correto para NAO ficar pedindo flags de Chrome ao dono.
 ---
 
 # Confirmacao visual — Cachola OS
@@ -25,10 +25,10 @@ O chrome-devtools-mcp LANCA O PROPRIO Chrome dele, com perfil dedicado e persist
 
 ## URLs
 - Producao: https://cachola.cloud
-- Local: http://localhost:3000
+- Dev: http://localhost:3000 (app de dev — roda na VPS de dev; do notebook, via túnel SSH / port-forward do VS Code)
 
-## Lembrete local
-Apos re-seed do banco local, test users nascem sem grants — re-aplicar a migration de backfill relevante antes de qualquer prova de toggle.
+## Lembrete (ambiente de dev)
+Apos re-seed do banco de dev, test users nascem sem grants — re-aplicar a migration de backfill relevante antes de qualquer prova de toggle.
 
 ## Armadilha: viewport estreito da janela automatizada do MCP
 
