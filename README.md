@@ -1,36 +1,43 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Cachola OS
 
-## Getting Started
+Plataforma de operação diária (SaaS/PWA) do **Grupo DRK** para o buffet infantil **Buffet Cachola** — duas unidades (Pinheiros e Moema). Centraliza o que antes vivia espalhado em WhatsApp, planilhas e cadernos: eventos, checklists, manutenção, equipamentos, prestadores, comunicação interna, atas, calendário, BI e vendas (com integração ao CRM Ploomes).
 
-First, run the development server:
+> Projeto privado e proprietário do Grupo DRK.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Stack
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- **Next.js 16** (App Router) + **React 19** + **TypeScript 5** (strict)
+- **Tailwind v4** com tokens próprios (sage green / warm beige) — sem `tailwind.config.ts`
+- **@base-ui/react** (não confundir com Radix/shadcn)
+- **TanStack Query** (estado servidor) + **Zustand** (estado cliente)
+- **Supabase self-hosted** (Docker) + **GoTrue** (auth)
+- **Recharts**, PWA, Lucide, Sonner
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Ambientes
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Ambiente | Onde | Acesso |
+|----------|------|--------|
+| **Produção** | VPS Hostinger (Ubuntu 24.04 + Nginx + PM2 cluster) | https://cachola.cloud · Supabase em `api.cachola.cloud` |
+| **Desenvolvimento** | VPS de dev (headless), dev server via PM2 (`cachola-dev`) | `localhost:3000` da VPS, acessado do notebook via túnel SSH / port-forward do VS Code · banco Docker `cacholaos-db` |
 
-## Learn More
+## Como rodar o dev
 
-To learn more about Next.js, take a look at the following resources:
+1. **Sempre** rodar antes o pre-flight de sincronia (skill `cachola-dev-sync`) — 4 checks que pegam "drift" entre o ambiente e a base compartilhada.
+2. O dev server roda na VPS de dev pelo PM2 (`cachola-dev`); o acesso do notebook é via túnel SSH / port-forward do VS Code para `localhost:3000`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Passo a passo completo: ver `CLAUDE.md` e as skills `.claude/skills/cachola-dev-sync` e `.claude/skills/cachola-visual-qa`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Deploy (produção)
 
-## Deploy on Vercel
+Deploy é **só por git** — nunca editar arquivos direto na VPS.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+`develop` (testes) → CI verde → `merge --no-ff main` → GitHub Actions deploya na VPS → migrations aplicadas **após** o deploy verde + `NOTIFY pgrst, 'reload schema'`.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Regras detalhadas: `CLAUDE.md` (seção GIT WORKFLOW) e skills `cachola-supabase-ops` / `cachola-vps-ops`.
+
+## Documentação (fonte da verdade)
+
+- **`CLAUDE.md`** — memória persistente do projeto. **Leia primeiro.**
+- **`AGENTS.md`** — mapa de entrada para agentes de IA.
+- **`docs/`** — `MODULES.md`, `DECISIONS.md`, `PERMISSIONS.md`, `API_PLOOMES.md`, `ops/`, `rbac/`.
+- **`.claude/skills/`** — 7 skills com padrões reais e armadilhas do projeto.
