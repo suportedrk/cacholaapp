@@ -27,6 +27,7 @@ Esta skill cobre toda a camada **abaixo do código de aplicação**: banco de da
 | Mexer no `deploy.yml`, GitHub Actions, PM2 | `references/deploy-pipeline.md` |
 | Algo quebrou em prod e preciso reagir | `references/incidents-playbook.md` (LEIA PRIMEIRO) |
 | Mudar env do GoTrue, Nginx, ou S3 | `references/infra-config.md` |
+| Reerguer o Supabase do zero (servidor novo / recuperação de desastre) | `references/bootstrap-supabase.md` |
 | Adicionar/editar role, lembrar de constantes | `references/rbac-reference.md` |
 | Criar MODULO NOVO do zero (do banco a UI) — passo a passo de permissoes | `references/novo-modulo-permissoes.md` |
 | Query em tabela grande sem `ORDER BY` + `limit` — risco de truncamento silencioso | `references/postgrest-pagination.md` |
