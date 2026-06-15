@@ -61,6 +61,7 @@ export interface MeetingMinuteForList {
   created_by:   string
   created_at:   string
   updated_at:   string
+  unit?:        { id: string; name: string | null; slug: string | null } | null
   creator:      MinuteUser | null
   participants: MinuteParticipant[]
   action_items: MinuteActionItemSummary[]
@@ -105,6 +106,7 @@ export interface MeetingMinuteDetail {
   created_by:   string
   created_at:   string
   updated_at:   string
+  unit?:        { id: string; name: string | null; slug: string | null } | null
   creator:      MinuteUser | null
   participants: MeetingMinuteParticipantDetail[]
   action_items: MeetingMinuteActionItemDetail[]

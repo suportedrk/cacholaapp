@@ -7,6 +7,7 @@ import {
   ArrowLeft, MoreHorizontal, Pencil, Trash2,
   Calendar, MapPin, User, FileDown, Copy, Loader2, Globe,
 } from 'lucide-react'
+import { UnitChip } from '@/components/shared/unit-chip'
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
   DropdownMenuItem, DropdownMenuSeparator,
@@ -121,8 +122,10 @@ export function MeetingMinuteDetailView({
               <Calendar className="w-4 h-4 shrink-0" />
               {meetingDate}
             </span>
-            {/* Rótulo "Geral" apenas para atas sem unidade (criadas pela diretoria) */}
-            {minute.unit_id == null && (
+            {/* Unidade: chip colorido quando específica, "Geral" quando null */}
+            {minute.unit_id != null ? (
+              <UnitChip slug={minute.unit?.slug} name={minute.unit?.name} size="sm" />
+            ) : (
               <span className="flex items-center gap-1.5">
                 <Globe className="w-4 h-4 shrink-0" />
                 Geral · todas as unidades

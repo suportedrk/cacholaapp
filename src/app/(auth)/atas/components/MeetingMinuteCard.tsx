@@ -9,6 +9,7 @@ import { cn, getInitials, getAvatarColor } from '@/lib/utils'
 import { MEETING_STATUS_LABELS } from '@/types/minutes'
 import type { MeetingMinuteForList } from '@/types/minutes'
 import { formatSaoPauloDateTimeShort } from '@/lib/utils/meeting-datetime'
+import { UnitChip } from '@/components/shared/unit-chip'
 
 // ─────────────────────────────────────────────────────────────
 // Status badge
@@ -131,8 +132,12 @@ export const MeetingMinuteCard = memo(function MeetingMinuteCard({
 
           {/* ── Row 2: data e local ── */}
           <div className="flex flex-col gap-1">
-            {/* Rótulo "Geral" apenas para atas sem unidade (criadas pela diretoria) */}
-            {minute.unit_id == null && (
+            {/* Unidade: chip colorido quando específica, "Geral" quando null */}
+            {minute.unit_id != null ? (
+              <div>
+                <UnitChip slug={minute.unit?.slug} name={minute.unit?.name} size="sm" />
+              </div>
+            ) : (
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <Globe className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
                 <span>Geral · todas as unidades</span>
