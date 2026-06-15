@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import { RefreshCw } from 'lucide-react'
+import { AlertTriangle, RefreshCw } from 'lucide-react'
 import { isChunkLoadError, reloadForNewVersion } from '@/lib/pwa/chunk-reload'
 
 interface GlobalErrorProps {
@@ -51,12 +51,16 @@ export default function GlobalError({ error }: GlobalErrorProps) {
               margin: '0 auto 20px',
             }}
           >
-            <RefreshCw
-              size={32}
-              color={isVersionError ? '#059669' : '#dc2626'}
-              strokeWidth={1.5}
-              style={isVersionError ? { animation: 'spin 1s linear infinite' } : undefined}
-            />
+            {isVersionError ? (
+              <RefreshCw
+                size={32}
+                color="#059669"
+                strokeWidth={1.5}
+                style={{ animation: 'spin 1s linear infinite' }}
+              />
+            ) : (
+              <AlertTriangle size={32} color="#dc2626" strokeWidth={1.5} />
+            )}
           </div>
 
           <h1 style={{ fontSize: '1.25rem', fontWeight: 600, color: '#1a1a1a', marginBottom: 8 }}>
