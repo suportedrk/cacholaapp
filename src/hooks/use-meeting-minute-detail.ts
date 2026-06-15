@@ -10,6 +10,7 @@ import type { MeetingMinuteDetail } from '@/types/minutes'
 // ─────────────────────────────────────────────────────────────
 const MINUTE_DETAIL_SELECT = `
   *,
+  unit:units!meeting_minutes_unit_id_fkey(id, name, slug),
   creator:users!meeting_minutes_created_by_fkey(id, name, avatar_url),
   participants:meeting_participants(
     user_id, role, notified_at,
