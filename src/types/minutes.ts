@@ -112,6 +112,23 @@ export interface MeetingMinuteDetail {
   action_items: MeetingMinuteActionItemDetail[]
 }
 
+// ── RPC — get_my_action_items ──────────────────────────────────
+
+export interface MyMeetingTask {
+  item_id:       string
+  description:   string
+  due_date:      string | null
+  status:        ActionItemStatus
+  completed_at:  string | null
+  meeting_id:    string
+  meeting_title: string
+  meeting_date:  string
+  unit_id:       string | null
+  unit_name:     string | null
+  unit_slug:     string | null
+  can_view_full: boolean
+}
+
 // ── Form draft types ───────────────────────────────────────────
 
 export interface ParticipantDraft {
