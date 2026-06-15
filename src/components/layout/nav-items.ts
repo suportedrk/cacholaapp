@@ -189,7 +189,7 @@ export const NAV_GROUPS: NavGroup[] = [
           { label: 'Itens',              href: ROUTES.decoracaoItens,        icon: Boxes,   module: 'decoracao', allowedRoles: [...DECORACAO_MANAGE_ROLES] },
         ],
       },
-      { label: 'Atas',         href: ROUTES.minutes,     icon: FileText,  module: 'atas',         allowedRoles: [...ATAS_ACCESS_ROLES], comingSoon: true  },
+      { label: 'Atas',         href: ROUTES.minutes,     icon: FileText,  module: 'atas',         allowedRoles: [...ATAS_ACCESS_ROLES] },
       { label: 'Relatórios',   href: ROUTES.reports,     icon: BarChart3, module: 'relatorios',   allowedRoles: [...BI_ACCESS_ROLES], comingSoon: true },
     ],
   },
