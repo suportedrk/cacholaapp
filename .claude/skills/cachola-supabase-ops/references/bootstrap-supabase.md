@@ -11,7 +11,7 @@ A produção do Cachola OS **NÃO** usa um `docker-compose` caseiro. Ela roda o 
 - Projeto Docker Compose: `supabase`
 - Compose real: `/opt/supabase/supabase/docker/docker-compose.yml` (oficial, editado in-place)
 
-**NÃO use** os arquivos `docker-compose.yml` / `docker-compose.prod.yml` que existem na raiz do repo `cacholaapp` — são maquetes antigas e divergentes (nomes de contêiner, domínio e versões errados; sem o pooler). Estão marcados para aposentadoria.
+**Atenção aos composes do repo `cacholaapp`:** o `docker-compose.prod.yml` foi **removido** — era uma maquete antiga e divergente (não refletia a produção). O `docker-compose.yml` da raiz **NÃO é produção**: é o Compose do ambiente de **dev** (a VPS de dev o usa — projeto `cacholaos-dev`, contêiner `cacholaos-db`). A produção usa o Supabase oficial em `/opt/supabase`, descrito neste guia.
 
 O app Next.js (Cachola OS) **não** faz parte desse Compose: roda à parte, via **PM2** no host, e se conecta ao Supabase pelo **Kong** (porta 8000) → **Nginx** do host → `https://api.cachola.cloud`.
 

@@ -83,7 +83,7 @@ log "   Storage: ${STORAGE_FILE} (${STORAGE_SIZE})"
 # ── 3. Backup de configurações (críticas + sistema) ───────────
 log "[3/4] Backup de configurações..."
 CONFIG_FILE="${DEST}/${PREFIX}_config.tar.gz"
-tar -czf "${CONFIG_FILE}"   "${APP_DIR}/.env"   "${APP_DIR}/.env.local"   "${APP_DIR}/docker-compose.yml"   "${APP_DIR}/docker-compose.prod.yml"   "${SUPABASE_DIR}/.env"   "${SUPABASE_DIR}/volumes/api/kong.yml"   /etc/cachola/cron.env   /etc/nginx/sites-available/cacholaos   /etc/nginx/sites-available/supabase-api   /opt/cron-call.sh   /opt/cron-runner.sh   /etc/letsencrypt/   /root/.config/rclone/rclone.conf   2>/dev/null || true
+tar -czf "${CONFIG_FILE}"   "${APP_DIR}/.env"   "${APP_DIR}/.env.local"   "${APP_DIR}/docker-compose.yml"   "${SUPABASE_DIR}/.env"   "${SUPABASE_DIR}/volumes/api/kong.yml"   /etc/cachola/cron.env   /etc/nginx/sites-available/cacholaos   /etc/nginx/sites-available/supabase-api   /opt/cron-call.sh   /opt/cron-runner.sh   /etc/letsencrypt/   /root/.config/rclone/rclone.conf   2>/dev/null || true
 CONFIG_SIZE=$(du -sh "${CONFIG_FILE}" | cut -f1)
 log "   Config: ${CONFIG_FILE} (${CONFIG_SIZE})"
 

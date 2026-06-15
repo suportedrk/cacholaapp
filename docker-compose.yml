@@ -1,15 +1,8 @@
 # ============================================================
-# CACHOLA OS — Docker Compose (Desenvolvimento Local)
-# ============================================================
-# Supabase Self-Hosted Community Edition
-# Documentação: https://supabase.com/docs/guides/self-hosting/docker
-#
-# Como usar:
-#   1. Copie .env.example para .env e preencha as variáveis
-#   2. docker compose up -d
-#   3. Acesse: http://localhost:3000 (app)
-#              http://localhost:8000 (Supabase API)
-#              http://localhost:3001 (Supabase Studio)
+# ATENCAO: ESTE E O COMPOSE DO AMBIENTE DE DEV (nao e producao).
+# Usado pela VPS de dev em /root/cacholaos (projeto cacholaos-dev).
+# A PRODUCAO usa o Supabase self-hosted OFICIAL em /opt/supabase —
+# ver .claude/skills/cachola-supabase-ops/references/bootstrap-supabase.md
 # ============================================================
 
 name: cacholaos-dev
