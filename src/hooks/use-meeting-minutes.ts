@@ -60,7 +60,10 @@ export function useMeetingMinutes(filters?: Partial<MeetingMinutesFilters>) {
       }
 
       // Period filter
-      if (filters?.period && filters.period !== 'all') {
+      if (filters?.period === 'custom') {
+        if (filters.startDate) query = query.gte('meeting_date', filters.startDate)
+        if (filters.endDate)   query = query.lte('meeting_date', filters.endDate)
+      } else if (filters?.period && filters.period !== 'all') {
         const months = parseInt(filters.period, 10)
         const since = startOfDay(subMonths(new Date(), months)).toISOString()
         query = query.gte('meeting_date', since)

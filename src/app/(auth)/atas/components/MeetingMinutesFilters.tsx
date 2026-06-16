@@ -6,15 +6,17 @@ import { cn } from '@/lib/utils'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
+import { DateInput } from '@/components/ui/date-input'
 import { MEETING_STATUS_LABELS } from '@/types/minutes'
 import type { MeetingMinutesFilters, MeetingStatus } from '@/types/minutes'
 
 const PERIOD_LABELS: Record<string, string> = {
-  '1':  'Último mês',
-  '3':  'Últimos 3 meses',
-  '6':  'Últimos 6 meses',
-  '12': 'Último ano',
-  'all': 'Todos os períodos',
+  '1':     'Último mês',
+  '3':     'Últimos 3 meses',
+  '6':     'Últimos 6 meses',
+  '12':    'Último ano',
+  'all':   'Todos os períodos',
+  'custom': 'Período personalizado',
 }
 
 interface Props {
@@ -100,6 +102,28 @@ export function MeetingMinutesFiltersBar({
             ))}
           </SelectContent>
         </Select>
+
+        {/* Período personalizado — seletores de data */}
+        {filters.period === 'custom' && (
+          <>
+            <div className="flex items-center gap-1.5">
+              <label className="text-xs text-muted-foreground whitespace-nowrap">De</label>
+              <DateInput
+                value={filters.startDate ?? ''}
+                onChange={(v) => onFilterChange('startDate', v || null)}
+                className="h-9 w-[140px]"
+              />
+            </div>
+            <div className="flex items-center gap-1.5">
+              <label className="text-xs text-muted-foreground whitespace-nowrap">Até</label>
+              <DateInput
+                value={filters.endDate ?? ''}
+                onChange={(v) => onFilterChange('endDate', v || null)}
+                className="h-9 w-[140px]"
+              />
+            </div>
+          </>
+        )}
 
         {/* Somente as minhas */}
         {showOnlyMine && (
