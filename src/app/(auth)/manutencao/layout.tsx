@@ -1,11 +1,11 @@
 import { requireRoleServer } from '@/lib/auth/require-role'
-import { COMING_SOON_BYPASS_ROLES } from '@/config/roles'
+import { MAINTENANCE_MODULE_ROLES } from '@/config/roles'
 
 export default async function ManutencaoLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  await requireRoleServer(COMING_SOON_BYPASS_ROLES)
+  await requireRoleServer(MAINTENANCE_MODULE_ROLES)
   return <>{children}</>
 }

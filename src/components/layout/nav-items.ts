@@ -162,14 +162,14 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: 'Checklist Operacional', href: ROUTES.checklists, icon: ClipboardList, module: 'checklists', allowedRoles: [...OPERATIONAL_CHECKLIST_ROLES], comingSoon: true },
       {
-        label: 'Manutenção', href: ROUTES.maintenance, icon: Wrench, module: 'manutencao', allowedRoles: [...MAINTENANCE_MODULE_ROLES], comingSoon: true,
+        label: 'Manutenção', href: ROUTES.maintenance, icon: Wrench, module: 'manutencao', allowedRoles: [...MAINTENANCE_MODULE_ROLES],
         children: [
-          { label: 'Dashboard',     href: ROUTES.maintenanceDashboard, icon: LayoutDashboard, module: 'manutencao',    allowedRoles: [...MAINTENANCE_ADMIN_ROLES],  comingSoon: true },
-          { label: 'Chamados',      href: ROUTES.maintenanceChamados,  icon: ClipboardList,   module: 'manutencao',    allowedRoles: [...MAINTENANCE_MODULE_ROLES], comingSoon: true },
-          { label: 'Agenda',        href: ROUTES.maintenanceAgenda,    icon: CalendarClock,   module: 'manutencao',    allowedRoles: [...MAINTENANCE_ADMIN_ROLES],  comingSoon: true },
-          { label: 'Minhas Tarefas', href: ROUTES.maintenanceMinhasTarefas, icon: ListTodo,   module: 'manutencao',    allowedRoles: [...MAINTENANCE_MODULE_ROLES], comingSoon: true },
-          { label: 'Equipamentos',  href: ROUTES.equipment,            icon: Package,         module: 'equipamentos',  allowedRoles: [...EQUIPAMENTOS_MENU_ROLES],  comingSoon: true },
-          { label: 'Configurações', href: ROUTES.maintenanceConfig,    icon: Settings2,       module: 'manutencao',    allowedRoles: [...MAINTENANCE_ADMIN_ROLES],  comingSoon: true },
+          { label: 'Dashboard',     href: ROUTES.maintenanceDashboard, icon: LayoutDashboard, module: 'manutencao',    allowedRoles: [...MAINTENANCE_ADMIN_ROLES] },
+          { label: 'Chamados',      href: ROUTES.maintenanceChamados,  icon: ClipboardList,   module: 'manutencao',    allowedRoles: [...MAINTENANCE_MODULE_ROLES] },
+          { label: 'Agenda',        href: ROUTES.maintenanceAgenda,    icon: CalendarClock,   module: 'manutencao',    allowedRoles: [...MAINTENANCE_ADMIN_ROLES] },
+          { label: 'Minhas Tarefas', href: ROUTES.maintenanceMinhasTarefas, icon: ListTodo,   module: 'manutencao',    allowedRoles: [...MAINTENANCE_MODULE_ROLES] },
+          { label: 'Equipamentos',  href: ROUTES.equipment,            icon: Package,         module: 'equipamentos',  allowedRoles: [...EQUIPAMENTOS_MENU_ROLES] },
+          { label: 'Configurações', href: ROUTES.maintenanceConfig,    icon: Settings2,       module: 'manutencao',    allowedRoles: [...MAINTENANCE_ADMIN_ROLES] },
         ],
       },
       { label: 'Prestadores',  href: ROUTES.providers,   icon: Handshake, module: 'prestadores',  allowedRoles: [...PRESTADORES_ACCESS_ROLES], comingSoon: true },
