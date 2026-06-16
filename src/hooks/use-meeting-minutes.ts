@@ -62,7 +62,8 @@ export function useMeetingMinutes(filters?: Partial<MeetingMinutesFilters>) {
       // Period filter
       if (filters?.period === 'custom') {
         if (filters.startDate) query = query.gte('meeting_date', filters.startDate)
-        if (filters.endDate)   query = query.lte('meeting_date', filters.endDate)
+        // Fim do dia em SP (UTC-3 fixo desde 2019) — evita excluir atas cujo timestamptz é após meia-noite UTC
+        if (filters.endDate)   query = query.lte('meeting_date', filters.endDate + 'T23:59:59.999-03:00')
       } else if (filters?.period && filters.period !== 'all') {
         const months = parseInt(filters.period, 10)
         const since = startOfDay(subMonths(new Date(), months)).toISOString()
