@@ -24,10 +24,12 @@ export const ACTION_ITEM_STATUS_LABELS: Record<ActionItemStatus, string> = {
 }
 
 export const DEFAULT_MINUTES_FILTERS: MeetingMinutesFilters = {
-  search:   '',
-  status:   'all',
-  period:   '6',
-  onlyMine: false,
+  search:    '',
+  status:    'all',
+  period:    '6',
+  onlyMine:  false,
+  startDate: null,
+  endDate:   null,
 }
 
 // ── Sub-shapes ────────────────────────────────────────────────
@@ -70,10 +72,12 @@ export interface MeetingMinuteForList {
 // ── Filters ────────────────────────────────────────────────────
 
 export interface MeetingMinutesFilters {
-  search:   string
-  status:   MeetingStatus | 'all'
-  period:   '1' | '3' | '6' | '12' | 'all'
-  onlyMine: boolean
+  search:    string
+  status:    MeetingStatus | 'all'
+  period:    '1' | '3' | '6' | '12' | 'all' | 'custom'
+  onlyMine:  boolean
+  startDate: string | null
+  endDate:   string | null
 }
 
 // ── Detail types (form + view) ─────────────────────────────────

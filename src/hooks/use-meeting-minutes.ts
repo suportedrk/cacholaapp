@@ -60,7 +60,12 @@ export function useMeetingMinutes(filters?: Partial<MeetingMinutesFilters>) {
       }
 
       // Period filter
-      if (filters?.period && filters.period !== 'all') {
+      if (filters?.period === 'custom') {
+        // Início do dia em SP (UTC-3 fixo desde 2019) — evita incluir atas da noite anterior em SP
+        if (filters.startDate) query = query.gte('meeting_date', filters.startDate + 'T00:00:00-03:00')
+        // Fim do dia em SP (UTC-3 fixo desde 2019) — evita excluir atas cujo timestamptz é após meia-noite UTC
+        if (filters.endDate)   query = query.lte('meeting_date', filters.endDate + 'T23:59:59.999-03:00')
+      } else if (filters?.period && filters.period !== 'all') {
         const months = parseInt(filters.period, 10)
         const since = startOfDay(subMonths(new Date(), months)).toISOString()
         query = query.gte('meeting_date', since)
