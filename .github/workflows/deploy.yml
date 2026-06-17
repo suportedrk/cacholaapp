@@ -15,11 +15,43 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
+    env:
+      DEPLOY_SCRIPT: |
+        set -e
+
+        echo "Verificando working tree da VPS..."
+        cd /opt/cacholaapp
+        DIVERGED=$(git status --porcelain | grep -v '^??' || true)
+        if [ -n "$DIVERGED" ]; then
+          echo "ERRO: Working tree da VPS tem arquivos rastreados modificados ou deletados:"
+          echo "$DIVERGED"
+          echo "Corrija manualmente na VPS antes de fazer novo deploy."
+          exit 1
+        fi
+        echo "Working tree OK."
+
+        echo "Atualizando codigo..."
+        git pull origin main
+
+        echo "Instalando dependencias..."
+        npm ci
+
+        echo "Buildando aplicacao..."
+        NODE_OPTIONS=--max-old-space-size=4096 npm run build
+
+        echo "Reiniciando PM2..."
+        pm2 restart cacholaos --update-env
+
+        echo "Deploy concluido!"
+        pm2 status cacholaos
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Deploy via SSH
+      - name: Deploy via SSH (tentativa 1)
+        id: deploy1
+        continue-on-error: true
         uses: appleboy/ssh-action@v1.2.5
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -28,34 +60,49 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           timeout: 90s
           command_timeout: 12m
-          script: |
-            set -e
+          script: ${{ env.DEPLOY_SCRIPT }}
 
-            echo "Verificando working tree da VPS..."
-            cd /opt/cacholaapp
-            DIVERGED=$(git status --porcelain | grep -v '^??' || true)
-            if [ -n "$DIVERGED" ]; then
-              echo "ERRO: Working tree da VPS tem arquivos rastreados modificados ou deletados:"
-              echo "$DIVERGED"
-              echo "Corrija manualmente na VPS antes de fazer novo deploy."
-              exit 1
-            fi
-            echo "Working tree OK."
+      - name: Aguardar antes da tentativa 2
+        if: steps.deploy1.outcome == 'failure'
+        run: sleep 30
 
-            echo "Atualizando codigo..."
-            git pull origin main
+      - name: Deploy via SSH (tentativa 2)
+        id: deploy2
+        if: steps.deploy1.outcome == 'failure'
+        continue-on-error: true
+        uses: appleboy/ssh-action@v1.2.5
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          timeout: 90s
+          command_timeout: 12m
+          script: ${{ env.DEPLOY_SCRIPT }}
 
-            echo "Instalando dependencias..."
-            npm ci
+      - name: Aguardar antes da tentativa 3
+        if: steps.deploy1.outcome == 'failure' && steps.deploy2.outcome == 'failure'
+        run: sleep 60
 
-            echo "Buildando aplicacao..."
-            NODE_OPTIONS=--max-old-space-size=4096 npm run build
+      - name: Deploy via SSH (tentativa 3)
+        id: deploy3
+        if: steps.deploy1.outcome == 'failure' && steps.deploy2.outcome == 'failure'
+        continue-on-error: true
+        uses: appleboy/ssh-action@v1.2.5
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          timeout: 90s
+          command_timeout: 12m
+          script: ${{ env.DEPLOY_SCRIPT }}
 
-            echo "Reiniciando PM2..."
-            pm2 restart cacholaos --update-env
-
-            echo "Deploy concluido!"
-            pm2 status cacholaos
+      - name: Falhar se todas as tentativas falharam
+        if: steps.deploy1.outcome == 'failure' && steps.deploy2.outcome == 'failure' && steps.deploy3.outcome == 'failure'
+        run: |
+          echo "::error::As 3 tentativas de deploy via SSH falharam (provavel instabilidade de rede GitHub para a VPS)."
+          exit 1
 
       - name: Notify success
         if: success()
