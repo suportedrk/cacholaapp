@@ -1,0 +1,113 @@
+name: Migrar Producao (esteira)
+
+on:
+  workflow_dispatch:
+    inputs:
+      migration_file:
+        description: "Nome exato do arquivo (ex: 160_minha_migracao.sql)"
+        required: true
+        type: string
+      confirmar:
+        description: "Redigite o nome do arquivo para confirmar"
+        required: true
+        type: string
+      dry_run:
+        description: "Teste sem gravar (BEGIN/ROLLBACK)"
+        required: false
+        type: boolean
+        default: false
+      forcar_reaplicar:
+        description: "Reaplicar mesmo se ja constar como aplicada (use com cuidado)"
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: migrate-production
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    name: Aplicar migracao em producao
+    runs-on: ubuntu-latest
+    environment: producao
+    timeout-minutes: 15
+    steps:
+      - name: Validar inputs
+        run: |
+          set -e
+          FILE="${{ github.event.inputs.migration_file }}"
+          CONF="${{ github.event.inputs.confirmar }}"
+          if ! echo "$FILE" | grep -qE '^[0-9]{3}_[a-z0-9_]+\.sql$'; then
+            echo "::error::Nome invalido. Use NNN_descricao.sql (minusculas, numeros e _)."
+            exit 1
+          fi
+          if [ "$FILE" != "$CONF" ]; then
+            echo "::error::A confirmacao nao bate com o nome do arquivo."
+            exit 1
+          fi
+          echo "Inputs validados: $FILE"
+
+      - name: Aplicar via SSH
+        uses: appleboy/ssh-action@v1.2.5
+        env:
+          MIGRATION_FILE: ${{ github.event.inputs.migration_file }}
+          DRY_RUN: ${{ github.event.inputs.dry_run }}
+          FORCE: ${{ github.event.inputs.forcar_reaplicar }}
+          GH_ACTOR: ${{ github.actor }}
+          GH_SHA: ${{ github.sha }}
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          timeout: 90s
+          command_timeout: 12m
+          envs: MIGRATION_FILE,DRY_RUN,FORCE,GH_ACTOR,GH_SHA
+          script: |
+            set -eu
+            DB_CONTAINER=supabase-db
+            REPO=/opt/cacholaapp
+            MIG="$REPO/supabase/migrations/$MIGRATION_FILE"
+            echo "$MIGRATION_FILE" | grep -qE '^[0-9]{3}_[a-z0-9_]+\.sql$' || { echo "Nome invalido"; exit 1; }
+            if [ ! -f "$MIG" ]; then
+              echo "ERRO: $MIGRATION_FILE nao existe na VPS. Faca o deploy (merge para main) antes de aplicar."
+              exit 1
+            fi
+            if grep -iqE '^[[:space:]]*(commit|rollback)[[:space:]]*;?[[:space:]]*$' "$MIG"; then
+              echo "ERRO: o arquivo contem COMMIT ou ROLLBACK soltos. A esteira gerencia a transacao; remova esses comandos."
+              exit 1
+            fi
+            CHECKSUM=$(sha256sum "$MIG" | cut -d' ' -f1)
+            if [ "$FORCE" != "true" ]; then
+              JA=$(docker exec -i "$DB_CONTAINER" psql -U postgres -d postgres -tAc "SELECT 1 FROM public.cachola_migration_log WHERE filename = '$MIGRATION_FILE' LIMIT 1;")
+              if [ "$JA" = "1" ]; then
+                echo "ERRO: $MIGRATION_FILE ja consta como aplicada. Use forcar_reaplicar se realmente quiser repetir."
+                exit 1
+              fi
+            fi
+            if [ "$DRY_RUN" = "true" ]; then
+              echo "DRY-RUN: testando $MIGRATION_FILE (sera desfeito, nada gravado)..."
+              { echo 'BEGIN;'; cat "$MIG"; echo 'ROLLBACK;'; } | docker exec -i "$DB_CONTAINER" psql -v ON_ERROR_STOP=1 -U postgres -d postgres
+              echo "DRY-RUN concluido com sucesso. Nada foi gravado."
+              exit 0
+            fi
+            TS=$(date +%Y%m%d-%H%M%S)
+            BKDIR=/opt/backups/pre-mig
+            mkdir -p "$BKDIR"
+            BK="$BKDIR/${MIGRATION_FILE%.sql}-$TS.sql.gz"
+            echo "Backup pre-migracao em $BK ..."
+            docker exec "$DB_CONTAINER" pg_dump -U postgres postgres | gzip > "$BK"
+            SZ=$(stat -c%s "$BK")
+            if [ "$SZ" -lt 1000 ]; then
+              echo "ERRO: backup saiu vazio ou pequeno demais ($SZ bytes). Abortando antes de aplicar."
+              exit 1
+            fi
+            echo "Backup OK ($SZ bytes)."
+            echo "Aplicando $MIGRATION_FILE ..."
+            docker exec -i "$DB_CONTAINER" psql -v ON_ERROR_STOP=1 --single-transaction -U postgres -d postgres < "$MIG"
+            docker exec -i "$DB_CONTAINER" psql -U postgres -d postgres -c "NOTIFY pgrst, 'reload schema';"
+            docker exec -i "$DB_CONTAINER" psql -v ON_ERROR_STOP=1 -U postgres -d postgres -c "INSERT INTO public.cachola_migration_log (filename, applied_by, git_sha, checksum) VALUES ('$MIGRATION_FILE', '$GH_ACTOR', '$GH_SHA', '$CHECKSUM') ON CONFLICT (filename) DO UPDATE SET applied_at = now(), applied_by = EXCLUDED.applied_by, git_sha = EXCLUDED.git_sha, checksum = EXCLUDED.checksum;"
+            CODE=$(curl -fsS -o /dev/null -w '%{http_code}' https://cachola.cloud || echo "000")
+            echo "Healthcheck HTTPS: $CODE"
+            echo "Migracao $MIGRATION_FILE aplicada com sucesso."

@@ -420,6 +420,10 @@ docker exec -i supabase-db psql -U postgres -d postgres \
 > Quebrar essa ordem causa `untracked working tree files would be overwritten by merge`
 > (incidente Sub-etapas A+B da tabela `sellers`, abr/2026).
 
+#### Esteira de migração com botão (`migrate-prod.yml`) — Fase 1
+
+A partir da migration **160**, a aplicação em produção passa a ter alternativa com 1 clique: o workflow manual `.github/workflows/migrate-prod.yml` (GitHub → Actions → "Migrar Producao (esteira)"). Ele reusa os secrets SSH do deploy, faz backup `pg_dump` pré-migração, aplica com `psql --single-transaction`, roda healthcheck em `https://cachola.cloud` e registra tudo em `public.cachola_migration_log` (tabela de auditoria/guarda contra reaplicação). A ordem **deploy-primeiro** continua valendo: merge para `main` → deploy verde → só então clicar a esteira (com `dry_run` para testar antes). Migrations novas **não** devem conter `BEGIN/COMMIT/ROLLBACK` soltos nem `NOTIFY pgrst` manual — a esteira cuida da transação e do reload. **Documentação completa:** skill `cachola-supabase-ops` → `references/deploy-pipeline.md` (seção "Esteira de migracao com botao").
+
 ### Banco de dados de DEV — snapshot anonimizado (LGPD)
 
 O banco da VPS de dev é um **retrato (snapshot) já anonimizado** da produção — não uma cópia ao vivo. É semeado **manualmente** e renovado só quando necessário; não há sincronização automática puxando dados da produção.
