@@ -40,11 +40,15 @@ export type CalendarEvent = {
 export type CalendarMaintenance = {
   id: string
   title: string
-  date: string          // due_date 'YYYY-MM-DD'
+  date: string          // 'YYYY-MM-DD' — due_at ou scheduled_at conforme a regra de dedup
   type: MaintenanceType
   status: string
   sector: { id: string; name: string } | null
   entityType: 'maintenance'
+  /** true = item vem de uma execução agendada (scheduled_at); false/undefined = vem do due_at */
+  scheduled?: boolean
+  /** Nome do executor da execução agendada (usuário interno ou prestador), quando disponível */
+  executor_name?: string | null
 }
 
 export type DashboardMaintenanceStats = {
@@ -220,26 +224,104 @@ export function useCalendarMaintenance(dateFrom: string, dateTo: string, enabled
     queryKey: ['dashboard', 'calendar-maintenance', dateFrom, dateTo, activeUnitId],
     queryFn: async () => {
       const supabase = createClient()
-      let q = supabase
+
+      // Q1 — chamados pelo due_at (comportamento original)
+      let ticketsQ = supabase
         .from('maintenance_tickets')
         .select('id, title, nature, status, due_at, sector:maintenance_sectors(id, name)')
         .gte('due_at', `${dateFrom}T00:00:00`)
         .lte('due_at', `${dateTo}T23:59:59`)
         .not('status', 'in', '("concluded","cancelled")')
         .order('due_at', { ascending: true })
-      if (activeUnitId) q = q.eq('unit_id', activeUnitId)
-      const { data, error } = await q
+      if (activeUnitId) ticketsQ = ticketsQ.eq('unit_id', activeUnitId)
 
-      if (error) throw error
-      return (data ?? []).map((o) => ({
-        id: o.id,
-        title: o.title,
-        date: o.due_at ? o.due_at.split('T')[0] : '',
-        type: (NATURE_TO_TYPE[o.nature] ?? 'punctual') as MaintenanceType,
-        status: o.status,
-        sector: o.sector as unknown as { id: string; name: string } | null,
-        entityType: 'maintenance' as const,
-      })) satisfies CalendarMaintenance[]
+      // Q2 — execuções agendadas (scheduled_at) no período
+      // Usa (supabase as any) porque maintenance_executions não tem relações em database.types.ts
+      const execQ = (supabase as ReturnType<typeof createClient> & { from: (t: string) => unknown } as any)
+        .from('maintenance_executions')
+        .select(`
+          id, ticket_id, executor_type, scheduled_at,
+          internal_user:users!internal_user_id(id, name),
+          provider:service_providers!provider_id(id, name),
+          ticket:maintenance_tickets!ticket_id(
+            id, title, nature, status, unit_id,
+            sector:maintenance_sectors(id, name)
+          )
+        `)
+        .gte('scheduled_at', `${dateFrom}T00:00:00`)
+        .lte('scheduled_at', `${dateTo}T23:59:59`)
+        .order('scheduled_at', { ascending: true })
+
+      const [
+        { data: ticketsData, error: ticketsError },
+        { data: execRaw, error: execError },
+      ] = await Promise.all([ticketsQ, execQ as Promise<{ data: unknown[]; error: unknown }>])
+      const execData = execRaw as Array<{
+        id: string
+        ticket_id: string
+        executor_type: string
+        scheduled_at: string | null
+        internal_user: { id: string; name: string } | null
+        provider: { id: string; name: string } | null
+        ticket: {
+          id: string; title: string; nature: string; status: string
+          unit_id: string; sector: { id: string; name: string } | null
+        } | null
+      }> | null
+
+      if (ticketsError) throw ticketsError
+      if (execError) throw execError
+
+      // Filtrar execuções: unidade (client-side, padrão de use-maintenance-schedule.ts)
+      // e ticket não pode estar concluído/cancelado
+      const validExecs = (execData ?? []).filter((e) => {
+        const t = e.ticket
+        if (!t) return false
+        if (t.status === 'concluded' || t.status === 'cancelled') return false
+        return !activeUnitId || t.unit_id === activeUnitId
+      })
+
+      // Dedup: manter apenas a execução mais cedo por chamado (sem duplicatas)
+      const earliestByTicket = new Map<string, typeof validExecs[0]>()
+      for (const e of validExecs) {
+        if (!earliestByTicket.has(e.ticket_id)) earliestByTicket.set(e.ticket_id, e)
+      }
+
+      // IDs de chamados que têm execução agendada → serão omitidos da lista por due_at
+      const scheduledTicketIds = new Set(earliestByTicket.keys())
+
+      // Itens por due_at (excluídos os que têm execução agendada)
+      const ticketItems = (ticketsData ?? [])
+        .filter((o) => !scheduledTicketIds.has(o.id))
+        .map((o) => ({
+          id: o.id,
+          title: o.title,
+          date: o.due_at ? o.due_at.split('T')[0] : '',
+          type: (NATURE_TO_TYPE[o.nature] ?? 'punctual') as MaintenanceType,
+          status: o.status,
+          sector: o.sector as unknown as { id: string; name: string } | null,
+          entityType: 'maintenance' as const,
+          scheduled: false,
+          executor_name: null as string | null,
+        }))
+
+      // Itens por scheduled_at (um por chamado, data da execução mais cedo)
+      const execItems = Array.from(earliestByTicket.values()).map((e) => {
+        const t = e.ticket!
+        return {
+          id: t.id,
+          title: t.title,
+          date: e.scheduled_at ? e.scheduled_at.split('T')[0] : '',
+          type: (NATURE_TO_TYPE[t.nature] ?? 'punctual') as MaintenanceType,
+          status: t.status,
+          sector: t.sector as unknown as { id: string; name: string } | null,
+          entityType: 'maintenance' as const,
+          scheduled: true,
+          executor_name: e.internal_user?.name ?? e.provider?.name ?? null,
+        }
+      })
+
+      return [...ticketItems, ...execItems] satisfies CalendarMaintenance[]
     },
     staleTime: 30 * 1000,
     enabled: isSessionReady && enabled && !!dateFrom && !!dateTo,

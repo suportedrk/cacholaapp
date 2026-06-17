@@ -664,13 +664,18 @@ function DayPopoverContent({
           key={m.id}
           onClick={() => onMaintenanceClick?.(m.id)}
           className={cn(
-            'w-full text-left text-xs rounded-md px-2 py-1.5 transition-opacity hover:opacity-80 flex items-center gap-1.5',
+            'w-full text-left text-xs rounded-md px-2 py-1.5 transition-opacity hover:opacity-80',
             MAINTENANCE_PILL[m.type]
           )}
         >
-          <Wrench className="w-3 h-3 shrink-0 opacity-70" />
-          <span className="truncate font-medium">{m.title}</span>
-          {m.sector && <span className="ml-auto shrink-0 opacity-60">{m.sector.name}</span>}
+          <div className="flex items-center gap-1.5">
+            <Wrench className="w-3 h-3 shrink-0 opacity-70" />
+            <span className="truncate font-medium flex-1">{m.title}</span>
+            {m.sector && <span className="shrink-0 opacity-60">{m.sector.name}</span>}
+          </div>
+          {m.executor_name && (
+            <p className="text-[10px] opacity-60 ml-4 truncate mt-0.5">{m.executor_name}</p>
+          )}
         </button>
       ))}
 
@@ -996,7 +1001,7 @@ function MonthView({
                       'w-full text-left text-[10px] leading-tight px-1 py-0.5 rounded-sm truncate font-medium transition-opacity hover:opacity-80 flex items-center gap-0.5',
                       MAINTENANCE_PILL[m.type]
                     )}
-                    title={m.title}
+                    title={[m.title, m.executor_name].filter(Boolean).join(' · ')}
                   >
                     <Wrench className="w-2.5 h-2.5 shrink-0" />
                     <span className="truncate">{m.title}</span>
@@ -1121,7 +1126,7 @@ function WeekView({ currentDate, eventsByDate, maintenanceByDate, checklistByDat
                       'w-full text-left text-[10px] leading-tight px-1 py-0.5 rounded-sm font-medium transition-opacity hover:opacity-80 flex items-center gap-0.5',
                       MAINTENANCE_PILL[m.type]
                     )}
-                    title={m.title}
+                    title={[m.title, m.executor_name].filter(Boolean).join(' · ')}
                   >
                     <Wrench className="w-2.5 h-2.5 shrink-0" />
                     <span className="truncate">{m.title}</span>
@@ -1227,6 +1232,9 @@ function DayView({ currentDate, eventsByDate, maintenanceByDate, checklistByDate
           </div>
           {m.sector && (
             <p className="text-xs opacity-70 mt-0.5 ml-6">{m.sector.name}</p>
+          )}
+          {m.executor_name && (
+            <p className="text-xs opacity-50 mt-0.5 ml-6">{m.executor_name}</p>
           )}
         </button>
       ))}
@@ -1392,6 +1400,7 @@ function ListView({
                   )
                 } else if (item.kind === 'maintenance') {
                   const m = item.data
+                  const mSubtitle = [m.sector?.name, m.executor_name].filter(Boolean).join(' · ')
                   return (
                     <button
                       key={m.id}
@@ -1402,10 +1411,12 @@ function ListView({
                       )}
                     >
                       <Wrench className="w-3.5 h-3.5 shrink-0 opacity-70" />
-                      <p className="text-xs font-semibold truncate">{m.title}</p>
-                      {m.sector && (
-                        <span className="ml-auto text-[10px] opacity-60 shrink-0">{m.sector.name}</span>
-                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-semibold truncate">{m.title}</p>
+                        {mSubtitle && (
+                          <p className="text-[10px] opacity-60 truncate">{mSubtitle}</p>
+                        )}
+                      </div>
                     </button>
                   )
                 } else if (item.kind === 'checklist') {
