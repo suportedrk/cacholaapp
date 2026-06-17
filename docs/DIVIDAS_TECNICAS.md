@@ -11,6 +11,9 @@ Status possiveis: PENDENTE | BLOQUEADA | AGUARDANDO TERCEIRO | VERIFICAR
 - [ ] Auditoria de vulnerabilidades npm (27 no ultimo build: 12 high, 14 moderate, 1 low): triar runtime-facing vs build/dev-only e aplicar so bumps seguros. NUNCA rodar npm audit fix --force (quebra Next 16 / Tailwind v4). STATUS: PENDENTE.
 - [ ] Auditar paridade de migracoes local vs producao. STATUS: PENDENTE.
 - [ ] Limpar o diretorio untracked scripts/ops/ que aparece na working tree da VPS de producao. STATUS: PENDENTE (baixa prioridade).
+- [ ] Esteira de migracao Fase 2: modo "aplicar pendentes" (varrer supabase/migrations, comparar com a tabela cachola_migration_log e aplicar em ordem o que falta, cada uma em sua propria transacao) + backfill da tabela com as migrations historicas ja aplicadas. STATUS: PENDENTE (fazer depois que a Fase 1 rodar algumas migrations reais).
+- [ ] Esteira (polimento opcional): mover o passo "Validar inputs" do migrate-prod.yml para um job separado SEM environment, para que nome de arquivo invalido falhe antes do gate de aprovacao (hoje precisa aprovar para so entao ver o erro). STATUS: PENDENTE (baixa prioridade, so UX).
+- [ ] Deploy: em 17/06/2026 as 3 tentativas de SSH do deploy.yml falharam juntas (run #279) e o re-run passou; tratado como instabilidade transitoria de rede GitHub->VPS. Monitorar: se as falhas das 3 tentativas voltarem com frequencia, investigar bloqueio no lado da VPS (fail2ban banindo IPs dos runners do GitHub) em vez de so re-rodar. STATUS: VERIFICAR.
 
 ## RBAC / Permissoes
 
@@ -36,6 +39,7 @@ Status possiveis: PENDENTE | BLOQUEADA | AGUARDANDO TERCEIRO | VERIFICAR
 
 - [ ] Recriar os 7 usuarios de teste de producao (teste-{role}@cachola.cloud) removidos em abril/2026 (~30 min). STATUS: PENDENTE.
 - [ ] Alinhamento de sinal de gap: conflitos de evento usam <= 0 e conflitos de pre-reserva usam < 0 — alinhar num toque futuro. STATUS: PENDENTE.
+- [ ] Conferir o Environment "VPS_SSH_KEY" no GitHub (Settings -> Environments). A esteira nao o usa (os secrets de SSH sao do repositorio). Se foi criado por engano, apagar. STATUS: VERIFICAR (baixa prioridade).
 
 ## Resolvidas
 
