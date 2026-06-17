@@ -40,3 +40,5 @@ Status possiveis: PENDENTE | BLOQUEADA | AGUARDANDO TERCEIRO | VERIFICAR
 ## Resolvidas
 
 (Mover itens concluidos para ca, com data e versao. Exemplo: "- [x] (17/06/2026, v1.x) descricao do item.")
+
+- [x] (17/06/2026, v1.56.1) Auto-retry 3x no passo Deploy via SSH (deploy.yml) — resolve as falhas transitorias de rede GitHub->VPS que vinham forcando deploy manual.
