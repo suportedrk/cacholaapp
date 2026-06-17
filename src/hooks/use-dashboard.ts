@@ -281,14 +281,9 @@ export function useCalendarMaintenance(dateFrom: string, dateTo: string, enabled
         return !activeUnitId || t.unit_id === activeUnitId
       })
 
-      // Dedup: manter apenas a execução mais cedo por chamado (sem duplicatas)
-      const earliestByTicket = new Map<string, typeof validExecs[0]>()
-      for (const e of validExecs) {
-        if (!earliestByTicket.has(e.ticket_id)) earliestByTicket.set(e.ticket_id, e)
-      }
-
-      // IDs de chamados que têm execução agendada → serão omitidos da lista por due_at
-      const scheduledTicketIds = new Set(earliestByTicket.keys())
+      // IDs de chamados que têm QUALQUER execução agendada na janela
+      // → esses chamados NÃO aparecem pelo due_at (o prazo cede ao agendamento)
+      const scheduledTicketIds = new Set(validExecs.map((e) => e.ticket_id))
 
       // Itens por due_at (excluídos os que têm execução agendada)
       const ticketItems = (ticketsData ?? [])
@@ -305,8 +300,9 @@ export function useCalendarMaintenance(dateFrom: string, dateTo: string, enabled
           executor_name: null as string | null,
         }))
 
-      // Itens por scheduled_at (um por chamado, data da execução mais cedo)
-      const execItems = Array.from(earliestByTicket.values()).map((e) => {
+      // Itens por scheduled_at — UMA entrada por execução agendada
+      // Chamados com múltiplas execuções na janela geram múltiplos itens (um por dia agendado)
+      const execItems = validExecs.map((e) => {
         const t = e.ticket!
         return {
           id: t.id,
