@@ -139,6 +139,18 @@ No hotfix v1.5.7 (27/abr/2026), a migration 072 foi mergeada sem smoke test loca
 
 ---
 
+## Backlog de dívidas técnicas (docs/DIVIDAS_TECNICAS.md)
+
+O arquivo `docs/DIVIDAS_TECNICAS.md` é a FONTE DE VERDADE das dívidas técnicas e pendências do projeto (não a memória do chat).
+
+Regras de uso, obrigatórias em toda sessão:
+- No início de qualquer tarefa, verifique se a área que vai ser mexida tem relação com algum item do backlog. Se tiver, AVISE logo no início da resposta e OFEREÇA resolver junto (total ou parte).
+- NUNCA resolva uma dívida por conta própria nem sem aprovação do Bruno (ou do consultor no chat). A regra é: surfar o item + sugerir; só executar com o "pode" explícito.
+- Quando uma dívida for de fato resolvida E estiver em produção, MOVA o item para a seção "Resolvidas" do arquivo, com data e versão (não apagar de vez — manter o histórico).
+- Ao adicionar uma nova dívida descoberta durante o trabalho, registre-a na seção correta do arquivo (com status), em vez de deixar só na conversa.
+
+---
+
 ## STACK TECNOLÓGICA
 
 | Camada | Tecnologia | Versão |

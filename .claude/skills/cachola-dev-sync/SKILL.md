@@ -10,6 +10,8 @@ description: Verificar sincronia entre ambiente local (git, package.json, banco 
 
 > **Nota de ambiente (jun/2026):** o "ambiente local" / "Docker local" desta skill agora é a **VPS de dev** (não mais o Windows do Bruno). Os comandos rodam na VPS; o dev server é gerido pelo PM2 (processo `cachola-dev`).
 
+> **Backlog de dívidas técnicas:** consultar `docs/DIVIDAS_TECNICAS.md` no início das tarefas; surfar itens relacionados à área mexida e oferecer resolver junto (nunca resolver sem aprovação). Mover resolvidos para a seção Resolvidas com data e versão.
+
 ---
 
 ## Quando usar
