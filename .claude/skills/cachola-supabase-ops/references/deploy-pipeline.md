@@ -269,3 +269,52 @@ ssh cacholaos-vps "cat /opt/cacholaapp/package.json | grep version"
 - [ ] PR review feita?
 - [ ] Branch atualizada com main? (rebase ou merge)
 - [ ] Mensagens de commit limpas?
+
+## Esteira de migracao com botao (`migrate-prod.yml`)
+
+Aplicar UMA migration no banco de **producao** com 1 clique, de forma transacao-segura e auditavel, reusando os mesmos secrets SSH do deploy (`SSH_HOST/SSH_USER/SSH_PRIVATE_KEY/SSH_PORT`). O isolamento dev-prod fica intacto: quem alcanca producao e o GitHub Actions, nunca o ambiente de dev.
+
+**Workflow:** `.github/workflows/migrate-prod.yml` — `workflow_dispatch` (botao manual). Protegido pelo Environment `producao` e por `concurrency: migrate-production`.
+
+### Como migrations novas devem ser escritas (160+)
+
+A esteira ja gerencia a transacao (`psql --single-transaction`) e o reload do schema. Por isso, a partir da 160:
+
+- **NAO** colocar `BEGIN;` / `COMMIT;` / `ROLLBACK;` soltos no arquivo — a esteira aborta se encontrar `COMMIT`/`ROLLBACK` solto (o `--single-transaction` ja envolve tudo). Se precisar de transacao explicita por algum motivo, isso e excecao a discutir.
+- **NAO** precisa de `NOTIFY pgrst, 'reload schema';` manual — a esteira dispara o reload depois de aplicar.
+- Nome do arquivo: `NNN_descricao.sql` (3 digitos, minusculas, numeros e `_`). O dry-run e a validacao de nome dependem desse padrao.
+- A migration `159_create_cachola_migration_log.sql` foi a **ultima aplicada manualmente** (por isso ela PODE ter `BEGIN/COMMIT` proprio). Ela cria `public.cachola_migration_log`, a tabela de auditoria/guarda da esteira.
+
+### Ordem obrigatoria: deploy PRIMEIRO, esteira DEPOIS
+
+A migration so chega na VPS pelo deploy normal. Sequencia:
+
+1. Criar a migration em `develop` (sem `BEGIN/COMMIT/ROLLBACK` soltos, sem `NOTIFY` manual).
+2. PR + merge para `main` → deploy automatico verde (o `.sql` agora existe em `/opt/cacholaapp/...` na VPS).
+3. So entao clicar a esteira. Se o arquivo nao estiver na VPS, a esteira aborta com mensagem clara.
+
+### Como disparar
+
+GitHub → aba **Actions** → workflow **"Migrar Producao (esteira)"** → **Run workflow**:
+
+- `migration_file`: nome exato (ex.: `160_minha_migracao.sql`).
+- `confirmar`: redigitar o mesmo nome (guarda contra clique errado).
+- `dry_run`: marque para testar antes — roda `BEGIN; <migration>; ROLLBACK;`, nada e gravado.
+- `forcar_reaplicar`: so se realmente quiser repetir uma migration ja registrada (raro).
+
+### O que a esteira faz (modo real)
+
+1. Valida nome e confirmacao.
+2. Confere se o arquivo existe na VPS; bloqueia se ja consta em `cachola_migration_log` (a menos que `forcar_reaplicar`).
+3. **Backup pre-migracao** (`pg_dump | gzip` em `/opt/backups/pre-mig/`), abortando se sair vazio.
+4. Aplica com `psql -v ON_ERROR_STOP=1 --single-transaction` (tudo ou nada).
+5. `NOTIFY pgrst` (reload do PostgREST) + healthcheck `https://cachola.cloud`.
+6. Registra a aplicacao em `public.cachola_migration_log` (filename, applied_by, git_sha, checksum).
+
+### Auditoria
+
+Toda aplicacao fica em `public.cachola_migration_log` — tabela de **metadado de operacao**: RLS ativo, **sem policies** e `REVOKE` de anon/authenticated, ou seja, so o superusuario `postgres` (que a esteira usa) acessa. Por isso **nao** entra no catalogo `modules` nem em `check_permission`. Consultar via SSH:
+
+```bash
+ssh cacholaos-vps "docker exec -i supabase-db psql -U postgres -d postgres -c 'SELECT filename, applied_at, applied_by FROM public.cachola_migration_log ORDER BY applied_at DESC LIMIT 10;'"
+```
