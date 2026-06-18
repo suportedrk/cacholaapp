@@ -493,150 +493,155 @@ function AddExecutionModal({
       onClick={onClose}
     >
       <div
-        className="bg-card border border-border rounded-t-2xl sm:rounded-2xl p-6 w-full sm:max-w-md space-y-4 shadow-xl"
+        className="bg-card border border-border rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md shadow-xl flex flex-col max-h-[85vh]"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between">
+        {/* Cabeçalho fixo */}
+        <div className="flex items-center justify-between px-6 pt-6 pb-4 shrink-0">
           <h2 className="text-base font-semibold">Adicionar Execução</h2>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Tipo toggle */}
-        <div className="flex gap-2">
-          {(['internal', 'external'] as const).map((t) => (
-            <button
-              key={t}
-              onClick={() => switchType(t)}
-              className={`flex-1 h-9 rounded-lg text-sm font-medium transition-colors border ${
-                type === t
-                  ? 'bg-primary text-primary-foreground border-primary'
-                  : 'border-border text-muted-foreground hover:bg-muted'
-              }`}
-            >
-              {t === 'internal' ? 'Interno' : 'Externo'}
-            </button>
-          ))}
-        </div>
-
-        {/* Executor */}
-        {type === 'internal' ? (
-          <div className="space-y-1">
-            <label className="text-xs text-muted-foreground">Colaborador</label>
-            <select
-              value={userId}
-              onChange={(e) => { setUserId(e.target.value); setError(null) }}
-              className="w-full h-10 rounded-lg border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-            >
-              <option value="">Selecione...</option>
-              {executors.map((u) => (
-                <option key={u.id} value={u.id}>{u.name}</option>
-              ))}
-            </select>
+        {/* Corpo rolável */}
+        <div className="flex-1 min-h-0 overflow-y-auto px-6 pb-2 space-y-4">
+          {/* Tipo toggle */}
+          <div className="flex gap-2">
+            {(['internal', 'external'] as const).map((t) => (
+              <button
+                key={t}
+                onClick={() => switchType(t)}
+                className={`flex-1 h-9 rounded-lg text-sm font-medium transition-colors border ${
+                  type === t
+                    ? 'bg-primary text-primary-foreground border-primary'
+                    : 'border-border text-muted-foreground hover:bg-muted'
+                }`}
+              >
+                {t === 'internal' ? 'Interno' : 'Externo'}
+              </button>
+            ))}
           </div>
-        ) : (
-          <>
+
+          {/* Executor */}
+          {type === 'internal' ? (
             <div className="space-y-1">
-              <label className="text-xs text-muted-foreground">Prestador</label>
+              <label className="text-xs text-muted-foreground">Colaborador</label>
               <select
-                value={providerId}
-                onChange={(e) => { setProviderId(e.target.value); setError(null) }}
+                value={userId}
+                onChange={(e) => { setUserId(e.target.value); setError(null) }}
                 className="w-full h-10 rounded-lg border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               >
                 <option value="">Selecione...</option>
-                {providers.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs text-muted-foreground">Responsável interno</label>
-              <select
-                value={responsibleId}
-                onChange={(e) => { setResponsibleId(e.target.value); setError(null) }}
-                className="w-full h-10 rounded-lg border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-              >
-                <option value="">Selecione...</option>
-                {responsibles.map((u) => (
+                {executors.map((u) => (
                   <option key={u.id} value={u.id}>{u.name}</option>
                 ))}
               </select>
-              <p className="text-xs text-muted-foreground">Quem acompanha o serviço do prestador.</p>
             </div>
-          </>
-        )}
+          ) : (
+            <>
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">Prestador</label>
+                <select
+                  value={providerId}
+                  onChange={(e) => { setProviderId(e.target.value); setError(null) }}
+                  className="w-full h-10 rounded-lg border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="">Selecione...</option>
+                  {providers.map((p) => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">Responsável interno</label>
+                <select
+                  value={responsibleId}
+                  onChange={(e) => { setResponsibleId(e.target.value); setError(null) }}
+                  className="w-full h-10 rounded-lg border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="">Selecione...</option>
+                  {responsibles.map((u) => (
+                    <option key={u.id} value={u.id}>{u.name}</option>
+                  ))}
+                </select>
+                <p className="text-xs text-muted-foreground">Quem acompanha o serviço do prestador.</p>
+              </div>
+            </>
+          )}
 
-        {/* Descrição */}
-        <div className="space-y-1">
-          <label className="text-xs text-muted-foreground">Descrição</label>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            rows={2}
-            placeholder="O que será feito..."
-            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none"
-          />
-        </div>
-
-        {/* Custo */}
-        <div className="space-y-1">
-          <label className="text-xs text-muted-foreground">Custo estimado (R$)</label>
-          <input
-            type="text"
-            inputMode="decimal"
-            value={costStr}
-            onChange={(e) => setCostStr(e.target.value)}
-            placeholder="0,00"
-            className="w-full h-10 rounded-lg border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-          />
-        </div>
-
-        {/* Status */}
-        <div className="space-y-1">
-          <label className="text-xs text-muted-foreground">Status</label>
-          <select
-            value={execStatus}
-            onChange={(e) => setExecStatus(e.target.value as ExecutionStatus)}
-            className="w-full h-10 rounded-lg border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-          >
-            <option value="assigned">Atribuída</option>
-            <option value="in_progress">Em Andamento</option>
-            <option value="concluded">Concluída</option>
-          </select>
-        </div>
-
-        {/* Agendamento — opcional. Gera o lançamento na agenda e na lista de tarefas. */}
-        <div className="grid grid-cols-2 gap-3">
+          {/* Descrição */}
           <div className="space-y-1">
-            <label className="text-xs text-muted-foreground">Data e hora</label>
+            <label className="text-xs text-muted-foreground">Descrição</label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={2}
+              placeholder="O que será feito..."
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+            />
+          </div>
+
+          {/* Custo */}
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground">Custo estimado (R$)</label>
             <input
-              type="datetime-local"
-              value={scheduledAt}
-              onChange={(e) => setScheduledAt(e.target.value)}
+              type="text"
+              inputMode="decimal"
+              value={costStr}
+              onChange={(e) => setCostStr(e.target.value)}
+              placeholder="0,00"
               className="w-full h-10 rounded-lg border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
+
+          {/* Status */}
           <div className="space-y-1">
-            <label className="text-xs text-muted-foreground">Duração (min)</label>
-            <input
-              type="number"
-              inputMode="numeric"
-              min={0}
-              value={durationStr}
-              onChange={(e) => setDurationStr(e.target.value)}
-              placeholder="ex: 60"
+            <label className="text-xs text-muted-foreground">Status</label>
+            <select
+              value={execStatus}
+              onChange={(e) => setExecStatus(e.target.value as ExecutionStatus)}
               className="w-full h-10 rounded-lg border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-            />
+            >
+              <option value="assigned">Atribuída</option>
+              <option value="in_progress">Em Andamento</option>
+              <option value="concluded">Concluída</option>
+            </select>
           </div>
+
+          {/* Agendamento — opcional. Gera o lançamento na agenda e na lista de tarefas. */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">Data e hora</label>
+              <input
+                type="datetime-local"
+                value={scheduledAt}
+                onChange={(e) => setScheduledAt(e.target.value)}
+                className="w-full h-10 rounded-lg border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">Duração (min)</label>
+              <input
+                type="number"
+                inputMode="numeric"
+                min={0}
+                value={durationStr}
+                onChange={(e) => setDurationStr(e.target.value)}
+                placeholder="ex: 60"
+                className="w-full h-10 rounded-lg border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Agendar gera a tarefa para o designado e o lançamento na agenda. Opcional.
+          </p>
+
+          {error && <p className="text-xs text-destructive">{error}</p>}
         </div>
-        <p className="text-xs text-muted-foreground">
-          Agendar gera a tarefa para o designado e o lançamento na agenda. Opcional.
-        </p>
 
-        {error && <p className="text-xs text-destructive">{error}</p>}
-
-        <div className="flex gap-2">
+        {/* Rodapé fixo */}
+        <div className="flex gap-2 px-6 pt-4 pb-6 shrink-0 border-t border-border">
           <Button variant="outline" size="sm" className="flex-1" onClick={onClose}>
             Cancelar
           </Button>
@@ -1321,6 +1326,26 @@ export default function ChamadoDetailPage() {
             </button>
           )}
         </div>
+        {/* Aviso: nenhuma execução com data agendada → chamado não aparece no calendário */}
+        {!executions.some((ex) => ex.scheduled_at) && (
+          <div className="mb-3 flex gap-2.5 rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-950/30">
+            <Calendar className="mt-0.5 h-4 w-4 shrink-0 text-blue-500 dark:text-blue-400" />
+            <div className="min-w-0">
+              <p className="text-xs text-blue-800 dark:text-blue-300">
+                Este chamado ainda não tem execução agendada. Ele aparecerá no calendário assim que você agendar uma execução (data e executor).
+              </p>
+              {canEdit && (
+                <button
+                  onClick={() => setAddExecOpen(true)}
+                  className="mt-1.5 text-xs font-medium text-blue-700 underline hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-200"
+                >
+                  Agendar execução
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
         {executions.length === 0 ? (
           <p className="text-xs text-muted-foreground">Nenhuma execução registrada</p>
         ) : (

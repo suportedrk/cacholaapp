@@ -46,6 +46,19 @@
 
 ---
 
+## SINCRONIZAÇÃO DE AMBIENTES — POLÍTICA OBRIGATÓRIA
+
+> **Skill de referência: `.claude/skills/cachola-dev-sync/`** — leia-a antes de qualquer diagnóstico ou implementação.
+> A política completa ("Política de Sincronização de Três Pontas") está documentada nessa skill.
+
+**Resumo executivo:**
+- **GitHub é a fonte única de verdade.** A cópia local do Windows (`C:\Users\bruno\Documents\Projetos\cacholaos`) pode estar atrás — NUNCA é usada como referência para diagnóstico.
+- **Para ler código em diagnóstico:** sempre `git fetch origin` + `git show origin/<branch>:<caminho>` — nunca ler o arquivo cru do disco.
+- **Início de sessão na máquina local:** rodar `scripts/sync-local.ps1` (ou `git fetch --all --prune && git pull --ff-only`) para atualizar o espelho.
+- **develop à frente de main entre releases = normal.** Após cada deploy, resync `develop ← main` via `git merge origin/main --no-edit && git push`.
+
+---
+
 ## PROTOCOLO DE DESENVOLVIMENTO — SEQUÊNCIA OBRIGATÓRIA
 
 > Esta seção existe porque a falta de validação local em dev foi fator contribuinte no incidente de 24/abr/2026 (v1.5.2). Leia antes de cada sessão.

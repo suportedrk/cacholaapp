@@ -265,6 +265,69 @@ Lições codificadas aqui:
 
 ---
 
+## Política de Sincronização de Três Pontas
+
+> Esta política garante que diagnósticos e implementações nunca sejam feitos sobre código defasado, independentemente de qual "ponta" está sendo lida.
+
+### As três pontas
+
+| Ponta | Localização | Papel |
+|---|---|---|
+| **Origem** | GitHub (`origin/main`, `origin/develop`) | Fonte única de verdade — sempre autoritativa |
+| **Dev** | VPS de dev (`~/cacholaos`, branch `develop`) | Onde o código é editado e commitado; deve sempre refletir `origin/develop` |
+| **Local** | Máquina Windows do Bruno (`C:\Users\bruno\Documents\Projetos\cacholaos`) | Espelho read-only para leitura e VS Code Remote-SSH; **NUNCA é fonte de verdade** |
+
+### Regra fundamental: GitHub é a fonte única de verdade
+
+O working tree local do Windows do Bruno **pode estar atrás** do GitHub em qualquer momento — ele é atualizado manualmente. Por isso:
+
+- **Nunca ler arquivo cru do disco local para diagnóstico.** Sempre usar `git show origin/<branch>:<caminho>` para inspecionar o estado autoritativo de qualquer arquivo.
+- **Antes de qualquer leitura de código para diagnóstico**, rodar `git fetch origin` para garantir que os refs remotos estão atualizados.
+
+```bash
+# Ler o estado autoritativo de um arquivo — CORRETO
+git fetch origin --quiet
+git show origin/develop:src/hooks/use-dashboard.ts
+
+# Ler o arquivo do disco — PODE ESTAR DEFASADO, só confiável se o pull foi feito agora
+cat src/hooks/use-dashboard.ts
+```
+
+### Sincronizar a cópia local no início de cada sessão
+
+A cópia local (Windows) é um espelho read-only — sem commits locais, apenas para navegar no código. Por isso `--ff-only` é seguro e garante que não há divergência local acidental.
+
+```powershell
+# PowerShell — rodar no início de cada sessão de trabalho
+cd C:\Users\bruno\Documents\Projetos\cacholaos
+git fetch --all --prune
+git checkout develop
+git pull --ff-only
+```
+
+Se `git pull --ff-only` falhar (erro "Not possible to fast-forward"), significa que há commits locais não esperados — investigar antes de forçar qualquer coisa. O script `scripts/sync-local.ps1` automatiza esses passos com saída legível.
+
+### Relação develop x main — divergência saudável vs. drift problemático
+
+É **normal e saudável** `develop` estar alguns commits à frente de `main` entre releases — isso representa trabalho em andamento ainda não deployado. **Não forçar identidade permanente** entre as duas branches.
+
+| Situação | Classificação | Ação |
+|---|---|---|
+| `develop` N commits à frente de `main` (trabalho em andamento) | ✅ Normal | Nenhuma — aguardar próximo release |
+| `develop` atrás de `main` (hotfix foi para main sem resync) | ❌ Drift problemático | `git merge origin/main --no-edit` em develop + push |
+| Local atrás de `develop` | ⚠️ Espelho desatualizado | `git pull --ff-only` na máquina local |
+
+Após cada deploy/release, resincronizar `develop ← main` para absorver o commit de merge `--no-ff`:
+```bash
+git checkout develop && git merge origin/main --no-edit && git push origin develop
+```
+
+### Preparar uma máquina Windows nova como cópia local
+
+Consulte o guia completo em [`docs/SETUP_MAQUINA_LOCAL.md`](../../../docs/SETUP_MAQUINA_LOCAL.md) — cobre clone inicial, sincronização manual, atalho de logon automático (sem admin) e tarefa agendada a cada 60 min (com admin).
+
+---
+
 ## Atualização da última migration de referência
 
 A skill faz probing da última migration conhecida (atualmente migration 090, coluna `chosen_unit_id` em `ploomes_orders`). Quando uma nova migration for adicionada ao projeto, atualize o snippet do Check 3 com a nova coluna/tabela de referência.

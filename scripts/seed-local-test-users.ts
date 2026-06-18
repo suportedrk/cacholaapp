@@ -217,16 +217,18 @@ async function main() {
       console.log(`   ✅ user_units: ${moema.name}`);
     }
 
-    // 3d. user_permissions: fan-out de role_default_perms
+    // 3d. user_permissions: fan-out de role_permissions (mesma fonte que o fluxo real de
+    // criação de usuário usa via applyRoleTemplate em src/lib/rbac/apply-template.ts).
+    // role_default_perms é legado e incompleto — NÃO usar.
     // ON CONFLICT usa o nome da constraint pois a chave inclui unit_id nullable (NULLS NOT DISTINCT)
     psql(
       `INSERT INTO public.user_permissions (user_id, module, action, granted) ` +
-      `SELECT '${userId}', module, action, granted ` +
-      `FROM public.role_default_perms ` +
-      `WHERE role = '${role}' ` +
+      `SELECT '${userId}', module_code, action, granted ` +
+      `FROM public.role_permissions ` +
+      `WHERE role_code = '${role}' ` +
       `ON CONFLICT ON CONSTRAINT user_permissions_user_unit_module_action_key DO UPDATE SET granted = EXCLUDED.granted`
     );
-    console.log(`   ✅ user_permissions: fan-out de role_default_perms`);
+    console.log(`   ✅ user_permissions: fan-out de role_permissions`);
 
     created.push({ email, role, userId });
     console.log();
