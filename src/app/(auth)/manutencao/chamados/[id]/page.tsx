@@ -1171,7 +1171,10 @@ export default function ChamadoDetailPage() {
   // ─── Permissions ───
   const canEdit    = !!ticket && ticket.status !== 'concluded' && ticket.status !== 'cancelled'
   const canApprove = hasRole(profile?.role, MAINTENANCE_ADMIN_ROLES)
-  const canDelete  = canEdit && hasRole(profile?.role, MAINTENANCE_ADMIN_ROLES)
+  // Editar e excluir execuções exige cargo admin (diretor/gerente/super_admin)
+  // além do ticket estar aberto — operacional_eventos e manutencao não veem os botões
+  const canManageExecutions = canEdit && hasRole(profile?.role, MAINTENANCE_ADMIN_ROLES)
+  const canDelete  = canManageExecutions
 
   // ─── File upload handler ───
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -1462,7 +1465,7 @@ export default function ChamadoDetailPage() {
               ticketId={typedTicket.id}
               unitId={typedTicket.unit_id}
               canApprove={canApprove}
-              canEdit={canEdit}
+              canEdit={canManageExecutions}
               canDelete={canDelete}
               people={people}
             />
