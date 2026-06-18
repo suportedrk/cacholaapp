@@ -322,6 +322,10 @@ Após cada deploy/release, resincronizar `develop ← main` para absorver o comm
 git checkout develop && git merge origin/main --no-edit && git push origin develop
 ```
 
+### Preparar uma máquina Windows nova como cópia local
+
+Consulte o guia completo em [`docs/SETUP_MAQUINA_LOCAL.md`](../../../docs/SETUP_MAQUINA_LOCAL.md) — cobre clone inicial, sincronização manual, atalho de logon automático (sem admin) e tarefa agendada a cada 60 min (com admin).
+
 ---
 
 ## Atualização da última migration de referência
