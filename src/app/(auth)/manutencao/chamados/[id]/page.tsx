@@ -19,6 +19,7 @@ import {
   Package,
   ArrowRightLeft,
   Pencil,
+  Trash2,
   Phone,
   MessageCircle,
   ImagePlus,
@@ -32,6 +33,8 @@ import {
   useUpdateTicketEquipment,
   useUpdateTicketAssignee,
   useAddExecution,
+  useExecutionEdit,
+  useDeleteExecution,
   useUploadTicketPhoto,
   useApproveCost,
   useFinalizeTicket,
@@ -423,20 +426,24 @@ function AddExecutionModal({
   ticketId,
   unitId,
   onClose,
+  execution,
 }: {
   ticketId: string
   unitId: string
   onClose: () => void
+  execution?: RichExecution
 }) {
-  const [type, setType] = useState<'internal' | 'external'>('internal')
-  const [userId, setUserId] = useState('')
-  const [providerId, setProviderId] = useState('')
-  const [responsibleId, setResponsibleId] = useState('')
-  const [description, setDescription] = useState('')
+  const isEditMode = !!execution
+
+  const [type, setType] = useState<'internal' | 'external'>(execution?.executor_type ?? 'internal')
+  const [userId, setUserId] = useState(execution?.internal_user_id ?? '')
+  const [providerId, setProviderId] = useState(execution?.provider_id ?? '')
+  const [responsibleId, setResponsibleId] = useState(execution?.responsible_user_id ?? '')
+  const [description, setDescription] = useState(execution?.description ?? '')
   const [costStr, setCostStr] = useState('')
-  const [execStatus, setExecStatus] = useState<ExecutionStatus>('assigned')
-  const [scheduledAt, setScheduledAt] = useState('')   // datetime-local (horário de Brasília)
-  const [durationStr, setDurationStr] = useState('')   // minutos
+  const [execStatus, setExecStatus] = useState<ExecutionStatus>(execution?.status ?? 'assigned')
+  const [scheduledAt, setScheduledAt] = useState(isoToDatetimeLocal(execution?.scheduled_at ?? null))
+  const [durationStr, setDurationStr] = useState(execution?.estimated_duration_minutes?.toString() ?? '')
   const [error, setError] = useState<string | null>(null)
 
   // Executor interno = equipe de manutenção (RPC com check_permission view + escopo unidade).
@@ -447,7 +454,9 @@ function AddExecutionModal({
   // Prestadores filtrados pela unidade do TICKET — em "Todas" no seletor global,
   // o store estaria em null e o hook listaria prestadores de todas as unidades.
   const { data: providers = [] } = useProviders({ status: 'active' }, unitId)
-  const { mutate: addExecution, isPending } = useAddExecution(onClose)
+  const { mutate: addExecution, isPending: isPendingAdd } = useAddExecution(onClose)
+  const { mutate: editExecution, isPending: isPendingEdit } = useExecutionEdit(ticketId)
+  const isPending = isPendingAdd || isPendingEdit
 
   // Reset em cascata ao alternar interno/external: limpa os campos do outro tipo.
   function switchType(t: 'internal' | 'external') {
@@ -470,21 +479,36 @@ function AddExecutionModal({
       setError('Selecione o prestador e o responsável interno.')
       return
     }
-    addExecution({
-      ticket_id:           ticketId,
-      executor_type:       type,
-      internal_user_id:    type === 'internal' ? userId || null : null,
-      provider_id:         type === 'external' ? providerId || null : null,
-      responsible_user_id: type === 'external' ? responsibleId || null : null,
-      description:         description.trim() || null,
-      cost:               parseFloat(costStr.replace(',', '.')) || 0,
-      status:             execStatus,
-      // datetime-local é "naive" — fixamos o fuso de Brasília (UTC-3, sem horário
-      // de verão) em vez de depender do fuso do dispositivo. '2026-06-15T14:30'
-      // → '2026-06-15T14:30:00-03:00' → toISOString() grava o UTC correto.
-      scheduled_at:        scheduledAt ? new Date(`${scheduledAt}:00-03:00`).toISOString() : null,
-      estimated_duration_minutes: durationStr ? parseInt(durationStr, 10) || null : null,
-    } as Parameters<typeof addExecution>[0])
+
+    if (isEditMode && execution) {
+      editExecution({
+        id:                  execution.id,
+        executor_type:       type,
+        internal_user_id:    type === 'internal' ? userId || null : null,
+        provider_id:         type === 'external' ? providerId || null : null,
+        responsible_user_id: type === 'external' ? responsibleId || null : null,
+        description:         description.trim() || null,
+        status:              execStatus,
+        scheduled_at:        scheduledAt ? new Date(`${scheduledAt}:00-03:00`).toISOString() : null,
+        estimated_duration_minutes: durationStr ? parseInt(durationStr, 10) || null : null,
+      }, { onSuccess: onClose })
+    } else {
+      addExecution({
+        ticket_id:           ticketId,
+        executor_type:       type,
+        internal_user_id:    type === 'internal' ? userId || null : null,
+        provider_id:         type === 'external' ? providerId || null : null,
+        responsible_user_id: type === 'external' ? responsibleId || null : null,
+        description:         description.trim() || null,
+        cost:               parseFloat(costStr.replace(',', '.')) || 0,
+        status:             execStatus,
+        // datetime-local é "naive" — fixamos o fuso de Brasília (UTC-3, sem horário
+        // de verão) em vez de depender do fuso do dispositivo. '2026-06-15T14:30'
+        // → '2026-06-15T14:30:00-03:00' → toISOString() grava o UTC correto.
+        scheduled_at:        scheduledAt ? new Date(`${scheduledAt}:00-03:00`).toISOString() : null,
+        estimated_duration_minutes: durationStr ? parseInt(durationStr, 10) || null : null,
+      } as Parameters<typeof addExecution>[0])
+    }
   }
 
   return createPortal(
@@ -498,7 +522,7 @@ function AddExecutionModal({
       >
         {/* Cabeçalho fixo */}
         <div className="flex items-center justify-between px-6 pt-6 pb-4 shrink-0">
-          <h2 className="text-base font-semibold">Adicionar Execução</h2>
+          <h2 className="text-base font-semibold">{isEditMode ? 'Editar Execução' : 'Adicionar Execução'}</h2>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
             <X className="w-4 h-4" />
           </button>
@@ -582,18 +606,20 @@ function AddExecutionModal({
             />
           </div>
 
-          {/* Custo */}
-          <div className="space-y-1">
-            <label className="text-xs text-muted-foreground">Custo estimado (R$)</label>
-            <input
-              type="text"
-              inputMode="decimal"
-              value={costStr}
-              onChange={(e) => setCostStr(e.target.value)}
-              placeholder="0,00"
-              className="w-full h-10 rounded-lg border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-            />
-          </div>
+          {/* Custo — oculto em modo edição (gerenciado pelo workflow de aprovação) */}
+          {!isEditMode && (
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">Custo estimado (R$)</label>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={costStr}
+                onChange={(e) => setCostStr(e.target.value)}
+                placeholder="0,00"
+                className="w-full h-10 rounded-lg border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+          )}
 
           {/* Status */}
           <div className="space-y-1">
@@ -664,6 +690,17 @@ function nowLocalDatetime(): string {
     year: 'numeric', month: '2-digit', day: '2-digit',
     hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo',
   }).formatToParts(new Date())
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? '00'
+  return `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}`
+}
+
+// Converte ISO UTC → 'YYYY-MM-DDTHH:MM' em Brasília, para o input datetime-local.
+function isoToDatetimeLocal(iso: string | null): string {
+  if (!iso) return ''
+  const parts = new Intl.DateTimeFormat('sv-SE', {
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo',
+  }).formatToParts(new Date(iso))
   const get = (t: string) => parts.find((p) => p.type === t)?.value ?? '00'
   return `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}`
 }
@@ -832,17 +869,26 @@ function waNumber(value: string): string {
 function ExecutionRow({
   execution,
   ticketId,
+  unitId,
   canApprove,
+  canEdit,
+  canDelete,
   people,
 }: {
   execution: RichExecution
   ticketId: string
+  unitId: string
   canApprove: boolean
+  canEdit: boolean
+  canDelete: boolean
   people: MaintenancePeopleMap
 }) {
   const { mutate: approveCost, isPending } = useApproveCost(ticketId)
+  const { mutate: deleteExecution, isPending: isDeleting } = useDeleteExecution(ticketId)
   const [approving, setApproving]   = useState(false)
   const [approvedStr, setApprovedStr] = useState(() => execution.cost.toFixed(2).replace('.', ','))
+  const [editOpen, setEditOpen]       = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
   // Nomes de usuário resolvidos pela RPC (Map) — embed só como fallback (NULL p/ técnicos).
   const internalName = execution.internal_user_id
@@ -987,6 +1033,65 @@ function ExecutionRow({
           )}
         </div>
       </div>
+
+      {/* Ações — Editar e Excluir (só para quem tem permissão e ticket editável) */}
+      {(canEdit || canDelete) && (
+        <div className="flex justify-end gap-1.5 mt-2">
+          {confirmDelete ? (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-destructive">Remover execução?</span>
+              <Button
+                variant="destructive"
+                size="sm"
+                className="h-7 px-2 text-xs"
+                disabled={isDeleting}
+                onClick={() => deleteExecution(execution.id)}
+              >
+                {isDeleting ? '...' : 'Sim'}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs"
+                disabled={isDeleting}
+                onClick={() => setConfirmDelete(false)}
+              >
+                Não
+              </Button>
+            </div>
+          ) : (
+            <>
+              {canEdit && (
+                <button
+                  onClick={() => setEditOpen(true)}
+                  className="h-7 w-7 rounded-md flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                  aria-label="Editar execução"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                </button>
+              )}
+              {canDelete && (
+                <button
+                  onClick={() => setConfirmDelete(true)}
+                  className="h-7 w-7 rounded-md flex items-center justify-center text-muted-foreground hover:bg-red-50 hover:text-destructive dark:hover:bg-red-950/30 transition-colors"
+                  aria-label="Remover execução"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {editOpen && (
+        <AddExecutionModal
+          ticketId={ticketId}
+          unitId={unitId}
+          execution={execution}
+          onClose={() => setEditOpen(false)}
+        />
+      )}
     </div>
   )
 }
@@ -1066,6 +1171,10 @@ export default function ChamadoDetailPage() {
   // ─── Permissions ───
   const canEdit    = !!ticket && ticket.status !== 'concluded' && ticket.status !== 'cancelled'
   const canApprove = hasRole(profile?.role, MAINTENANCE_ADMIN_ROLES)
+  // Editar e excluir execuções exige cargo admin (diretor/gerente/super_admin)
+  // além do ticket estar aberto — operacional_eventos e manutencao não veem os botões
+  const canManageExecutions = canEdit && hasRole(profile?.role, MAINTENANCE_ADMIN_ROLES)
+  const canDelete  = canManageExecutions
 
   // ─── File upload handler ───
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -1354,7 +1463,10 @@ export default function ChamadoDetailPage() {
               key={ex.id}
               execution={ex}
               ticketId={typedTicket.id}
+              unitId={typedTicket.unit_id}
               canApprove={canApprove}
+              canEdit={canManageExecutions}
+              canDelete={canDelete}
               people={people}
             />
           ))

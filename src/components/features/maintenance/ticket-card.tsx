@@ -17,7 +17,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { UserAvatar } from '@/components/shared/user-avatar'
 import { useUpdateTicketStatus } from '@/hooks/use-tickets'
 import type { MaintenanceTicketForList, ExecutionForList, TicketStatus } from '@/types/database.types'
 import type { MaintenancePeopleMap } from '@/hooks/use-maintenance-people'
@@ -202,7 +201,6 @@ export const TicketCard = memo(function TicketCard({ ticket, people, onClick }: 
             {assignedName && (
               <div className="flex items-center gap-1.5 text-xs text-text-secondary min-w-0">
                 <UserCheck className="w-3 h-3 shrink-0 text-text-tertiary" />
-                <UserAvatar name={assignedName} size="sm" className="w-5 h-5 text-[9px] shrink-0" />
                 <span className="truncate">{assignedName}</span>
               </div>
             )}
@@ -212,9 +210,6 @@ export const TicketCard = memo(function TicketCard({ ticket, people, onClick }: 
                   ? <Building2 className="w-3 h-3 shrink-0 text-text-tertiary" />
                   : <Wrench    className="w-3 h-3 shrink-0 text-text-tertiary" />
                 }
-                {!execIsExternal && (
-                  <UserAvatar name={execLabel} size="sm" className="w-5 h-5 text-[9px] shrink-0" />
-                )}
                 <span className="truncate">{execLabel}</span>
               </div>
             )}
