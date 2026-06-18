@@ -50,6 +50,7 @@ import {
   MAINTENANCE_MODULE_ROLES,
   EQUIPAMENTOS_MENU_ROLES,
   MAINTENANCE_ADMIN_ROLES,
+  MAINTENANCE_AGENDA_ROLES,
   PRESTADORES_ACCESS_ROLES,
   BACKUP_VIEW_ROLES,
   ADMIN_ACCESS_ROLES,
@@ -166,7 +167,7 @@ export const NAV_GROUPS: NavGroup[] = [
         children: [
           { label: 'Dashboard',     href: ROUTES.maintenanceDashboard, icon: LayoutDashboard, module: 'manutencao',    allowedRoles: [...MAINTENANCE_ADMIN_ROLES] },
           { label: 'Chamados',      href: ROUTES.maintenanceChamados,  icon: ClipboardList,   module: 'manutencao',    allowedRoles: [...MAINTENANCE_MODULE_ROLES] },
-          { label: 'Agenda',        href: ROUTES.maintenanceAgenda,    icon: CalendarClock,   module: 'manutencao',    allowedRoles: [...MAINTENANCE_ADMIN_ROLES] },
+          { label: 'Agenda',        href: ROUTES.maintenanceAgenda,    icon: CalendarClock,   module: 'manutencao',    allowedRoles: [...MAINTENANCE_AGENDA_ROLES] },
           { label: 'Minhas Tarefas', href: ROUTES.maintenanceMinhasTarefas, icon: ListTodo,   module: 'manutencao',    allowedRoles: [...MAINTENANCE_MODULE_ROLES] },
           { label: 'Equipamentos',  href: ROUTES.equipment,            icon: Package,         module: 'equipamentos',  allowedRoles: [...EQUIPAMENTOS_MENU_ROLES] },
           { label: 'Configurações', href: ROUTES.maintenanceConfig,    icon: Settings2,       module: 'manutencao',    allowedRoles: [...MAINTENANCE_ADMIN_ROLES] },

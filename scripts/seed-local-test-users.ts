@@ -9,7 +9,7 @@
  * ║  Uso: npx tsx scripts/seed-local-test-users.ts                           ║
  * ╚══════════════════════════════════════════════════════════════════════════╝
  *
- * Cria 10 usuários de teste — um por role — para validação de guards e
+ * Cria 11 usuários de teste — um por role — para validação de guards e
  * permissões no ambiente local Docker.
  *
  * Email:  teste.<role>@cachola.local  (pos_vendas → teste.posvendas@cachola.local)
@@ -71,8 +71,9 @@ const TEST_ROLES = [
   { role: 'manutencao',  emailSlug: 'manutencao' },
   { role: 'financeiro',  emailSlug: 'financeiro' },
   { role: 'rh',          emailSlug: 'rh'         },
-  { role: 'freelancer',  emailSlug: 'freelancer' },
-  { role: 'entregador',  emailSlug: 'entregador' },
+  { role: 'freelancer',         emailSlug: 'freelancer'         },
+  { role: 'entregador',         emailSlug: 'entregador'         },
+  { role: 'operacional_eventos', emailSlug: 'operacional_eventos' },
 ] as const;
 
 // ─── Supabase Admin client ───────────────────────────────────────────────────
@@ -199,18 +200,19 @@ async function main() {
     console.log(`   ✅ public.users: role=${role}`);
 
     // 3c. user_units: Pinheiros (default) + Moema (se disponível)
+    // Nota: coluna `role` foi removida de user_units na migration 089 — role vive em public.users
     psql(
-      `INSERT INTO public.user_units (user_id, unit_id, role, is_default) ` +
-      `VALUES ('${userId}', '${defaultUnit.id}', '${role}', true) ` +
-      `ON CONFLICT (user_id, unit_id) DO UPDATE SET role = '${role}', is_default = true`
+      `INSERT INTO public.user_units (user_id, unit_id, is_default) ` +
+      `VALUES ('${userId}', '${defaultUnit.id}', true) ` +
+      `ON CONFLICT (user_id, unit_id) DO UPDATE SET is_default = true`
     );
     console.log(`   ✅ user_units: ${defaultUnit.name} (default)`);
 
     if (moema && moema.id !== defaultUnit.id) {
       psql(
-        `INSERT INTO public.user_units (user_id, unit_id, role, is_default) ` +
-        `VALUES ('${userId}', '${moema.id}', '${role}', false) ` +
-        `ON CONFLICT (user_id, unit_id) DO UPDATE SET role = '${role}', is_default = false`
+        `INSERT INTO public.user_units (user_id, unit_id, is_default) ` +
+        `VALUES ('${userId}', '${moema.id}', false) ` +
+        `ON CONFLICT (user_id, unit_id) DO UPDATE SET is_default = false`
       );
       console.log(`   ✅ user_units: ${moema.name}`);
     }

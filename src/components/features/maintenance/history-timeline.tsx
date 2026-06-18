@@ -65,7 +65,7 @@ function TimelineItem({ item, isLast }: { item: HistoryOrderItem; isLast: boolea
   const Icon         = cfg.icon
   const resHours     = calcResolutionHours(item.created_at, item.concluded_at)
   const concludedDate = item.concluded_at
-    ? format(parseISO(item.concluded_at), "dd 'de' MMM 'às' HH:mm", { locale: ptBR })
+    ? format(parseISO(item.concluded_at), "dd 'de' MMM 'de' yyyy 'às' HH:mm", { locale: ptBR })
     : null
 
   return (

@@ -11,9 +11,13 @@ Status possiveis: PENDENTE | BLOQUEADA | AGUARDANDO TERCEIRO | VERIFICAR
 - [ ] Auditoria de vulnerabilidades npm (27 no ultimo build: 12 high, 14 moderate, 1 low): triar runtime-facing vs build/dev-only e aplicar so bumps seguros. NUNCA rodar npm audit fix --force (quebra Next 16 / Tailwind v4). STATUS: PENDENTE.
 - [ ] Auditar paridade de migracoes local vs producao. STATUS: PENDENTE.
 - [ ] Limpar o diretorio untracked scripts/ops/ que aparece na working tree da VPS de producao. STATUS: PENDENTE (baixa prioridade).
+- [ ] Esteira de migracao Fase 2: modo "aplicar pendentes" (varrer supabase/migrations, comparar com a tabela cachola_migration_log e aplicar em ordem o que falta, cada uma em sua propria transacao) + backfill da tabela com as migrations historicas ja aplicadas. STATUS: PENDENTE (fazer depois que a Fase 1 rodar algumas migrations reais).
+- [ ] Esteira (polimento opcional): mover o passo "Validar inputs" do migrate-prod.yml para um job separado SEM environment, para que nome de arquivo invalido falhe antes do gate de aprovacao (hoje precisa aprovar para so entao ver o erro). STATUS: PENDENTE (baixa prioridade, so UX).
+- [ ] Deploy: em 17/06/2026 as 3 tentativas de SSH do deploy.yml falharam juntas (run #279) e o re-run passou; tratado como instabilidade transitoria de rede GitHub->VPS. Monitorar: se as falhas das 3 tentativas voltarem com frequencia, investigar bloqueio no lado da VPS (fail2ban banindo IPs dos runners do GitHub) em vez de so re-rodar. STATUS: VERIFICAR.
 
 ## RBAC / Permissoes
 
+- [ ] operacional_eventos — cargo cai em /403 logo apos o login por falta de permissoes em user_permissions. Raiz: o script de seed (scripts/seed-local-test-users.ts) faz fan-out de role_default_perms (1 linha para operacional_eventos: apenas central_servicos.view), mas a fonte de verdade real e role_permissions (10 linhas, incluindo dashboard.view e eventos.view). O layout /dashboard usa requirePermissionServer('dashboard','view') e o layout /eventos usa requirePermissionServer('eventos','view') — ambos consultam user_permissions via check_permission() em runtime; sem o grant, redireciona para /403. Os modulos que usam requireRoleServer (cargo-based) nao sao afetados: /manutencao, /atas, /checklists passam. Migration 143 deliberadamente pulou role_default_perms para a role nova (comentario na migration documenta isso). O mesmo gap existe na role manutencao (role_default_perms nao tem dashboard.view la tambem), mas o usuario de teste funciona por grant manual inserido numa sessao de QA anterior. Opcoes de correcao: (A) migration de backfill direto em user_permissions para usuarios existentes com a role operacional_eventos; (B) adicionar as linhas faltantes em role_default_perms para operacional_eventos; (C) corrigir o seed script para ler de role_permissions em vez de role_default_perms. Opcao A resolve quem ja existe; Opcao C resolve novos usuarios seedados localmente. STATUS: PENDENTE (diagnostico completo em sessao 17/06/2026; correcao pendente de aprovacao).
 - [ ] Atas — converter as operacoes de ESCRITA de role-gating (ATAS_MANAGE_ROLES) para check_permission + aplicar backfill. Pre-requisito para que cargos operacionais possam algum dia ter escrita em Atas (as entradas atas.create/edit em role_permissions ficam "ocas" ate isso). STATUS: PENDENTE.
 - [ ] Manutencao — alinhar o template do cargo DIRETOR para incluir create/edit/delete de manutencao (hoje Carol e Vinicius funcionam por grants individuais; um diretor novo nao herdaria automaticamente). STATUS: VERIFICAR (conferir se a reforma da v1.55.0 ja cobriu).
 
@@ -36,6 +40,7 @@ Status possiveis: PENDENTE | BLOQUEADA | AGUARDANDO TERCEIRO | VERIFICAR
 
 - [ ] Recriar os 7 usuarios de teste de producao (teste-{role}@cachola.cloud) removidos em abril/2026 (~30 min). STATUS: PENDENTE.
 - [ ] Alinhamento de sinal de gap: conflitos de evento usam <= 0 e conflitos de pre-reserva usam < 0 — alinhar num toque futuro. STATUS: PENDENTE.
+- [ ] Conferir o Environment "VPS_SSH_KEY" no GitHub (Settings -> Environments). A esteira nao o usa (os secrets de SSH sao do repositorio). Se foi criado por engano, apagar. STATUS: VERIFICAR (baixa prioridade).
 
 ## Resolvidas
 

@@ -136,7 +136,7 @@ export function CostCard({ cost, currentUserId, canApprove }: CostCardProps) {
           <p className="text-xs text-muted-foreground">
             {cost.status === 'approved' ? 'Aprovado' : 'Reprovado'} por{' '}
             <span className="font-medium">{cost.reviewer.name}</span>{' '}
-            em {format(parseISO(cost.reviewed_at), "d 'de' MMM", { locale: ptBR })}
+            em {format(parseISO(cost.reviewed_at), "d 'de' MMM 'de' yyyy", { locale: ptBR })}
           </p>
         )}
 

@@ -190,6 +190,17 @@ export const MAINTENANCE_ADMIN_ROLES = [
 ] as const satisfies readonly Role[]
 
 /**
+ * Acesso à Agenda de Manutenção (rota /manutencao/agenda).
+ * Estende MAINTENANCE_ADMIN_ROLES adicionando `operacional_eventos`, que precisa de
+ * leitura read-only da agenda sem ter acesso a Dashboard ou Configurações
+ * (que continuam protegidos por MAINTENANCE_ADMIN_ROLES).
+ */
+export const MAINTENANCE_AGENDA_ROLES = [
+  ...MAINTENANCE_ADMIN_ROLES,
+  'operacional_eventos',
+] as const satisfies readonly Role[]
+
+/**
  * Acesso ao módulo de Prestadores (gestão de terceiros).
  * Exclui rh, freelancer, entregador — sem necessidade operacional nesse módulo.
  */

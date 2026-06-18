@@ -1,11 +1,11 @@
 import { requireRoleServer } from '@/lib/auth/require-role'
-import { MAINTENANCE_ADMIN_ROLES } from '@/config/roles'
+import { MAINTENANCE_AGENDA_ROLES } from '@/config/roles'
 
 export default async function ManutencaoAgendaLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  await requireRoleServer(MAINTENANCE_ADMIN_ROLES)
+  await requireRoleServer(MAINTENANCE_AGENDA_ROLES)
   return <>{children}</>
 }

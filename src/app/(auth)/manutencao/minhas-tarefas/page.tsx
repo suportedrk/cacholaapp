@@ -15,7 +15,7 @@ const dayKeyFmt = new Intl.DateTimeFormat('en-CA', {
   year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'America/Sao_Paulo',
 })
 const dateTimeFmt = new Intl.DateTimeFormat('pt-BR', {
-  day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo',
+  day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo',
 })
 
 const STATUS_BADGE: Record<string, string> = {
