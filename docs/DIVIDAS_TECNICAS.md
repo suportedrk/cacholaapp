@@ -17,6 +17,7 @@ Status possiveis: PENDENTE | BLOQUEADA | AGUARDANDO TERCEIRO | VERIFICAR
 
 ## RBAC / Permissoes
 
+- [ ] RBAC — applyRoleTemplate e disparado em fire-and-forget (src/hooks/use-units.ts:241 -> POST /api/admin/users/[id]/apply-role-template): se o disparo falhar (rede, timeout, excecao), o usuario recem-adicionado fica sem permissoes e cai em /403 sem nenhum aviso — falha silenciosa de dificil diagnostico (mesmo sintoma do "usuario capenga" investigado em 18/06/2026 no cargo operacional_eventos, embora a causa naquele caso tenha sido outra). Correcao sugerida (prioridade BAIXA): aguardar o resultado do apply-role-template; em falha, emitir log + toast de erro na tela de gestao de usuarios; expor botao "reaplicar template" na tela de permissoes do usuario (/admin/usuarios/[id]/permissoes); considerar retry automatico. STATUS: PENDENTE (identificado em 18/06/2026, release v1.58.0).
 - [ ] Atas — converter as operacoes de ESCRITA de role-gating (ATAS_MANAGE_ROLES) para check_permission + aplicar backfill. Pre-requisito para que cargos operacionais possam algum dia ter escrita em Atas (as entradas atas.create/edit em role_permissions ficam "ocas" ate isso). STATUS: PENDENTE.
 - [ ] Manutencao — alinhar o template do cargo DIRETOR para incluir create/edit/delete de manutencao (hoje Carol e Vinicius funcionam por grants individuais; um diretor novo nao herdaria automaticamente). STATUS: VERIFICAR (conferir se a reforma da v1.55.0 ja cobriu).
 
