@@ -344,6 +344,7 @@ export type ExecutionInsert = {
   status?:             ExecutionStatus
   scheduled_at?:       string | null
   estimated_duration_minutes?: number | null
+  show_in_main_calendar?: boolean
 }
 
 export function useAddExecution(onSuccess?: () => void) {
@@ -466,6 +467,7 @@ export type ExecutionEditPayload = {
   status?: ExecutionStatus
   scheduled_at?: string | null
   estimated_duration_minutes?: number | null
+  show_in_main_calendar?: boolean
 }
 
 export function useExecutionEdit(ticketId: string) {

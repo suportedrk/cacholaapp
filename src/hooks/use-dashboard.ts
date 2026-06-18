@@ -240,7 +240,7 @@ export function useCalendarMaintenance(dateFrom: string, dateTo: string, enabled
       const execQ = (supabase as ReturnType<typeof createClient> & { from: (t: string) => unknown } as any)
         .from('maintenance_executions')
         .select(`
-          id, ticket_id, executor_type, scheduled_at,
+          id, ticket_id, executor_type, scheduled_at, show_in_main_calendar,
           internal_user:users!internal_user_id(id, name),
           provider:service_providers!provider_id(id, name),
           ticket:maintenance_tickets!ticket_id(
@@ -261,6 +261,7 @@ export function useCalendarMaintenance(dateFrom: string, dateTo: string, enabled
         ticket_id: string
         executor_type: string
         scheduled_at: string | null
+        show_in_main_calendar: boolean
         internal_user: { id: string; name: string } | null
         provider: { id: string; name: string } | null
         ticket: {
@@ -278,6 +279,7 @@ export function useCalendarMaintenance(dateFrom: string, dateTo: string, enabled
         const t = e.ticket
         if (!t) return false
         if (t.status === 'concluded' || t.status === 'cancelled') return false
+        if (e.show_in_main_calendar !== true) return false
         return !activeUnitId || t.unit_id === activeUnitId
       })
 

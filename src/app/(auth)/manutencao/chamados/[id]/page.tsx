@@ -444,6 +444,7 @@ function AddExecutionModal({
   const [execStatus, setExecStatus] = useState<ExecutionStatus>(execution?.status ?? 'assigned')
   const [scheduledAt, setScheduledAt] = useState(isoToDatetimeLocal(execution?.scheduled_at ?? null))
   const [durationStr, setDurationStr] = useState(execution?.estimated_duration_minutes?.toString() ?? '')
+  const [showInCalendar, setShowInCalendar] = useState(execution?.show_in_main_calendar ?? false)
   const [error, setError] = useState<string | null>(null)
 
   // Executor interno = equipe de manutenção (RPC com check_permission view + escopo unidade).
@@ -491,6 +492,7 @@ function AddExecutionModal({
         status:              execStatus,
         scheduled_at:        scheduledAt ? new Date(`${scheduledAt}:00-03:00`).toISOString() : null,
         estimated_duration_minutes: durationStr ? parseInt(durationStr, 10) || null : null,
+        show_in_main_calendar: scheduledAt ? showInCalendar : false,
       }, { onSuccess: onClose })
     } else {
       addExecution({
@@ -507,6 +509,7 @@ function AddExecutionModal({
         // → '2026-06-15T14:30:00-03:00' → toISOString() grava o UTC correto.
         scheduled_at:        scheduledAt ? new Date(`${scheduledAt}:00-03:00`).toISOString() : null,
         estimated_duration_minutes: durationStr ? parseInt(durationStr, 10) || null : null,
+        show_in_main_calendar: scheduledAt ? showInCalendar : false,
       } as Parameters<typeof addExecution>[0])
     }
   }
@@ -662,6 +665,18 @@ function AddExecutionModal({
           <p className="text-xs text-muted-foreground">
             Agendar gera a tarefa para o designado e o lançamento na agenda. Opcional.
           </p>
+
+          {scheduledAt && (
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={showInCalendar}
+                onChange={(e) => setShowInCalendar(e.target.checked)}
+                className="h-4 w-4 rounded border-border accent-primary"
+              />
+              <span className="text-sm">Mostrar no calendário principal (Início)</span>
+            </label>
+          )}
 
           {error && <p className="text-xs text-destructive">{error}</p>}
         </div>
@@ -847,6 +862,7 @@ function FinalizeModal({
 // ─────────────────────────────────────────────────────────────
 type ProviderContact = { type: 'phone' | 'email' | 'whatsapp'; value: string; is_primary: boolean | null }
 type RichExecution = MaintenanceExecution & {
+  show_in_main_calendar: boolean
   internal_user:         { id: string; name: string; avatar_url: string | null } | null
   responsible_user:      { id: string; name: string } | null
   cost_approved_by_user: { id: string; name: string } | null
@@ -1441,7 +1457,7 @@ export default function ChamadoDetailPage() {
             <Calendar className="mt-0.5 h-4 w-4 shrink-0 text-blue-500 dark:text-blue-400" />
             <div className="min-w-0">
               <p className="text-xs text-blue-800 dark:text-blue-300">
-                Este chamado ainda não tem execução agendada. Ele aparecerá no calendário assim que você agendar uma execução (data e executor).
+                Este chamado ainda não tem execução agendada. Ao agendar uma execução, você pode marcá-la para aparecer no calendário principal (Início).
               </p>
               {canEdit && (
                 <button
