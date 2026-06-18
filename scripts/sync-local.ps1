@@ -2,10 +2,12 @@
 # Sincroniza a copia local (Windows) do repositorio Cachola OS com o GitHub.
 # Uso: .\scripts\sync-local.ps1
 # Executar no inicio de cada sessao de trabalho antes de abrir o VS Code.
+#
+# Compativel com Windows PowerShell 5.1 e PowerShell 7+.
+# Usa apenas caracteres ASCII nas mensagens (evita bugs de encoding do PS 5.1).
 
 $RepoPath = "C:\Users\bruno\Documents\Projetos\cacholaos"
 
-# Verificar se o diretorio existe
 if (-not (Test-Path $RepoPath)) {
     Write-Host "ERRO: diretorio nao encontrado: $RepoPath" -ForegroundColor Red
     exit 1
@@ -14,8 +16,8 @@ if (-not (Test-Path $RepoPath)) {
 Set-Location $RepoPath
 
 Write-Host ""
-Write-Host "=== Cachola OS — Sincronizando copia local ===" -ForegroundColor Cyan
-Write-Host "   Repositorio: $RepoPath"
+Write-Host "=== Cachola OS - Sincronizando copia local ===" -ForegroundColor Cyan
+Write-Host "    Repositorio: $RepoPath"
 Write-Host ""
 
 # 1. Buscar todas as refs remotas e remover branches deletadas
@@ -46,8 +48,9 @@ git pull --ff-only
 if ($LASTEXITCODE -ne 0) {
     Write-Host ""
     Write-Host "AVISO: git pull --ff-only falhou." -ForegroundColor Red
-    Write-Host "       Isso indica commits locais nao esperados. Investigar com: git log --oneline origin/develop..HEAD" -ForegroundColor Red
-    Write-Host "       NAO forcou nenhuma alteracao. Resolva manualmente antes de continuar." -ForegroundColor Red
+    Write-Host "       Isso indica commits locais nao esperados." -ForegroundColor Red
+    Write-Host "       Diagnose com: git log --oneline origin/develop..HEAD" -ForegroundColor Red
+    Write-Host "       Nenhuma alteracao foi forcada. Resolva manualmente antes de continuar." -ForegroundColor Red
     exit 1
 }
 Write-Host "     OK" -ForegroundColor Green
@@ -56,40 +59,36 @@ Write-Host "     OK" -ForegroundColor Green
 Write-Host "4/4  Estado atual:" -ForegroundColor Yellow
 Write-Host ""
 
-# Versao do package.json
-$PackageJson = Get-Content "package.json" -Raw | ConvertFrom-Json
-$Versao = $PackageJson.version
-Write-Host "   Versao local (package.json) : $Versao" -ForegroundColor White
+# Versao local lida diretamente do arquivo (parser JSON nativo)
+$VersaoLocal = (Get-Content -Raw "$RepoPath\package.json" | ConvertFrom-Json).version
 
-# Versao no origin/main
-$VersaoMain = git show origin/main:package.json | Select-String '"version"' | Select-Object -First 1
-$VersaoMain = ($VersaoMain -replace '.*"version":\s*"([^"]+)".*', '$1').Trim()
-Write-Host "   Versao origin/main          : $VersaoMain" -ForegroundColor White
+# Versao de origin/main e origin/develop sem trocar de branch (git show + ConvertFrom-Json)
+$VersaoMain    = (git show origin/main:package.json    | ConvertFrom-Json).version
+$VersaoDevelop = (git show origin/develop:package.json | ConvertFrom-Json).version
 
-# Versao no origin/develop
-$VersaoDevelop = git show origin/develop:package.json | Select-String '"version"' | Select-Object -First 1
-$VersaoDevelop = ($VersaoDevelop -replace '.*"version":\s*"([^"]+)".*', '$1').Trim()
-Write-Host "   Versao origin/develop       : $VersaoDevelop" -ForegroundColor White
+Write-Host "    Versao local (package.json) : $VersaoLocal" -ForegroundColor White
+Write-Host "    Versao origin/main          : $VersaoMain" -ForegroundColor White
+Write-Host "    Versao origin/develop       : $VersaoDevelop" -ForegroundColor White
 
 Write-Host ""
 
 # Relacao develop x main
-$DevAheadMain = git rev-list --count "origin/main..origin/develop"
-$DevBehindMain = git rev-list --count "origin/develop..origin/main"
+[int]$DevAheadMain  = git rev-list --count "origin/main..origin/develop"
+[int]$DevBehindMain = git rev-list --count "origin/develop..origin/main"
 
 if ($DevBehindMain -gt 0) {
-    Write-Host "   AVISO: develop esta $DevBehindMain commit(s) ATRAS de main — drift problematico." -ForegroundColor Red
-    Write-Host "          Corrigir: git merge origin/main --no-edit && git push origin develop" -ForegroundColor Red
+    Write-Host "    ATENCAO: develop esta $DevBehindMain commit(s) ATRAS de main - drift problematico." -ForegroundColor Red
+    Write-Host "             Corrigir: git merge origin/main --no-edit && git push origin develop" -ForegroundColor Red
 } elseif ($DevAheadMain -gt 0) {
-    Write-Host "   develop esta $DevAheadMain commit(s) a frente de main (trabalho em andamento — normal)." -ForegroundColor Green
+    Write-Host "    develop esta $DevAheadMain commit(s) a frente de main (trabalho em andamento - normal)." -ForegroundColor Green
 } else {
-    Write-Host "   develop e main estao identicos." -ForegroundColor Green
+    Write-Host "    develop e main estao identicos." -ForegroundColor Green
 }
 
 Write-Host ""
 
 # Status do working tree
-Write-Host "   Status do repositorio:" -ForegroundColor White
+Write-Host "    Status do repositorio:" -ForegroundColor White
 git status -sb
 
 Write-Host ""
