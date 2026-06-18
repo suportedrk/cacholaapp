@@ -452,6 +452,73 @@ export function useUploadTicketPhoto() {
 }
 
 // ─────────────────────────────────────────────────────────────
+// EDITAR EXECUÇÃO (campos não-financeiros)
+// cost/cost_approved/cost_approved_by são gerenciados pelo workflow de aprovação
+// (migration 095 trigger bloqueia essas colunas após aprovação)
+// ─────────────────────────────────────────────────────────────
+export type ExecutionEditPayload = {
+  id: string
+  executor_type?: 'internal' | 'external'
+  internal_user_id?: string | null
+  provider_id?: string | null
+  responsible_user_id?: string | null
+  description?: string | null
+  status?: ExecutionStatus
+  scheduled_at?: string | null
+  estimated_duration_minutes?: number | null
+}
+
+export function useExecutionEdit(ticketId: string) {
+  const qc = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ id, ...payload }: ExecutionEditPayload) => {
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from('maintenance_executions')
+        .update({ ...payload, updated_at: new Date().toISOString() })
+        .eq('id', id)
+        .select()
+        .single()
+      if (error) throw error
+      return data
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['ticket', ticketId] })
+      qc.invalidateQueries({ queryKey: ['tickets'] })
+      qc.invalidateQueries({ queryKey: ['dashboard', 'calendar-maintenance'] })
+      toast.success('Execução atualizada')
+    },
+    onError: (err) => toast.error(mapPgError(err, {}, 'EXECUTION_EDIT')),
+  })
+}
+
+// ─────────────────────────────────────────────────────────────
+// EXCLUIR EXECUÇÃO
+// ─────────────────────────────────────────────────────────────
+export function useDeleteExecution(ticketId: string) {
+  const qc = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (executionId: string) => {
+      const supabase = createClient()
+      const { error } = await supabase
+        .from('maintenance_executions')
+        .delete()
+        .eq('id', executionId)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['ticket', ticketId] })
+      qc.invalidateQueries({ queryKey: ['tickets'] })
+      qc.invalidateQueries({ queryKey: ['dashboard', 'calendar-maintenance'] })
+      toast.success('Execução removida')
+    },
+    onError: (err) => toast.error(mapPgError(err, {}, 'EXECUTION_DELETE')),
+  })
+}
+
+// ─────────────────────────────────────────────────────────────
 // APROVAR CUSTO DE EXECUÇÃO
 // ─────────────────────────────────────────────────────────────
 export function useApproveCost(ticketId: string) {
