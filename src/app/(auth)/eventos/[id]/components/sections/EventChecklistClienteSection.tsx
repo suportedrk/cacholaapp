@@ -9,23 +9,26 @@ import {
   ChecklistClientePrintDialog,
   buildChecklistClienteItems,
   NAO_PREENCHIDO,
+  RESTRITO,
 } from './ChecklistClientePrintDialog'
 import type { Event } from '@/types/database.types'
 
 interface EventChecklistClienteSectionProps {
   event: Event
   unitName: string | null
+  canSeeValues: boolean
 }
 
 /**
- * Seção SOMENTE LEITURA "Checklist do Cliente" — espelho de campos do Ploomes já
- * presentes na tabela events. Fase 1: 12 campos reais + 9 placeholders ("não
- * preenchido") aguardando a Fase 2 (campos a trazer do Ploomes). Sem edição,
- * sem data fetching — recebe tudo via props.
+ * Seção SOMENTE LEITURA "Checklist do Cliente" — espelho de campos do Ploomes
+ * presentes na tabela events. Todos os 21 itens estão ligados a dados reais;
+ * "não preenchido" só aparece quando o campo está vazio no banco.
+ * O campo financeiro ("Valor do Convidado Extra e Staff") é restrito por cargo
+ * via canSeeValues (canViewFestaValues) e exibe "Restrito" quando false.
  */
-export function EventChecklistClienteSection({ event, unitName }: EventChecklistClienteSectionProps) {
+export function EventChecklistClienteSection({ event, unitName, canSeeValues }: EventChecklistClienteSectionProps) {
   const [printOpen, setPrintOpen] = useState(false)
-  const items = buildChecklistClienteItems(event)
+  const items = buildChecklistClienteItems(event, canSeeValues)
 
   return (
     <>
@@ -47,6 +50,7 @@ export function EventChecklistClienteSection({ event, unitName }: EventChecklist
           <dl className="grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2">
             {items.map((it) => {
               const isEmpty = it.value === NAO_PREENCHIDO
+              const isRestricted = it.restricted === true || it.value === RESTRITO
               return (
                 <div
                   key={it.label}
@@ -56,7 +60,11 @@ export function EventChecklistClienteSection({ event, unitName }: EventChecklist
                   <dd
                     className={cn(
                       'text-right text-sm font-medium',
-                      isEmpty ? 'text-text-tertiary italic' : 'text-text-primary',
+                      isRestricted
+                        ? 'text-text-tertiary'
+                        : isEmpty
+                          ? 'text-text-tertiary italic'
+                          : 'text-text-primary',
                     )}
                   >
                     {it.value}
@@ -73,6 +81,7 @@ export function EventChecklistClienteSection({ event, unitName }: EventChecklist
         onOpenChange={setPrintOpen}
         event={event}
         unitName={unitName}
+        canSeeValues={canSeeValues}
       />
     </>
   )

@@ -14,12 +14,17 @@ import {
 import { Button } from '@/components/ui/button'
 import type { Event } from '@/types/database.types'
 
-/** Texto exibido quando um campo não está preenchido (null/vazio) ou aguarda a Fase 2. */
+/** Texto exibido quando um campo não está preenchido (null/vazio). */
 export const NAO_PREENCHIDO = 'não preenchido'
+
+/** Texto exibido quando o campo é restrito por permissão de cargo. */
+export const RESTRITO = 'Restrito'
 
 export interface ChecklistClienteItem {
   label: string
   value: string
+  /** true quando o valor foi ocultado por trava de cargo (ex: campo financeiro). */
+  restricted?: boolean
 }
 
 /** Booleano → "Sim"/"Não" (nunca "não preenchido" — o campo é sempre boolean no banco). */
@@ -40,12 +45,26 @@ function timeValue(v: string | null | undefined): string {
   return v.slice(0, 5)
 }
 
+/** Valor monetário BRL; null → "não preenchido". */
+function currencyValue(v: number | null | undefined): string {
+  if (v === null || v === undefined) return NAO_PREENCHIDO
+  return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+}
+
 /**
  * Fonte única dos 21 itens do Checklist do Cliente (ordem + regras de valor).
  * Consumida tanto pela seção quanto por este dialog de impressão.
- * Itens marcados "Fase 2" são placeholders fixos até os campos virem do Ploomes.
+ * Todos os campos são ligados a dados reais de events; "não preenchido" só
+ * aparece quando o campo está vazio no banco.
+ *
+ * @param canSeeValues true para cargos que podem ver valores financeiros
+ *   (canViewFestaValues). false exibe "Restrito" no campo financeiro.
  */
-export function buildChecklistClienteItems(event: Event): ChecklistClienteItem[] {
+export function buildChecklistClienteItems(event: Event, canSeeValues: boolean): ChecklistClienteItem[] {
+  const extraGuestValue: ChecklistClienteItem = canSeeValues
+    ? { label: 'Valor do Convidado Extra e Staff', value: currencyValue(event.extra_guest_staff_value) }
+    : { label: 'Valor do Convidado Extra e Staff', value: RESTRITO, restricted: true }
+
   return [
     { label: 'Número de convidados adultos', value: textValue(event.adult_count) },
     { label: 'Número de convidados até 4 anos', value: textValue(event.kids_under4) },
@@ -55,19 +74,19 @@ export function buildChecklistClienteItems(event: Event): ChecklistClienteItem[]
     { label: 'Teremos algum show?', value: boolLabel(event.has_show) },
     { label: 'Bebidas de fora', value: boolLabel(event.outside_drinks) },
     { label: 'Lembrancinhas', value: boolLabel(event.party_favors) },
-    { label: 'Quantidade Rolha', value: NAO_PREENCHIDO },
-    { label: 'Valor do Convidado Extra e Staff', value: NAO_PREENCHIDO },
-    { label: 'Responsável', value: NAO_PREENCHIDO },
+    { label: 'Quantidade Rolha', value: textValue(event.corkage_quantity) },
+    extraGuestValue,
+    { label: 'Responsável', value: textValue(event.responsible_person) },
     { label: 'Nome do pai', value: textValue(event.father_name) },
-    { label: 'Contratou foto e/ou vídeo?', value: NAO_PREENCHIDO },
-    { label: 'Contato(s) foto e/ou vídeo', value: textValue(event.photo_video) },
+    { label: 'Contratou foto e/ou vídeo?', value: textValue(event.photo_video) },
+    { label: 'Contato(s) foto e/ou vídeo', value: textValue(event.photo_video_contact) },
     { label: 'Horário do Show', value: timeValue(event.show_time) },
-    { label: 'Gerador', value: NAO_PREENCHIDO },
-    { label: 'Valet custos', value: NAO_PREENCHIDO },
+    { label: 'Gerador', value: textValue(event.generator) },
+    { label: 'Valet custos', value: textValue(event.valet_cost) },
     { label: 'Músicas', value: textValue(event.music) },
-    { label: 'Outros detalhes Checklist Cliente', value: NAO_PREENCHIDO },
-    { label: 'Pagou Rolha?', value: NAO_PREENCHIDO },
-    { label: 'Detalhamento de Hora Extra', value: NAO_PREENCHIDO },
+    { label: 'Outros detalhes Checklist Cliente', value: textValue(event.checklist_other_details) },
+    { label: 'Pagou Rolha?', value: textValue(event.corkage_paid) },
+    { label: 'Detalhamento de Hora Extra', value: textValue(event.overtime_details) },
   ]
 }
 
@@ -76,6 +95,7 @@ interface Props {
   onOpenChange: (v: boolean) => void
   event: Event
   unitName: string | null
+  canSeeValues: boolean
 }
 
 /**
@@ -83,12 +103,12 @@ interface Props {
  * Espelha o FestaRomaneioPrintDialog: documento branco + window.print() +
  * bloco @media print que isola a área de impressão (id checklist-cliente-print-area).
  */
-export function ChecklistClientePrintDialog({ open, onOpenChange, event, unitName }: Props) {
+export function ChecklistClientePrintDialog({ open, onOpenChange, event, unitName, canSeeValues }: Props) {
   const handlePrint = useCallback(() => {
     window.print()
   }, [])
 
-  const items = buildChecklistClienteItems(event)
+  const items = buildChecklistClienteItems(event, canSeeValues)
 
   const dataFmt = (() => {
     try {

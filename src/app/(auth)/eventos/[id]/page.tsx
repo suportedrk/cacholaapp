@@ -594,7 +594,7 @@ export default function EventoDetailPage() {
         )}
 
         {/* S3b2: Checklist do Cliente (somente leitura — espelho Ploomes) */}
-        <EventChecklistClienteSection event={event} unitName={event.unit?.name ?? null} />
+        <EventChecklistClienteSection event={event} unitName={event.unit?.name ?? null} canSeeValues={canSeeValues} />
 
         {/* S3c: Briefing */}
         {hasBriefing && (
