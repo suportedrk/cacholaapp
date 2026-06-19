@@ -9,7 +9,10 @@
 //   OU PLOOMES_USER_KEY como fallback direto
 // =============================================================
 
-import 'dotenv/config'
+import dotenv from 'dotenv'
+// .env.local tem precedência sobre .env (mesma lógica do Next.js)
+dotenv.config({ path: '.env.local' })
+dotenv.config()
 import { createClient } from '@supabase/supabase-js'
 
 const BASE_URL = (process.env.PLOOMES_API_URL ?? 'https://api2.ploomes.com/').replace(/\/$/, '')
