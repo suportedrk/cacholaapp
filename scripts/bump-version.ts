@@ -18,3 +18,12 @@ execSync(`npm version ${type} --no-git-tag-version`, { stdio: 'pipe' })
 const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'))
 console.log(`✅ ${pkg.name}: ${prev} → ${pkg.version}`)
 console.log(`   Commit: git add package.json package-lock.json && git commit -m "chore(version): bump to ${pkg.version}"`)
+
+// Reinicia o dev server (PM2) para que NEXT_PUBLIC_APP_VERSION reflita a nova versão.
+// Falha silenciosa: se o PM2 não estiver disponível (CI, máquina local), apenas avisa.
+try {
+  execSync('pm2 restart cachola-dev --update-env', { stdio: 'pipe' })
+  console.log('   PM2 cachola-dev reiniciado — versão propagada.')
+} catch {
+  console.log('   (PM2 não disponível neste ambiente — restart manual se necessário.)')
+}
