@@ -28,6 +28,7 @@ import { AccordionSection } from './components/AccordionSection'
 import { ProvidersSection } from './components/sections/ProvidersSection'
 import { EventSalesSection } from './components/sections/EventSalesSection'
 import { EventDecoracaoSection } from './components/sections/EventDecoracaoSection'
+import { EventChecklistClienteSection } from './components/sections/EventChecklistClienteSection'
 import { UnitChip } from '@/components/shared/unit-chip'
 import { cn } from '@/lib/utils'
 import type { ChecklistForList } from '@/types/database.types'
@@ -591,6 +592,9 @@ export default function EventoDetailPage() {
             </div>
           </AccordionSection>
         )}
+
+        {/* S3b2: Checklist do Cliente (somente leitura — espelho Ploomes) */}
+        <EventChecklistClienteSection event={event} unitName={event.unit?.name ?? null} />
 
         {/* S3c: Briefing */}
         {hasBriefing && (
