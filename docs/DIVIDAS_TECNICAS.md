@@ -38,6 +38,7 @@ Status possiveis: PENDENTE | BLOQUEADA | AGUARDANDO TERCEIRO | VERIFICAR
 - [ ] Vendas Fase 3 / Orders Fase 2 — UI Vendedoras + melhorias de BI por Categoria + vendedoras ativas/inativas. STATUS: PENDENTE.
 - [ ] Central de Servicos Fase 2 — anexos + confirmacao de leitura + dashboard. STATUS: PENDENTE.
 - [ ] Front "Permissoes de Custo de Prestador" para o campo agreed_price em Prestadores. STATUS: PENDENTE.
+- [ ] Checklist do Cliente — Fase 2 (campos do Ploomes): a secao "Checklist do Cliente" no detalhe do evento (/eventos/[id], entregue na Fase 1) exibe 8 campos reais da tabela events; outros 9 itens aparecem fixos como "nao preenchido" por aguardarem campos do Ploomes. Os 9 campos a trazer: Quantidade Rolha, Valor do Convidado Extra e Staff, Responsavel, Contratou foto e/ou video?, Gerador, Valet custos, Outros detalhes Checklist Cliente, Pagou Rolha?, Detalhamento de Hora Extra. Para cada um: (a) descobrir a fieldKey no Ploomes (usar a skill ploomes-cachola-api); (b) criar a coluna na tabela events via esteira de migracao; (c) mapear o campo no sync (lib/ploomes/sync.ts). Depois, trocar o placeholder fixo pelo valor real em buildChecklistClienteItems (ChecklistClientePrintDialog.tsx). STATUS: PENDENTE (identificado em 19/06/2026, Fase 1).
 
 ## Pequenas / Housekeeping
 
