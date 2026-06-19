@@ -114,6 +114,7 @@ export type ParsedDeal = {
   unitName?: string       // ObjectValueName do campo Unidade
   venueName?: string      // ObjectValueName do campo Casa
   theme?: string
+  decoratorName?: string
   notes?: string          // Observações (BigString)
   // Logística
   setupTime?: string      // "HH:MM"

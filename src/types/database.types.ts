@@ -562,6 +562,7 @@ export type Event = {
   deal_amount: number | null
   owner_id: number | null
   owner_name: string | null
+  decorator_name: string | null   // migration 161
 }
 
 export type EventInsert = {
@@ -578,6 +579,7 @@ export type EventInsert = {
   birthday_age?: number | null
   guest_count?: number | null
   theme?: string | null
+  decorator_name?: string | null
   notes?: string | null
   ploomes_deal_id?: string | null
   ploomes_url?: string | null
