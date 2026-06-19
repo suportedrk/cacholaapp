@@ -357,6 +357,7 @@ export async function syncDeals(
           // guest_count removido do sync de Deals (v1.10.0):
           // fonte de verdade migrada para Order.contracted_guests via sync-orders.ts.
           theme: parsed.theme ?? null,
+          decorator_name: parsed.decoratorName ?? null,
           notes: parsed.notes ?? null,
           unit_id: unitId,
           created_by: createdBy,

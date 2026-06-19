@@ -3,7 +3,7 @@
 import { memo } from 'react'
 import Link from 'next/link'
 import { parseISO, isToday, isFuture, startOfDay } from 'date-fns'
-import { Clock, Users, Phone, Tag, Handshake, AlertTriangle, User } from 'lucide-react'
+import { Clock, Users, Phone, Tag, Handshake, AlertTriangle, User, Palette } from 'lucide-react'
 
 export type ConflictType = 'overlap' | 'short_gap' | null
 import { EventStatusBadge } from '@/components/shared/event-status-badge'
@@ -131,6 +131,14 @@ export const EventCard = memo(function EventCard({ event, conflictType = null }:
               <span className="text-xs text-text-secondary line-clamp-1">{event.theme}</span>
             </div>
           )}
+
+          {/* Decoradora */}
+          <div className="flex items-center gap-1 mt-1">
+            <Palette className="w-3 h-3 text-text-tertiary shrink-0" />
+            <span className={cn('text-xs line-clamp-1', event.decorator_name ? 'text-text-secondary' : 'text-text-tertiary italic')}>
+              {event.decorator_name || 'não preenchido'}
+            </span>
+          </div>
         </div>
       </div>
 

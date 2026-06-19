@@ -54,6 +54,7 @@ export const DEAL_FIELD_MAP: Record<string, FieldDef> = {
   'deal_ECAAAF3B-720D-4141-BF64-0FF6F812C203': { field: 'hasShow',            label: 'Tem Show?',             valueKey: 'BoolValue',       parser: 'bool'   },
   'deal_E8816C88-BF8B-4646-A4F4-EE45D72DE5A9': { field: 'photoVideo',         label: 'Foto/Vídeo',            valueKey: 'ObjectValueName', parser: 'string' },
   'deal_7F9617A6-581E-45A5-B876-6D2621571473': { field: 'decorationAligned',  label: 'Decoração Alinhada?',   valueKey: 'BoolValue',       parser: 'bool'   },
+  'deal_704AFDA8-03B8-4399-9BD7-D945EE3EF2A8': { field: 'decoratorName',      label: 'Responsável da Decoração', valueKey: 'ObjectValueName', parser: 'string' },
   'deal_ED366225-61E5-4FD3-A5EB-C478DD43D17F': { field: 'hasDecoratedSweets', label: 'Doces Decorados?',      valueKey: 'BoolValue',       parser: 'bool'   },
   'deal_F47F435B-2279-42E3-B4D3-6E4A911DA9CE': { field: 'partyFavors',        label: 'Lembrancinhas?',        valueKey: 'BoolValue',       parser: 'bool'   },
   'deal_61FFFFDE-85E8-420A-ADE5-E485573C9019': { field: 'outsideDrinks',      label: 'Bebidas de Fora?',      valueKey: 'BoolValue',       parser: 'bool'   },
