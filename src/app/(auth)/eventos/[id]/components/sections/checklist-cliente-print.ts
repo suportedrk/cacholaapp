@@ -106,10 +106,10 @@ export function openChecklistClientePrint({ event, unitName, canSeeValues }: Ope
     '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">' +
     '<title>' + escapeHtml(titleStr) + '</title>' +
     '<style>' +
-    '@page { size: A4; margin: 14mm; }' +
+    '@page { size: A4; margin: 0; }' +
     '* { box-sizing: border-box; }' +
     'html, body { margin: 0; padding: 0; }' +
-    'body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #111; font-size: 12px; line-height: 1.35; }' +
+    'body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #111; font-size: 12px; line-height: 1.35; padding: 14mm; }' +
     '.header { border-bottom: 1px solid #cccccc; padding-bottom: 8px; margin-bottom: 12px; }' +
     '.header h1 { font-size: 18px; margin: 0 0 2px; }' +
     '.header .subtitle { font-size: 12px; color: #444444; margin: 0; }' +
