@@ -19,7 +19,7 @@ interface EventChecklistClienteSectionProps {
 
 /**
  * Seção SOMENTE LEITURA "Checklist do Cliente" — espelho de campos do Ploomes já
- * presentes na tabela events. Fase 1: 8 campos reais + 13 placeholders ("não
+ * presentes na tabela events. Fase 1: 12 campos reais + 9 placeholders ("não
  * preenchido") aguardando a Fase 2 (campos a trazer do Ploomes). Sem edição,
  * sem data fetching — recebe tudo via props.
  */
