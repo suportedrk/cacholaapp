@@ -142,6 +142,16 @@ export type ParsedDeal = {
   adultCount?: number
   kidsUnder4?: number
   kidsOver5?: number
+  // Checklist do Cliente (Fase 2)
+  corkageQuantity?: number
+  extraGuestStaffValue?: number
+  responsiblePerson?: string
+  photoVideoContact?: string
+  generator?: string
+  valetCost?: string
+  checklistOtherDetails?: string
+  corkagePaid?: string
+  overtimeDetails?: string
   ploomesUrl: string
 }
 

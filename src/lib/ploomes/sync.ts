@@ -390,6 +390,16 @@ export async function syncDeals(
           deal_amount: parsed.amount ?? null,
           owner_id:   deal.OwnerId ?? null,
           owner_name: deal.Owner?.Name ?? null,
+          // Checklist do Cliente (migration 162)
+          corkage_quantity:        parsed.corkageQuantity ?? null,
+          extra_guest_staff_value: parsed.extraGuestStaffValue ?? null,
+          responsible_person:      parsed.responsiblePerson ?? null,
+          photo_video_contact:     parsed.photoVideoContact ?? null,
+          generator:               parsed.generator ?? null,
+          valet_cost:              parsed.valetCost ?? null,
+          checklist_other_details: parsed.checklistOtherDetails ?? null,
+          corkage_paid:            parsed.corkagePaid ?? null,
+          overtime_details:        parsed.overtimeDetails ?? null,
         }
 
         // Verificar se já existe (para contar created vs updated vs lost)

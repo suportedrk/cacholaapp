@@ -71,6 +71,16 @@ export const DEAL_FIELD_MAP: Record<string, FieldDef> = {
   'deal_98B5BE4A-BDE5-48A0-8DBB-4C7BC3FF5325': { field: 'adultCount',         label: 'Nº Adultos',            valueKey: 'IntegerValue',    parser: 'number' },
   'deal_C5BACF76-AA6B-4F99-AE04-F20D5413A5CD': { field: 'kidsUnder4',         label: 'Crianças ≤4 anos',      valueKey: 'IntegerValue',    parser: 'number' },
   'deal_80C05E5C-E258-435A-993F-2FAAD139DF1F': { field: 'kidsOver5',          label: 'Crianças ≥5 anos',      valueKey: 'IntegerValue',    parser: 'number' },
+  // ── Checklist do Cliente (Fase 2 — 8 campos; "Contratou foto/vídeo?" já é photoVideo acima) ─
+  'deal_F42FF428-2937-4F94-82B9-8812805072F2': { field: 'corkageQuantity',     label: 'Quantidade Rolha',          valueKey: 'IntegerValue',    parser: 'number' },
+  'deal_BA8CEB23-34FD-4F53-BAE3-A182C67CE8FB': { field: 'extraGuestStaffValue', label: 'Valor Convidado Extra e Staff', valueKey: 'DecimalValue',   parser: 'number' },
+  'deal_993CA06F-AB38-47D6-9249-4742ACB180EE': { field: 'responsiblePerson',   label: 'Responsável',               valueKey: 'StringValue',     parser: 'string' },
+  'deal_459AC176-27EC-4D85-ADD2-D711F7618833': { field: 'photoVideoContact',   label: 'Contato(s) Foto/Vídeo',     valueKey: 'BigStringValue',  parser: 'string' },
+  'deal_5057B43F-6022-4751-8C67-96129854E9E2': { field: 'generator',           label: 'Gerador',                   valueKey: 'ObjectValueName', parser: 'string' },
+  'deal_E1A6E631-4F1B-427A-AA16-BE3C1525FC50': { field: 'valetCost',           label: 'Valet Custos',              valueKey: 'ObjectValueName', parser: 'string' },
+  'deal_0B67A37D-3B9C-46EA-A4D0-5377BDCBAB60': { field: 'checklistOtherDetails', label: 'Outros Detalhes Checklist', valueKey: 'BigStringValue', parser: 'string' },
+  'deal_20EAB3E0-19E8-4533-84BF-780E1EE4343A': { field: 'corkagePaid',         label: 'Pagou Rolha?',              valueKey: 'StringValue',     parser: 'string' },
+  'deal_F76459D8-A6E4-4183-96B1-90149A1F59C5': { field: 'overtimeDetails',     label: 'Detalhamento Hora Extra',   valueKey: 'BigStringValue',  parser: 'string' },
 }
 
 /** Rótulos legíveis por field name — útil para exibição no frontend */
