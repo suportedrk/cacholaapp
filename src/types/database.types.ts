@@ -563,6 +563,16 @@ export type Event = {
   owner_id: number | null
   owner_name: string | null
   decorator_name: string | null   // migration 161
+  // Checklist do Cliente (migration 162) — campos espelhados de DEAL do Ploomes
+  corkage_quantity: number | null         // migration 162
+  extra_guest_staff_value: number | null  // migration 162
+  responsible_person: string | null       // migration 162
+  photo_video_contact: string | null      // migration 162
+  generator: string | null                // migration 162
+  valet_cost: string | null               // migration 162
+  checklist_other_details: string | null  // migration 162
+  corkage_paid: string | null             // migration 162
+  overtime_details: string | null         // migration 162
 }
 
 export type EventInsert = {
