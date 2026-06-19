@@ -904,52 +904,70 @@ function MonthView({
                 onDayClick={onDayClick}
               />
 
-              {/* Mobile: dots */}
-              <div className="flex flex-wrap gap-[3px] sm:hidden mt-0.5">
-                {dayEvents.slice(0, 3).map((ev) => (
-                  <button
-                    key={ev.id}
-                    onClick={() => onEventClick(ev)}
-                    className={cn(
-                      'w-1.5 h-1.5 rounded-full min-w-[6px] min-h-[6px]',
-                      eventDot(ev)
-                    )}
-                    aria-label={ev.title}
-                  />
-                ))}
-                {dayMaint.slice(0, 2).map((m) => (
-                  <button
-                    key={m.id}
-                    onClick={() => onMaintenanceClick?.(m.id)}
-                    className={cn(
-                      'w-1.5 h-1.5 rounded-full min-w-[6px] min-h-[6px]',
-                      MAINTENANCE_DOT[m.type]
-                    )}
-                    aria-label={m.title}
-                  />
-                ))}
-                {dayChklists.slice(0, 1).map((c) => (
-                  <button
-                    key={c.id}
-                    onClick={() => onChecklistClick?.(c.url)}
-                    className={cn('w-1.5 h-1.5 rounded-full min-w-[6px] min-h-[6px]', CHECKLIST_DOT)}
-                    aria-label={c.title}
-                  />
-                ))}
-                {dayPreRes.slice(0, 1).map((p) => (
-                  <button
-                    key={p.id}
-                    onClick={() => onPreReservaClick?.(p)}
-                    className={cn('w-1.5 h-1.5 rounded-full min-w-[6px] min-h-[6px]', prDot(p))}
-                    aria-label={p.title}
-                  />
-                ))}
-                {dayEvents.length + dayMaint.length + dayChklists.length + dayPreRes.length > 6 && (
-                  <span className="text-[9px] text-muted-foreground leading-none self-center">
-                    +{dayEvents.length + dayMaint.length + dayChklists.length + dayPreRes.length - 6}
-                  </span>
-                )}
-              </div>
+              {/* Mobile: dots agrupados por cor com contagem */}
+              {(() => {
+                const eventMap = new Map<string, { colorClass: string; count: number; label: string }>()
+                for (const ev of dayEvents) {
+                  const colorClass = eventDot(ev)
+                  if (!eventMap.has(colorClass)) {
+                    const slug = ev.unit?.slug?.toLowerCase() ?? ''
+                    const label =
+                      ev.status === 'lost' ? 'perdidos'
+                      : slug.includes('moema') ? 'Moema'
+                      : slug ? 'Pinheiros' : 'eventos'
+                    eventMap.set(colorClass, { colorClass, count: 0, label })
+                  }
+                  eventMap.get(colorClass)!.count++
+                }
+
+                const maintMap = new Map<string, { colorClass: string; count: number; label: string }>()
+                for (const m of dayMaint) {
+                  const colorClass = MAINTENANCE_DOT[m.type]
+                  if (!maintMap.has(colorClass)) {
+                    maintMap.set(colorClass, { colorClass, count: 0, label: 'manutenção' })
+                  }
+                  maintMap.get(colorClass)!.count++
+                }
+
+                const prMap = new Map<string, { colorClass: string; count: number; label: string }>()
+                for (const p of dayPreRes) {
+                  const colorClass = prDot(p)
+                  if (!prMap.has(colorClass)) {
+                    const label = p.source === 'ploomes' ? 'pré-reserva Ploomes' : 'pré-venda'
+                    prMap.set(colorClass, { colorClass, count: 0, label })
+                  }
+                  prMap.get(colorClass)!.count++
+                }
+
+                const allGroups = [
+                  ...Array.from(eventMap.values()),
+                  ...Array.from(maintMap.values()),
+                  ...(dayChklists.length > 0
+                    ? [{ colorClass: CHECKLIST_DOT, count: dayChklists.length, label: 'checklists' }]
+                    : []),
+                  ...Array.from(prMap.values()),
+                ]
+
+                if (allGroups.length === 0) return null
+
+                return (
+                  <div className="flex flex-wrap justify-center items-center gap-1 sm:hidden mt-0.5">
+                    {allGroups.map((g, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => onDayClick(day)}
+                        className={cn(
+                          'h-4 w-4 min-w-[16px] min-h-[16px] rounded-full flex items-center justify-center',
+                          g.colorClass
+                        )}
+                        aria-label={`${g.count} ${g.label}`}
+                      >
+                        <span className="text-[10px] font-bold leading-none text-white">{g.count}</span>
+                      </button>
+                    ))}
+                  </div>
+                )
+              })()}
 
               {/* Desktop: pills */}
               <div className="hidden sm:flex flex-col gap-0.5">
