@@ -3,7 +3,7 @@
 import { memo } from 'react'
 import Link from 'next/link'
 import { parseISO, isToday, isFuture, startOfDay } from 'date-fns'
-import { Clock, Users, Phone, Mail, Tag, Handshake, AlertTriangle, User } from 'lucide-react'
+import { Clock, Users, Phone, Tag, Handshake, AlertTriangle, User } from 'lucide-react'
 
 export type ConflictType = 'overlap' | 'short_gap' | null
 import { EventStatusBadge } from '@/components/shared/event-status-badge'
@@ -56,7 +56,7 @@ export const EventCard = memo(function EventCard({ event, conflictType = null }:
     ? (event as EventForList).providers_count?.[0]?.count ?? 0
     : 0
 
-  const hasContact = !!(event.client_phone || event.client_email)
+  const hasContact = !!event.client_phone
 
   return (
     <Link
@@ -167,16 +167,6 @@ export const EventCard = memo(function EventCard({ event, conflictType = null }:
               >
                 <Phone className="w-3 h-3 shrink-0" />
                 {event.client_phone}
-              </button>
-            )}
-            {event.client_email && (
-              <button
-                type="button"
-                onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.location.href = `mailto:${event.client_email}` }}
-                className="inline-flex items-center gap-1 text-xs text-text-link hover:underline truncate max-w-[200px]"
-              >
-                <Mail className="w-3 h-3 shrink-0" />
-                {event.client_email}
               </button>
             )}
           </div>
