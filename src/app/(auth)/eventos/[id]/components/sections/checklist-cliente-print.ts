@@ -77,6 +77,15 @@ interface OpenPrintArgs {
 export function openChecklistClientePrint({ event, unitName, canSeeValues }: OpenPrintArgs): void {
   const items = buildChecklistClienteItems(event, canSeeValues)
 
+  const geradoEm = new Intl.DateTimeFormat('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'America/Sao_Paulo',
+  }).format(new Date())
+
   const dataFmt = (() => {
     try {
       return format(parseISO(`${event.date}T00:00:00`), "EEEE, d 'de' MMMM 'de' yyyy", { locale: ptBR })
@@ -106,7 +115,7 @@ export function openChecklistClientePrint({ event, unitName, canSeeValues }: Ope
     '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">' +
     '<title>' + escapeHtml(titleStr) + '</title>' +
     '<style>' +
-    '@page { size: A4; margin: 0; }' +
+    '@page { size: A4; margin: 0 0 12mm 0; @bottom-left { content: "Gerado por CacholaOS — ' + geradoEm + '"; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 9px; color: #888888; padding-left: 14mm; border-top: 1px solid #e5e5e5; } @bottom-right { content: counter(page) "/" counter(pages); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 9px; color: #888888; padding-right: 14mm; border-top: 1px solid #e5e5e5; } }' +
     '* { box-sizing: border-box; }' +
     'html, body { margin: 0; padding: 0; }' +
     'body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #111; font-size: 12px; line-height: 1.35; padding: 14mm; }' +
