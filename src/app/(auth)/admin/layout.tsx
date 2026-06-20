@@ -4,9 +4,9 @@ import { requireRoleServer } from '@/lib/auth/require-role'
 /**
  * Layout de Server Component para a área /admin.
  *
- * Permite acesso apenas para super_admin, diretor e rh.
+ * Permite acesso apenas para super_admin e diretor.
  * Cada sub-rota tem seu próprio layout para granularidade adicional:
- *   /admin/usuarios → ADMIN_USERS_MANAGE_ROLES (super_admin, diretor, rh)
+ *   /admin/usuarios → ADMIN_USERS_MANAGE_ROLES (super_admin, diretor)
  *   /admin/unidades → ADMIN_UNITS_MANAGE_ROLES (super_admin, diretor)
  *   /admin/logs     → ADMIN_LOGS_VIEW_ROLES    (super_admin, diretor)
  */

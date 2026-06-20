@@ -72,10 +72,11 @@ public/swe-worker-*.js
 public/swe-worker-*.js.map
 
 # ============================================================
-# CLAUDE CODE — ignora tudo, mas mantém skills versionadas
+# CLAUDE CODE — ignora tudo, mas mantém skills e agents versionados
 # ============================================================
 .claude/*
 !.claude/skills/
+!.claude/agents/
 
 # ============================================================
 # SYNC LOCAL — dumps temporários (contêm dados reais anonimizados)

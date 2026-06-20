@@ -30,6 +30,13 @@ Este arquivo é o **ponto de entrada**. A fonte da verdade completa é o **`CLAU
 - **cachola-visual-qa** — confirmação visual via `chrome-devtools-mcp` (headless na VPS de dev; login por ambiente; armadilha do viewport estreito).
 - **ploomes-cachola-api** — integração Ploomes (OData, FieldKeys, webhooks). **Não** ler o `ploomesapi.md` cru da raiz.
 
+## Subagentes (`.claude/agents/`)
+
+Auditores read-only (devolvem veredito APROVADO/REPROVADO, nunca editam). Cada um lê a skill de domínio correspondente antes de auditar. Disparam pela `description` ao tocar nas áreas que cobrem:
+
+- **rbac-auditor** — audita controle de acesso nas 4 camadas (template `role_permissions`, guard de layout, guard de API, RLS/RPC); caça literal de role inline, code de módulo em inglês em `check_permission`, e grants órfãos em troca de cargo. Use ao mexer em `layout.tsx` de rota, API que modifica dados, RLS/RPC ou `src/config/roles.ts`. Lê `cachola-rbac-pattern`.
+- **migration-reviewer** — revisa todo `.sql` novo em `supabase/migrations/` antes do merge e da esteira: ordem DDL-antes-DML (lição da 072), `DROP FUNCTION` antes de `CREATE` com assinatura mudada, idempotência, RLS+GRANT em tabela nova, sem `BEGIN/COMMIT`/`NOTIFY pgrst` soltos (regra da esteira 160+), rollback presente, predicados de funções gêmeas. Lê `cachola-supabase-ops`.
+
 ## Ambientes
 
 - **Produção:** `cachola.cloud` — VPS Hostinger + Nginx + PM2; branch `main` → deploy automático.
