@@ -53,6 +53,7 @@ Status possiveis: PENDENTE | BLOQUEADA | AGUARDANDO TERCEIRO | VERIFICAR
 - [ ] Recriar os 7 usuarios de teste de producao (teste-{role}@cachola.cloud) removidos em abril/2026 (~30 min). STATUS: PENDENTE.
 - [ ] Alinhamento de sinal de gap: conflitos de evento usam <= 0 e conflitos de pre-reserva usam < 0 — alinhar num toque futuro. STATUS: PENDENTE.
 - [ ] Conferir o Environment "VPS_SSH_KEY" no GitHub (Settings -> Environments). A esteira nao o usa (os secrets de SSH sao do repositorio). Se foi criado por engano, apagar. STATUS: VERIFICAR (baixa prioridade).
+- [ ] Seguranca — /api/audit: reforco menor pendente. A validacao de action/module (allowlist) ja foi aplicada em 20/06/2026 (commit a2ab187, achado pelo subagente security-reviewer). FALTA travar 100% o conteudo livre de old_data/new_data (hoje aceitam JSONB arbitrario de usuario autenticado; a policy RLS de INSERT em audit_logs e WITH CHECK (TRUE)). Sugestao: allowlist de chaves por entity_type + limite de tamanho do payload. STATUS: PENDENTE (baixa prioridade — o vetor principal de forja ja foi fechado).
 
 ## Resolvidas
 
