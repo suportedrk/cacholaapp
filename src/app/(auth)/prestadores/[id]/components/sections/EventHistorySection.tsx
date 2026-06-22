@@ -6,6 +6,8 @@ import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
 import { formatCurrency } from '@/lib/utils/providers'
+import { useAuth } from '@/hooks/use-auth'
+import { canViewProviderCost } from '@/config/roles'
 import { EVENT_PROVIDER_STATUS_LABELS } from '@/types/providers'
 import { StarRating } from '../../../components/StarRating'
 import { AccordionSection } from '../AccordionSection'
@@ -30,6 +32,9 @@ function EventRow({
   ep: ProviderEventItem
   rating?: ProviderRating
 }) {
+  const { profile } = useAuth()
+  const canSeeCost = canViewProviderCost(profile?.role)
+
   const event = ep.event
   if (!event) return null
 
@@ -79,7 +84,7 @@ function EventRow({
               </span>
             </>
           )}
-          {ep.agreed_price != null && ep.agreed_price > 0 && (
+          {canSeeCost && ep.agreed_price != null && ep.agreed_price > 0 && (
             <>
               <span className="text-muted-foreground/40 text-xs">·</span>
               <span className="text-xs font-medium text-foreground">

@@ -32,7 +32,7 @@ Este arquivo é o **ponto de entrada**. A fonte da verdade completa é o **`CLAU
 
 ## Subagentes (`.claude/agents/`)
 
-Disparam pela `description` ao tocar nas áreas que cobrem; cada um lê a skill de domínio correspondente antes de agir. **5 são read-only** (devolvem veredito, nunca editam); **`test-author` é o único que escreve**.
+Disparam pela `description` ao tocar nas áreas que cobrem; cada um lê a skill de domínio correspondente antes de agir. **8 são read-only** (devolvem veredito, nunca editam); **`test-author` é o único que escreve**.
 
 - **rbac-auditor** *(read-only)* — audita controle de acesso nas 4 camadas (template `role_permissions`, guard de layout, guard de API, RLS/RPC); caça literal de role inline, code de módulo em inglês em `check_permission`, e grants órfãos em troca de cargo. Use ao mexer em `layout.tsx` de rota, API que modifica dados, RLS/RPC ou `src/config/roles.ts`. Lê `cachola-rbac-pattern`.
 - **migration-reviewer** *(read-only)* — revisa todo `.sql` novo em `supabase/migrations/` antes do merge e da esteira: ordem DDL-antes-DML (lição da 072), `DROP FUNCTION` antes de `CREATE` com assinatura mudada, idempotência, RLS+GRANT em tabela nova, sem `BEGIN/COMMIT`/`NOTIFY pgrst` soltos (regra da esteira 160+), rollback presente, predicados de funções gêmeas. Lê `cachola-supabase-ops`.
@@ -40,6 +40,9 @@ Disparam pela `description` ao tocar nas áreas que cobrem; cada um lê a skill 
 - **security-reviewer** *(read-only)* — segurança + LGPD (buffet infantil = PII de menores): auth no servidor por rota, segredos, validação de input, PII de criança em log/URL/export, triagem de vulns npm. Use ao mexer em rota de API, `createAdminClient`, env/segredo, log/export ou cron/webhook. Checklist próprio (não há skill LGPD ainda).
 - **visual-qa** *(renderiza, não edita)* — QA visual com foco em **mobile (375px)** e tablet, claro+escuro, via `chrome-devtools-mcp`: design tokens, WCAG AA, estados loading/error/empty. Use ao mexer em componente/tela. Lê `cachola-visual-qa`.
 - **test-author** *(ESCREVE testes)* — cobre lógica pura crítica (permissão, unidade canônica, períodos, conflito `<=0`/`<0`, moeda BR, recorrência, parsers Ploomes); adota Vitest e integra o CI (Categoria A — exige aprovação). Use ao pedir testes ou travar regressão de bug.
+- **db-performance-reviewer** *(read-only)* — performance de banco em escala: índice para colunas de filtro/join/ordenação, índices parciais, custo de RLS (funções `STABLE` vs `VOLATILE`, subquery por linha), JOIN deal→order→products indexado, paginação apoiada por índice. Caveat embutido: dev é snapshot pequeno → `EXPLAIN` engana, raciocina por escala. Use ao mexer em índice, RPC de BI/Vendas, RLS ou schema de tabela grande. Lê `cachola-supabase-ops`.
+- **data-fetching-reviewer** *(read-only)* — padrões obrigatórios de TanStack Query: `enabled: isSessionReady`, **nunca** `enabled` com `activeUnitId`, retry sem 401/403, `isError` tratado, `useLoadingTimeout` desestruturado, `createClient` singleton. Pega a classe de bug **"Skeleton Loading Infinito"**. Use ao mexer em `src/hooks/**` ou telas. Lê `cachola-stack` (`auth-and-session.md`) + a seção "DATA FETCHING" do `CLAUDE.md`.
+- **design-tokens-reviewer** *(read-only)* — design system no nível de **código** (par estático do `visual-qa`): hex hardcoded na UI, `oklch()`/classe Tailwind em HTML de html2canvas/print, `Button asChild`, `animate-pulse`, touch target < 44px. Conhece as exceções de hex (Recharts/jsPDF/e-mail/print). Use ao mexer em componente/tela. Lê `cachola-stack` (`design-tokens.md`) + `DESIGN_SYSTEM_CLAUDE_CODE.md`.
 
 ## Ambientes
 

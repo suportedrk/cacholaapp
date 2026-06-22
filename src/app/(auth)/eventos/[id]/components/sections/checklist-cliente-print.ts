@@ -127,9 +127,9 @@ export function openChecklistClientePrint({ event, unitName, canSeeValues }: Ope
     '.meta .v { font-size: 12px; margin: 2px 0 0; }' +
     '.meta .v.cap { text-transform: capitalize; }' +
     '.items-title { font-size: 9px; text-transform: uppercase; letter-spacing: 0.04em; color: #777777; margin: 0 0 6px; }' +
-    '.items { display: grid; grid-template-columns: 1fr 1fr; gap: 0 24px; }' +
-    '.field { border-bottom: 1px solid #e5e5e5; padding: 5px 0; break-inside: avoid; }' +
-    '.field.full { grid-column: 1 / -1; }' +
+    '.items { font-size: 0; }' +
+    '.field { display: inline-block; width: 50%; vertical-align: top; border-bottom: 1px solid #e5e5e5; padding: 5px 24px 5px 0; break-inside: avoid; }' +
+    '.field.full { display: block; width: 100%; padding-right: 0; }' +
     '.field .label { font-size: 10px; color: #666666; margin: 0 0 1px; }' +
     '.field .value { font-size: 12.5px; font-weight: 600; color: #111111; margin: 0; overflow-wrap: anywhere; white-space: pre-wrap; }' +
     '.field .value.empty { font-style: italic; font-weight: 400; color: #999999; }' +

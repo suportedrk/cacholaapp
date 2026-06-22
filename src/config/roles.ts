@@ -442,6 +442,34 @@ export function canViewFestaValues(role: Role | null | undefined): boolean {
   return (ROLES_CAN_VIEW_FESTA_VALUES as readonly string[]).includes(role)
 }
 
+/**
+ * Roles que podem visualizar o CUSTO de prestador (event_providers.agreed_price) —
+ * quanto pagamos ao fornecedor, dado financeiro sensível, distinto do valor de festa
+ * (quanto cobramos do cliente). Gestão + financeiro + os cargos OPERACIONAIS que
+ * contratam/coordenam prestadores e negociam o preço (manutencao, decoracao) —
+ * estes precisam ver o valor que eles mesmos definem (resolve a assimetria "escreve
+ * mas não vê"). BLOQUEADAS: vendedora e pos_vendas (vendas — não lidam com custo de
+ * fornecedor) + rh/freelancer/entregador (sem acesso a Prestadores). Exibe "Restrito".
+ * Gate de exibição no frontend (sem espelho em SQL hoje); ajustar aqui se necessário.
+ */
+export const ROLES_CAN_VIEW_PROVIDER_COST = [
+  'super_admin',
+  'diretor',
+  'gerente',
+  'financeiro',
+  'manutencao',
+  'decoracao',
+] as const satisfies readonly Role[]
+
+/**
+ * Helper direto para verificar se um role pode ver o custo de prestador.
+ * Usar em componentes React para tornar a intenção explícita nos call sites.
+ */
+export function canViewProviderCost(role: Role | null | undefined): boolean {
+  if (!role) return false
+  return (ROLES_CAN_VIEW_PROVIDER_COST as readonly string[]).includes(role)
+}
+
 export type CommercialChecklistManageRole =
   (typeof COMMERCIAL_CHECKLIST_MANAGE_ROLES)[number]
 
