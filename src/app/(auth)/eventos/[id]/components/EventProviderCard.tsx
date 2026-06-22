@@ -4,6 +4,8 @@ import Link from 'next/link'
 import { ExternalLink, MoreVertical, Check, X, Trophy, Clock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatCurrency } from '@/lib/utils/providers'
+import { useAuth } from '@/hooks/use-auth'
+import { canViewProviderCost } from '@/config/roles'
 import { ProviderAvatar } from '@/app/(auth)/prestadores/components/ProviderAvatar'
 import { ConfirmDialog } from '@/components/shared/confirm-dialog'
 import {
@@ -31,6 +33,8 @@ interface Props {
 export function EventProviderCard({ ep }: Props) {
   const update = useUpdateEventProvider()
   const remove = useRemoveProviderFromEvent()
+  const { profile } = useAuth()
+  const canSeeCost = canViewProviderCost(profile?.role)
 
   const provider = ep.provider
   if (!provider) return null
@@ -44,7 +48,11 @@ export function EventProviderCard({ ep }: Props) {
   }
 
   const statusLabel = EVENT_PROVIDER_STATUS_LABELS[ep.status]
-  const priceLabel = ep.agreed_price ? formatCurrency(ep.agreed_price) : null
+  // Custo de prestador é restrito (gestão + financeiro). Demais veem "Restrito"
+  // quando há valor, sem vazar o montante.
+  const priceLabel = ep.agreed_price
+    ? (canSeeCost ? formatCurrency(ep.agreed_price) : 'Restrito')
+    : null
   const priceSuffix = ep.price_type !== 'per_event' ? ` · ${PRICE_TYPE_LABELS[ep.price_type]}` : ''
 
   return (

@@ -66,7 +66,10 @@ export function useConflictingEventIds(): Set<string> {
 
 // ─────────────────────────────────────────────────────────────
 // useOverlappingEventIds
-// IDs de eventos com sobreposição direta (gap_minutes <= 0).
+// IDs de eventos com sobreposição direta (gap_minutes < 0).
+// Semântica canônica da RPC (mig 049/154): < 0 = sobreposição;
+// 0..119 = intervalo < 2h (gap = 0 é "encostado", não sobreposição).
+// Alinhado com use-pre-reserva-conflicts (era <= 0 aqui — outlier).
 // ─────────────────────────────────────────────────────────────
 export function useOverlappingEventIds(): Set<string> {
   const { data } = useEventConflicts()
@@ -77,7 +80,7 @@ export function useOverlappingEventIds(): Set<string> {
     const ids = new Set<string>()
     for (const c of data) {
       if (c.conflict_date < today) continue
-      if (c.gap_minutes <= 0) {
+      if (c.gap_minutes < 0) {
         ids.add(c.event_id_a)
         ids.add(c.event_id_b)
       }
@@ -88,7 +91,9 @@ export function useOverlappingEventIds(): Set<string> {
 
 // ─────────────────────────────────────────────────────────────
 // useShortGapEventIds
-// IDs de eventos com intervalo insuficiente (0 < gap_minutes < 120).
+// IDs de eventos com intervalo insuficiente (0 <= gap_minutes < 120).
+// gap = 0 (encostado) entra aqui, não na sobreposição — igual à RPC
+// e ao use-pre-reserva-conflicts (era > 0 aqui — outlier).
 // ─────────────────────────────────────────────────────────────
 export function useShortGapEventIds(): Set<string> {
   const { data } = useEventConflicts()
@@ -99,7 +104,7 @@ export function useShortGapEventIds(): Set<string> {
     const ids = new Set<string>()
     for (const c of data) {
       if (c.conflict_date < today) continue
-      if (c.gap_minutes > 0 && c.gap_minutes < 120) {
+      if (c.gap_minutes >= 0 && c.gap_minutes < 120) {
         ids.add(c.event_id_a)
         ids.add(c.event_id_b)
       }

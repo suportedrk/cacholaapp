@@ -237,14 +237,26 @@ export function useAddUserToUnit() {
       qc.invalidateQueries({ queryKey: ['user-units'] })
       qc.invalidateQueries({ queryKey: ['user-units', 'user', data.userId] })
 
-      // Aplica template do cargo silenciosamente (fire-and-forget) — Ajuste 2 PR 3
+      toast.success('Usuário vinculado à unidade.')
+
+      // Aplica template do cargo. Antes era fire-and-forget silencioso: se
+      // falhasse (rede/timeout/exceção), o usuário ficava SEM permissões e caía
+      // em /403 sem nenhum aviso. Agora avisa o admin e aponta para a correção
+      // (o botão "Aplicar template do cargo" já existe na tela de permissões).
       fetch(`/api/admin/users/${data.userId}/apply-role-template`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ role: data.role }),
-      }).catch(() => {})
-
-      toast.success('Usuário vinculado à unidade.')
+      })
+        .then((res) => {
+          if (!res.ok) throw new Error(String(res.status))
+        })
+        .catch(() => {
+          toast.warning(
+            'Usuário vinculado, mas as permissões do cargo podem não ter sido aplicadas. Abra a tela de permissões do usuário e use "Aplicar template do cargo".',
+            { duration: 10000 },
+          )
+        })
     },
     onError: () => toast.error('Erro ao vincular usuário.'),
   })
