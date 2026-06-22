@@ -71,5 +71,9 @@
     "tsx": "^4.21.0",
     "typescript": "^5",
     "vitest": "^4.1.9"
+  },
+  "overrides": {
+    "dompurify": "^3.4.11",
+    "fast-uri": "^3.1.2"
   }
 }
