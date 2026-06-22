@@ -445,16 +445,20 @@ export function canViewFestaValues(role: Role | null | undefined): boolean {
 /**
  * Roles que podem visualizar o CUSTO de prestador (event_providers.agreed_price) —
  * quanto pagamos ao fornecedor, dado financeiro sensível, distinto do valor de festa
- * (quanto cobramos do cliente). Gate conservador: gestão + financeiro.
- * Demais roles que acessam Prestadores (vendedora, pos_vendas, decoracao, manutencao)
- * veem o prestador, mas NÃO o valor negociado — exibe "Restrito".
- * Gate de exibição no frontend (sem espelho em SQL hoje); ampliar aqui se necessário.
+ * (quanto cobramos do cliente). Gestão + financeiro + os cargos OPERACIONAIS que
+ * contratam/coordenam prestadores e negociam o preço (manutencao, decoracao) —
+ * estes precisam ver o valor que eles mesmos definem (resolve a assimetria "escreve
+ * mas não vê"). BLOQUEADAS: vendedora e pos_vendas (vendas — não lidam com custo de
+ * fornecedor) + rh/freelancer/entregador (sem acesso a Prestadores). Exibe "Restrito".
+ * Gate de exibição no frontend (sem espelho em SQL hoje); ajustar aqui se necessário.
  */
 export const ROLES_CAN_VIEW_PROVIDER_COST = [
   'super_admin',
   'diretor',
   'gerente',
   'financeiro',
+  'manutencao',
+  'decoracao',
 ] as const satisfies readonly Role[]
 
 /**
