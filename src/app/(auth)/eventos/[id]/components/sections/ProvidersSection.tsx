@@ -4,6 +4,8 @@ import { useState } from 'react'
 import { Handshake, Plus } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { formatCurrency } from '@/lib/utils/providers'
+import { useAuth } from '@/hooks/use-auth'
+import { canViewProviderCost } from '@/config/roles'
 import { useEventProviders } from '@/hooks/use-event-providers'
 import { useEventRatings } from '@/hooks/use-provider-ratings'
 import { AccordionSection } from '../AccordionSection'
@@ -21,6 +23,8 @@ export function ProvidersSection({ eventId, eventDate, eventTitle = '' }: Props)
   const [addOpen, setAddOpen] = useState(false)
   const { data: eventProviders = [], isLoading } = useEventProviders(eventId)
   const { data: ratingsMap = {} } = useEventRatings(eventId)
+  const { profile } = useAuth()
+  const canSeeCost = canViewProviderCost(profile?.role)
 
   // Total estimated cost — sum per_event providers with a price
   const totalEstimated = eventProviders.reduce((sum, ep) => {
@@ -66,8 +70,8 @@ export function ProvidersSection({ eventId, eventDate, eventTitle = '' }: Props)
               </div>
             ))}
 
-            {/* Total estimado */}
-            {totalEstimated > 0 && (
+            {/* Total estimado — restrito a gestão + financeiro (custo de prestador) */}
+            {canSeeCost && totalEstimated > 0 && (
               <div className="flex items-center justify-between pt-2 mt-2 border-t border-border">
                 <span className="text-xs text-text-tertiary">Total estimado (por evento)</span>
                 <span className="text-sm font-semibold text-text-primary">
