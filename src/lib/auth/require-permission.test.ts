@@ -6,11 +6,11 @@
  * por inspeção de tipo + smoke do helper plpgsql `check_permission_or_raise`.
  *
  * Executar:
- *   npm test
- *   ou: npx tsx --test src/lib/auth/require-permission.test.ts
+ *   npm test            (vitest run — descobre todos os *.test.ts)
+ *   npm run test:watch  (modo watch)
  */
 
-import { test } from 'node:test'
+import { test } from 'vitest'
 import assert from 'node:assert/strict'
 import { evaluatePermission } from './require-permission'
 

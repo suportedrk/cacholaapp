@@ -1,17 +1,24 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import type { Json } from '@/types/database.types'
 
-export type AuditAction =
-  | 'create' | 'update' | 'delete' | 'status_change'
-  | 'login' | 'logout' | 'export'
-  | 'activated' | 'deactivated'
-  | 'permission_changed'
-  | 'password_reset_requested'
-  | 'impersonate_start'
+// Lista oficial de ações e módulos de auditoria — fonte única de verdade.
+// Exportada como array `as const` para servir de allowlist em runtime
+// (ex.: validação do POST /api/audit), com o type derivado dela.
+export const AUDIT_ACTIONS = [
+  'create', 'update', 'delete', 'status_change',
+  'login', 'logout', 'export',
+  'activated', 'deactivated',
+  'permission_changed',
+  'password_reset_requested',
+  'impersonate_start',
+] as const
+export type AuditAction = (typeof AUDIT_ACTIONS)[number]
 
-export type AuditModule =
-  | 'users' | 'events' | 'maintenance' | 'checklists'
-  | 'notifications' | 'settings' | 'auth'
+export const AUDIT_MODULES = [
+  'users', 'events', 'maintenance', 'checklists',
+  'notifications', 'settings', 'auth',
+] as const
+export type AuditModule = (typeof AUDIT_MODULES)[number]
 
 interface AuditParams {
   action: AuditAction

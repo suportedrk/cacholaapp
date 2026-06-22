@@ -8,10 +8,11 @@
  * (cai no Deal).
  *
  * Executar:
- *   npx tsx --test src/lib/ploomes/resolve-unit.test.ts
+ *   npm test            (vitest run — descobre todos os *.test.ts)
+ *   npm run test:watch  (modo watch)
  */
 
-import { test } from 'node:test'
+import { test } from 'vitest'
 import assert from 'node:assert/strict'
 import { resolveEffectiveUnitId, resolveFestaUnit } from './resolve-unit'
 
