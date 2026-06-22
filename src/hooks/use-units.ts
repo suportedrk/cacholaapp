@@ -333,14 +333,18 @@ export function useChangeUserRole() {
         body: JSON.stringify({ role }),
       })
       if (!res.ok) throw new Error(await res.text())
-      return res.json() as Promise<{ ok: boolean; applied: number; role: string }>
+      return res.json() as Promise<{ ok: boolean; applied: number; pruned: number; role: string }>
     },
-    onSuccess: (_, { userId }) => {
+    onSuccess: (data, { userId }) => {
       qc.invalidateQueries({ queryKey: ['user-units'] })
       qc.invalidateQueries({ queryKey: ['users', userId] })
       qc.invalidateQueries({ queryKey: ['permissions', userId] })
       qc.invalidateQueries({ queryKey: ['role-template-diff', userId] })
-      toast.success('Cargo atualizado e permissões sincronizadas.')
+      toast.success(
+        data.pruned > 0
+          ? `Cargo atualizado. ${data.pruned} permissão(ões) órfã(s) do cargo anterior removida(s).`
+          : 'Cargo atualizado e permissões sincronizadas.',
+      )
     },
     onError: () => toast.error('Erro ao atualizar cargo.'),
   })

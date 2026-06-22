@@ -17,6 +17,16 @@ interface PermRow {
   granted: boolean
 }
 
+interface DiffEntry {
+  module: string
+  module_label: string
+  action: Action
+  current: boolean | null
+  template: boolean | null
+  has_diff: boolean
+  orphan: boolean
+}
+
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -73,11 +83,11 @@ export async function GET(
       currentMap.set(`${p.module}:${p.action}`, p.granted)
     }
 
-    // Diff
-    const diffs = (template ?? []).map((t) => {
+    // Diff a partir do template (permissões que o cargo define)
+    const diffs: DiffEntry[] = (template ?? []).map((t): DiffEntry => {
       const key = `${t.module_code}:${t.action}`
       const currentVal = currentMap.has(key) ? currentMap.get(key)! : null
-      const templateVal = t.granted
+      const templateVal: boolean | null = t.granted
       return {
         module: t.module_code,
         module_label: t.modules.label,
@@ -85,8 +95,40 @@ export async function GET(
         current: currentVal,
         template: templateVal,
         has_diff: currentVal !== templateVal,
+        orphan: false,
       }
     })
+
+    // Permissões ÓRFÃS: linhas em user_permissions cujo module:action não está no
+    // template do cargo. Aplicar o template (com prune) as remove — por isso entram
+    // no diff como "a remover" (template: null), antes invisíveis.
+    const templateKeys = new Set(
+      (template ?? []).map((t) => `${t.module_code}:${t.action}`),
+    )
+    const orphanRows = (current ?? []).filter(
+      (p) => !templateKeys.has(`${p.module}:${p.action}`),
+    )
+
+    if (orphanRows.length > 0) {
+      // Labels dos módulos (catálogo) para exibição das órfãs
+      const { data: mods } = await supabase
+        .from('modules')
+        .select('code, label')
+        .returns<{ code: string; label: string }[]>()
+      const labelMap = new Map((mods ?? []).map((m) => [m.code, m.label]))
+
+      for (const p of orphanRows) {
+        diffs.push({
+          module: p.module,
+          module_label: labelMap.get(p.module) ?? p.module,
+          action: p.action as Action,
+          current: p.granted,
+          template: null,
+          has_diff: true,
+          orphan: true,
+        })
+      }
+    }
 
     const changedCount = diffs.filter((d) => d.has_diff).length
 

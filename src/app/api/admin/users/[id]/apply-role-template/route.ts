@@ -30,9 +30,13 @@ export async function POST(
 
     const roleToApply = body.role ?? targetUser.role
 
-    const applied = await applyRoleTemplate(supabase, userId, roleToApply, null)
+    // prune=true → alinha o usuário EXATAMENTE ao template (remove órfãs), coerente
+    // com o diff que agora mostra as órfãs como "Remover".
+    const { applied, pruned } = await applyRoleTemplate(supabase, userId, roleToApply, null, {
+      prune: true,
+    })
 
-    return NextResponse.json({ applied, role: roleToApply })
+    return NextResponse.json({ applied, pruned, role: roleToApply })
   } catch (err) {
     console.error('[apply-role-template]', err)
     return NextResponse.json({ error: 'Erro interno.' }, { status: 500 })
