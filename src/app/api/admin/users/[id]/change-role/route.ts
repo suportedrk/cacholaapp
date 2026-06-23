@@ -46,10 +46,13 @@ export async function POST(
       return NextResponse.json({ error: 'Erro ao atualizar cargo.' }, { status: 500 })
     }
 
-    // Aplicar template de permissões para o novo cargo (global, unit_id=null)
-    const applied = await applyRoleTemplate(supabase, userId, body.role, null)
+    // Aplicar template de permissões para o novo cargo (global, unit_id=null).
+    // prune=true → remove grants órfãos do cargo anterior (resultado = exatamente o template).
+    const { applied, pruned } = await applyRoleTemplate(supabase, userId, body.role, null, {
+      prune: true,
+    })
 
-    return NextResponse.json({ ok: true, applied, role: body.role })
+    return NextResponse.json({ ok: true, applied, pruned, role: body.role })
   } catch (err) {
     console.error('[change-role]', err)
     return NextResponse.json({ error: 'Erro interno.' }, { status: 500 })

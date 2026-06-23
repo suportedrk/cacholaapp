@@ -9,6 +9,8 @@ import { ProviderConflictAlert } from './ProviderConflictAlert'
 import { useProviders } from '@/hooks/use-providers'
 import { useProviderScheduleConflicts, useAddProviderToEvent } from '@/hooks/use-event-providers'
 import { useDebounce } from '@/hooks/use-debounce'
+import { useAuth } from '@/hooks/use-auth'
+import { canViewProviderCost } from '@/config/roles'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
@@ -49,6 +51,11 @@ export function AddProviderModal({ eventId, eventDate, existingProviderIds, onCl
   const debouncedSearch = useDebounce(search, 200)
   const addProvider     = useAddProviderToEvent()
   const { data: allProviders = [] } = useProviders()
+
+  // Custo de prestador é restrito (gestão + financeiro + manutencao/decoracao).
+  // Quem não pode VER o custo também não pode ESCREVÊ-lo (resolve "não vê mas escreve").
+  const { profile } = useAuth()
+  const canSeeCost = canViewProviderCost(profile?.role)
 
   // Filtered results: exclude already associated + apply search
   const filteredProviders = allProviders.filter((p) => {
@@ -101,7 +108,7 @@ export function AddProviderModal({ eventId, eventDate, existingProviderIds, onCl
       unit_id:      selected.unit_id,
       category_id:  categoryId || undefined,
       status,
-      agreed_price: priceValue ? parseCurrency(priceValue) : undefined,
+      agreed_price: canSeeCost && priceValue ? parseCurrency(priceValue) : undefined,
       price_type:   priceType,
       arrival_time: arrivalTime || undefined,
       notes:        notes.trim() || undefined,
@@ -241,7 +248,8 @@ export function AddProviderModal({ eventId, eventDate, existingProviderIds, onCl
                   </Select>
                 </div>
 
-                {/* Price + type */}
+                {/* Price + type — restrito aos cargos que podem ver o custo */}
+                {canSeeCost && (
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-medium text-text-secondary mb-1.5">
@@ -274,6 +282,7 @@ export function AddProviderModal({ eventId, eventDate, existingProviderIds, onCl
                     </Select>
                   </div>
                 </div>
+                )}
 
                 {/* Arrival time */}
                 <div>

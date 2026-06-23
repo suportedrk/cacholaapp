@@ -13,8 +13,10 @@ export interface PermDiff {
   module_label: string
   action: Action
   current: boolean | null
-  template: boolean
+  template: boolean | null
   has_diff: boolean
+  /** true quando a linha é uma permissão órfã (existe no usuário mas não no template → será removida) */
+  orphan?: boolean
 }
 
 export interface RoleTemplateDiffResult {
@@ -142,7 +144,7 @@ export function useApplyRoleTemplate() {
         body: JSON.stringify(role ? { role } : {}),
       })
       if (!res.ok) throw new Error(await res.text())
-      return res.json() as Promise<{ applied: number; role: string }>
+      return res.json() as Promise<{ applied: number; pruned: number; role: string }>
     },
     onSuccess: (_data, { userId }) => {
       queryClient.invalidateQueries({ queryKey: ['permissions', userId] })

@@ -55,7 +55,8 @@ export async function POST(
 
     for (const user of userList) {
       try {
-        const count = await applyRoleTemplate(supabase, user.id, code, null)
+        // "Aplicar a todos" mantém merge (sem prune) — operação em massa, sem diff por usuário.
+        const { applied: count } = await applyRoleTemplate(supabase, user.id, code, null)
         succeeded.push({ user_id: user.id, email: user.email, permissions_changed: count })
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err)

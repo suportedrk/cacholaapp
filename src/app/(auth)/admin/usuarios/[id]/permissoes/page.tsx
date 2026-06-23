@@ -79,9 +79,13 @@ export default function PermissoesUsuarioPage() {
   }
 
   async function handleApplyTemplate() {
-    await applyTemplate.mutateAsync({ userId: id })
+    const res = await applyTemplate.mutateAsync({ userId: id })
     setDiffOpen(false)
-    toast.success('Template de permissões aplicado com sucesso.')
+    toast.success(
+      res.pruned > 0
+        ? `Template aplicado. ${res.pruned} permissão(ões) órfã(s) removida(s).`
+        : 'Template de permissões aplicado com sucesso.',
+    )
   }
 
   const isSuperAdmin = hasRole(user.role, TEMPLATE_MANAGE_ROLES)
@@ -229,7 +233,9 @@ export default function PermissoesUsuarioPage() {
                         )}
                       </td>
                       <td className="px-3 py-2 text-center">
-                        {d.template ? (
+                        {d.template === null ? (
+                          <span className="text-red-600 font-semibold text-xs">Remover</span>
+                        ) : d.template ? (
                           <span className="text-green-600 font-semibold">✓</span>
                         ) : (
                           <span className="text-muted-foreground">—</span>
