@@ -25,7 +25,6 @@ import type { Database } from '../src/types/database.types'
 
 const SUPABASE_URL         = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!
-const PLOOMES_USER_KEY     = process.env.PLOOMES_USER_KEY!
 
 const args    = process.argv.slice(2)
 const APPLY   = args.includes('--apply')
@@ -34,7 +33,7 @@ const orderId = Number(args.find((a) => /^\d+$/.test(a)))
 const fmtBRL = (n: number) =>
   n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
-type Snapshot = { dealId: number | null; amount: number; count: number; sum: number }
+type Snapshot = { dealId: number | null; amount: number; count: number; sum: number; createDate: string | null }
 
 async function snapshot(
   supabase: ReturnType<typeof createClient<Database>>,
@@ -42,7 +41,7 @@ async function snapshot(
 ): Promise<Snapshot> {
   const { data: order, error: orderErr } = await supabase
     .from('ploomes_orders')
-    .select('deal_id, amount')
+    .select('deal_id, amount, ploomes_create_date')
     .eq('ploomes_order_id', id)
     .maybeSingle()
   if (orderErr) {
@@ -65,17 +64,8 @@ async function snapshot(
     amount: Number(order?.amount ?? 0),
     count,
     sum,
+    createDate: (order?.ploomes_create_date as string | null) ?? null,
   }
-}
-
-/** Busca a CreateDate da Order direto no Ploomes (a API não suporta Orders(id)). */
-async function fetchOrderCreateDate(id: number, userKey: string): Promise<Date | null> {
-  const url = `https://api2.ploomes.com/Orders?$filter=Id eq ${id}&$select=Id,CreateDate`
-  const res = await fetch(url, { headers: { 'User-Key': userKey } })
-  if (!res.ok) return null
-  const json = (await res.json()) as { value?: Array<{ Id: number; CreateDate?: string }> }
-  const cd = json.value?.[0]?.CreateDate
-  return cd ? new Date(cd) : null
 }
 
 function printSnapshot(label: string, s: Snapshot) {
@@ -109,15 +99,16 @@ async function main() {
     return
   }
 
-  if (!PLOOMES_USER_KEY) {
-    console.error('❌ PLOOMES_USER_KEY ausente — necessária para o re-sync.')
+  // CreateDate vem do próprio banco (ploomes_create_date) — o syncOrders carrega
+  // a user_key do Ploomes da tabela ploomes_config internamente, então o script
+  // NÃO precisa de PLOOMES_USER_KEY no ambiente.
+  if (!before.createDate) {
+    console.error('❌ ploomes_create_date ausente na order — não dá para montar a janela de re-sync.')
     process.exit(1)
   }
-
-  console.log('\n⏳ Buscando CreateDate da Order no Ploomes…')
-  const createDate = await fetchOrderCreateDate(orderId, PLOOMES_USER_KEY)
-  if (!createDate || Number.isNaN(createDate.getTime())) {
-    console.error('❌ Não foi possível obter a CreateDate da Order no Ploomes.')
+  const createDate = new Date(before.createDate)
+  if (Number.isNaN(createDate.getTime())) {
+    console.error(`❌ ploomes_create_date inválida: ${before.createDate}`)
     process.exit(1)
   }
 
