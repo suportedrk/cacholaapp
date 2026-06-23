@@ -2,6 +2,7 @@ import type { NextConfig } from 'next'
 import { execSync } from 'child_process'
 import { readFileSync } from 'fs'
 import withPWA from '@ducanh2912/next-pwa'
+import { withSentryConfig } from '@sentry/nextjs'
 
 /** Determina o BUILD_ID uma única vez, no início do processo de build. */
 function getBuildId(): string {
@@ -70,7 +71,7 @@ const nextConfig: NextConfig = {
   },
 }
 
-export default withBundleAnalyzer(withPWA({
+const composedConfig = withBundleAnalyzer(withPWA({
   dest: 'public',
   cacheOnFrontEndNav: true,
   aggressiveFrontEndNavCaching: true,
@@ -85,3 +86,20 @@ export default withBundleAnalyzer(withPWA({
     clientsClaim: true,
   },
 })(nextConfig))
+
+// Sentry é o wrapper mais externo. Fase 1: sem upload de sourcemap — sem
+// SENTRY_AUTH_TOKEN o plugin pula o upload e o build segue normal. Fase 2:
+// definir SENTRY_AUTH_TOKEN + SENTRY_ORG + SENTRY_PROJECT no .env da prod
+// para passar a subir sourcemaps (stacks legíveis).
+export default withSentryConfig(composedConfig, {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  // Release alinhada ao pipeline de versão existente (git short hash).
+  release: { name: BUILD_ID },
+  // Silencioso no build da VPS (CI não setado); verboso só em CI real.
+  silent: !process.env.CI,
+  widenClientFileUpload: true,
+  disableLogger: true,
+  automaticVercelMonitors: false,
+})
