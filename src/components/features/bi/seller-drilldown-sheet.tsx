@@ -170,6 +170,19 @@ export function SellerDrilldownSheet({ isOpen, onClose, seller, unitId, periodMo
   // History chart data
   const historyRows = history.data ?? []
 
+  // Tempo médio de fechamento agregado no PERÍODO selecionado (média ponderada
+  // por deals ganhos/mês) — antes exibia apenas o último mês. Mesmo padrão do
+  // periodClosing da Visão Geral.
+  const periodAvgDaysToClose = (() => {
+    const weight = historyRows.reduce((s, r) => s + r.won_count, 0)
+    if (weight === 0) return null
+    const wSum = historyRows.reduce(
+      (s, r) => (r.avg_days_to_close != null ? s + r.avg_days_to_close * r.won_count : s),
+      0,
+    )
+    return wSum / weight
+  })()
+
   return (
     <Sheet open={isOpen} onOpenChange={(open) => { if (!open) onClose() }}>
       <SheetContent
@@ -228,9 +241,9 @@ export function SellerDrilldownSheet({ isOpen, onClose, seller, unitId, periodMo
             Tempo médio:{' '}
             {seller.won_count > 0 ? (
               <span className="text-text-secondary font-medium">
-                {/* avg_days_to_close está no history, mostramos do último mês */}
-                {historyRows.length > 0 && historyRows[historyRows.length - 1]?.avg_days_to_close != null
-                  ? `${Math.round(historyRows[historyRows.length - 1].avg_days_to_close!)} dias`
+                {/* Média ponderada de todo o período selecionado (não só o último mês) */}
+                {periodAvgDaysToClose != null
+                  ? `${Math.round(periodAvgDaysToClose)} dias`
                   : '—'}
               </span>
             ) : '—'}
@@ -238,7 +251,7 @@ export function SellerDrilldownSheet({ isOpen, onClose, seller, unitId, periodMo
               <div className="space-y-2 text-sm text-text-secondary">
                 <p className="font-semibold text-text-primary">Tempo Médio de Fechamento</p>
                 <p>Média de dias entre a criação do lead no Ploomes e a data do último update do deal — proxy para o tempo real de fechamento.</p>
-                <p>O valor exibido aqui é do <span className="font-medium text-text-primary">último mês</span> do período selecionado.</p>
+                <p>É a média ponderada (por deals ganhos) de <span className="font-medium text-text-primary">todo o período selecionado</span> ({periodMonths}M).</p>
                 <p className="text-text-tertiary text-xs">⚠️ Deals editados após o fechamento podem distorcer este número. Ver o histórico mensal na aba &quot;Histórico&quot; para a série completa.</p>
               </div>
             </InfoPopover>
