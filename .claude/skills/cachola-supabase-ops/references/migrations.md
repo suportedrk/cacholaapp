@@ -80,16 +80,16 @@ docker exec -i cacholaos-db psql -U postgres -d postgres < supabase/migrations/N
 
 ### Em produção (VPS)
 
-Migrations rodam **automaticamente** no deploy via GitHub Actions (script no `deploy.yml` aplica todas as migrations não aplicadas, em ordem). Não rodar manualmente.
+⚠️ **O `deploy.yml` NÃO aplica migrations** (verificado em 23/06/2026 — não há passo de `psql`/`.sql` no workflow). Migrations chegam à produção por **dois** caminhos, nunca automaticamente pelo deploy:
 
-Se precisar rodar manualmente em emergência:
+1. **Esteira `migrate-prod.yml`** (botão manual no GitHub Actions) — caminho padrão a partir da **migration 160**. Registra cada aplicação em `public.cachola_migration_log`. Ver `deploy-pipeline.md` → "Esteira de migracao com botao". **Ordem obrigatória: deploy do código PRIMEIRO (leva o `.sql` para a VPS), esteira DEPOIS.**
+2. **Manual** (histórico, até a migration 159, e emergências):
 ```bash
 ssh cacholaos-vps  # alias configurado
-cd /opt/supabase
-docker exec -i supabase-db psql -U postgres -d postgres < /caminho/para/NNN_x.sql
+docker exec -i supabase-db psql -U postgres -d postgres < /opt/cacholaapp/supabase/migrations/NNN_x.sql
 ```
 
-E depois fazer um commit que registra que a migration foi aplicada (mesmo que vazio, para sincronizar histórico).
+Como não há rede automática, a disciplina **deploy → esteira** é o único mecanismo que garante a migration em prod. Conferir paridade quando em dúvida: `SELECT filename FROM public.cachola_migration_log ORDER BY filename;` (cobre 160+) + probe de schema das colunas/objetos das migrations recentes.
 
 ## Criando RPCs (funções customizadas)
 
