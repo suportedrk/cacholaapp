@@ -100,6 +100,9 @@ export default withSentryConfig(composedConfig, {
   // Silencioso no build da VPS (CI não setado); verboso só em CI real.
   silent: !process.env.CI,
   widenClientFileUpload: true,
-  disableLogger: true,
-  automaticVercelMonitors: false,
+  // (v10) substituem disableLogger + automaticVercelMonitors do nível raiz.
+  webpack: {
+    treeshake: { removeDebugLogging: true },
+    automaticVercelMonitors: false,
+  },
 })
