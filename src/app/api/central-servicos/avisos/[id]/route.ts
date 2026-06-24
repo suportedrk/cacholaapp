@@ -51,6 +51,7 @@ export async function PATCH(
         unidade: body.unidade,
         publicado_em: body.publicado_em || new Date().toISOString(),
         expira_em: body.expira_em || null,
+        exige_confirmacao: body.exige_confirmacao === true,
       })
       .eq('id', id)
 

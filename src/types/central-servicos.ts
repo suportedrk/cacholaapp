@@ -161,6 +161,13 @@ export interface CentralServicosAvisoAnexo {
   created_by: string | null
 }
 
+/** Confirmação de leitura de um aviso (uma por usuário). */
+export interface CentralServicosAvisoLeitura {
+  usuario_id: string
+  confirmado_em: string
+  usuario?: { name: string } | null // nome do confirmante (embed; visível só para gestor)
+}
+
 export interface CentralServicosAviso {
   id: string
   titulo: string
@@ -170,10 +177,14 @@ export interface CentralServicosAviso {
   unidade: ContatoUnidade // mesmo conjunto geral/pinheiros/moema (rótulo informativo)
   publicado_em: string
   expira_em: string | null
+  exige_confirmacao: boolean
   created_at: string
   updated_at: string
   created_by: string | null
   anexos: CentralServicosAvisoAnexo[] // embed via PostgREST; [] quando não há anexos
+  // Confirmações de leitura (embed). Pela RLS: usuário comum vê só a própria;
+  // gestor (edit) vê todas. [] quando ninguém confirmou / quando não exige.
+  leituras: CentralServicosAvisoLeitura[]
 }
 
 /** Payload do formulário de criação/edição de aviso. */
@@ -185,6 +196,7 @@ export interface AvisoFormInput {
   unidade: ContatoUnidade
   publicado_em: string
   expira_em: string | null
+  exige_confirmacao: boolean
 }
 
 /** Estado de vigência de um aviso (derivado no cliente para a UI). */
