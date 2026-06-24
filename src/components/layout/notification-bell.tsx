@@ -9,7 +9,7 @@ import { toast } from 'sonner'
 import {
   Bell, Calendar, RefreshCw, ClipboardList, CheckCircle2,
   AlertTriangle, CheckCheck, LucideIcon, X, Wrench,
-  Clock, Archive, Check,
+  Clock, Archive, Check, ListTodo,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -41,6 +41,7 @@ const TYPE_ICON: Record<string, LucideIcon> = {
   maintenance_completed:    CheckCircle2,
   maintenance_overdue:      AlertTriangle,
   maintenance_due_soon:     Clock,
+  action_item_assigned:     ListTodo,
 }
 
 const TYPE_ICON_CLASS: Record<string, string> = {
@@ -56,6 +57,7 @@ const TYPE_ICON_CLASS: Record<string, string> = {
   maintenance_completed:    'icon-green',
   maintenance_overdue:      'icon-red',
   maintenance_due_soon:     'icon-orange',
+  action_item_assigned:     'icon-blue',
 }
 
 function getFilterCategory(type: string): FilterTab {

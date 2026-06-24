@@ -25,6 +25,7 @@ import {
   type CalendarEvent,
 } from '@/hooks/use-dashboard'
 import { useCalendarChecklists } from '@/hooks/use-calendar-checklists'
+import { useCalendarActionItems } from '@/hooks/use-calendar-action-items'
 import { useCalendarPreReservas } from '@/hooks/use-calendar-pre-reservas'
 import { usePreReservasPloomes } from '@/hooks/use-pre-reservas-ploomes'
 import { useLoadingTimeout } from '@/hooks/use-loading-timeout'
@@ -102,6 +103,7 @@ export default function DashboardPage() {
   } = useCalendarEvents(dateFrom, dateTo)
   const { data: calMaintenance = [] } = useCalendarMaintenance(dateFrom, dateTo, showMaintenance)
   const { data: calChecklists = [] } = useCalendarChecklists()
+  const { data: calActionItems = [] } = useCalendarActionItems()
   const { data: calPreReservasDiretoria = [] } = useCalendarPreReservas(dateFrom, dateTo)
   const { data: calPreReservasPloomes   = [] } = usePreReservasPloomes(dateFrom, dateTo)
   const calPreReservas = useMemo(
@@ -314,6 +316,7 @@ export default function DashboardPage() {
           events={filteredCalEvents}
           maintenanceItems={calMaintenance}
           checklistItems={calChecklists}
+          actionItemsData={calActionItems}
           preReservaItems={filteredCalPreReservas}
           showMaintenance={showMaintenance}
           onToggleMaintenance={() => setShowMaintenance((v) => !v)}
