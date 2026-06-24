@@ -152,6 +152,17 @@ export type ParsedDeal = {
   checklistOtherDetails?: string
   corkagePaid?: string
   overtimeDetails?: string
+  // Checklist de Decoração (9 campos novos; os outros 7 reaproveitam campos acima:
+  // theme, decoratorName, setupTime, teardownTime, briefing, cakeFlavor, hasDecoratedSweets)
+  decoratorNotes?: string
+  forminhasColors?: string
+  workshopsNotes?: string
+  balloonsValue?: number       // DecimalValue (declarado Data/hora no Ploomes, grava R$)
+  balloonsNotes?: string
+  fakeCakeValue?: number        // DecimalValue (declarado Data/hora no Ploomes, grava R$)
+  fakeCakeNotes?: string
+  decoratedSweetsNotes?: string
+  decorationAddonsNotes?: string
   ploomesUrl: string
 }
 

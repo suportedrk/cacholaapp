@@ -400,6 +400,16 @@ export async function syncDeals(
           checklist_other_details: parsed.checklistOtherDetails ?? null,
           corkage_paid:            parsed.corkagePaid ?? null,
           overtime_details:        parsed.overtimeDetails ?? null,
+          // Checklist de Decoração (migration 165)
+          decorator_notes:         parsed.decoratorNotes ?? null,
+          forminhas_colors:        parsed.forminhasColors ?? null,
+          workshops_notes:         parsed.workshopsNotes ?? null,
+          balloons_value:          parsed.balloonsValue ?? null,
+          balloons_notes:          parsed.balloonsNotes ?? null,
+          fake_cake_value:         parsed.fakeCakeValue ?? null,
+          fake_cake_notes:         parsed.fakeCakeNotes ?? null,
+          decorated_sweets_notes:  parsed.decoratedSweetsNotes ?? null,
+          decoration_addons_notes: parsed.decorationAddonsNotes ?? null,
         }
 
         // Verificar se já existe (para contar created vs updated vs lost)
