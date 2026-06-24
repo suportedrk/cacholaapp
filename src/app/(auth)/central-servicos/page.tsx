@@ -1,23 +1,12 @@
-import { PageHeader } from '@/components/shared/page-header'
-import { CentralServicosDashboard } from './_components/central-servicos-dashboard'
-
-export const metadata = {
-  title: 'Central de Serviços',
-}
+import { redirect } from 'next/navigation'
+import { ROUTES } from '@/lib/constants'
 
 /**
- * Página inicial (hub) do módulo Central de Serviços.
- * Fase 2 (Bloco E.3): atalhos com contadores + meus avisos pendentes de
- * confirmação + acompanhamento de confirmações para a gestão.
+ * O módulo Central de Serviços NÃO tem tela inicial (hub): o item do menu
+ * lateral apenas expande os filhos (Links / Contatos / Avisos). Acesso direto a
+ * `/central-servicos` (URL ou breadcrumb) é encaminhado para a primeira
+ * sub-página, em vez de exibir uma landing própria.
  */
 export default function CentralServicosPage() {
-  return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Central de Serviços"
-        description="Área de uso geral da equipe — links úteis, contatos e avisos da empresa."
-      />
-      <CentralServicosDashboard />
-    </div>
-  )
+  redirect(ROUTES.centralServicosAvisos)
 }
