@@ -81,6 +81,18 @@ export const DEAL_FIELD_MAP: Record<string, FieldDef> = {
   'deal_0B67A37D-3B9C-46EA-A4D0-5377BDCBAB60': { field: 'checklistOtherDetails', label: 'Outros Detalhes Checklist', valueKey: 'BigStringValue', parser: 'string' },
   'deal_20EAB3E0-19E8-4533-84BF-780E1EE4343A': { field: 'corkagePaid',         label: 'Pagou Rolha?',              valueKey: 'StringValue',     parser: 'string' },
   'deal_F76459D8-A6E4-4183-96B1-90149A1F59C5': { field: 'overtimeDetails',     label: 'Detalhamento Hora Extra',   valueKey: 'BigStringValue',  parser: 'string' },
+  // ── Checklist de Decoração (9 campos novos) ─────────────────
+  // NB: Balões/Bolo Fake "Valor cobrado" são declarados como Data/hora no painel do Ploomes (TypeId 5),
+  // mas gravam DecimalValue/moeda na prática (confirmado por amostragem). Por isso valueKey=DecimalValue.
+  'deal_7CB6A6A2-8935-4882-B68F-51EA7B56789D': { field: 'decoratorNotes',       label: 'Responsável Decoração - Obs.', valueKey: 'BigStringValue', parser: 'string' },
+  'deal_29B4CC3C-B37A-495F-B368-FB8EF3EA29B1': { field: 'forminhasColors',      label: 'Forminhas - Cores',          valueKey: 'BigStringValue',  parser: 'string' },
+  'deal_D56C449B-57E8-4DF0-A35C-AF1E8C9BB0BB': { field: 'workshopsNotes',       label: 'Oficinas - Observações',     valueKey: 'BigStringValue',  parser: 'string' },
+  'deal_CA67DC60-FBB8-4A81-B4C3-49D2230172A7': { field: 'balloonsValue',        label: 'Balões - Valor cobrado',     valueKey: 'DecimalValue',    parser: 'number' },
+  'deal_EF8082BC-AF37-44AC-98ED-152B1D6EA742': { field: 'balloonsNotes',        label: 'Balões - Observações',       valueKey: 'BigStringValue',  parser: 'string' },
+  'deal_040C6AD0-298B-4367-B256-3D8B2C3DA5FD': { field: 'fakeCakeValue',        label: 'Bolo Fake - Valor Cobrado',  valueKey: 'DecimalValue',    parser: 'number' },
+  'deal_62E5F9A1-154D-4C0D-A0AF-C32F31BE2E5D': { field: 'fakeCakeNotes',        label: 'Bolo Fake - Observações',    valueKey: 'BigStringValue',  parser: 'string' },
+  'deal_E2249487-5285-42B0-B513-40609B8250F0': { field: 'decoratedSweetsNotes', label: 'Doces Decorados - Obs.',     valueKey: 'BigStringValue',  parser: 'string' },
+  'deal_36396B6F-8BA1-48A4-8FA3-D54699C635D6': { field: 'decorationAddonsNotes',label: 'Adicionais Decoração - Obs.', valueKey: 'BigStringValue',  parser: 'string' },
 }
 
 /** Rótulos legíveis por field name — útil para exibição no frontend */

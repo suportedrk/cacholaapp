@@ -573,6 +573,15 @@ export type Event = {
   checklist_other_details: string | null  // migration 162
   corkage_paid: string | null             // migration 162
   overtime_details: string | null         // migration 162
+  decorator_notes: string | null          // migration 165
+  forminhas_colors: string | null         // migration 165
+  workshops_notes: string | null          // migration 165
+  balloons_value: number | null           // migration 165 (DecimalValue/moeda)
+  balloons_notes: string | null           // migration 165
+  fake_cake_value: number | null          // migration 165 (DecimalValue/moeda)
+  fake_cake_notes: string | null          // migration 165
+  decorated_sweets_notes: string | null   // migration 165
+  decoration_addons_notes: string | null  // migration 165
 }
 
 export type EventInsert = {
