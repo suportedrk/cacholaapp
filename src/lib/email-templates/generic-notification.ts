@@ -1,4 +1,4 @@
-import { wrapInLayout } from './base'
+import { wrapInLayout, escapeHtml } from './base'
 
 interface GenericNotificationData {
   title: string
@@ -11,7 +11,7 @@ interface GenericNotificationData {
 export function tplGenericNotification({ title, message, link, linkLabel, preheader }: GenericNotificationData) {
   const body = `
     <p style="margin:0;font-size:15px;color:#374151;line-height:1.6;">
-      ${message}
+      ${escapeHtml(message)}
     </p>`
 
   return {

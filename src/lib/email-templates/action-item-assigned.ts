@@ -1,4 +1,4 @@
-import { wrapInLayout } from './base'
+import { wrapInLayout, escapeHtml } from './base'
 
 interface AssignedTask {
   description: string
@@ -27,10 +27,10 @@ export function tplActionItemAssigned({
       (t) => `
         <tr>
           <td style="padding:8px 0 4px;border-top:1px solid #DDD8D2;font-size:13px;color:#374151;line-height:1.5;">
-            <strong style="color:#1A1A1A;">✅ ${t.description}</strong>
+            <strong style="color:#1A1A1A;">✅ ${escapeHtml(t.description)}</strong>
             ${
               t.dueLabel
-                ? `<br /><span style="font-size:12px;color:#777777;">📅 Prazo: ${t.dueLabel}</span>`
+                ? `<br /><span style="font-size:12px;color:#777777;">📅 Prazo: ${escapeHtml(t.dueLabel)}</span>`
                 : `<br /><span style="font-size:12px;color:#9CA3AF;">Sem prazo definido</span>`
             }
           </td>
@@ -40,11 +40,11 @@ export function tplActionItemAssigned({
 
   const body = `
     <p style="margin:0 0 20px;font-size:15px;color:#374151;line-height:1.6;">
-      Olá <strong>${assigneeName}</strong>,
+      Olá <strong>${escapeHtml(assigneeName)}</strong>,
     </p>
     <p style="margin:0 0 20px;font-size:15px;color:#374151;line-height:1.6;">
-      <strong>${assignerName}</strong> atribuiu ${isPlural ? 'novas tarefas' : 'uma nova tarefa'} a você
-      na ata de reunião <strong>"${meetingTitle}"</strong> (${meetingDate}).
+      <strong>${escapeHtml(assignerName)}</strong> atribuiu ${isPlural ? 'novas tarefas' : 'uma nova tarefa'} a você
+      na ata de reunião <strong>"${escapeHtml(meetingTitle)}"</strong> (${meetingDate}).
     </p>
 
     <!-- Tasks card -->

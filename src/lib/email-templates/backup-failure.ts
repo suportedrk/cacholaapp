@@ -1,4 +1,4 @@
-import { wrapInLayout } from './base'
+import { wrapInLayout, escapeHtml } from './base'
 
 export interface BackupFailureRow {
   kind: 'daily' | 'weekly' | 'monthly'
@@ -63,13 +63,13 @@ export function tplBackupFailure({ failures, stuckRows, backupMissing }: BackupF
         ${kindLabel(row.kind)} / ${sourceLabel(row.source)}
       </td>
       <td style="padding:8px 10px;font-size:12px;font-family:monospace;color:#6B7280;border-bottom:1px solid #F3F4F6;word-break:break-all;">
-        ${row.filename}
+        ${escapeHtml(row.filename)}
       </td>
       <td style="padding:8px 10px;font-size:12px;color:#6B7280;border-bottom:1px solid #F3F4F6;white-space:nowrap;">
         ${formatDateBR(row.started_at)}
       </td>
       ${row.error_message
-        ? `<td style="padding:8px 10px;font-size:11px;color:#DC2626;border-bottom:1px solid #F3F4F6;">${row.error_message.slice(0, 120)}</td>`
+        ? `<td style="padding:8px 10px;font-size:11px;color:#DC2626;border-bottom:1px solid #F3F4F6;">${escapeHtml(row.error_message.slice(0, 120))}</td>`
         : `<td style="padding:8px 10px;font-size:11px;color:#9CA3AF;border-bottom:1px solid #F3F4F6;">—</td>`
       }
     </tr>`).join('')

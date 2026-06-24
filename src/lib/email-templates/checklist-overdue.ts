@@ -1,4 +1,4 @@
-import { wrapInLayout } from './base'
+import { wrapInLayout, escapeHtml } from './base'
 
 interface ChecklistOverdueData {
   checklistTitle: string
@@ -9,7 +9,7 @@ interface ChecklistOverdueData {
 
 export function tplChecklistOverdue({ checklistTitle, checklistId, eventTitle, pendingItems }: ChecklistOverdueData) {
   const eventLine = eventTitle
-    ? `<p style="margin:0 0 4px;font-size:13px;color:#6B7280;"><strong>Evento vinculado:</strong> ${eventTitle}</p>`
+    ? `<p style="margin:0 0 4px;font-size:13px;color:#6B7280;"><strong>Evento vinculado:</strong> ${escapeHtml(eventTitle)}</p>`
     : ''
 
   const pendingLine = pendingItems && pendingItems > 0
@@ -20,7 +20,7 @@ export function tplChecklistOverdue({ checklistTitle, checklistId, eventTitle, p
 
   const body = `
     <p style="margin:0 0 12px;font-size:15px;color:#374151;line-height:1.6;">
-      O checklist <strong>"${checklistTitle}"</strong> está com o prazo vencido.
+      O checklist <strong>"${escapeHtml(checklistTitle)}"</strong> está com o prazo vencido.
     </p>
     ${eventLine}
     ${pendingLine}

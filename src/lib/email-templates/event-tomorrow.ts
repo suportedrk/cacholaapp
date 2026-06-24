@@ -1,4 +1,4 @@
-import { wrapInLayout } from './base'
+import { wrapInLayout, escapeHtml } from './base'
 
 interface EventTomorrowData {
   eventTitle: string
@@ -10,11 +10,11 @@ interface EventTomorrowData {
 
 export function tplEventTomorrow({ eventTitle, eventId, eventDate, startTime, clientName }: EventTomorrowData) {
   const timeLine = startTime
-    ? `<p style="margin:0 0 4px;font-size:13px;color:#6B7280;"><strong>Horário:</strong> ${startTime}</p>`
+    ? `<p style="margin:0 0 4px;font-size:13px;color:#6B7280;"><strong>Horário:</strong> ${escapeHtml(startTime)}</p>`
     : ''
 
   const clientLine = clientName
-    ? `<p style="margin:0 0 4px;font-size:13px;color:#6B7280;"><strong>Cliente:</strong> ${clientName}</p>`
+    ? `<p style="margin:0 0 4px;font-size:13px;color:#6B7280;"><strong>Cliente:</strong> ${escapeHtml(clientName)}</p>`
     : ''
 
   const body = `
@@ -24,7 +24,7 @@ export function tplEventTomorrow({ eventTitle, eventId, eventDate, startTime, cl
       </p>
     </div>
     <p style="margin:0 0 12px;font-size:15px;color:#374151;line-height:1.6;">
-      O evento <strong>"${eventTitle}"</strong> acontece
+      O evento <strong>"${escapeHtml(eventTitle)}"</strong> acontece
       <strong>amanhã, dia ${eventDate}</strong>.
     </p>
     ${timeLine}
