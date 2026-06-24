@@ -41,15 +41,18 @@ export function useCentralServicosAvisos() {
       const { data, error } = await (supabase as any)
         .from('central_servicos_avisos')
         .select(
-          '*, anexos:central_servicos_aviso_anexos(id, aviso_id, storage_path, file_name, mime_type, size_bytes, created_at, created_by)',
+          '*, ' +
+            'anexos:central_servicos_aviso_anexos(id, aviso_id, storage_path, file_name, mime_type, size_bytes, created_at, created_by), ' +
+            'leituras:central_servicos_avisos_leitura(usuario_id, confirmado_em, usuario:users(name))',
         )
         .order('publicado_em', { ascending: false })
 
       if (error) throw error
-      // Normaliza: garante anexos: [] mesmo quando o embed vier nulo.
+      // Normaliza embeds: garante arrays mesmo quando vierem nulos.
       return ((data ?? []) as CentralServicosAviso[]).map((a) => ({
         ...a,
         anexos: a.anexos ?? [],
+        leituras: a.leituras ?? [],
       }))
     },
   })
@@ -133,5 +136,28 @@ export function useRemoveAvisoAnexo() {
       queryClient.invalidateQueries({ queryKey: ['central-servicos', 'avisos'] })
     },
     onError: (err: Error) => toast.error(err.message),
+  })
+}
+
+// ── Confirmação de leitura ────────────────────────────────────
+
+/** Confirma a PRÓPRIA leitura de um aviso (insert idempotente via RLS). */
+export function useConfirmarLeitura() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ avisoId, userId }: { avisoId: string; userId: string }) => {
+      const supabase = createClient()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase as any)
+        .from('central_servicos_avisos_leitura')
+        .insert({ aviso_id: avisoId, usuario_id: userId })
+      // UNIQUE(aviso_id, usuario_id): confirmar 2x não é erro real.
+      if (error && error.code !== '23505') throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['central-servicos', 'avisos'] })
+      toast.success('Leitura confirmada.')
+    },
+    onError: () => toast.error('Não foi possível confirmar a leitura.'),
   })
 }

@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { Switch } from '@/components/ui/switch'
 import { DateInput } from '@/components/ui/date-input'
 import {
   Select,
@@ -70,6 +71,7 @@ interface FormState {
   unidade: ContatoUnidade
   publicadoData: string // yyyy-mm-dd
   expiraData: string // yyyy-mm-dd | ''
+  exigeConfirmacao: boolean
 }
 
 /** ISO → yyyy-mm-dd (data local). */
@@ -94,6 +96,7 @@ const EMPTY = (): FormState => ({
   unidade: 'geral',
   publicadoData: todayDate(),
   expiraData: '',
+  exigeConfirmacao: false,
 })
 
 interface Props {
@@ -143,6 +146,7 @@ export function AvisoEditSheet({ open, onOpenChange, aviso, createMode, canDelet
         unidade: aviso.unidade,
         publicadoData: isoToDate(aviso.publicado_em),
         expiraData: isoToDate(aviso.expira_em),
+        exigeConfirmacao: aviso.exige_confirmacao,
       })
       setAnexos(
         (aviso.anexos ?? []).map((a) => ({
@@ -230,6 +234,7 @@ export function AvisoEditSheet({ open, onOpenChange, aviso, createMode, canDelet
       // início do dia para publicação; fim do dia para expiração (inclusivo).
       publicado_em: new Date(`${form.publicadoData || todayDate()}T00:00:00`).toISOString(),
       expira_em: form.expiraData ? new Date(`${form.expiraData}T23:59:59`).toISOString() : null,
+      exige_confirmacao: form.exigeConfirmacao,
     }
   }
 
@@ -362,6 +367,23 @@ export function AvisoEditSheet({ open, onOpenChange, aviso, createMode, canDelet
               />
               <p className="text-xs text-muted-foreground">Vazio = nunca expira.</p>
             </div>
+          </div>
+
+          {/* Exige confirmação de leitura */}
+          <div className="flex items-start justify-between gap-3 rounded-lg border border-border bg-muted/20 px-3 py-2.5">
+            <div className="min-w-0">
+              <Label htmlFor="aviso-exige-confirmacao" className="cursor-pointer">
+                Exige confirmação de leitura
+              </Label>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Mostra o botão &quot;Confirmo que li&quot; e registra quem confirmou.
+              </p>
+            </div>
+            <Switch
+              id="aviso-exige-confirmacao"
+              checked={form.exigeConfirmacao}
+              onCheckedChange={(v) => set('exigeConfirmacao', v)}
+            />
           </div>
 
           {/* Anexos */}
