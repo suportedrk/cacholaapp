@@ -64,9 +64,16 @@ export function CentralServicosDashboard() {
   const canEdit = perms?.canEdit ?? false
   const confirmar = useConfirmarLeitura()
 
-  const { data: avisos = [], isLoading: loadingAvisos, isError, refetch } = useCentralServicosAvisos()
-  const { data: links = [], isLoading: loadingLinks } = useCentralServicosLinks()
-  const { data: contatos = [], isLoading: loadingContatos } = useCentralServicosContatos()
+  const { data: avisos = [], isLoading: loadingAvisos, isError: avisosError, refetch: refetchAvisos } = useCentralServicosAvisos()
+  const { data: links = [], isLoading: loadingLinks, isError: linksError, refetch: refetchLinks } = useCentralServicosLinks()
+  const { data: contatos = [], isLoading: loadingContatos, isError: contatosError, refetch: refetchContatos } = useCentralServicosContatos()
+
+  const anyError = avisosError || linksError || contatosError
+  function retryAll() {
+    if (avisosError) void refetchAvisos()
+    if (linksError) void refetchLinks()
+    if (contatosError) void refetchContatos()
+  }
 
   const vigentes = useMemo(() => avisos.filter((a) => avisoEstado(a) === 'vigente'), [avisos])
   const pessoasCount = useMemo(() => contatos.filter((c) => c.tipo === 'pessoa').length, [contatos])
@@ -110,16 +117,16 @@ export function CentralServicosDashboard() {
         />
       </div>
 
-      {/* Erro ao carregar avisos (não bloqueia os atalhos acima) */}
-      {isError && (
+      {/* Erro ao carregar dados (não bloqueia os atalhos, que mostram '—') */}
+      {anyError && (
         <div className="flex items-center justify-between gap-3 rounded-xl border border-status-error-text/30 bg-status-error-bg px-4 py-3">
           <div className="flex items-center gap-2 text-sm text-status-error-text">
             <AlertCircle className="h-4 w-4 shrink-0" />
-            Não foi possível carregar os avisos.
+            Não foi possível carregar alguns dados.
           </div>
           <button
             type="button"
-            onClick={() => refetch()}
+            onClick={retryAll}
             className="shrink-0 text-sm font-medium text-status-error-text underline underline-offset-4"
           >
             Tentar novamente
