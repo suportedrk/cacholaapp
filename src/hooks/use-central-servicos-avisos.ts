@@ -40,11 +40,17 @@ export function useCentralServicosAvisos() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error } = await (supabase as any)
         .from('central_servicos_avisos')
-        .select('*')
+        .select(
+          '*, anexos:central_servicos_aviso_anexos(id, aviso_id, storage_path, file_name, mime_type, size_bytes, created_at, created_by)',
+        )
         .order('publicado_em', { ascending: false })
 
       if (error) throw error
-      return (data ?? []) as CentralServicosAviso[]
+      // Normaliza: garante anexos: [] mesmo quando o embed vier nulo.
+      return ((data ?? []) as CentralServicosAviso[]).map((a) => ({
+        ...a,
+        anexos: a.anexos ?? [],
+      }))
     },
   })
 }
@@ -87,6 +93,44 @@ export function useDeleteAviso() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['central-servicos', 'avisos'] })
       toast.success('Aviso excluído.')
+    },
+    onError: (err: Error) => toast.error(err.message),
+  })
+}
+
+// ── Anexos ────────────────────────────────────────────────────
+
+export interface AnexoMetaInput {
+  storage_path: string
+  file_name: string
+  mime_type: string | null
+  size_bytes: number | null
+}
+
+/** Registra a metadata de um anexo já enviado ao Storage. */
+export function useAddAvisoAnexo() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ avisoId, meta }: { avisoId: string; meta: AnexoMetaInput }) => {
+      const res = await callJson(`/api/central-servicos/avisos/${avisoId}/anexos`, 'POST', meta)
+      return res?.data?.id as string
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['central-servicos', 'avisos'] })
+    },
+    onError: (err: Error) => toast.error(err.message),
+  })
+}
+
+/** Remove um anexo (linha de metadata + objeto no Storage, server-side). */
+export function useRemoveAvisoAnexo() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ avisoId, anexoId }: { avisoId: string; anexoId: string }) => {
+      await callJson(`/api/central-servicos/avisos/${avisoId}/anexos/${anexoId}`, 'DELETE')
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['central-servicos', 'avisos'] })
     },
     onError: (err: Error) => toast.error(err.message),
   })

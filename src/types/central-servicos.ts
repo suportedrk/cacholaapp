@@ -149,6 +149,18 @@ export const AVISO_PRIORIDADE_LABELS: Record<AvisoPrioridade, string> = {
   alta: 'Alta',
 }
 
+/** Anexo (PDF/imagem) de um aviso. O binário fica no bucket; aqui só a metadata. */
+export interface CentralServicosAvisoAnexo {
+  id: string
+  aviso_id: string
+  storage_path: string
+  file_name: string
+  mime_type: string | null
+  size_bytes: number | null
+  created_at: string
+  created_by: string | null
+}
+
 export interface CentralServicosAviso {
   id: string
   titulo: string
@@ -161,6 +173,7 @@ export interface CentralServicosAviso {
   created_at: string
   updated_at: string
   created_by: string | null
+  anexos: CentralServicosAvisoAnexo[] // embed via PostgREST; [] quando não há anexos
 }
 
 /** Payload do formulário de criação/edição de aviso. */
@@ -185,6 +198,20 @@ export function avisoEstado(aviso: CentralServicosAviso, now = new Date()): Avis
 
 /** Bucket privado das fotos dos contatos. */
 export const CONTATOS_BUCKET = 'central-servicos-contatos'
+
+/** Bucket privado dos anexos do Mural de Avisos (PDF/imagem). */
+export const AVISOS_ANEXOS_BUCKET = 'central-servicos-avisos-anexos'
+
+/** Tipos MIME aceitos como anexo de aviso. */
+export const AVISO_ANEXO_MIME_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'application/pdf',
+] as const
+
+/** Tamanho máximo de um anexo de aviso (10 MB). */
+export const AVISO_ANEXO_MAX_BYTES = 10 * 1024 * 1024
 
 /**
  * Monta o link de WhatsApp a partir de um telefone.
