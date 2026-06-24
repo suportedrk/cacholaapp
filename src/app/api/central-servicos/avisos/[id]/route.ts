@@ -5,6 +5,7 @@ import {
   AVISO_CATEGORIAS,
   AVISO_PRIORIDADES,
   CONTATO_UNIDADES,
+  AVISOS_ANEXOS_BUCKET,
   type AvisoFormInput,
 } from '@/types/central-servicos'
 
@@ -76,6 +77,18 @@ export async function DELETE(
     const { id } = await params
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const supabase = (await createClient()) as any
+
+    // Remove os objetos de Storage dos anexos antes de apagar o aviso — a FK
+    // ON DELETE CASCADE limpa só as linhas de metadata, não o binário no bucket.
+    const { data: anexos } = await supabase
+      .from('central_servicos_aviso_anexos')
+      .select('storage_path')
+      .eq('aviso_id', id)
+    const paths = (anexos ?? []).map((a: { storage_path: string }) => a.storage_path)
+    if (paths.length > 0) {
+      const { error: storageErr } = await supabase.storage.from(AVISOS_ANEXOS_BUCKET).remove(paths)
+      if (storageErr) console.error('[DELETE aviso] anexos de storage não removidos:', storageErr)
+    }
 
     const { error } = await supabase.from('central_servicos_avisos').delete().eq('id', id)
     if (error) throw error

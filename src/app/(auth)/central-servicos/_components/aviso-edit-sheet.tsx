@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { Trash2 } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Trash2, FileText, ImageIcon, X } from 'lucide-react'
 import {
   Sheet,
   SheetContent,
@@ -21,10 +21,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { FileDropZone, type UploadedFileMeta } from '@/components/shared/file-upload'
+import { createClient } from '@/lib/supabase/client'
 import {
   useCreateAviso,
   useUpdateAviso,
   useDeleteAviso,
+  useAddAvisoAnexo,
+  useRemoveAvisoAnexo,
 } from '@/hooks/use-central-servicos-avisos'
 import {
   AVISO_CATEGORIAS,
@@ -33,12 +37,30 @@ import {
   AVISO_PRIORIDADE_LABELS,
   CONTATO_UNIDADES,
   CONTATO_UNIDADE_LABELS,
+  AVISOS_ANEXOS_BUCKET,
+  AVISO_ANEXO_MIME_TYPES,
+  AVISO_ANEXO_MAX_BYTES,
   type CentralServicosAviso,
   type AvisoFormInput,
   type AvisoCategoria,
   type AvisoPrioridade,
   type ContatoUnidade,
 } from '@/types/central-servicos'
+
+/** Item de anexo no formulário: pode ser persistido (id) ou recém-enviado (sem id). */
+interface LocalAnexo {
+  id?: string
+  storage_path: string
+  file_name: string
+  mime_type: string | null
+  size_bytes: number | null
+}
+
+function formatBytes(n: number | null): string {
+  if (!n) return ''
+  if (n < 1024 * 1024) return `${Math.round(n / 1024)} KB`
+  return `${(n / 1024 / 1024).toFixed(1)} MB`
+}
 
 interface FormState {
   titulo: string
@@ -86,9 +108,18 @@ export function AvisoEditSheet({ open, onOpenChange, aviso, createMode, canDelet
   const createMutation = useCreateAviso()
   const updateMutation = useUpdateAviso()
   const deleteMutation = useDeleteAviso()
+  const addAnexo = useAddAvisoAnexo()
+  const removeAnexo = useRemoveAvisoAnexo()
 
   const [form, setForm] = useState<FormState>(EMPTY)
   const [deleteConfirm, setDeleteConfirm] = useState(false)
+
+  // Anexos: lista local (persistidos têm id; recém-enviados não).
+  const [anexos, setAnexos] = useState<LocalAnexo[]>([])
+  // storage_paths enviados nesta sessão e ainda não vinculados (limpar se cancelar).
+  const pendingUploads = useRef<string[]>([])
+  // ids de anexos persistidos que o usuário removeu (apagar ao salvar).
+  const removedExistingIds = useRef<string[]>([])
 
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((f) => ({ ...f, [key]: value }))
@@ -98,8 +129,11 @@ export function AvisoEditSheet({ open, onOpenChange, aviso, createMode, canDelet
     if (!open) return
     /* eslint-disable react-hooks/set-state-in-effect -- sincroniza props→form ao abrir */
     setDeleteConfirm(false)
+    pendingUploads.current = []
+    removedExistingIds.current = []
     if (createMode || !aviso) {
       setForm(EMPTY())
+      setAnexos([])
     } else {
       setForm({
         titulo: aviso.titulo,
@@ -110,12 +144,81 @@ export function AvisoEditSheet({ open, onOpenChange, aviso, createMode, canDelet
         publicadoData: isoToDate(aviso.publicado_em),
         expiraData: isoToDate(aviso.expira_em),
       })
+      setAnexos(
+        (aviso.anexos ?? []).map((a) => ({
+          id: a.id,
+          storage_path: a.storage_path,
+          file_name: a.file_name,
+          mime_type: a.mime_type,
+          size_bytes: a.size_bytes,
+        })),
+      )
     }
     /* eslint-enable react-hooks/set-state-in-effect */
   }, [open, createMode, aviso?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const isPending =
-    createMutation.isPending || updateMutation.isPending || deleteMutation.isPending
+    createMutation.isPending || updateMutation.isPending || deleteMutation.isPending ||
+    addAnexo.isPending || removeAnexo.isPending
+
+  async function removeFromStorage(paths: string[]) {
+    if (paths.length === 0) return
+    try {
+      await createClient().storage.from(AVISOS_ANEXOS_BUCKET).remove(paths)
+    } catch {
+      // fire-and-forget
+    }
+  }
+
+  function handleUploaded(meta: UploadedFileMeta) {
+    pendingUploads.current = [...pendingUploads.current, meta.storage_path]
+    setAnexos((prev) => [...prev, { ...meta }])
+  }
+
+  function handleRemoveAnexo(item: LocalAnexo) {
+    setAnexos((prev) => prev.filter((a) => a.storage_path !== item.storage_path))
+    if (item.id) {
+      // persistido → apaga ao salvar
+      removedExistingIds.current = [...removedExistingIds.current, item.id]
+    } else {
+      // upload pendente desta sessão → apaga do storage agora
+      void removeFromStorage([item.storage_path])
+      pendingUploads.current = pendingUploads.current.filter((p) => p !== item.storage_path)
+    }
+  }
+
+  /** Vincula novos anexos e apaga os removidos, contra um aviso já existente. */
+  async function reconcileAnexos(avisoId: string) {
+    const toAdd = anexos.filter((a) => !a.id)
+    await Promise.all([
+      ...toAdd.map((a) =>
+        addAnexo.mutateAsync({
+          avisoId,
+          meta: {
+            storage_path: a.storage_path,
+            file_name: a.file_name,
+            mime_type: a.mime_type,
+            size_bytes: a.size_bytes,
+          },
+        }),
+      ),
+      ...removedExistingIds.current.map((anexoId) =>
+        removeAnexo.mutateAsync({ avisoId, anexoId }),
+      ),
+    ])
+    // vinculados com sucesso → não limpar do storage
+    pendingUploads.current = []
+    removedExistingIds.current = []
+  }
+
+  async function close(saved: boolean) {
+    if (!saved && pendingUploads.current.length > 0) {
+      await removeFromStorage(pendingUploads.current)
+    }
+    pendingUploads.current = []
+    removedExistingIds.current = []
+    onOpenChange(false)
+  }
 
   function buildPayload(): AvisoFormInput {
     return {
@@ -133,11 +236,14 @@ export function AvisoEditSheet({ open, onOpenChange, aviso, createMode, canDelet
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     try {
+      let avisoId: string
       if (createMode) {
-        await createMutation.mutateAsync(buildPayload())
+        avisoId = await createMutation.mutateAsync(buildPayload())
       } else {
-        await updateMutation.mutateAsync({ id: aviso!.id, input: buildPayload() })
+        avisoId = aviso!.id
+        await updateMutation.mutateAsync({ id: avisoId, input: buildPayload() })
       }
+      await reconcileAnexos(avisoId)
     } catch {
       return
     }
@@ -150,15 +256,17 @@ export function AvisoEditSheet({ open, onOpenChange, aviso, createMode, canDelet
       return
     }
     try {
+      // Apagar o aviso cascateia os anexos (FK ON DELETE CASCADE) — sem reconcile.
       await deleteMutation.mutateAsync(aviso!.id)
     } catch {
       return
     }
+    pendingUploads.current = []
     onOpenChange(false)
   }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet open={open} onOpenChange={(o) => { if (!o) void close(false); else onOpenChange(true) }}>
       <SheetContent side="right" className="sm:max-w-lg overflow-y-auto">
         <SheetHeader>
           <SheetTitle>{createMode ? 'Novo aviso' : 'Editar aviso'}</SheetTitle>
@@ -256,6 +364,52 @@ export function AvisoEditSheet({ open, onOpenChange, aviso, createMode, canDelet
             </div>
           </div>
 
+          {/* Anexos */}
+          <div className="space-y-2">
+            <Label>Anexos</Label>
+            {anexos.length > 0 && (
+              <ul className="space-y-1.5">
+                {anexos.map((a) => {
+                  const isPdf = a.mime_type === 'application/pdf'
+                  return (
+                    <li
+                      key={a.storage_path}
+                      className="flex items-center gap-2 rounded-lg border border-border bg-muted/30 px-2.5 py-1.5"
+                    >
+                      {isPdf
+                        ? <FileText className="h-4 w-4 shrink-0 text-red-500" />
+                        : <ImageIcon className="h-4 w-4 shrink-0 text-blue-500" />}
+                      <span className="min-w-0 flex-1 truncate text-sm">{a.file_name}</span>
+                      {a.size_bytes ? (
+                        <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
+                          {formatBytes(a.size_bytes)}
+                        </span>
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveAnexo(a)}
+                        disabled={isPending}
+                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-destructive disabled:opacity-50"
+                        aria-label={`Remover ${a.file_name}`}
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+            <FileDropZone
+              bucket={AVISOS_ANEXOS_BUCKET}
+              folder="avisos"
+              accept=".pdf,image/jpeg,image/png,image/webp"
+              allowedMime={AVISO_ANEXO_MIME_TYPES}
+              maxBytes={AVISO_ANEXO_MAX_BYTES}
+              disabled={isPending}
+              onUploaded={handleUploaded}
+            />
+          </div>
+
           <SheetFooter className="flex-col gap-2 pt-2 sm:flex-row sm:justify-between">
             {!createMode && canDelete && (
               <Button
@@ -270,7 +424,7 @@ export function AvisoEditSheet({ open, onOpenChange, aviso, createMode, canDelet
               </Button>
             )}
             <div className="flex gap-2 sm:ml-auto">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isPending}>
+              <Button type="button" variant="outline" onClick={() => void close(false)} disabled={isPending}>
                 Cancelar
               </Button>
               <Button type="submit" disabled={isPending || !form.titulo.trim() || !form.conteudo.trim()}>

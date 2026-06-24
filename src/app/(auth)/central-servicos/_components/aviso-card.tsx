@@ -1,16 +1,52 @@
 'use client'
 
-import { useState } from 'react'
-import { Pencil, AlertTriangle, Clock } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { Pencil, AlertTriangle, Clock, Paperclip, FileText, ImageIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { useSignedUrls } from '@/hooks/use-signed-urls'
 import {
   AVISO_CATEGORIA_LABELS,
   CONTATO_UNIDADE_LABELS,
+  AVISOS_ANEXOS_BUCKET,
   avisoEstado,
   type CentralServicosAviso,
+  type CentralServicosAvisoAnexo,
 } from '@/types/central-servicos'
+
+/** Lista de anexos clicáveis (abre signed URL em nova aba). */
+function AvisoAnexos({ anexos }: { anexos: CentralServicosAvisoAnexo[] }) {
+  const paths = useMemo(() => anexos.map((a) => a.storage_path), [anexos])
+  const { data: urls = {} } = useSignedUrls(AVISOS_ANEXOS_BUCKET, paths)
+
+  return (
+    <div className="mt-3 flex flex-wrap gap-1.5">
+      {anexos.map((a) => {
+        const url = urls[a.storage_path]
+        const isPdf = a.mime_type === 'application/pdf'
+        const Icon = isPdf ? FileText : ImageIcon
+        return (
+          <a
+            key={a.id}
+            href={url ?? '#'}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => { if (!url) e.preventDefault() }}
+            className={cn(
+              'inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/40 px-2.5 py-1 text-xs text-foreground transition-colors hover:bg-muted',
+              !url && 'pointer-events-none opacity-50',
+            )}
+            title={a.file_name}
+          >
+            <Icon className={cn('h-3.5 w-3.5 shrink-0', isPdf ? 'text-red-500' : 'text-blue-500')} />
+            <span className="max-w-[180px] truncate">{a.file_name}</span>
+          </a>
+        )
+      })}
+    </div>
+  )
+}
 
 const dateFmt = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })
 
@@ -65,6 +101,12 @@ export function AvisoCard({ aviso, canEdit, onEdit }: AvisoCardProps) {
             {estado === 'expirado' && (
               <Badge variant="outline" className="text-muted-foreground">Expirado</Badge>
             )}
+            {aviso.anexos.length > 0 && (
+              <Badge variant="outline" className="gap-1 text-muted-foreground">
+                <Paperclip className="h-3 w-3" />
+                {aviso.anexos.length}
+              </Badge>
+            )}
           </div>
         </div>
         {canEdit && (
@@ -92,6 +134,8 @@ export function AvisoCard({ aviso, canEdit, onEdit }: AvisoCardProps) {
           {expanded ? 'Ver menos' : 'Ver mais'}
         </button>
       )}
+
+      {aviso.anexos.length > 0 && <AvisoAnexos anexos={aviso.anexos} />}
 
       {aviso.expira_em && estado !== 'expirado' && (
         <p className="mt-2 text-xs text-muted-foreground">Expira em {fmt(aviso.expira_em)}</p>
