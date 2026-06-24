@@ -59,6 +59,10 @@ Status possiveis: PENDENTE | BLOQUEADA | AGUARDANDO TERCEIRO | VERIFICAR
 - [x] (23/06/2026) Environment "VPS_SSH_KEY" no GitHub. VERIFICADO via `gh api repos/.../environments`: existe apenas o environment `producao` (total_count=1). Nao ha environment `VPS_SSH_KEY` — nada a apagar. Sem acao.
 - [x] (22/06/2026) Seguranca — /api/audit: reforco do payload FEITO. `validateAuditField` trava old_data/new_data (rejeita nao-objeto, >100 chaves, >16KB serializado); entity_type/entity_id ganharam teto de 200 chars; ip (x-forwarded-for) passou a pegar so o 1o IP da lista + validar formato (evita INSERT INET quebrar e perder a trilha). Revisado pelo subagente security-reviewer (APROVADO COM RESSALVAS — os 2 vizinhos entity_type/ip foram incorporados no mesmo commit). NAO implementado de proposito: allowlist de chaves POR entity_type (custaria um registry por tipo; o trio forma+tamanho+allowlist de action/module ja cobre o vetor de forja por autenticado).
 
+## Seguranca / LGPD
+
+- [ ] Templates de e-mail nao escapam input de usuario (HTML injection) — TRANSVERSAL, pre-existente. Todos os templates em `src/lib/email-templates/` interpolam campos livres (title, creatorName, description, assignerName, etc.) crus no HTML, sem escape — ex.: `meeting-minute-notification.ts`, `action-item-assigned.ts` (novo, Atas Fase B), `base.ts`. Severidade BAIXA: e (a) e-mail, nao DOM do app (clientes modernos sanitizam script/onerror no render); (b) so quem ja tem permissao de escrita no modulo (staff de gestao) consegue injetar; risco pratico = spoofing visual/quebra de layout, nao XSS executavel. Fix sugerido (PR dedicado): helper `escapeHtml()` em `base.ts` aplicado a toda interpolacao de campo livre, retroativo a toda a familia de templates. STATUS: PENDENTE (identificado 24/06/2026 pelos subagentes rbac-auditor + security-reviewer na Atas Fase B; nao bloqueante; nao corrigir so um template — e dividida transversal). NAO e regressao da Fase B.
+
 ## Resolvidas
 
 (Mover itens concluidos para ca, com data e versao. Exemplo: "- [x] (17/06/2026, v1.x) descricao do item.")

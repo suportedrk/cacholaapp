@@ -3,12 +3,34 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
+import { useAuth } from '@/hooks/use-auth'
 import type { MeetingMinuteFormData, ParticipantDraft, ActionItemDraft, ActionItemStatus, MeetingMinuteDetail, ParticipantRole } from '@/types/minutes'
 import {
   combineSaoPauloDateTimeToISO,
   todaySaoPaulo,
   DEFAULT_MEETING_TIME,
 } from '@/lib/utils/meeting-datetime'
+
+// ─────────────────────────────────────────────────────────────
+// Notificação de atribuição de tarefa (Atas — Fase B)
+// Fire-and-forget: avisa o responsável (sino + e-mail) quando uma action
+// item passa a ser atribuída a ele. O caller já calcula apenas as TRANSIÇÕES
+// de atribuição e exclui a auto-atribuição do próprio autor.
+// ─────────────────────────────────────────────────────────────
+interface AssignmentNotice {
+  assigneeId:  string
+  description: string
+  dueDate:     string | null
+}
+
+function notifyAssignments(meetingMinuteId: string, assignments: AssignmentNotice[]) {
+  if (assignments.length === 0) return
+  fetch('/api/minutes/notify-assignment', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ meetingMinuteId, assignments }),
+  }).catch((err) => console.error('[minutes] Falha ao notificar atribuições:', err))
+}
 
 // ─────────────────────────────────────────────────────────────
 // Helpers — typed wrappers around untyped tables
@@ -97,7 +119,7 @@ export function useCreateMeetingMinute() {
 
       return minuteId
     },
-    onSuccess: (minuteId, { form }) => {
+    onSuccess: (minuteId, { form, userId }) => {
       qc.invalidateQueries({ queryKey: ['meeting-minutes'] })
       toast.success('Ata criada com sucesso!')
 
@@ -109,6 +131,13 @@ export function useCreateMeetingMinute() {
           body:    JSON.stringify({ meetingMinuteId: minuteId, previousStatus: null }),
         }).catch((err) => console.error('[minutes] Falha ao notificar participantes:', err))
       }
+
+      // Fase B — avisar responsáveis: na criação, todo item com responsável
+      // (≠ próprio autor) é uma nova atribuição.
+      const assignments: AssignmentNotice[] = form.action_items
+        .filter((a) => a.description.trim() && a.assigned_to && a.assigned_to !== userId)
+        .map((a) => ({ assigneeId: a.assigned_to!, description: a.description.trim(), dueDate: a.due_date || null }))
+      notifyAssignments(minuteId, assignments)
     },
     onError: () => {
       toast.error('Erro ao criar ata. Tente novamente.')
@@ -130,6 +159,7 @@ interface UpdatePayload {
 
 export function useUpdateMeetingMinute() {
   const qc = useQueryClient()
+  const { profile } = useAuth()
 
   return useMutation({
     mutationFn: async ({
@@ -242,7 +272,7 @@ export function useUpdateMeetingMinute() {
 
       return id
     },
-    onSuccess: (id, { form, previousStatus }) => {
+    onSuccess: (id, { form, previousStatus, originalActionItems }) => {
       qc.invalidateQueries({ queryKey: ['meeting-minutes'] })
       qc.invalidateQueries({ queryKey: ['meeting-minutes', 'detail', id] })
       toast.success('Ata atualizada com sucesso!')
@@ -255,6 +285,18 @@ export function useUpdateMeetingMinute() {
           body:    JSON.stringify({ meetingMinuteId: id, previousStatus }),
         }).catch((err) => console.error('[minutes] Falha ao notificar participantes:', err))
       }
+
+      // Fase B — avisar responsáveis apenas nas TRANSIÇÕES de atribuição:
+      // item novo com responsável, ou item cujo responsável mudou vs. o original.
+      const prevAssigneeById = new Map(
+        originalActionItems.filter((a) => a.id).map((a) => [a.id as string, a.assigned_to]),
+      )
+      const currentUserId = profile?.id
+      const assignments: AssignmentNotice[] = form.action_items
+        .filter((a) => a.description.trim() && a.assigned_to && a.assigned_to !== currentUserId)
+        .filter((a) => !a.id || prevAssigneeById.get(a.id) !== a.assigned_to)
+        .map((a) => ({ assigneeId: a.assigned_to!, description: a.description.trim(), dueDate: a.due_date || null }))
+      notifyAssignments(id, assignments)
     },
     onError: () => {
       toast.error('Erro ao atualizar ata. Tente novamente.')
