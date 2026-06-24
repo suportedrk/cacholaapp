@@ -1,4 +1,4 @@
-import { wrapInLayout } from './base'
+import { wrapInLayout, escapeHtml } from './base'
 
 interface MaintenanceOverdueData {
   orderTitle: string
@@ -15,12 +15,12 @@ export function tplMaintenanceOverdue({ orderTitle, orderId, assignedTo, daysOve
     : ''
 
   const assignedLine = assignedTo
-    ? `<p style="margin:0 0 8px;font-size:13px;color:#6B7280;"><strong>Responsável:</strong> ${assignedTo}</p>`
+    ? `<p style="margin:0 0 8px;font-size:13px;color:#6B7280;"><strong>Responsável:</strong> ${escapeHtml(assignedTo)}</p>`
     : ''
 
   const body = `
     <p style="margin:0 0 8px;font-size:15px;color:#374151;line-height:1.6;">
-      A ordem de manutenção <strong>"${orderTitle}"</strong> está com o prazo vencido.
+      A ordem de manutenção <strong>"${escapeHtml(orderTitle)}"</strong> está com o prazo vencido.
     </p>
     ${overdueLine}
     ${assignedLine}

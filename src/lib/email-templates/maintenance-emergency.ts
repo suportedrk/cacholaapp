@@ -1,4 +1,4 @@
-import { wrapInLayout } from './base'
+import { wrapInLayout, escapeHtml } from './base'
 
 interface MaintenanceEmergencyData {
   orderTitle: string
@@ -9,8 +9,8 @@ interface MaintenanceEmergencyData {
 
 export function tplMaintenanceEmergency({ orderTitle, orderId, description, sector }: MaintenanceEmergencyData) {
   const extraRows = [
-    sector ? `<tr><td style="padding:4px 0;font-size:13px;color:#6B7280;"><strong>Setor:</strong> ${sector}</td></tr>` : '',
-    description ? `<tr><td style="padding:4px 0;font-size:13px;color:#6B7280;"><strong>Descrição:</strong> ${description}</td></tr>` : '',
+    sector ? `<tr><td style="padding:4px 0;font-size:13px;color:#6B7280;"><strong>Setor:</strong> ${escapeHtml(sector)}</td></tr>` : '',
+    description ? `<tr><td style="padding:4px 0;font-size:13px;color:#6B7280;"><strong>Descrição:</strong> ${escapeHtml(description)}</td></tr>` : '',
   ].filter(Boolean).join('')
 
   const body = `
@@ -20,7 +20,7 @@ export function tplMaintenanceEmergency({ orderTitle, orderId, description, sect
       </p>
     </div>
     <p style="margin:0 0 12px;font-size:15px;color:#374151;line-height:1.6;">
-      A ordem de manutenção <strong>"${orderTitle}"</strong> foi criada como
+      A ordem de manutenção <strong>"${escapeHtml(orderTitle)}"</strong> foi criada como
       <strong style="color:#DC2626;">emergência</strong> e requer resolução imediata.
     </p>
     ${extraRows ? `<table cellpadding="0" cellspacing="0" border="0" style="margin-bottom:8px;">${extraRows}</table>` : ''}

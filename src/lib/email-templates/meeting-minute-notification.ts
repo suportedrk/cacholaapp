@@ -1,4 +1,4 @@
-import { wrapInLayout } from './base'
+import { wrapInLayout, escapeHtml } from './base'
 
 interface MeetingMinuteNotificationData {
   participantName:  string
@@ -24,17 +24,17 @@ export function tplMeetingMinuteNotification({
   const locationRow = location
     ? `<tr>
         <td style="padding:4px 0;font-size:13px;color:#555555;">
-          <strong style="color:#333333;">📍 Local:</strong>&nbsp; ${location}
+          <strong style="color:#333333;">📍 Local:</strong>&nbsp; ${escapeHtml(location)}
         </td>
        </tr>`
     : ''
 
   const body = `
     <p style="margin:0 0 20px;font-size:15px;color:#374151;line-height:1.6;">
-      Olá <strong>${participantName}</strong>,
+      Olá <strong>${escapeHtml(participantName)}</strong>,
     </p>
     <p style="margin:0 0 20px;font-size:15px;color:#374151;line-height:1.6;">
-      <strong>${creatorName}</strong> publicou uma nova ata de reunião
+      <strong>${escapeHtml(creatorName)}</strong> publicou uma nova ata de reunião
       na qual você participou.
     </p>
 
@@ -46,7 +46,7 @@ export function tplMeetingMinuteNotification({
           <table width="100%" cellpadding="0" cellspacing="0" border="0">
             <tr>
               <td style="padding:4px 0;font-size:14px;font-weight:700;color:#1A1A1A;line-height:1.4;">
-                📋&nbsp; ${title}
+                📋&nbsp; ${escapeHtml(title)}
               </td>
             </tr>
             <tr>

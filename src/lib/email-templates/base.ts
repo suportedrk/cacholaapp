@@ -5,6 +5,23 @@
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://cachola.cloud'
 
+/**
+ * Escapa caracteres especiais de HTML em texto livre vindo de input de usuário,
+ * antes de interpolar no corpo de um e-mail. Previne HTML/markup injection
+ * (ex.: nome de tarefa, título de ata, descrição com `<...>` ou `&`).
+ *
+ * Usar em TODA interpolação de campo de texto livre nos templates. Não usar em
+ * HTML já composto (corpo montado) nem em URLs (paths/IDs controlados).
+ */
+export function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
 export function wrapInLayout(
   title: string,
   body: string,
@@ -12,8 +29,12 @@ export function wrapInLayout(
   ctaLabel?: string,
   preheader?: string,
 ): string {
+  // title e preheader chegam como texto livre (alguns templates passam dados de
+  // usuário) — escapados aqui de forma centralizada. O `body` é HTML já composto
+  // (cada template escapa seus próprios campos) e NÃO é escapado.
+  const safeTitle = escapeHtml(title)
   const preheaderHtml = preheader
-    ? `<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;color:#F5F4F0;">${preheader}</div>`
+    ? `<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;color:#F5F4F0;">${escapeHtml(preheader)}</div>`
     : ''
 
   const ctaHtml =
@@ -36,7 +57,7 @@ export function wrapInLayout(
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <title>${title}</title>
+  <title>${safeTitle}</title>
 </head>
 <body style="margin:0;padding:0;background:#F5F4F0;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;">
   ${preheaderHtml}
@@ -59,7 +80,7 @@ export function wrapInLayout(
           <tr>
             <td style="padding:28px 28px 8px;">
               <h1 style="margin:0 0 12px;font-size:20px;font-weight:700;color:#1A1A1A;line-height:1.3;">
-                ${title}
+                ${safeTitle}
               </h1>
               ${body}
             </td>
