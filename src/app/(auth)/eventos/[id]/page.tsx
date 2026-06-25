@@ -1,22 +1,19 @@
 'use client'
 
-import { useState, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import {
   ArrowLeft, Calendar, Clock, MapPin, Users,
-  Plus, ExternalLink, Wrench, PartyPopper, Truck, User2, User,
-  CheckSquare, MessageCircle, Phone, Mail,
-  ClipboardList, History, Tag, Star, Camera, Music2, CakeSlice,
-  DollarSign, School, BookText, Check, X as XIcon,
+  ExternalLink, Wrench, PartyPopper, Truck, User2, User,
+  MessageCircle, Phone, Mail,
+  History, Tag, Music2, CakeSlice,
+  School,
 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EventStatusBadge } from '@/components/shared/event-status-badge'
 import { UserAvatar } from '@/components/shared/user-avatar'
-import { CreateChecklistModal } from '@/app/(auth)/checklists/components/create-checklist-modal'
 import { EventTimeline } from '@/components/features/events/event-timeline'
 import { MaintenanceStatusBadge, MaintenancePriorityBadge } from '@/components/features/maintenance/maintenance-status-badge'
 import { useEvent } from '@/hooks/use-events'
@@ -25,14 +22,12 @@ import { useEventMaintenances } from '@/hooks/use-maintenance'
 import { useAuth } from '@/hooks/use-auth'
 import { canViewFestaValues } from '@/config/roles'
 import { AccordionSection } from './components/AccordionSection'
-import { ProvidersSection } from './components/sections/ProvidersSection'
 import { EventSalesSection } from './components/sections/EventSalesSection'
 import { EventDecoracaoSection } from './components/sections/EventDecoracaoSection'
 import { EventChecklistClienteSection } from './components/sections/EventChecklistClienteSection'
 import { EventChecklistDecoracaoSection } from './components/sections/EventChecklistDecoracaoSection'
 import { UnitChip } from '@/components/shared/unit-chip'
 import { cn } from '@/lib/utils'
-import type { ChecklistForList } from '@/types/database.types'
 
 // AccordionSection — imported from ./components/AccordionSection
 
@@ -79,66 +74,14 @@ function LogisticsTimeline({
   )
 }
 
-// ── Bool indicator helper ──────────────────────────────────────
-function BoolIndicator({ value, label }: { value: boolean; label: string }) {
-  return (
-    <div className="flex items-center gap-2">
-      {value ? (
-        <Check className="w-3.5 h-3.5 text-green-500 shrink-0" />
-      ) : (
-        <XIcon className="w-3.5 h-3.5 text-text-tertiary/40 shrink-0" />
-      )}
-      <span className={cn('text-sm', value ? 'text-text-primary' : 'text-text-tertiary line-through')}>{label}</span>
-    </div>
-  )
-}
-
-// ── Checklist Row ──────────────────────────────────────────────
-function EventChecklistRow({ checklist }: { checklist: ChecklistForList }) {
-  const items = checklist.checklist_items ?? []
-  const total = items.length
-  const done  = items.filter((i) => i.status === 'done').length
-  const pct   = total > 0
-    ? Math.round((done / total) * 100)
-    : (checklist.status === 'completed' ? 100 : 0)
-  const isCompleted = checklist.status === 'completed'
-  const barColor    = isCompleted || pct >= 80 ? 'bg-green-500' : pct >= 50 ? 'bg-amber-500' : 'bg-red-500'
-
-  return (
-    <Link
-      href={`/checklists/${checklist.id}`}
-      className="flex items-center gap-3 py-2.5 border-b border-border last:border-b-0 -mx-4 px-4 hover:bg-muted/30 transition-colors"
-    >
-      {isCompleted ? (
-        <CheckSquare className="w-4 h-4 text-green-500 shrink-0" />
-      ) : (
-        <div className="w-4 h-4 rounded border-2 border-border shrink-0" />
-      )}
-      <div className="flex-1 min-w-0">
-        <p className="text-sm text-text-primary truncate">{checklist.title}</p>
-        {total > 0 && (
-          <div className="flex items-center gap-2 mt-0.5">
-            <div className="flex-1 h-1 rounded-full bg-muted overflow-hidden">
-              <div className={cn('h-full rounded-full', barColor)} style={{ width: `${pct}%` }} />
-            </div>
-            <span className="text-[10px] text-text-tertiary tabular-nums shrink-0">{pct}%</span>
-          </div>
-        )}
-      </div>
-      <ExternalLink className="w-3.5 h-3.5 text-text-tertiary shrink-0" />
-    </Link>
-  )
-}
 
 // ── Mobile Quick Actions Bar ───────────────────────────────────
 function QuickActionsBar({
   phone,
   ploomesUrl,
-  onChecklistsClick,
 }: {
   phone?: string | null
   ploomesUrl?: string | null
-  onChecklistsClick: () => void
 }) {
   const cleanPhone = phone?.replace(/\D/g, '') ?? ''
 
@@ -179,15 +122,6 @@ function QuickActionsBar({
             <span className="text-[10px] text-text-tertiary">WhatsApp</span>
           </div>
         )}
-
-        <button
-          type="button"
-          onClick={onChecklistsClick}
-          className="flex flex-col items-center gap-1 px-3 py-1 rounded-lg hover:bg-muted/40 transition-colors"
-        >
-          <CheckSquare className="w-5 h-5 text-text-secondary" />
-          <span className="text-[10px] text-text-tertiary">Checklists</span>
-        </button>
 
         {ploomesUrl ? (
           <a
@@ -255,16 +189,8 @@ export default function EventoDetailPage() {
   const canSeeValues = canViewFestaValues(profile?.role)
 
   const { data: event, isLoading, isError } = useEvent(id)
-  const { data: checklists = [], isLoading: checklistsLoading } = useEventChecklists(id)
+  const { data: checklists = [] } = useEventChecklists(id)
   const { data: maintenances = [] } = useEventMaintenances(id)
-
-  const [addChecklistOpen, setAddChecklistOpen] = useState(false)
-
-  const checklistsSectionRef = useRef<HTMLDivElement | null>(null)
-
-  function scrollToChecklists() {
-    checklistsSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }
 
   // ── Loading ──
   if (isLoading) return <EventDetailSkeleton />
@@ -302,18 +228,10 @@ export default function EventoDetailPage() {
 
   const displayTitle = event.title
 
-  const completedChecklists = checklists.filter((c) => c.status === 'completed').length
 
   const hasPartyInfo  = !!(event.notes || event.event_category || event.cake_flavor || event.music || event.adult_count || event.kids_under4 || event.kids_over5)
   const hasClientInfo = !!(event.client_phone || event.client_email || event.father_name || event.school || event.birthday_date)
   const hasLogisticsExtras = !!(event.setup_time || event.teardown_time || event.show_time)
-  const hasServices   = event.has_show || event.decoration_aligned || event.has_decorated_sweets || event.party_favors || event.outside_drinks || !!event.photo_video
-  const hasBriefing   = !!event.briefing
-  const hasFinancial  = !!(event.deal_amount || event.payment_method)
-
-  function formatBRL(val: number) {
-    return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-  }
   function formatTime(t: string) { return t.slice(0, 5) }
 
   const ploomesUrl = event.ploomes_deal_id
@@ -575,61 +493,11 @@ export default function EventoDetailPage() {
           </div>
         </AccordionSection>
 
-        {/* S3b: Serviços Contratados */}
-        {hasServices && (
-          <AccordionSection title="Serviços Contratados" icon={Star}>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
-              <BoolIndicator value={event.has_show}            label="Show" />
-              <BoolIndicator value={event.decoration_aligned}  label="Decoração alinhada" />
-              <BoolIndicator value={event.has_decorated_sweets} label="Doces decorados" />
-              <BoolIndicator value={event.party_favors}        label="Lembrancinhas" />
-              <BoolIndicator value={event.outside_drinks}      label="Bebidas de fora" />
-              {event.photo_video && (
-                <div className="flex items-center gap-2">
-                  <Camera className="w-3.5 h-3.5 text-text-secondary shrink-0" />
-                  <span className="text-sm text-text-primary">{event.photo_video}</span>
-                </div>
-              )}
-            </div>
-          </AccordionSection>
-        )}
-
         {/* S3b2: Checklist do Cliente (somente leitura — espelho Ploomes) */}
         <EventChecklistClienteSection event={event} unitName={event.unit?.name ?? null} canSeeValues={canSeeValues} />
 
         {/* S3b3: Checklist de Decoração (somente leitura — espelho Ploomes) */}
         <EventChecklistDecoracaoSection event={event} unitName={event.unit?.name ?? null} canSeeValues={canSeeValues} />
-
-        {/* S3c: Briefing */}
-        {hasBriefing && (
-          <AccordionSection title="Briefing" icon={BookText}>
-            <p className="text-sm text-text-secondary whitespace-pre-wrap leading-relaxed">{event.briefing}</p>
-          </AccordionSection>
-        )}
-
-        {/* S3d: Financeiro */}
-        {hasFinancial && (
-          <AccordionSection title="Financeiro" icon={DollarSign}>
-            {canSeeValues ? (
-              <div className="space-y-2">
-                {event.deal_amount != null && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-text-secondary">Valor do negócio</span>
-                    <span className="text-sm font-semibold text-text-primary">{formatBRL(event.deal_amount)}</span>
-                  </div>
-                )}
-                {event.payment_method && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-text-secondary">Forma de pagamento</span>
-                    <span className="text-sm text-text-primary">{event.payment_method}</span>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <p className="text-sm text-text-tertiary">— Restrito —</p>
-            )}
-          </AccordionSection>
-        )}
 
         {/* S3e: Vendas */}
         <EventSalesSection eventId={id} />
@@ -643,49 +511,6 @@ export default function EventoDetailPage() {
           clientName={event.client_name ?? null}
         />
 
-        {/* S4: Prestadores */}
-        <ProvidersSection eventId={id} eventDate={event.date} eventTitle={event.title ?? ''} />
-
-        {/* S5: Checklists */}
-        <div ref={checklistsSectionRef}>
-          <AccordionSection
-            title="Checklists"
-            icon={CheckSquare}
-            badge={checklists.length > 0 ? `${completedChecklists}/${checklists.length}` : undefined}
-            defaultOpen
-          >
-            {checklistsLoading && (
-              <div className="space-y-2">
-                {[1, 2].map((i) => <Skeleton key={i} className="h-10 rounded" />)}
-              </div>
-            )}
-
-            {!checklistsLoading && checklists.length === 0 && (
-              <div className="flex flex-col items-center gap-2 py-6 text-center">
-                <ClipboardList className="w-7 h-7 text-text-tertiary/40" />
-                <p className="text-sm text-text-secondary">Nenhum checklist neste evento.</p>
-              </div>
-            )}
-
-            {!checklistsLoading && checklists.length > 0 && (
-              <div>
-                {checklists.map((cl) => (
-                  <EventChecklistRow key={cl.id} checklist={cl as ChecklistForList} />
-                ))}
-              </div>
-            )}
-
-            <Button
-              size="sm"
-              variant="outline"
-              className="w-full mt-3 gap-1.5"
-              onClick={() => setAddChecklistOpen(true)}
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Criar Checklist
-            </Button>
-          </AccordionSection>
-        </div>
 
         {/* S5: Equipe */}
         {(event.staff ?? []).length > 0 && (
@@ -743,20 +568,10 @@ export default function EventoDetailPage() {
 
       </div>
 
-      {/* Modals */}
-      <CreateChecklistModal
-        open={addChecklistOpen}
-        onClose={() => setAddChecklistOpen(false)}
-        defaultEventId={id}
-        defaultEventTitle={event.title}
-        onCreated={() => setAddChecklistOpen(false)}
-      />
-
       {/* Mobile Quick Actions */}
       <QuickActionsBar
         phone={event.client_phone}
         ploomesUrl={ploomesUrl}
-        onChecklistsClick={scrollToChecklists}
       />
     </div>
   )
