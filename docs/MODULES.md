@@ -25,6 +25,8 @@
 
 **Conflito de horário:** gap_minutes ≤ 0 = sobreposição (vermelho); 0 < gap_minutes < 120 = intervalo curto (âmbar). Função SQL `get_event_conflicts(unit_id)`.
 
+**Impressão geral (v1.68.0):** botão "Imprimir tudo" no cabeçalho de `/eventos/[id]` gera uma página A4 consolidada com todas as seções (cabeçalho, Informações, Logística, Cliente, os 2 Checklists, Vendas, Equipe, Decoração da Festa, Histórico) via `event-full-print.ts` (mesmo padrão `window.open` + `document.write` dos prints individuais, que continuam existindo). Abre a aba primeiro e busca os dados preguiçosos (RPC `get_event_sales_summary` + decoração da festa) sob demanda para não ser bloqueada como pop-up. **Vendas sai sempre só com Categoria/Produto/Qtd — sem valores monetários** (decisão do produto); os campos de valor dos Checklists seguem `canViewFestaValues` como na impressão individual. Reusa `buildChecklistClienteItems`/`buildChecklistDecoracaoItems` e `deriveTimeline` (exportado de `event-timeline.tsx`) — sem duplicar lógica.
+
 ---
 
 ## CHECKLISTS
