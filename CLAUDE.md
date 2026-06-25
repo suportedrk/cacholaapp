@@ -1376,6 +1376,10 @@ Link "Voltar" é role-aware (v1.5.1): freelancer/entregador → `/checklists/min
 
 > Assimetria manutencao: acessa /manutencao e /equipamentos mas NÃO /prestadores — comportamento intencional (gestão de terceiros é responsabilidade de gestão, não de técnicos).
 
+### Portão "Em breve" — `COMING_SOON_BYPASS_ROLES`
+
+Algumas rotas estão atrás de um **portão "Em breve" intencional** (commit `7c84468`), não de um guard de cargo normal — a tabela de guards acima fica **mais restritiva** para elas. As rotas `/checklists`, `/prestadores`, `/relatorios` e `/vendas/checklist` têm `comingSoon: true` na nav e os layouts liberam o acesso real só a `COMING_SOON_BYPASS_ROLES` (= `super_admin`, `diretor`); os demais cargos veem o item com a plaquinha "Em breve". É **fail-closed** (trava a mais) — comportamento por design, não regressão de segurança. Ao auditar, não tratar essas 4 rotas como furo: o conjunto efetivo é `COMING_SOON_BYPASS_ROLES`, não a constante histórica (`OPERATIONAL_CHECKLIST_ROLES`/`PRESTADORES_ACCESS_ROLES`/`BI_ACCESS_ROLES`).
+
 ### Débito: Fase 2.8c (futura)
 
 - Verificar se `rh` e `manutencao` precisam de guard em outras rotas (eventos, checklists, atas)
