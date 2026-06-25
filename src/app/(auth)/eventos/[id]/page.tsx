@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { format, parseISO } from 'date-fns'
@@ -9,7 +10,7 @@ import {
   ExternalLink, Wrench, PartyPopper, Truck, User2, User,
   MessageCircle, Phone, Mail,
   History, Tag, Music2, CakeSlice,
-  School,
+  School, Printer, Loader2,
 } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EventStatusBadge } from '@/components/shared/event-status-badge'
@@ -27,6 +28,7 @@ import { EventSalesSection } from './components/sections/EventSalesSection'
 import { EventDecoracaoSection } from './components/sections/EventDecoracaoSection'
 import { EventChecklistClienteSection } from './components/sections/EventChecklistClienteSection'
 import { EventChecklistDecoracaoSection } from './components/sections/EventChecklistDecoracaoSection'
+import { openEventFullPrint } from './components/sections/event-full-print'
 import { UnitChip } from '@/components/shared/unit-chip'
 import { cn } from '@/lib/utils'
 
@@ -188,6 +190,7 @@ export default function EventoDetailPage() {
 
   const { profile } = useAuth()
   const canSeeValues = canViewFestaValues(profile?.role)
+  const [isPrinting, setIsPrinting] = useState(false)
 
   const { data: event, isLoading, isError } = useEvent(id)
   const { data: checklists = [] } = useEventChecklists(id)
@@ -239,6 +242,21 @@ export default function EventoDetailPage() {
     ? `https://app10.ploomes.com/deal/${event.ploomes_deal_id}`
     : event.ploomes_url
 
+  const handlePrintAll = async () => {
+    if (isPrinting) return
+    setIsPrinting(true)
+    try {
+      await openEventFullPrint({
+        event,
+        checklists,
+        unitName: event.unit?.name ?? null,
+        canSeeValues,
+      })
+    } finally {
+      setIsPrinting(false)
+    }
+  }
+
   return (
     <div className="space-y-4 pb-20 md:pb-0">
 
@@ -262,6 +280,19 @@ export default function EventoDetailPage() {
         </span>
 
         <div className="flex items-center gap-2 ml-auto shrink-0">
+          <button
+            type="button"
+            onClick={handlePrintAll}
+            disabled={isPrinting}
+            className="inline-flex items-center gap-1.5 text-xs text-text-secondary hover:text-text-primary border border-border rounded-lg px-2.5 py-1.5 transition-colors hover:bg-muted disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {isPrinting ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Printer className="w-3.5 h-3.5" />
+            )}
+            <span className="hidden sm:inline">{isPrinting ? 'Gerando…' : 'Imprimir tudo'}</span>
+          </button>
           {ploomesUrl && (
             <a
               href={ploomesUrl}

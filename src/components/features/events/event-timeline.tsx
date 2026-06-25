@@ -59,7 +59,7 @@ function formatTs(d: Date): string {
 // ─────────────────────────────────────────────────────────────
 // DERIVE TIMELINE FROM DATA
 // ─────────────────────────────────────────────────────────────
-function deriveTimeline(
+export function deriveTimeline(
   event: EventWithDetails,
   checklists: ChecklistForList[],
 ): TimelineItem[] {
