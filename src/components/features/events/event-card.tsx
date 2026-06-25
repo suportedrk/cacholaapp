@@ -7,6 +7,7 @@ import { Clock, Users, Phone, Tag, Handshake, AlertTriangle, User, Palette } fro
 
 export type ConflictType = 'overlap' | 'short_gap' | null
 import { EventStatusBadge } from '@/components/shared/event-status-badge'
+import { ContractSignedBadge } from '@/components/shared/contract-signed-badge'
 import { PloomeBadge } from '@/components/features/ploomes/ploomes-badge'
 import { UnitChip } from '@/components/shared/unit-chip'
 import { cn } from '@/lib/utils'
@@ -99,6 +100,7 @@ export const EventCard = memo(function EventCard({ event, conflictType = null }:
             </span>
           )}
           {event.ploomes_deal_id && <PloomeBadge size="xs" />}
+          <ContractSignedBadge signed={event.contract_signed} size="sm" />
           <EventStatusBadge status={event.status} size="sm" />
         </div>
       </div>

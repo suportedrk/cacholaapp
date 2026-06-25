@@ -1131,7 +1131,22 @@ className: 'bg-blue-50 text-blue-700 border border-blue-200'
 ```
 
 Componentes que usam este padrão: `event-status-badge.tsx`, `maintenance-type-badge.tsx`,
-`maintenance-status-badge.tsx`. Ao criar novos badges, usar sempre `.badge-{cor}`.
+`maintenance-status-badge.tsx`, `contract-signed-badge.tsx`. Ao criar novos badges, usar sempre `.badge-{cor}`.
+
+#### `ContractSignedBadge` (v1.67.0) — Contrato assinado (Clicksign)
+
+`src/components/shared/contract-signed-badge.tsx` — etiqueta de contrato assinado, usada na
+listagem de eventos (`event-card.tsx`) e no topo do detalhe da festa (`/eventos/[id]`).
+
+- Prop `signed: boolean | null | undefined` — modelo de 3 estados:
+  - `null`/`undefined` → **não renderiza nada** (festa sem documento de venda)
+  - `false` → `.badge-red` + ícone `FileX2` → "Não assinado"
+  - `true` → `.badge-green` + ícone `FileCheck2` → "Assinado"
+- Prop `size`: `'sm'` (card) | `'md'` (detalhe).
+
+O chip de filtro **"Contrato não assinado"** em `/eventos` segue o mesmo molde dos chips de
+conflito (overlap/short_gap) da mesma tela — paleta `red-*` crua inline (dívida pré-existente
+dos chips de filtro daquela toolbar, replicada por consistência intra-tela, não tokenizada).
 
 ---
 

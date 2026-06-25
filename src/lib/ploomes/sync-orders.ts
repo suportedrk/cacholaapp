@@ -20,6 +20,7 @@ import { ploomesGet } from './client'
 import { loadPloomesConfig, resolveUnitId } from './sync'
 import { resolveFestaUnit } from './resolve-unit'
 import { refreshEventGuestCountFromLatestOrder } from './event-guest-sync'
+import { refreshEventContractSignedFromOrders } from './event-contract-sync'
 
 type AdminClient = SupabaseClient<Database>
 
@@ -51,6 +52,7 @@ interface PloomesOrderOtherProperty {
   FieldKey?: string
   ObjectValueName?: string | null
   IntegerValue?: number | null
+  BoolValue?: boolean | null
 }
 
 interface PloomesOrder {
@@ -82,6 +84,11 @@ const ORDER_FIELD_KEY_CHOSEN_UNIT = 'order_EDD14E93-ECEB-4EEE-A362-80416A78E61D'
 // Fonte de verdade para events.guest_count a partir da v1.10.0.
 const ORDER_FIELD_KEY_CONTRACTED_GUESTS = 'order_3620B917-6DCD-4977-824F-F159CC196E29'
 
+// FieldKey de "Assinado (Clicksign)" no Order (TypeId=10, checkbox → BoolValue).
+// Quando marcado vem BoolValue=true; quando desmarcado o Ploomes OMITE a propriedade.
+// Mirror em ploomes_config.clicksign_signed_field_key (migration 166).
+const ORDER_FIELD_KEY_CLICKSIGN_SIGNED = 'order_7B61B5EB-7BBB-406E-808E-EE9BDF17AA9C'
+
 function extractChosenUnitName(order: PloomesOrder): string | undefined {
   return order.OtherProperties?.find(
     (p) => p.FieldKey === ORDER_FIELD_KEY_CHOSEN_UNIT,
@@ -93,6 +100,15 @@ function extractContractedGuests(order: PloomesOrder): number | null {
     (p) => p.FieldKey === ORDER_FIELD_KEY_CONTRACTED_GUESTS,
   )
   return prop?.IntegerValue ?? null
+}
+
+// Assinado só quando o checkbox vem marcado (BoolValue=true). Propriedade
+// ausente, false ou null = não assinado.
+function extractContractSigned(order: PloomesOrder): boolean {
+  const prop = order.OtherProperties?.find(
+    (p) => p.FieldKey === ORDER_FIELD_KEY_CLICKSIGN_SIGNED,
+  )
+  return prop?.BoolValue === true
 }
 
 interface ProductCatalogEntry {
@@ -532,6 +548,7 @@ export async function syncOrders(
                 ploomes_last_update: order.LastUpdateDate ?? null,
                 chosen_unit_id:      chosenUnitId ?? null,
                 contracted_guests:   extractContractedGuests(order),
+                contract_signed:     extractContractSigned(order),
               },
               { onConflict: 'ploomes_order_id' },
             )
@@ -548,6 +565,8 @@ export async function syncOrders(
           // Propaga guest_count → events sempre a partir da Order mais recente do Deal
           if (order.DealId) {
             await refreshEventGuestCountFromLatestOrder(order.DealId, supabase)
+            // Propaga contract_signed → events agregando TODAS as orders do Deal
+            await refreshEventContractSignedFromOrders(order.DealId, supabase)
           }
 
           // 8. Limpar produtos antigos da Order antes de re-inserir

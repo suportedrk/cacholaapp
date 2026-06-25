@@ -40,7 +40,7 @@ import { STATUS_CONFIG } from '@/components/shared/event-status-badge'
 import type { EventStatus } from '@/types/database.types'
 import type { CalendarPreReserva } from '@/types/pre-reservas'
 import type { FilterChipColor } from '@/components/shared/filter-chip'
-import { Search, X, Sparkles, Shield } from 'lucide-react'
+import { Search, X, Sparkles, Shield, FileX2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { hasRole, ADMIN_ACCESS_ROLES } from '@/config/roles'
 
@@ -48,7 +48,7 @@ import { hasRole, ADMIN_ACCESS_ROLES } from '@/config/roles'
 // Tipos
 // ─────────────────────────────────────────────────────────────
 type ConflictFilter = 'overlap' | 'short_gap'
-type ActiveFilter   = EventStatus | ConflictFilter | 'ploomes' | 'diretoria' | null
+type ActiveFilter   = EventStatus | ConflictFilter | 'ploomes' | 'diretoria' | 'unsigned' | null
 
 // ─────────────────────────────────────────────────────────────
 // Configuração de chips de status
@@ -178,12 +178,13 @@ function EventosContent() {
   const isConflictFilter  = activeFilter === 'overlap' || activeFilter === 'short_gap'
   const isPloomesFilter   = activeFilter === 'ploomes'
   const isDiretoriaFilter = activeFilter === 'diretoria'
+  const isUnsignedFilter  = activeFilter === 'unsigned'
 
   // Paginação normal de eventos
   const queryStatus: EventStatus[] | undefined = useMemo(() => {
-    if (!activeFilter || isConflictFilter || isPloomesFilter || isDiretoriaFilter) return undefined
+    if (!activeFilter || isConflictFilter || isPloomesFilter || isDiretoriaFilter || isUnsignedFilter) return undefined
     return [activeFilter as EventStatus]
-  }, [activeFilter, isConflictFilter, isPloomesFilter, isDiretoriaFilter])
+  }, [activeFilter, isConflictFilter, isPloomesFilter, isDiretoriaFilter, isUnsignedFilter])
 
   const {
     data,
@@ -196,6 +197,7 @@ function EventosContent() {
     tab,
     status: queryStatus,
     search: debouncedSearch || undefined,
+    contractUnsigned: isUnsignedFilter,
   })
 
   const allEvents = useMemo(
@@ -260,6 +262,9 @@ function EventosContent() {
 
   // Pré-reservas a exibir
   const displayPreReservas = useMemo(() => {
+    // Filtro "Contrato não assinado" é sobre festas com documento de venda —
+    // pré-reservas não têm contrato, então ficam fora desse filtro.
+    if (isUnsignedFilter) return []
     let prs = filteredPreReservas
     // Filtro de conflito: só as pré-reservas que conflitam
     if (activeFilter === 'overlap')   prs = prs.filter((pr) => prConflicts.prOverlapIds.has(pr.id))
@@ -277,7 +282,7 @@ function EventosContent() {
       )
     }
     return prs
-  }, [filteredPreReservas, activeFilter, prConflicts, selectedOwner, debouncedSearch])
+  }, [filteredPreReservas, activeFilter, prConflicts, selectedOwner, debouncedSearch, isUnsignedFilter])
 
   // Lista de vendedoras únicas (dos eventos carregados + pré-reservas)
   const ownerOptions = useMemo(() => {
@@ -455,6 +460,22 @@ function EventosContent() {
           )}
         </button>
 
+        {/* Separador + chip: Contrato não assinado (próximos 30 dias) */}
+        <span className="w-px h-5 bg-border self-center mx-0.5" />
+        <button
+          onClick={() => toggleFilter('unsigned')}
+          className={cn(
+            'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium transition-colors',
+            isUnsignedFilter
+              ? 'border-red-300 bg-red-100 text-red-700 dark:border-red-700 dark:bg-red-900/40 dark:text-red-400'
+              : 'border-border bg-background text-muted-foreground hover:bg-muted',
+          )}
+          title="Festas sem contrato assinado (Clicksign) nos próximos 30 dias"
+        >
+          <FileX2 className="h-3.5 w-3.5" />
+          Contrato não assinado
+        </button>
+
         {/* Separador + filtros de pré-reserva (Diretoria e Ploomes) */}
         {(prDiretoria.length > 0 || prPloomes.length > 0) && (
           <span className="w-px h-5 bg-border self-center mx-0.5" />
@@ -588,6 +609,13 @@ function EventosContent() {
               icon={Shield}
               title="Nenhuma pré-venda Diretoria no período"
               description="Não há registros para a aba e período selecionados. Tente ajustar o filtro de data ou desative o filtro exclusivo."
+              action={{ label: 'Limpar filtro', onClick: () => setActiveFilter(null) }}
+            />
+          ) : isUnsignedFilter ? (
+            <EmptyState
+              icon={FileX2}
+              title="Nenhum contrato pendente"
+              description="Nenhuma festa sem contrato assinado (Clicksign) nos próximos 30 dias."
               action={{ label: 'Limpar filtro', onClick: () => setActiveFilter(null) }}
             />
           ) : tab !== 'all' ? (

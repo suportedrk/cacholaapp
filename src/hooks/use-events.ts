@@ -1,7 +1,7 @@
 'use client'
 
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns'
+import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, addDays } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
 import type { EventWithDetails, EventForList, EventInsert, EventUpdate, EventStatus } from '@/types/database.types'
 import { toast } from 'sonner'
@@ -158,15 +158,22 @@ export type EventFiltersInfinite = {
   status?: EventStatus[]
   search?: string
   noDateFilter?: boolean  // desativa o filtro date >= hoje (usado por filtros de conflito)
+  // Filtro "Contrato não assinado": festas sem assinatura (contract_signed=false)
+  // com data nos PRÓXIMOS 30 dias. Quando true, impõe sua própria janela de data
+  // (hoje..hoje+30) e ignora o range da aba.
+  contractUnsigned?: boolean
 }
+
+// Janela do filtro de contrato não assinado (dias à frente).
+const CONTRACT_UNSIGNED_WINDOW_DAYS = 30
 
 export function useEventsInfinite(filters: EventFiltersInfinite) {
   const { activeUnitId } = useUnitStore()
   const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
-  const { tab, status, search, noDateFilter } = filters
+  const { tab, status, search, noDateFilter, contractUnsigned } = filters
 
   return useInfiniteQuery({
-    queryKey: ['events-infinite', activeUnitId, tab, status, search, noDateFilter],
+    queryKey: ['events-infinite', activeUnitId, tab, status, search, noDateFilter, contractUnsigned],
     enabled: isSessionReady,
     staleTime: 30 * 1000,
     initialPageParam: 0 as number,
@@ -193,13 +200,22 @@ export function useEventsInfinite(filters: EventFiltersInfinite) {
 
       if (activeUnitId) query = query.eq('unit_id', activeUnitId)
 
-      const dateRange = getTabDateRange(tab, now)
-      if (dateRange) {
-        query = query.gte('date', dateRange.start).lte('date', dateRange.end)
-      } else if (!noDateFilter && !search?.trim() && !status?.length) {
-        // Aba "Todos" sem filtros: exibe apenas eventos a partir de hoje
-        // (noDateFilter=true desativa isso para filtros de conflito)
-        query = query.gte('date', format(now, 'yyyy-MM-dd'))
+      if (contractUnsigned) {
+        // Filtro exclusivo: festas sem contrato assinado nos próximos 30 dias.
+        // Impõe sua própria janela de data e ignora o range da aba.
+        query = query
+          .eq('contract_signed', false)
+          .gte('date', format(now, 'yyyy-MM-dd'))
+          .lte('date', format(addDays(now, CONTRACT_UNSIGNED_WINDOW_DAYS), 'yyyy-MM-dd'))
+      } else {
+        const dateRange = getTabDateRange(tab, now)
+        if (dateRange) {
+          query = query.gte('date', dateRange.start).lte('date', dateRange.end)
+        } else if (!noDateFilter && !search?.trim() && !status?.length) {
+          // Aba "Todos" sem filtros: exibe apenas eventos a partir de hoje
+          // (noDateFilter=true desativa isso para filtros de conflito)
+          query = query.gte('date', format(now, 'yyyy-MM-dd'))
+        }
       }
 
       if (status?.length) {
