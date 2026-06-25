@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EventStatusBadge } from '@/components/shared/event-status-badge'
+import { ContractSignedBadge } from '@/components/shared/contract-signed-badge'
 import { UserAvatar } from '@/components/shared/user-avatar'
 import { EventTimeline } from '@/components/features/events/event-timeline'
 import { MaintenanceStatusBadge, MaintenancePriorityBadge } from '@/components/features/maintenance/maintenance-status-badge'
@@ -294,8 +295,9 @@ export default function EventoDetailPage() {
                   <span className="text-sm text-text-secondary">{event.theme}</span>
                 </div>
               )}
-              <div className="mt-2">
+              <div className="mt-2 flex flex-wrap items-center gap-2">
                 <EventStatusBadge status={event.status} />
+                <ContractSignedBadge signed={event.contract_signed} size="md" />
               </div>
               <div className="mt-3">
                 <p className="text-sm font-medium text-text-primary">{event.client_name}</p>

@@ -582,6 +582,9 @@ export type Event = {
   fake_cake_notes: string | null          // migration 165
   decorated_sweets_notes: string | null   // migration 165
   decoration_addons_notes: string | null  // migration 165
+  // Contrato assinado (Clicksign) agregado das orders — migration 166.
+  // NULL = festa sem documento de venda; false = tem order(s) sem assinatura; true = >=1 assinada.
+  contract_signed: boolean | null          // migration 166
 }
 
 export type EventInsert = {

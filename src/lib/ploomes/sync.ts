@@ -17,6 +17,7 @@ import { resolveFestaUnit } from './resolve-unit'
 import type { PloomesDeal, SyncResult } from './types'
 import type { PloomesConfigRow } from '@/types/database.types'
 import { refreshEventGuestCountFromLatestOrder } from './event-guest-sync'
+import { refreshEventContractSignedFromOrders } from './event-contract-sync'
 
 type AdminClient = SupabaseClient<Database>
 
@@ -428,6 +429,7 @@ export async function syncDeals(
           result.dealsErrors++
         } else {
           await refreshEventGuestCountFromLatestOrder(deal.Id, supabase)
+          await refreshEventContractSignedFromOrders(deal.Id, supabase)
 
           if (existing) {
             // Detectar transição para/de lost (deal ganho/perdido ou reaberto)
