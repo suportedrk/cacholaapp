@@ -15,6 +15,7 @@
 // Idempotência: mesmo dealId processado com sucesso nos últimos 30s → skipped
 
 import { NextRequest, NextResponse } from 'next/server'
+import { timingSafeEqual } from 'node:crypto'
 import { createAdminClient } from '@/lib/supabase/server'
 import { syncDeals } from '@/lib/ploomes/sync'
 import { syncSingleDealToBI } from '@/lib/ploomes/sync-deals'
@@ -66,10 +67,19 @@ export async function POST(req: NextRequest) {
   let webhookLogId: string | null = null
 
   try {
-    // ── 1. Validar chave de verificação ──────────────────────
-    const receivedKey = req.headers.get('x-ploomes-validation-key') ?? ''
+    // ── 1. Validar chave de verificação (fail-closed) ─────────
+    // Sem chave configurada o webhook dispara sync via service_role — então
+    // recusa tudo quando PLOOMES_VALIDATION_KEY está ausente (nunca fail-open).
+    if (!VALIDATION_KEY) {
+      console.error('[Ploomes webhook] PLOOMES_VALIDATION_KEY não configurada — recusando.')
+      return NextResponse.json({ error: 'Webhook não configurado.' }, { status: 503 })
+    }
 
-    if (VALIDATION_KEY && receivedKey !== VALIDATION_KEY) {
+    const receivedKey = req.headers.get('x-ploomes-validation-key') ?? ''
+    // Comparação em tempo constante (timingSafeEqual exige buffers de mesmo tamanho).
+    const received = Buffer.from(receivedKey)
+    const expected = Buffer.from(VALIDATION_KEY)
+    if (received.length !== expected.length || !timingSafeEqual(received, expected)) {
       console.warn('[Ploomes webhook] Chave de validação inválida.')
       return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
     }

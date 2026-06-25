@@ -1096,6 +1096,41 @@ assumir que o fix resolveu.
 
 ---
 
+## REGRA DE SEGURANÇA — REVISÃO APPSEC OBRIGATÓRIA
+
+> Cachola OS é um buffet **infantil**: trata PII de menores (LGPD). Segurança não é etapa opcional.
+> Skill de referência: **`docs/seguranca/`** (`seguranca-web-appsec`) — OWASP Top 10:2025 + references de SQLi, IDOR/controle de acesso, autenticação/sessão, XSS/CSRF e configuração segura.
+> Subagente: **`appsec-security-reviewer`** (revisor AppSec primário, read-only no fluxo de revisão).
+
+**Toda mudança que toca superfície de ataque DEVE passar pelo `appsec-security-reviewer` antes do merge para `main`.** Superfície de ataque inclui:
+
+- Autenticação, login, sessão, tokens/JWT, recuperação de senha
+- Rota de API / Route Handler / Server Action (especialmente POST/PATCH/DELETE)
+- Uso de `createAdminClient` / `service_role`
+- Política de RLS, RPC `SECURITY DEFINER`, migration que cria tabela/policy/função
+- Upload/download de arquivo, bucket de Storage, webhook, endpoint de cron
+- Variáveis de ambiente, segredos, integrações com terceiros (Ploomes, SMTP, R2)
+- Renderização de conteúdo do usuário (`dangerouslySetInnerHTML`, `document.write` de print, html2canvas) e templates de e-mail
+
+**Fluxo obrigatório (não-derrogável):**
+1. Implementar a mudança em `develop`.
+2. Acionar o `appsec-security-reviewer` (read-only) sobre o diff — ele devolve veredito 🔴/🟡/✅ por achado, com categoria OWASP e o fix.
+3. **Corrigir todos os 🔴 antes do merge.** 🟡 = corrigir ou registrar como risco aceito em `docs/DIVIDAS_TECNICAS.md` (seção Segurança/LGPD) com justificativa.
+4. Só então `tsc`/`lint` limpos → merge → deploy.
+
+**Padrão de guard em API** (lição da varredura de 25/jun/2026 — endpoints proxy Ploomes tinham IDOR: qualquer autenticado lia PII do CRM por ID via `service_role`):
+```ts
+// No TOPO do handler, ANTES de createAdminClient() e de ler params/body:
+const guard = await requireRoleApi(ALLOWED_ROLES)   // src/lib/auth/require-role.ts
+if (!guard.ok) return guard.response
+const supabase = await createAdminClient()
+```
+Regra: **toda rota que usa `service_role` precisa de guard de cargo antes** — `getUser()` sozinho (só "está logado?") NÃO é autorização. Validação de upload (tipo + tamanho) sempre **server-side**, nunca só no client.
+
+**Webhook/cron:** validar a chave/segredo em **fail-closed** (segredo ausente → recusa, nunca aceita) e com comparação em tempo constante (`timingSafeEqual`).
+
+---
+
 ## REGRA SUPABASE SSR — storageKey NO MIDDLEWARE
 
 **Nunca usar o hostname completo no `storageKey` do `createServerClient`.**
@@ -1340,6 +1375,10 @@ Link "Voltar" é role-aware (v1.5.1): freelancer/entregador → `/checklists/min
 | **manutencao** | ✅ | ✅ | **🚫/403** | — | 🚫/403 |
 
 > Assimetria manutencao: acessa /manutencao e /equipamentos mas NÃO /prestadores — comportamento intencional (gestão de terceiros é responsabilidade de gestão, não de técnicos).
+
+### Portão "Em breve" — `COMING_SOON_BYPASS_ROLES`
+
+Algumas rotas estão atrás de um **portão "Em breve" intencional** (commit `7c84468`), não de um guard de cargo normal — a tabela de guards acima fica **mais restritiva** para elas. As rotas `/checklists`, `/prestadores`, `/relatorios` e `/vendas/checklist` têm `comingSoon: true` na nav e os layouts liberam o acesso real só a `COMING_SOON_BYPASS_ROLES` (= `super_admin`, `diretor`); os demais cargos veem o item com a plaquinha "Em breve". É **fail-closed** (trava a mais) — comportamento por design, não regressão de segurança. Ao auditar, não tratar essas 4 rotas como furo: o conjunto efetivo é `COMING_SOON_BYPASS_ROLES`, não a constante histórica (`OPERATIONAL_CHECKLIST_ROLES`/`PRESTADORES_ACCESS_ROLES`/`BI_ACCESS_ROLES`).
 
 ### Débito: Fase 2.8c (futura)
 

@@ -2,6 +2,7 @@
 
 import { useQuery, keepPreviousData } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
+import { orIlike } from '@/lib/utils/supabase-filters'
 import { useAuthReadyStore } from '@/stores/auth-store'
 import type { PloomesDealsRow } from '@/types/database.types'
 
@@ -64,7 +65,7 @@ export function useStageDrilldownDeals(params: DrilldownParams) {
 
       if (params.search.trim()) {
         const s = params.search.trim()
-        query = query.or(`title.ilike.%${s}%,contact_name.ilike.%${s}%`)
+        query = query.or(orIlike(['title', 'contact_name'], s))
       }
 
       const { data, count, error } = await query

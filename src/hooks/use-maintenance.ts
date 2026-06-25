@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
+import { orIlike } from '@/lib/utils/supabase-filters'
 import { toast } from 'sonner'
 import { addDays, addWeeks, addMonths, format } from 'date-fns'
 import type {
@@ -75,7 +76,7 @@ export function useMaintenanceOrders(filters: MaintenanceFilters = {}) {
 
       if (activeUnitId) q = q.eq('unit_id', activeUnitId)
       if (search?.trim()) {
-        q = q.or(`title.ilike.%${search}%,description.ilike.%${search}%`)
+        q = q.or(orIlike(['title', 'description'], search))
       }
       if (type?.length)     q = q.in('type', type)
       if (status?.length)   q = q.in('status', status)

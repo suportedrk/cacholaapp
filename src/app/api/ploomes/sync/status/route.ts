@@ -1,15 +1,17 @@
 // GET /api/ploomes/sync/status — Retorna os últimos registros de sync
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
+import { requireRoleApi } from '@/lib/auth/require-role'
+import { SETTINGS_ROLES } from '@/config/roles'
 
 export async function GET() {
   try {
-    const supabase = await createAdminClient()
+    // Guard: status de sync via service_role — restringir a quem administra a
+    // integração (super_admin, diretor), consistente com ploomes/sync e config.
+    const guard = await requireRoleApi(SETTINGS_ROLES)
+    if (!guard.ok) return guard.response
 
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 })
-    }
+    const supabase = await createAdminClient()
 
     const { data: logs, error } = await supabase
       .from('ploomes_sync_log')
@@ -33,7 +35,8 @@ export async function GET() {
       .limit(20)
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      console.error('[GET /api/ploomes/sync/status]', error)
+      return NextResponse.json({ error: 'Erro interno.' }, { status: 500 })
     }
 
     const latest = logs?.[0] ?? null

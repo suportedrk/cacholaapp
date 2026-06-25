@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
+import { orIlike } from '@/lib/utils/supabase-filters'
 import { toast } from 'sonner'
 import { useUnitStore } from '@/stores/unit-store'
 import { useAuthReadyStore } from '@/stores/auth-store'
@@ -62,7 +63,7 @@ export function useSuppliers(filters: SupplierFilters = {}) {
       if (activeUnitId) q = q.eq('unit_id', activeUnitId)
 
       if (search?.trim()) {
-        q = q.or(`company_name.ilike.%${search}%,trade_name.ilike.%${search}%`)
+        q = q.or(orIlike(['company_name', 'trade_name'], search))
       }
       if (category) q = q.eq('category', category)
       if (isActive !== undefined) q = q.eq('is_active', isActive)
