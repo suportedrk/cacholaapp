@@ -25,6 +25,18 @@ interface LoginError {
   message: string
 }
 
+/**
+ * Sanitiza o parâmetro redirectTo: só aceita caminho INTERNO (começa com "/"
+ * e não com "//" nem "/\"). Bloqueia open redirect — ?redirectTo=//evil.com
+ * jogaria a vítima logada para phishing fora do domínio. (A01:2025)
+ */
+function safeInternalPath(raw: string | null): string {
+  if (!raw || !raw.startsWith('/') || raw.startsWith('//') || raw.startsWith('/\\')) {
+    return '/dashboard'
+  }
+  return raw
+}
+
 function classifyError(error: string): LoginError {
   const lower = error.toLowerCase()
   if (
@@ -184,7 +196,7 @@ function LoginForm() {
 
   const formCardRef = useRef<HTMLDivElement>(null)
 
-  const redirectTo    = searchParams.get('redirectTo') ?? '/dashboard'
+  const redirectTo    = safeInternalPath(searchParams.get('redirectTo'))
   const callbackError = searchParams.get('error')
 
   // Already authenticated → redirect

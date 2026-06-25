@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
+import { orIlike } from '@/lib/utils/supabase-filters'
 import { toast } from 'sonner'
 import { useUnitStore } from '@/stores/unit-store'
 import { useAuthReadyStore } from '@/stores/auth-store'
@@ -93,7 +94,7 @@ export function useTickets(filters: TicketFilters = {}) {
       if (activeUnitId) q = q.eq('unit_id', activeUnitId)
 
       if (search?.trim()) {
-        q = q.or(`title.ilike.%${search.trim()}%,description.ilike.%${search.trim()}%`)
+        q = q.or(orIlike(['title', 'description'], search))
       }
       if (status?.length)   q = q.in('status', status)
       if (nature?.length)   q = q.in('nature', nature)

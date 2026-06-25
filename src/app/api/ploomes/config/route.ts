@@ -129,7 +129,7 @@ export async function PATCH(req: NextRequest) {
 
   if (error) {
     console.error('[PATCH /api/ploomes/config]', error)
-    return NextResponse.json({ error: 'Erro ao atualizar configuração.', detail: error.message, code: error.code }, { status: 500 })
+    return NextResponse.json({ error: 'Erro ao atualizar configuração.' }, { status: 500 })
   }
 
   if (!data) {
