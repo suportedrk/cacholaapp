@@ -79,6 +79,7 @@
     "hono": "^4.12.25",
     "@babel/plugin-transform-modules-systemjs": "^7.29.4",
     "serialize-javascript": "^7.0.3",
-    "lodash": "^4.18.0"
+    "lodash": "^4.18.0",
+    "ws": "^8"
   }
 }
