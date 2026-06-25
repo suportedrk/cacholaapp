@@ -1,6 +1,8 @@
 // GET /api/ploomes/deals — Proxy: lista deals do pipeline Ploomes
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
+import { requireRoleApi } from '@/lib/auth/require-role'
+import { SETTINGS_ROLES } from '@/config/roles'
 import { ploomesGet } from '@/lib/ploomes/client'
 import { loadPloomesConfig } from '@/lib/ploomes/sync'
 import { parseDeal } from '@/lib/ploomes/field-mapping'
@@ -8,12 +10,13 @@ import type { PloomesDeal } from '@/lib/ploomes/types'
 
 export async function GET() {
   try {
-    const supabase = await createAdminClient()
+    // Guard: lista deals do CRM (PII + valores) via service_role (ignora RLS).
+    // Só quem administra a integração (super_admin, diretor) — único consumidor
+    // são as telas de config/setup da integração Ploomes.
+    const guard = await requireRoleApi(SETTINGS_ROLES)
+    if (!guard.ok) return guard.response
 
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 })
-    }
+    const supabase = await createAdminClient()
 
     const dbConfig = await loadPloomesConfig(supabase, null)
     const pipelineId = dbConfig?.pipeline_id ?? parseInt(process.env.PLOOMES_PIPELINE_ID ?? '60000636', 10)

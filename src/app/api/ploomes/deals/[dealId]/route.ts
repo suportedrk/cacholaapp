@@ -1,6 +1,8 @@
 // GET /api/ploomes/deals/[dealId] — Proxy: deal específico com campos parseados
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
+import { requireRoleApi } from '@/lib/auth/require-role'
+import { SETTINGS_ROLES } from '@/config/roles'
 import { ploomesGetOne } from '@/lib/ploomes/client'
 import { loadPloomesConfig } from '@/lib/ploomes/sync'
 import { parseDeal } from '@/lib/ploomes/field-mapping'
@@ -11,12 +13,12 @@ export async function GET(
   { params }: { params: Promise<{ dealId: string }> },
 ) {
   try {
-    const supabase = await createAdminClient()
+    // Guard: este proxy usa service_role (ignora RLS) e devolve PII de cliente
+    // do CRM — restringir a quem administra a integração (super_admin, diretor).
+    const guard = await requireRoleApi(SETTINGS_ROLES)
+    if (!guard.ok) return guard.response
 
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 })
-    }
+    const supabase = await createAdminClient()
 
     const { dealId } = await params
 
