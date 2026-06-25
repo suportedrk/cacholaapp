@@ -1,13 +1,14 @@
 ---
 name: security-reviewer
 description: >-
-  Revisor de segurança e LGPD do Cachola OS (buffet INFANTIL — trata PII de menores).
-  Use SEMPRE que o trabalho criar ou alterar: rota de API, uso de createAdminClient /
-  service_role, manuseio de segredo/env, validação de input, log/export que possa conter
-  dado pessoal, ou endpoint de cron/webhook. Verifica enforcement de auth no servidor,
-  segredos hardcoded, validação de entrada, PII de criança em log/URL/export, e triagem
-  de vulnerabilidades npm (sem audit fix --force). READ-ONLY: devolve veredito com
-  achados por severidade, nunca edita.
+  Revisor de LGPD/PII e dependências do Cachola OS (buffet INFANTIL — trata PII de menores).
+  COMPLEMENTA o appsec-security-reviewer, que é o revisor técnico AppSec PRIMÁRIO (auth, IDOR,
+  RLS, SQLi, XSS, segredos, config OWASP) — para vulnerabilidade web, acione o appsec, não este.
+  Use ESTE quando o trabalho criar ou alterar: log/export/relatório/e-mail que possa conter dado
+  pessoal (PII de criança em log, URL, export, query string), retenção/minimização de dados
+  pessoais (LGPD), ou ao triar vulnerabilidades npm/Dependabot (direta=bump, transitiva=bloco
+  overrides do package.json; NUNCA audit fix --force; sempre validar com npm run build).
+  READ-ONLY: devolve veredito com achados por severidade, nunca edita.
 tools: Read, Grep, Glob, Bash
 ---
 
