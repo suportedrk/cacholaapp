@@ -1,6 +1,9 @@
 /**
- * Minimal type declarations for nodemailer v6.
- * Cobre apenas a API utilizada no projeto.
+ * Minimal type declarations for nodemailer v9.
+ * Cobre apenas a API estrutural usada no projeto (createTransport + sendMail +
+ * verify/close + host/port/secure/auth/from/to/subject/html/text). Como é só a
+ * forma usada, vale para a v9 sem ajuste. Sombreia o pacote — por isso não
+ * dependemos de @types/nodemailer.
  */
 declare module 'nodemailer' {
   interface TransportOptions {
@@ -43,6 +46,7 @@ declare module 'nodemailer' {
 
   function createTransport(options: TransportOptions): Transporter
 
+  const nodemailer: { createTransport: typeof createTransport }
   export { createTransport, TransportOptions, MailOptions, SentMessageInfo, Transporter }
-  export default { createTransport }
+  export default nodemailer
 }
