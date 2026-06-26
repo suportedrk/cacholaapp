@@ -634,10 +634,10 @@ export function useUpdateChecklistItem() {
           .upload(path, photoFile, { upsert: true })
         if (uploadErr) throw uploadErr
 
-        const { data: urlData } = supabase.storage
-          .from('checklist-photos')
-          .getPublicUrl(path)
-        photo_url = urlData.publicUrl
+        // Bucket privado (mig 169): gravamos o PATH, não a URL pública. A
+        // exibição usa signed URL — alinha com checklist_item_comments.photo_url
+        // e equipment.photo_url (que já guardam path).
+        photo_url = path
       }
 
       const now = new Date().toISOString()
