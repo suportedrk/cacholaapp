@@ -96,7 +96,10 @@ export default function NovoUsuarioPage() {
       } else {
         toast.success('Usuário criado com sucesso! Um e-mail de boas-vindas foi enviado.')
       }
-      await queryClient.invalidateQueries({ queryKey: ['users'] })
+      // refetchType: 'all' força o refetch mesmo da lista que está inativa (não
+      // montada) — sem isso a listagem volta com cache velho e o novo usuário só
+      // aparece após F5 manual.
+      await queryClient.invalidateQueries({ queryKey: ['users'], refetchType: 'all' })
       router.push(ROUTES.users)
     } catch {
       toast.error('Erro inesperado. Tente novamente.')

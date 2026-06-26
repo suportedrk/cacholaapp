@@ -139,12 +139,12 @@ export default function UsuariosPage() {
         </div>
       ) : (
         <div className="bg-card rounded-2xl border border-border overflow-hidden">
-          <div className="hidden md:grid md:grid-cols-[auto_1fr_auto_auto_auto] gap-4 px-4 py-3 border-b border-border bg-muted/30 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-            <span className="w-9" />
+          <div className="hidden md:grid md:grid-cols-[2.25rem_minmax(0,1fr)_8rem_5.5rem_14rem] gap-4 px-4 py-3 border-b border-border bg-muted/30 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            <span />
             <span>Usuário</span>
-            <span className="w-28">Cargo</span>
-            <span className="w-20">Status</span>
-            <span className="w-20">Ações</span>
+            <span>Cargo</span>
+            <span>Status</span>
+            <span className="text-right">Ações</span>
           </div>
 
           <ul className="divide-y divide-border">
@@ -164,21 +164,26 @@ export default function UsuariosPage() {
 
               return (
                 <li key={user.id}>
-                  <div className="flex items-center gap-3 px-4 py-3 hover:bg-accent/50 transition-colors md:grid md:grid-cols-[auto_1fr_auto_auto_auto] md:gap-4">
+                  <div className="flex items-center gap-3 px-4 py-3 hover:bg-accent/50 transition-colors md:grid md:grid-cols-[2.25rem_minmax(0,1fr)_8rem_5.5rem_14rem] md:gap-4">
                     <UserAvatar name={user.name} avatarUrl={user.avatar_url} />
-                    <div className="flex-1 min-w-0">
+                    <div className="min-w-0">
                       <p className="text-sm font-medium text-foreground truncate">{user.name}</p>
                       <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                     </div>
-                    <div className="hidden md:block">
-                      <span className="text-xs text-muted-foreground">
+                    <div className="hidden md:block min-w-0">
+                      <span className="text-xs text-muted-foreground truncate block">
                         {ROLE_LABELS[user.role] ?? user.role}
                       </span>
                     </div>
                     <div className="hidden md:block">
                       <StatusBadge active={user.is_active} />
                     </div>
-                    <div className="flex items-center gap-1 ml-auto md:ml-0">
+                    <div className="flex items-center gap-1 ml-auto md:ml-0 md:justify-end">
+                      {/* Slot de largura fixa para os ícones rápidos (reenviar
+                          convite / "ver como") — reservar o espaço mantém
+                          "Editar" e "Permissões" alinhados em todas as linhas,
+                          tenham elas os ícones ou não. */}
+                      <div className="flex items-center justify-end gap-1 w-[4.75rem] shrink-0">
                       {/* Botão "Reenviar convite" — para usuários com convite pendente */}
                       {canResendThis && (
                         <button
@@ -217,15 +222,16 @@ export default function UsuariosPage() {
                           }
                         </button>
                       )}
+                      </div>
                       <Link
                         href={`${ROUTES.users}/${user.id}`}
-                        className="px-3 py-1.5 text-xs font-medium rounded-lg text-primary hover:bg-primary/10 transition-colors min-h-[36px] flex items-center"
+                        className="w-16 px-3 py-1.5 text-xs font-medium rounded-lg text-primary hover:bg-primary/10 transition-colors min-h-[36px] flex items-center justify-center shrink-0"
                       >
                         Editar
                       </Link>
                       <Link
                         href={`${ROUTES.users}/${user.id}/permissoes`}
-                        className="px-3 py-1.5 text-xs font-medium rounded-lg text-muted-foreground hover:bg-accent transition-colors min-h-[36px] flex items-center"
+                        className="w-24 px-3 py-1.5 text-xs font-medium rounded-lg text-muted-foreground hover:bg-accent transition-colors min-h-[36px] flex items-center justify-center shrink-0"
                       >
                         Permissões
                       </Link>
