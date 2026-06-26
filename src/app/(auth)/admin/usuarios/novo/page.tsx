@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useQueryClient } from '@tanstack/react-query'
 import { Loader2, UserPlus } from 'lucide-react'
+import { useCreateUser } from '@/hooks/use-users'
 import { useIsReadOnly } from '@/hooks/use-read-only'
 import { useAvailableSellersForInvite } from '@/hooks/use-sellers'
 import { useUnits } from '@/hooks/use-units'
@@ -34,7 +34,7 @@ export default function NovoUsuarioPage() {
   const [isPending, setIsPending] = useState(false)
 
   const isReadOnly = useIsReadOnly()
-  const queryClient = useQueryClient()
+  const { mutateAsync: createUser } = useCreateUser()
   const { data: availableSellers = [], isLoading: loadingSellers } = useAvailableSellersForInvite()
   const { data: units = [], isLoading: loadingUnits } = useUnits()
 
@@ -68,41 +68,26 @@ export default function NovoUsuarioPage() {
 
     setIsPending(true)
     try {
-      const res = await fetch('/api/admin/users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: name.trim(),
-          email: email.trim().toLowerCase(),
-          phone: phone.trim() || null,
-          role,
-          seller_id: isVendedora ? sellerId : null,
-          units: selectedUnits.map((unit_id) => ({
-            unit_id,
-            is_default: unit_id === defaultUnitId,
-          })),
-        }),
+      const result = await createUser({
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        phone: phone.trim() || null,
+        role,
+        seller_id: isVendedora ? sellerId : null,
+        units: selectedUnits.map((unit_id) => ({
+          unit_id,
+          is_default: unit_id === defaultUnitId,
+        })),
       })
 
-      const json = await res.json()
-
-      if (!res.ok) {
-        toast.error(json.error ?? 'Erro ao criar usuário.')
-        return
-      }
-
-      if (json.warning) {
-        toast.warning(json.warning, { duration: 10000 })
+      if (result.warning) {
+        toast.warning(result.warning, { duration: 10000 })
       } else {
         toast.success('Usuário criado com sucesso! Um e-mail de boas-vindas foi enviado.')
       }
-      // refetchType: 'all' força o refetch mesmo da lista que está inativa (não
-      // montada) — sem isso a listagem volta com cache velho e o novo usuário só
-      // aparece após F5 manual.
-      await queryClient.invalidateQueries({ queryKey: ['users'], refetchType: 'all' })
       router.push(ROUTES.users)
-    } catch {
-      toast.error('Erro inesperado. Tente novamente.')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erro inesperado. Tente novamente.')
     } finally {
       setIsPending(false)
     }

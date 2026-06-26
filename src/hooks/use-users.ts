@@ -82,6 +82,45 @@ export function useUpdateUser() {
   })
 }
 
+// ─────────────────────────────────────────────────────────────
+// CRIAR USUÁRIO (provisão completa via API — convite + role + unidades)
+// ─────────────────────────────────────────────────────────────
+export interface CreateUserInput {
+  name: string
+  email: string
+  phone: string | null
+  role: UserRole
+  seller_id: string | null
+  units: { unit_id: string; is_default: boolean }[]
+}
+
+export function useCreateUser() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (input: CreateUserInput): Promise<{ id?: string; warning?: string }> => {
+      let res: Response
+      try {
+        res = await fetch('/api/admin/users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(input),
+        })
+      } catch {
+        throw new Error('Erro inesperado. Tente novamente.')
+      }
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(json.error ?? 'Erro ao criar usuário.')
+      return json as { id?: string; warning?: string }
+    },
+    onSuccess: () => {
+      // refetchType:'all' força refetch mesmo da lista inativa (não montada) —
+      // sem isso a listagem volta com cache velho e o novo usuário só aparece após F5.
+      queryClient.invalidateQueries({ queryKey: ['users'], refetchType: 'all' })
+    },
+  })
+}
+
 export function useDeactivateUser() {
   const queryClient = useQueryClient()
 
