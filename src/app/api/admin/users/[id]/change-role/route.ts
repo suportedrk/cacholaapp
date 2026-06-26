@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { requireRoleApi } from '@/lib/auth/require-role'
-import { ADMIN_USERS_MANAGE_ROLES } from '@/config/roles'
+import { ADMIN_USERS_MANAGE_ROLES, assertAssignableRole } from '@/config/roles'
 import { applyRoleTemplate } from '@/lib/rbac/apply-template'
-import type { UserRole } from '@/types/database.types'
 
 export async function POST(
   request: Request,
@@ -16,12 +15,12 @@ export async function POST(
     const { id: userId } = await params
     const body = await request.json() as { role: string; user_unit_id?: string }
 
-    if (!body.role) {
-      return NextResponse.json(
-        { error: 'Campo obrigatório ausente: role.' },
-        { status: 400 }
-      )
+    // Allowlist anti mass-assignment + trava super_admin (guard.role = ator).
+    const roleCheck = assertAssignableRole(body.role, guard.role)
+    if (!roleCheck.ok) {
+      return NextResponse.json({ error: roleCheck.error }, { status: roleCheck.status })
     }
+    const newRole = roleCheck.role
 
     const supabase = await createAdminClient()
 
@@ -39,7 +38,7 @@ export async function POST(
     // Atualizar users.role (cargo global — fonte de verdade per Decisão 4)
     const { error: roleErr } = await supabase
       .from('users')
-      .update({ role: body.role as UserRole })
+      .update({ role: newRole })
       .eq('id', userId)
 
     if (roleErr) {
@@ -48,11 +47,11 @@ export async function POST(
 
     // Aplicar template de permissões para o novo cargo (global, unit_id=null).
     // prune=true → remove grants órfãos do cargo anterior (resultado = exatamente o template).
-    const { applied, pruned } = await applyRoleTemplate(supabase, userId, body.role, null, {
+    const { applied, pruned } = await applyRoleTemplate(supabase, userId, newRole, null, {
       prune: true,
     })
 
-    return NextResponse.json({ ok: true, applied, pruned, role: body.role })
+    return NextResponse.json({ ok: true, applied, pruned, role: newRole })
   } catch (err) {
     console.error('[change-role]', err)
     return NextResponse.json({ error: 'Erro interno.' }, { status: 500 })
