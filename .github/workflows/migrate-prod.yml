@@ -27,11 +27,13 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  migrate:
-    name: Aplicar migracao em producao
+  # Validacao dos inputs roda ANTES do gate de aprovacao (sem environment).
+  # Assim, nome de arquivo invalido / confirmacao errada falha imediatamente,
+  # sem precisar aprovar o environment 'producao' so para entao ver o erro.
+  validar:
+    name: Validar inputs
     runs-on: ubuntu-latest
-    environment: producao
-    timeout-minutes: 15
+    timeout-minutes: 5
     steps:
       - name: Validar inputs
         run: |
@@ -48,6 +50,13 @@ jobs:
           fi
           echo "Inputs validados: $FILE"
 
+  migrate:
+    name: Aplicar migracao em producao
+    needs: validar
+    runs-on: ubuntu-latest
+    environment: producao
+    timeout-minutes: 15
+    steps:
       - name: Aplicar via SSH
         uses: appleboy/ssh-action@v1.2.5
         env:

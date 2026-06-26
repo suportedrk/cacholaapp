@@ -62,6 +62,37 @@ function isTransientBuildArtifact(event: ErrorEvent): boolean {
   })
 }
 
+/**
+ * Ruído BENIGNO do lock de auth do Supabase (Web Locks / @supabase/ssr).
+ *
+ * Em páginas pesadas (ex.: /dashboard dispara muitas queries no mount) o refresh
+ * do token concorre com outras chamadas de auth e o supabase-js "rouba" o lock:
+ * a chamada que perdeu rejeita com `AbortError: Lock was stolen by another
+ * request` e loga `lock:sb-...-auth-token ... was released because another
+ * request stole it`. A chamada que roubou o lock CONCLUI normalmente — NÃO trava
+ * o usuário. É mecanismo interno de coordenação do token, não bug do app.
+ *
+ * O client é singleton (`src/lib/supabase/client.ts`) e não há `getUser()` em
+ * `useEffect` — os anti-padrões que causariam lock REAL já estão cobertos; isto é
+ * só o ruído residual inerente ao supabase-js. Descartado aqui para não afogar o
+ * sinal real (fadiga de alerta), espelhando o filtro de ruído de deploy acima.
+ * Escopo proposital: só as 2 mensagens exatas do supabase-js — qualquer outro
+ * erro (mesmo AbortError de outra origem) NÃO é silenciado.
+ */
+const BENIGN_AUTH_LOCK_PATTERNS: RegExp[] = [
+  /lock was stolen by another request/i,
+  /was released because another request stole it/i,
+]
+
+function isBenignAuthLockNoise(event: ErrorEvent): boolean {
+  const values = event.exception?.values
+  if (!values?.length) return false
+  return values.some((v) => {
+    const text = `${v.type ?? ''}: ${v.value ?? ''}`
+    return BENIGN_AUTH_LOCK_PATTERNS.some((re) => re.test(text))
+  })
+}
+
 function redactDeep(value: unknown, depth = 0): unknown {
   if (depth > 6 || value == null) return value
   if (Array.isArray(value)) return value.map((v) => redactDeep(v, depth + 1))
@@ -79,6 +110,8 @@ function redactDeep(value: unknown, depth = 0): unknown {
 export function scrubEvent(event: ErrorEvent, _hint: EventHint): ErrorEvent | null {
   // Descarta o ruído transitório da janela de deploy antes de qualquer coisa.
   if (isTransientBuildArtifact(event)) return null
+  // Descarta o ruído benigno do lock de auth do Supabase (lock "roubado").
+  if (isBenignAuthLockNoise(event)) return null
 
   // Identificação do usuário: mantém só o id interno (sem e-mail/nome/ip).
   if (event.user) {
