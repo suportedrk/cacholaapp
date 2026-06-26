@@ -43,7 +43,7 @@ export async function requireRoleServer(allowed: readonly Role[]): Promise<void>
  */
 export async function requireRoleApi(
   allowed: readonly Role[],
-): Promise<{ ok: true } | { ok: false; response: NextResponse }> {
+): Promise<{ ok: true; role: Role; userId: string } | { ok: false; response: NextResponse }> {
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
@@ -67,5 +67,7 @@ export async function requireRoleApi(
     }
   }
 
-  return { ok: true }
+  // Devolve o cargo do chamador (aditivo, retrocompatível) — permite que o
+  // handler aplique regras de menor privilégio sobre o role atribuído.
+  return { ok: true, role: profile.role as Role, userId: user.id }
 }

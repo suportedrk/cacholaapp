@@ -103,6 +103,19 @@ export const GLOBAL_VIEWER_ROLES = [
 ] as const satisfies readonly Role[]
 
 /**
+ * Cargos para os quais a unidade é OPCIONAL na criação do usuário.
+ * São cargos de visão global (veem todas as unidades), então não precisam
+ * nascer vinculados a uma unidade específica. Todo cargo FORA desta lista é
+ * operacional e exige ao menos 1 unidade ao ser criado — sem isso o usuário
+ * cai em estado indeterminado de unidade no boot (ver UNIT STORE no CLAUDE.md).
+ * Decisão de produto (Bruno, 26/06/2026): apenas super_admin + diretor.
+ */
+export const UNIT_OPTIONAL_AT_CREATION_ROLES = [
+  'super_admin',
+  'diretor',
+] as const satisfies readonly Role[]
+
+/**
  * "Diretoria" — super_admin + diretor APENAS (sem pos_vendas).
  * Espelha a função SQL `is_diretoria()` (migration 153). Usada no modelo de
  * visibilidade do módulo Atas: diretoria edita atas gerais, duplica como geral

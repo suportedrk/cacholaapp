@@ -1099,7 +1099,7 @@ assumir que o fix resolveu.
 ## REGRA DE SEGURANÇA — REVISÃO APPSEC OBRIGATÓRIA
 
 > Cachola OS é um buffet **infantil**: trata PII de menores (LGPD). Segurança não é etapa opcional.
-> Skill de referência: **`docs/seguranca/`** (`seguranca-web-appsec`) — OWASP Top 10:2025 + references de SQLi, IDOR/controle de acesso, autenticação/sessão, XSS/CSRF e configuração segura.
+> Skill de referência: **`seguranca-web-appsec`** (`.claude/skills/seguranca-web-appsec/`) — OWASP Top 10:2025 + `references/` de SQLi, IDOR/controle de acesso, autenticação/sessão, XSS/CSRF e configuração segura. Invocável via Skill tool.
 > Subagente: **`appsec-security-reviewer`** (revisor AppSec primário, read-only no fluxo de revisão).
 
 **Toda mudança que toca superfície de ataque DEVE passar pelo `appsec-security-reviewer` antes do merge para `main`.** Superfície de ataque inclui:
