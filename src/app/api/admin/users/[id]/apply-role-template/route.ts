@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { requireRoleApi } from '@/lib/auth/require-role'
-import { ADMIN_USERS_MANAGE_ROLES } from '@/config/roles'
+import { ADMIN_USERS_MANAGE_ROLES, assertAssignableRole } from '@/config/roles'
 import { applyRoleTemplate } from '@/lib/rbac/apply-template'
 
 export async function POST(
@@ -28,7 +28,13 @@ export async function POST(
       return NextResponse.json({ error: 'Usuário não encontrado.' }, { status: 404 })
     }
 
-    const roleToApply = body.role ?? targetUser.role
+    // Allowlist anti mass-assignment + trava super_admin. Valida o role efetivo
+    // (body.role quando fornecido; senão o cargo atual do alvo).
+    const roleCheck = assertAssignableRole(body.role ?? targetUser.role, guard.role)
+    if (!roleCheck.ok) {
+      return NextResponse.json({ error: roleCheck.error }, { status: roleCheck.status })
+    }
+    const roleToApply = roleCheck.role
 
     // prune=true → alinha o usuário EXATAMENTE ao template (remove órfãs), coerente
     // com o diff que agora mostra as órfãs como "Remover".

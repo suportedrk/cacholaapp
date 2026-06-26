@@ -15,6 +15,8 @@ import { ItemAssignPopover, type AssignedUser } from './item-assign-popover'
 import { ItemDeadlinePopover } from './item-deadline-popover'
 import { ItemCommentsSheet } from './item-comments-sheet'
 import { useUpdateChecklistItem } from '@/hooks/use-checklists'
+import { useSignedUrls } from '@/hooks/use-signed-urls'
+import { toChecklistPhotoPath } from '@/lib/utils/storage-path'
 import type { ChecklistItem, ChecklistItemStatus, Priority, User as UserType } from '@/types/database.types'
 import { PRIORITY_LABELS } from '@/types/database.types'
 
@@ -111,6 +113,15 @@ export function ChecklistItemRow({
   }, [initialCommentsCount, item.checklist_item_comments?.length])
 
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Bucket privado (mig 169): a foto é exibida via signed URL a partir do path.
+  // toChecklistPhotoPath normaliza linhas legadas (URL pública) → path.
+  const photoPath = item.photo_url ? toChecklistPhotoPath(item.photo_url) : null
+  const { data: signedPhotoUrls = {} } = useSignedUrls(
+    'checklist-photos',
+    photoPath ? [photoPath] : [],
+  )
+  const photoSrc = photoPath ? signedPhotoUrls[photoPath] : null
 
   const isDone    = item.status === 'done'
   const isNa      = item.status === 'na'
@@ -322,10 +333,10 @@ export function ChecklistItemRow({
               </p>
             )}
 
-            {/* Photo */}
-            {item.photo_url && (
+            {/* Photo (signed URL — bucket privado) */}
+            {photoSrc && (
               <img
-                src={item.photo_url}
+                src={photoSrc}
                 alt="Foto do item"
                 className="mt-2 rounded-lg w-full max-w-[200px] object-cover border border-border"
               />

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/client'
 import { useUnitStore } from '@/stores/unit-store'
 import { generateChecklistReportPDF } from '@/lib/utils/checklist-report-pdf'
+import { toChecklistPhotoPath } from '@/lib/utils/storage-path'
 import {
   PRIORITY_LABELS, CHECKLIST_TYPE_LABELS,
 } from '@/types/database.types'
@@ -96,9 +97,11 @@ export function ExportPdfModal({ open, onClose, checklist }: ExportPdfModalProps
       // ── 2. Fetch signed URLs + resize photos ───────────────
       const reportPhotos: ChecklistReportPhoto[] = []
       if (includePhotos) {
+        // Bucket privado (mig 169): photo_url guarda PATH; normaliza linhas
+        // legadas (URL pública) → path antes de assinar.
         const photoPaths = items
           .filter((i) => i.photo_url)
-          .map((i) => i.photo_url!)
+          .map((i) => toChecklistPhotoPath(i.photo_url!))
 
         if (photoPaths.length > 0) {
           const { data: signed } = await supabase.storage
@@ -112,7 +115,7 @@ export function ExportPdfModal({ open, onClose, checklist }: ExportPdfModalProps
           for (let i = 0; i < items.length; i++) {
             const item = items[i]
             if (!item.photo_url) continue
-            const signedUrl = signedMap.get(item.photo_url)
+            const signedUrl = signedMap.get(toChecklistPhotoPath(item.photo_url))
             if (!signedUrl) continue
 
             setProgress(`Processando foto ${reportPhotos.length + 1} de ${photoPaths.length}…`)

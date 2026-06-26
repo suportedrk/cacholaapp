@@ -6,13 +6,10 @@ import {
   ADMIN_USERS_MANAGE_ROLES,
   VENDEDORA_ROLES,
   UNIT_OPTIONAL_AT_CREATION_ROLES,
-  SYSTEM_ONLY_ROLES,
+  assertAssignableRole,
 } from '@/config/roles'
 import { applyRoleTemplate } from '@/lib/rbac/apply-template'
-import { ROLE_LABELS } from '@/lib/constants'
 import type { UserRole } from '@/types/database.types'
-
-const VALID_ROLES = Object.keys(ROLE_LABELS) as UserRole[]
 
 interface UnitLink {
   unit_id: string
@@ -40,19 +37,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Campos obrigatórios ausentes.' }, { status: 400 })
     }
 
-    // ── Allowlist do cargo (anti mass-assignment) ───────────────────────────
-    // `role` vem do cliente; o tipo TypeScript é apagado no build. Validar em
-    // runtime contra o catálogo de cargos impede injeção de valor arbitrário.
-    if (!VALID_ROLES.includes(role)) {
-      return NextResponse.json({ error: 'Cargo inválido.' }, { status: 400 })
-    }
-    // Menor privilégio: cargo de sistema (super_admin) só pode ser atribuído
-    // por quem já é super_admin — espelha a semântica de SYSTEM_ONLY_ROLES.
-    if (hasRole(role, SYSTEM_ONLY_ROLES) && !hasRole(guard.role, SYSTEM_ONLY_ROLES)) {
-      return NextResponse.json(
-        { error: 'Apenas um Super Admin pode criar outro Super Admin.' },
-        { status: 403 }
-      )
+    // Allowlist anti mass-assignment + trava super_admin (fonte única em roles.ts).
+    const roleCheck = assertAssignableRole(role, guard.role)
+    if (!roleCheck.ok) {
+      return NextResponse.json({ error: roleCheck.error }, { status: roleCheck.status })
     }
 
     // ── Validação de vendedora (vínculo seller_id) ──────────────────────────
