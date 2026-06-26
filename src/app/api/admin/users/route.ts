@@ -6,6 +6,7 @@ import {
   ADMIN_USERS_MANAGE_ROLES,
   VENDEDORA_ROLES,
   UNIT_OPTIONAL_AT_CREATION_ROLES,
+  SYSTEM_ONLY_ROLES,
 } from '@/config/roles'
 import { applyRoleTemplate } from '@/lib/rbac/apply-template'
 import { ROLE_LABELS } from '@/lib/constants'
@@ -45,8 +46,9 @@ export async function POST(request: Request) {
     if (!VALID_ROLES.includes(role)) {
       return NextResponse.json({ error: 'Cargo inválido.' }, { status: 400 })
     }
-    // Menor privilégio: só um super_admin pode criar outro super_admin.
-    if (role === 'super_admin' && guard.role !== 'super_admin') {
+    // Menor privilégio: cargo de sistema (super_admin) só pode ser atribuído
+    // por quem já é super_admin — espelha a semântica de SYSTEM_ONLY_ROLES.
+    if (hasRole(role, SYSTEM_ONLY_ROLES) && !hasRole(guard.role, SYSTEM_ONLY_ROLES)) {
       return NextResponse.json(
         { error: 'Apenas um Super Admin pode criar outro Super Admin.' },
         { status: 403 }
