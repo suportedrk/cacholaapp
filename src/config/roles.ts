@@ -14,6 +14,8 @@
  */
 
 import type { Role } from '@/types/permissions'
+import type { UserRole } from '@/types/database.types'
+import { ROLE_LABELS } from '@/lib/constants'
 
 /** Acesso a qualquer aba do módulo BI (sidebar + página /bi) e Relatórios. */
 export const BI_ACCESS_ROLES = [
@@ -503,4 +505,38 @@ export function hasRole<T extends readonly Role[]>(
   allowed: T,
 ): role is T[number] {
   return !!role && (allowed as readonly Role[]).includes(role)
+}
+
+/**
+ * Catálogo de cargos atribuíveis (fonte de verdade: ROLE_LABELS).
+ * Derivado aqui para que a allowlist anti mass-assignment tenha um único ponto.
+ */
+export const VALID_ASSIGNABLE_ROLES = Object.keys(ROLE_LABELS) as UserRole[]
+
+/**
+ * Valida, em runtime, um `role` recebido do cliente antes de gravá-lo/aplicá-lo
+ * a um usuário. Resolve dois riscos (A01/A08 — mass-assignment):
+ *  1. `role` é apagado no build (tipo TS) → qualquer string injetada no body
+ *     entraria sem validação. Aqui checamos contra o catálogo.
+ *  2. Menor privilégio: cargo de sistema (super_admin) só pode ser atribuído
+ *     por quem já é super_admin (espelha SYSTEM_ONLY_ROLES).
+ *
+ * Fonte única reutilizada por POST /api/admin/users, .../change-role e
+ * .../apply-role-template. Em sucesso, devolve o role já estreitado p/ UserRole.
+ */
+export function assertAssignableRole(
+  role: string | null | undefined,
+  actorRole: Role | null | undefined,
+): { ok: true; role: UserRole } | { ok: false; error: string; status: number } {
+  if (!role || !(VALID_ASSIGNABLE_ROLES as readonly string[]).includes(role)) {
+    return { ok: false, error: 'Cargo inválido.', status: 400 }
+  }
+  if (hasRole(role as Role, SYSTEM_ONLY_ROLES) && !hasRole(actorRole, SYSTEM_ONLY_ROLES)) {
+    return {
+      ok: false,
+      error: 'Apenas um Super Admin pode atribuir o cargo Super Admin.',
+      status: 403,
+    }
+  }
+  return { ok: true, role: role as UserRole }
 }

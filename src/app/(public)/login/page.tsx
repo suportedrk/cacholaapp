@@ -18,7 +18,7 @@ import { hasRole, OPERATIONAL_MOBILE_ROLES } from '@/config/roles'
 // ERROR CLASSIFICATION
 // ─────────────────────────────────────────────────────────────
 
-type ErrorType = 'credentials' | 'blocked' | 'inactive' | 'rate_limit' | 'server' | 'unconfirmed'
+type ErrorType = 'credentials' | 'blocked' | 'inactive' | 'rate_limit' | 'server'
 
 interface LoginError {
   type: ErrorType
@@ -39,15 +39,17 @@ function safeInternalPath(raw: string | null): string {
 
 function classifyError(error: string): LoginError {
   const lower = error.toLowerCase()
+  // Falha de credencial E "e-mail não confirmado" colapsam na MESMA mensagem
+  // genérica. Distinguir "não confirmado" revelaria que a conta EXISTE (porém
+  // não confirmada) — enumeração de usuário (OWASP A07). O GoTrue devolve
+  // "Email not confirmed" só para conta existente; tratamos igual a senha errada.
   if (
     lower.includes('invalid login') || lower.includes('invalid credentials') ||
     lower.includes('wrong password') || lower.includes('user not found') ||
-    lower.includes('email not confirmed') === false && lower.includes('invalid')
+    lower.includes('invalid') ||
+    lower.includes('email not confirmed') || lower.includes('not confirmed')
   ) {
     return { type: 'credentials', message: 'E-mail ou senha incorretos. Verifique e tente novamente.' }
-  }
-  if (lower.includes('email not confirmed') || lower.includes('not confirmed')) {
-    return { type: 'unconfirmed', message: 'E-mail não confirmado. Verifique sua caixa de entrada.' }
   }
   if (lower.includes('inativa') || lower.includes('inactive')) {
     return { type: 'inactive', message: 'Sua conta está inativa. Contate o administrador do sistema.' }
@@ -71,7 +73,6 @@ const ERROR_ICONS: Record<ErrorType, React.ElementType> = {
   inactive:    AlertCircle,
   rate_limit:  Clock,
   server:      WifiOff,
-  unconfirmed: AlertCircle,
 }
 
 function ErrorAlert({ error, onRetry }: { error: LoginError; onRetry?: () => void }) {

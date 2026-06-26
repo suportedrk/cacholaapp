@@ -54,18 +54,50 @@ const nextConfig: NextConfig = {
 
   // Headers de segurança
   async headers() {
+    // CSP nesta 1ª rodada em modo Report-Only: NÃO bloqueia, só reporta
+    // violações (console/Sentry) p/ tuning antes de promover a enforce.
+    // Permissiva o suficiente p/ Next + next-pwa (worker/eval) + Recharts
+    // (style inline) + Sentry/Supabase (connect/wss). Endurecer depois com
+    // nonces e remoção de 'unsafe-inline'/'unsafe-eval'. (A02)
+    const cspReportOnly = [
+      "default-src 'self'",
+      "base-uri 'self'",
+      "object-src 'none'",
+      "frame-ancestors 'none'",
+      "img-src 'self' data: blob: https:",
+      "font-src 'self' data:",
+      "style-src 'self' 'unsafe-inline'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+      "connect-src 'self' https: wss:",
+      "worker-src 'self' blob:",
+      "manifest-src 'self'",
+      "form-action 'self'",
+    ].join('; ')
+
+    const securityHeaders = [
+      { key: 'X-Frame-Options', value: 'DENY' },
+      { key: 'X-Content-Type-Options', value: 'nosniff' },
+      { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+      {
+        key: 'Permissions-Policy',
+        value: 'camera=(), microphone=(), geolocation=()',
+      },
+      { key: 'Content-Security-Policy-Report-Only', value: cspReportOnly },
+    ]
+
+    // HSTS só em produção (HTTPS). Em dev (http://localhost) o browser ignora,
+    // e evitamos pinar o host local com includeSubDomains/preload.
+    if (process.env.NODE_ENV === 'production') {
+      securityHeaders.push({
+        key: 'Strict-Transport-Security',
+        value: 'max-age=63072000; includeSubDomains; preload',
+      })
+    }
+
     return [
       {
         source: '/(.*)',
-        headers: [
-          { key: 'X-Frame-Options', value: 'DENY' },
-          { key: 'X-Content-Type-Options', value: 'nosniff' },
-          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
-          {
-            key: 'Permissions-Policy',
-            value: 'camera=(), microphone=(), geolocation=()',
-          },
-        ],
+        headers: securityHeaders,
       },
     ]
   },
