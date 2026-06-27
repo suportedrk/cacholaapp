@@ -24,6 +24,7 @@ import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { IMPERSONATION_COOKIE, verifyImpersonationToken } from '@/lib/auth/impersonation'
+import { callerIsImpersonating, impersonationReadOnlyBlock } from '@/lib/auth/require-role'
 import type { Module, Action } from '@/types/permissions'
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>
@@ -110,6 +111,17 @@ export async function requirePermissionApi(
   action: Action,
 ): Promise<{ ok: true } | { ok: false; response: NextResponse }> {
   const supabase = await createClient()
+
+  // Modo "Ver como" = somente leitura: recusa ESCRITA via API (action != 'view') quando há
+  // impersonação ativa. As APIs rodam com a sessão do admin (sem o claim), então o read-only
+  // do banco não as alcança; bloqueamos na borda, espelhando o gate do check_permission (175).
+  if (action !== 'view') {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user && (await callerIsImpersonating(user.id))) {
+      return { ok: false, response: impersonationReadOnlyBlock(user.id, `requirePermissionApi:${modulo}.${action}`) }
+    }
+  }
+
   const result = await evaluatePermission(supabase, modulo, action)
 
   if (result.kind === 'no-session') {

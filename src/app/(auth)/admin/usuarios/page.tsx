@@ -49,7 +49,7 @@ export default function UsuariosPage() {
       // Redireciona para uma rota que o cargo do ALVO realmente acessa (freelancer/
       // entregador não veem /dashboard — cairiam em /403).
       const landing = hasRole(role as Role, OPERATIONAL_MOBILE_ROLES)
-        ? '/checklists/minhas-tarefas'
+        ? ROUTES.centralServicos
         : ROUTES.dashboard
       router.push(landing)
     } finally {

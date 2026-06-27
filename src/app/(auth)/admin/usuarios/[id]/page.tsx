@@ -100,7 +100,7 @@ export default function EditarUsuarioPage() {
             onClick={async () => {
               await startImpersonate.mutateAsync(user!.id)
               const landing = hasRole(user!.role, OPERATIONAL_MOBILE_ROLES)
-                ? '/checklists/minhas-tarefas'
+                ? ROUTES.centralServicos
                 : ROUTES.dashboard
               router.push(landing)
             }}

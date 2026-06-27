@@ -14,8 +14,32 @@ import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { IMPERSONATION_COOKIE, verifyImpersonationToken } from '@/lib/auth/impersonation'
+import { logAudit } from '@/lib/audit'
 import { hasRole, IMPERSONATION_ROLES } from '@/config/roles'
 import type { Role } from '@/types/permissions'
+
+/**
+ * True quando o chamador (sessão real) está num "Ver como" ativo — cookie de impersonação
+ * válido E mintado para ELE. Usado pelos guards de API para recusar escrita (o read-only do
+ * banco só cobre o token mintado do browser; rotas de API rodam com a sessão do admin, que
+ * NÃO carrega o claim → gravariam de verdade como o admin). Read-only de borda, fail-closed.
+ */
+export async function callerIsImpersonating(callerId: string): Promise<boolean> {
+  const store = await cookies()
+  const claims = verifyImpersonationToken(store.get(IMPERSONATION_COOKIE)?.value)
+  return !!claims && claims.impersonator === callerId
+}
+
+/** Resposta 403 padrão de "somente leitura" + audit do bloqueio (fecha o gap de auditoria). */
+export function impersonationReadOnlyBlock(callerId: string, context: string): NextResponse {
+  void logAudit({
+    action: 'impersonate_write_blocked',
+    module: 'users',
+    entityType: 'api',
+    newData: { admin_id: callerId, context },
+  })
+  return NextResponse.json({ error: 'Modo "Ver como" é somente leitura.' }, { status: 403 })
+}
 
 /**
  * Verifica role em Server Components / layouts.
@@ -79,6 +103,13 @@ export async function requireRoleApi(
       ok: false,
       response: NextResponse.json({ error: 'Não autorizado.' }, { status: 401 }),
     }
+  }
+
+  // Modo "Ver como" = somente leitura também nas rotas de API: as APIs rodam com a sessão
+  // do admin (sem o claim), então o read-only do banco não as alcança — recusamos na borda.
+  // (requireRoleApi gateia rotas predominantemente de escrita/admin; bloquear é fail-closed.)
+  if (await callerIsImpersonating(user.id)) {
+    return { ok: false, response: impersonationReadOnlyBlock(user.id, 'requireRoleApi') }
   }
 
   const { data: profile } = await supabase
