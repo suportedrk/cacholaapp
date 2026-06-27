@@ -104,6 +104,29 @@ function AuthBootstrap() {
         setAuthState(null, null, null)
       }
       setSessionReady()
+
+      // Re-hidrata o modo "Ver como" após F5 — SEQUENCIAL, depois da carga real do admin
+      // (profile + units já no store), para o startImpersonating snapshotar o contexto do
+      // admin e sobrescrever pelo do alvo sem corrida com loadUserUnits.
+      if (session?.user) {
+        try {
+          const res = await fetch('/api/admin/impersonate', { method: 'GET' })
+          if (res.ok) {
+            const data = await res.json()
+            if (data?.active && data?.token) {
+              useImpersonateStore.getState().startImpersonating({
+                token: data.token,
+                profile: data.profile,
+                userUnits: data.userUnits,
+                permissions: data.permissions,
+              })
+              qc.invalidateQueries()
+            }
+          }
+        } catch {
+          // sem re-hidratação — segue como sessão normal do admin
+        }
+      }
     })
 
     // ── Listener de mudanças de auth ─────────────────────────────────────────

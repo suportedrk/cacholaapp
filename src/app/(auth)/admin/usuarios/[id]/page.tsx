@@ -17,7 +17,7 @@ import { useAuth } from '@/hooks/use-auth'
 import { useStartImpersonate } from '@/hooks/use-impersonate'
 import { ROLE_LABELS, ROUTES } from '@/lib/constants'
 import type { UserRole } from '@/types/database.types'
-import { hasRole, IMPERSONATION_ROLES } from '@/config/roles'
+import { hasRole, IMPERSONATION_ROLES, OPERATIONAL_MOBILE_ROLES } from '@/config/roles'
 
 export default function EditarUsuarioPage() {
   const params = useParams()
@@ -99,7 +99,10 @@ export default function EditarUsuarioPage() {
             disabled={startImpersonate.isPending}
             onClick={async () => {
               await startImpersonate.mutateAsync(user!.id)
-              router.push(ROUTES.dashboard)
+              const landing = hasRole(user!.role, OPERATIONAL_MOBILE_ROLES)
+                ? '/checklists/minhas-tarefas'
+                : ROUTES.dashboard
+              router.push(landing)
             }}
             className="shrink-0 border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-400 dark:hover:bg-amber-950/30"
           >

@@ -222,22 +222,6 @@ export async function GET(request: Request) {
       return NextResponse.json({ active: false })
     }
 
-    // COMPAT LEGADA (remover na Fase 3): o hook atual chama GET ?userId= para o "start"
-    // do modo menu-simulação. Mantém o comportamento antigo (retorna contexto, SEM mintar
-    // token nem setar cookie) até o frontend migrar para POST.
-    const legacyUserId = new URL(request.url).searchParams.get('userId')
-    if (legacyUserId) {
-      if (legacyUserId === auth.callerId) {
-        return NextResponse.json({ message: 'Não é possível visualizar como você mesmo.' }, { status: 400 })
-      }
-      const ctx = await loadTargetContext(legacyUserId)
-      if ('error' in ctx) return NextResponse.json({ message: 'Usuário não encontrado.' }, { status: 404 })
-      if (hasRole(ctx.profile.role as UserRole, IMPERSONATION_ROLES)) {
-        return NextResponse.json({ message: 'Não é possível visualizar como outro super_admin.' }, { status: 403 })
-      }
-      return NextResponse.json({ profile: ctx.profile, userUnits: ctx.userUnits, permissions: ctx.permissions })
-    }
-
     const store = await cookies()
     const cookieValue = store.get(IMPERSONATION_COOKIE)?.value
     const claims = verifyImpersonationToken(cookieValue)
