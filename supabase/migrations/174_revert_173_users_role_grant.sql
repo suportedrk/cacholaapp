@@ -1,0 +1,43 @@
+-- ============================================================
+-- Migration 174 — REVERTE a 173 (restaura UPDATE table-level de authenticated em users)
+-- ============================================================
+-- POR QUE (incidente 27/06/2026):
+--   A migration 173 revogou o UPDATE da coluna `role` (e demais) de `authenticated`
+--   como camada de GRANT contra auto-escalada de cargo. A premissa era que TODA
+--   escrita legitima de `role` passa por `service_role`. ERRADA:
+--
+--   `createAdminClient()` (src/lib/supabase/server.ts) usa `createServerClient` do
+--   @supabase/ssr COM os cookies da requisicao. Quando ha sessao de usuario, o
+--   @supabase/ssr usa o JWT DO USUARIO no header Authorization (o service_role key
+--   vira apenas o `apikey` do gateway). Ou seja, os endpoints de admin
+--   (POST /api/admin/users/[id]/change-role e a provisao de cargo em
+--   POST /api/admin/users) rodam como `authenticated` (o admin logado), NAO como
+--   service_role. Funcionavam porque (a) `authenticated` tinha o GRANT table-level
+--   e (b) o trigger 171 liberava (admin tem usuarios:edit).
+--
+--   Com a 173, o GRANT de `role` sumiu para `authenticated` -> o UPDATE do
+--   change-role e da criacao de usuario passou a falhar com 42501 ANTES do trigger,
+--   inclusive para admins legitimos. Sintoma em prod: "Erro ao atualizar cargo".
+--
+-- ESTA MIGRATION desfaz a 173 (forward-only, padrao append-only): restaura o UPDATE
+-- table-level de `authenticated`. Em DR (replay 1..N), a 173 revoga e a 174 re-concede
+-- -> estado liquido correto. Idempotente.
+--
+-- SEGURANCA: NAO ha regressao vs. o baseline. A protecao contra auto-escalada de
+-- `role` continua sendo o trigger da mig 171 (protect_users_privileged_columns), que
+-- gateia por `usuarios:edit` e distingue admin de usuario comum — exatamente o que a
+-- camada de GRANT (coarse) nao conseguia fazer dado que admin tambem roda como
+-- `authenticated`.
+--
+-- PRE-REQUISITO para re-tentar a camada de GRANT no futuro: os endpoints de admin
+-- precisam usar um client service_role DE VERDADE (sem o override de JWT por cookie
+-- do @supabase/ssr) antes de revogar `role` de `authenticated`. Ver DIVIDAS_TECNICAS
+-- (Seguranca/LGPD).
+--
+-- Sem BEGIN/COMMIT nem NOTIFY pgrst (a esteira cuida).
+-- ============================================================
+
+-- Restaura o UPDATE table-level de authenticated (desfaz o REVOKE + grants de coluna
+-- da 173; o GRANT table-level abrange todas as colunas e torna os grants de coluna
+-- da 173 inertes).
+GRANT UPDATE ON public.users TO authenticated;
