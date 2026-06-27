@@ -72,6 +72,11 @@ const nextConfig: NextConfig = {
       "worker-src 'self' blob:",
       "manifest-src 'self'",
       "form-action 'self'",
+      // Coleta de violações (ainda Report-Only): report-uri p/ browsers que o
+      // suportam; report-to (grupo definido no header Reporting-Endpoints) p/ os
+      // mais novos. Ambos apontam p/ POST /api/csp-report (scrub de PII → log).
+      'report-uri /api/csp-report',
+      'report-to csp-endpoint',
     ].join('; ')
 
     const securityHeaders = [
@@ -82,6 +87,8 @@ const nextConfig: NextConfig = {
         key: 'Permissions-Policy',
         value: 'camera=(), microphone=(), geolocation=()',
       },
+      // Define o grupo `csp-endpoint` usado pela diretiva report-to da CSP.
+      { key: 'Reporting-Endpoints', value: 'csp-endpoint="/api/csp-report"' },
       { key: 'Content-Security-Policy-Report-Only', value: cspReportOnly },
     ]
 
