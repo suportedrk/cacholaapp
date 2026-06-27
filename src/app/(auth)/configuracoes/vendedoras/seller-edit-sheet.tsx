@@ -14,26 +14,51 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Link2, Link2Off } from 'lucide-react'
 import { useUnits } from '@/hooks/use-units'
-import { useUpdateSeller } from '@/hooks/use-sellers'
+import {
+  useUpdateSeller,
+  useUsersAvailableForSellerLink,
+  useSetSellerUserLink,
+  type SellerUserLink,
+} from '@/hooks/use-sellers'
+import { ROLE_LABELS } from '@/lib/constants'
 import type { Seller, SellerFormInput } from '@/types/seller'
 
 interface SellerEditSheetProps {
   seller: Seller | null
+  linkedUser: SellerUserLink | null
   open: boolean
   onOpenChange: (open: boolean) => void
   isSuperAdmin: boolean
+  canManageLink: boolean
 }
 
 export function SellerEditSheet({
   seller,
+  linkedUser,
   open,
   onOpenChange,
   isSuperAdmin,
+  canManageLink,
 }: SellerEditSheetProps) {
   const { data: units = [] } = useUnits()
   const updateSeller = useUpdateSeller()
+  const setLink = useSetSellerUserLink()
+
+  const [confirmUnlink, setConfirmUnlink] = useState(false)
+  const [selectedUserId, setSelectedUserId] = useState<string>('')
+
+  // Seletor de "vincular" só quando faz sentido: vendedora real, ativa, sem
+  // usuário e quem opera pode gerenciar. Lazy — não busca usuários à toa.
+  const canPickUser =
+    open &&
+    canManageLink &&
+    !!seller &&
+    !seller.is_system_account &&
+    seller.status === 'active' &&
+    !linkedUser
+  const { data: availableUsers = [] } = useUsersAvailableForSellerLink(canPickUser)
 
   const [form, setForm] = useState<SellerFormInput>({
     name: '',
@@ -59,8 +84,26 @@ export function SellerEditSheet({
         notes: seller.notes,
         is_system_account: seller.is_system_account,
       })
+      setConfirmUnlink(false)
+      setSelectedUserId('')
     }
   }, [seller])
+
+  function handleUnlink() {
+    if (!seller) return
+    setLink.mutate(
+      { sellerId: seller.id, userId: null },
+      { onSuccess: () => setConfirmUnlink(false) },
+    )
+  }
+
+  function handleLink() {
+    if (!seller || !selectedUserId) return
+    setLink.mutate(
+      { sellerId: seller.id, userId: selectedUserId },
+      { onSuccess: () => setSelectedUserId('') },
+    )
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -101,6 +144,114 @@ export function SellerEditSheet({
               />
               <p className="text-xs text-text-tertiary">Nome sincronizado pelo Ploomes — não editável.</p>
             </div>
+
+            {/* Usuário vinculado */}
+            {seller && (
+              <div className="space-y-2 rounded-lg border border-border-default p-3">
+                <Label className="flex items-center gap-1.5">
+                  <Link2 className="h-3.5 w-3.5 text-text-tertiary" />
+                  Usuário vinculado
+                </Label>
+
+                {seller.is_system_account ? (
+                  <p className="text-xs text-text-tertiary">
+                    Contas de sistema não vinculam usuário.
+                  </p>
+                ) : linkedUser ? (
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="text-sm text-text-primary truncate">{linkedUser.name}</div>
+                      {linkedUser.email && (
+                        <div className="text-xs text-text-tertiary truncate">{linkedUser.email}</div>
+                      )}
+                    </div>
+                    {canManageLink &&
+                      (confirmUnlink ? (
+                        <div className="flex shrink-0 gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setConfirmUnlink(false)}
+                            disabled={setLink.isPending}
+                          >
+                            Cancelar
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="destructive"
+                            onClick={handleUnlink}
+                            disabled={setLink.isPending}
+                          >
+                            {setLink.isPending && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
+                            Confirmar
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="shrink-0"
+                          onClick={() => setConfirmUnlink(true)}
+                        >
+                          <Link2Off className="mr-1.5 h-3.5 w-3.5" />
+                          Desvincular
+                        </Button>
+                      ))}
+                  </div>
+                ) : seller.status !== 'active' ? (
+                  <p className="text-xs text-text-tertiary">
+                    Vendedora inativa — reative para vincular um usuário.
+                  </p>
+                ) : !canManageLink ? (
+                  <p className="text-xs text-text-tertiary">Sem usuário vinculado.</p>
+                ) : (
+                  <div className="space-y-2">
+                    <Select
+                      value={selectedUserId}
+                      onValueChange={(v) => setSelectedUserId(v ?? '')}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue>
+                          {selectedUserId
+                            ? (availableUsers.find((u) => u.id === selectedUserId)?.name ??
+                              'Selecione um usuário')
+                            : 'Selecione um usuário'}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableUsers.length === 0 ? (
+                          <div className="px-2 py-3 text-xs text-text-tertiary">
+                            Nenhum usuário disponível para vincular.
+                          </div>
+                        ) : (
+                          availableUsers.map((u) => (
+                            <SelectItem key={u.id} value={u.id}>
+                              {u.name}
+                              <span className="ml-1.5 text-xs text-text-tertiary">
+                                ({ROLE_LABELS[u.role] ?? u.role})
+                              </span>
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={handleLink}
+                      disabled={!selectedUserId || setLink.isPending}
+                    >
+                      {setLink.isPending && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
+                      <Link2 className="mr-1.5 h-3.5 w-3.5" />
+                      Vincular
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* E-mail */}
             <div className="space-y-1.5">
