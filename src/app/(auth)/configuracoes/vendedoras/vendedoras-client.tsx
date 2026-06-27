@@ -1,6 +1,3 @@
-// TODO Fase futura: coluna "Usuário vinculado" na listagem de vendedoras,
-// com ação de desvincular/revincular (JOIN users.seller_id = sellers.id).
-
 'use client'
 
 import { useState } from 'react'
@@ -18,7 +15,7 @@ import {
   TooltipProvider,
 } from '@/components/ui/tooltip'
 import { useLoadingTimeout } from '@/hooks/use-loading-timeout'
-import { useSellers } from '@/hooks/use-sellers'
+import { useSellers, useSellerUserLinks } from '@/hooks/use-sellers'
 import { useUnits } from '@/hooks/use-units'
 import { useAuth } from '@/hooks/use-auth'
 import { SellerEditSheet } from './seller-edit-sheet'
@@ -52,6 +49,7 @@ export function VendedorasClient() {
   const canSyncSellers = hasRole(realProfile?.role, SELLERS_MANAGE_ROLES)
 
   const { data: sellers = [], isLoading, isError } = useSellers()
+  const { data: userLinks = {} } = useSellerUserLinks()
   const { data: units = [] } = useUnits()
   const { isTimedOut, retry } = useLoadingTimeout(isLoading)
 
@@ -204,7 +202,8 @@ export function VendedorasClient() {
                 <tr>
                   <th className="text-left px-4 py-3 font-medium">Nome</th>
                   <th className="text-left px-4 py-3 font-medium">Status</th>
-                  <th className="text-left px-4 py-3 font-medium hidden md:table-cell">Contratação</th>
+                  <th className="text-left px-4 py-3 font-medium hidden md:table-cell">Usuário vinculado</th>
+                  <th className="text-left px-4 py-3 font-medium hidden lg:table-cell">Contratação</th>
                   <th className="text-left px-4 py-3 font-medium hidden lg:table-cell">Desligamento</th>
                   <th className="text-left px-4 py-3 font-medium hidden md:table-cell">Unidade</th>
                   <th className="px-4 py-3" />
@@ -237,7 +236,23 @@ export function VendedorasClient() {
                         </Badge>
                       )}
                     </td>
-                    <td className="px-4 py-3 hidden md:table-cell text-text-secondary">
+                    <td className="px-4 py-3 hidden md:table-cell">
+                      {seller.is_system_account ? (
+                        <span className="text-text-tertiary">—</span>
+                      ) : userLinks[seller.id] ? (
+                        <div>
+                          <div className="text-text-primary">{userLinks[seller.id].name}</div>
+                          {userLinks[seller.id].email && (
+                            <div className="text-xs text-text-tertiary mt-0.5">
+                              {userLinks[seller.id].email}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-text-tertiary">Sem usuário</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 hidden lg:table-cell text-text-secondary">
                       {formatDate(seller.hire_date)}
                     </td>
                     <td className="px-4 py-3 hidden lg:table-cell text-text-secondary">
@@ -265,9 +280,11 @@ export function VendedorasClient() {
 
       <SellerEditSheet
         seller={editSeller}
+        linkedUser={editSeller ? (userLinks[editSeller.id] ?? null) : null}
         open={sheetOpen}
         onOpenChange={setSheetOpen}
         isSuperAdmin={isSuperAdmin}
+        canManageLink={canSyncSellers}
       />
     </>
   )
