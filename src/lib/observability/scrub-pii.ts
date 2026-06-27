@@ -93,7 +93,7 @@ function isBenignAuthLockNoise(event: ErrorEvent): boolean {
   })
 }
 
-function redactDeep(value: unknown, depth = 0): unknown {
+export function redactDeep(value: unknown, depth = 0): unknown {
   if (depth > 6 || value == null) return value
   if (Array.isArray(value)) return value.map((v) => redactDeep(v, depth + 1))
   if (typeof value === 'object') {
