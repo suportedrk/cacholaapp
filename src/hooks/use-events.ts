@@ -3,6 +3,7 @@
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, addDays } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
+import { getEffectiveUser } from '@/lib/auth/effective-user'
 import type { EventWithDetails, EventForList, EventInsert, EventUpdate, EventStatus } from '@/types/database.types'
 import { toast } from 'sonner'
 import { notifyEventCreated, notifyStatusChanged } from '@/lib/notifications'
@@ -440,7 +441,7 @@ export function useCreateEvent() {
       ;(async () => {
         try {
           const sb = createClient()
-          const { data: { user } } = await sb.auth.getUser()
+          const user = getEffectiveUser()
           await notifyEventCreated(sb as any, eventId, user?.id)
         } catch { /* não-crítico */ }
       })()
@@ -516,7 +517,7 @@ export function useChangeEventStatus() {
       ;(async () => {
         try {
           const sb = createClient()
-          const { data: { user } } = await sb.auth.getUser()
+          const user = getEffectiveUser()
           await notifyStatusChanged(sb as any, id, status, user?.id)
         } catch { /* não-crítico */ }
       })()

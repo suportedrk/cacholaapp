@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
+import { getEffectiveUser } from '@/lib/auth/effective-user'
 import { toast } from 'sonner'
 import { useAuthReadyStore } from '@/stores/auth-store'
 import {
@@ -141,7 +142,7 @@ export function useAddProviderToEvent() {
   return useMutation({
     mutationFn: async (input: CreateEventProviderInput) => {
       const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
+      const user = getEffectiveUser()
       const { data, error } = await supabase
         .from('event_providers')
         .insert({ ...input, created_by: user?.id ?? null })
@@ -159,7 +160,7 @@ export function useAddProviderToEvent() {
       ;(async () => {
         try {
           const supabase = createClient()
-          const { data: { user } } = await supabase.auth.getUser()
+          const user = getEffectiveUser()
           await notifyProviderAddedToEvent(supabase, data.id, user?.id ?? undefined)
         } catch { /* non-critical */ }
       })()
@@ -184,7 +185,7 @@ export function useUpdateEventProvider() {
   return useMutation({
     mutationFn: async ({ id, event_id, provider_id, ...patch }: UpdateEventProviderInput) => {
       const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
+      const user = getEffectiveUser()
 
       const update: Record<string, unknown> = { ...patch }
 
@@ -211,7 +212,7 @@ export function useUpdateEventProvider() {
         ;(async () => {
           try {
             const supabase = createClient()
-            const { data: { user } } = await supabase.auth.getUser()
+            const user = getEffectiveUser()
             await notifyProviderStatusChanged(supabase, data.id, data.status as string, user?.id ?? undefined)
           } catch { /* non-critical */ }
         })()

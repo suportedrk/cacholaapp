@@ -4,6 +4,7 @@ import { useRef, useState } from 'react'
 import { Camera, RefreshCw, Receipt, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
+import { getEffectiveUser } from '@/lib/auth/effective-user'
 import { compressImage } from '@/components/shared/photo-upload'
 import { cn } from '@/lib/utils'
 import { StatusBottomSheet } from './status-bottom-sheet'
@@ -43,7 +44,7 @@ export function QuickActionsBar({ orderId, currentStatus, canComplete }: Props) 
     setUploading(true)
     try {
       const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
+      const user = getEffectiveUser()
       if (!user) { toast.error('Não autenticado'); return }
 
       const compressed = await compressImage(file, 1200, 0.8)
