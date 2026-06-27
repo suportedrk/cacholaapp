@@ -25,6 +25,9 @@ interface ImpersonateState {
   // ─── Status ───────────────────────────────────────────────────
   isImpersonating: boolean
 
+  // ─── Token mintado do alvo (usado pelo client de dados; lido via accessToken) ─
+  impersonationToken: string | null
+
   // ─── Dados do usuário impersonado ────────────────────────────
   impersonatedProfile: AppUser | null
   impersonatedUserUnits: UserUnitWithUnit[] | null
@@ -37,6 +40,7 @@ interface ImpersonateState {
 
   // ─── Actions ──────────────────────────────────────────────────
   startImpersonating: (params: {
+    token: string
     profile: AppUser
     userUnits: UserUnitWithUnit[]
     permissions: PermissionMap
@@ -47,6 +51,7 @@ interface ImpersonateState {
 export const useImpersonateStore = create<ImpersonateState>((set) => ({
   // Estado inicial
   isImpersonating: false,
+  impersonationToken: null,
   impersonatedProfile: null,
   impersonatedUserUnits: null,
   impersonatedPermissions: null,
@@ -54,7 +59,7 @@ export const useImpersonateStore = create<ImpersonateState>((set) => ({
   originalActiveUnit: null,
   originalUserUnits: null,
 
-  startImpersonating: ({ profile, userUnits, permissions }) => {
+  startImpersonating: ({ token, profile, userUnits, permissions }) => {
     // Importação lazy para evitar dependência circular
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { useUnitStore } = require('@/stores/unit-store') as typeof import('@/stores/unit-store')
@@ -83,6 +88,7 @@ export const useImpersonateStore = create<ImpersonateState>((set) => ({
     // 4. Setar estado de impersonate
     set({
       isImpersonating: true,
+      impersonationToken: token,
       impersonatedProfile: profile,
       impersonatedUserUnits: userUnits,
       impersonatedPermissions: permissions,
@@ -105,6 +111,7 @@ export const useImpersonateStore = create<ImpersonateState>((set) => ({
     // 2. Limpar estado de impersonate
     set({
       isImpersonating: false,
+      impersonationToken: null,
       impersonatedProfile: null,
       impersonatedUserUnits: null,
       impersonatedPermissions: null,

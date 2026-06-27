@@ -44,10 +44,10 @@ export function ImpersonateBanner() {
           </span>
         </p>
         <p className="sm:hidden text-xs text-white/80 mt-0.5 truncate">
-          ⚠️ Modo visualização: apenas menus e permissões. Dados são do seu acesso.
+          🔒 Somente leitura — dados e acesso deste usuário. Nada é salvo.
         </p>
         <p className="hidden sm:block text-xs text-white/80 mt-0.5 truncate">
-          ⚠️ Simulação visual apenas — os menus e botões refletem o que este usuário vê, mas os dados mostrados continuam sendo os seus.
+          🔒 Modo somente leitura — você vê os dados e o acesso reais deste usuário; nenhuma alteração é salva.
         </p>
       </div>
 

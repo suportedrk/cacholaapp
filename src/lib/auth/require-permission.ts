@@ -20,8 +20,11 @@
  */
 
 import { redirect } from 'next/navigation'
+import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { IMPERSONATION_COOKIE, verifyImpersonationToken } from '@/lib/auth/impersonation'
+import { callerIsImpersonating, impersonationReadOnlyBlock } from '@/lib/auth/require-role'
 import type { Module, Action } from '@/types/permissions'
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>
@@ -51,12 +54,26 @@ export async function evaluatePermission(
   supabase: SupabaseServerClient,
   modulo: Module,
   action: Action,
+  impersonationAware = false,
 ): Promise<PermissionCheckResult> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { kind: 'no-session' }
 
+  // Modo "Ver como" (só guards de LAYOUT, impersonationAware=true): checa a permissão do
+  // usuário-ALVO (claims.sub) em vez do admin, para reproduzir os /403 do alvo. Seguro:
+  // o cookie é assinado e vinculado (impersonator === user.id) e só super_admin minta, então
+  // trocar para o alvo só pode RESTRINGIR (nunca escalar — o admin já passa por bypass).
+  let effectiveUserId = user.id
+  if (impersonationAware) {
+    const store = await cookies()
+    const claims = verifyImpersonationToken(store.get(IMPERSONATION_COOKIE)?.value)
+    if (claims && claims.impersonator === user.id) {
+      effectiveUserId = claims.sub
+    }
+  }
+
   const { data, error } = await supabase.rpc('check_permission', {
-    p_user_id: user.id,
+    p_user_id: effectiveUserId,
     p_module: modulo,
     p_action: action,
   })
@@ -76,7 +93,8 @@ export async function requirePermissionServer(
   action: Action,
 ): Promise<void> {
   const supabase = await createClient()
-  const result = await evaluatePermission(supabase, modulo, action)
+  // Guards de LAYOUT são impersonation-aware (reproduzem os /403 do alvo no modo "Ver como").
+  const result = await evaluatePermission(supabase, modulo, action, true)
 
   if (result.kind === 'no-session') redirect('/login')
   if (result.kind === 'denied') redirect('/403')
@@ -93,6 +111,17 @@ export async function requirePermissionApi(
   action: Action,
 ): Promise<{ ok: true } | { ok: false; response: NextResponse }> {
   const supabase = await createClient()
+
+  // Modo "Ver como" = somente leitura: recusa ESCRITA via API (action != 'view') quando há
+  // impersonação ativa. As APIs rodam com a sessão do admin (sem o claim), então o read-only
+  // do banco não as alcança; bloqueamos na borda, espelhando o gate do check_permission (175).
+  if (action !== 'view') {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user && (await callerIsImpersonating(user.id))) {
+      return { ok: false, response: impersonationReadOnlyBlock(user.id, `requirePermissionApi:${modulo}.${action}`) }
+    }
+  }
+
   const result = await evaluatePermission(supabase, modulo, action)
 
   if (result.kind === 'no-session') {

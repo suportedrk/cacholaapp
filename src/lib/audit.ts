@@ -11,6 +11,8 @@ export const AUDIT_ACTIONS = [
   'permission_changed',
   'password_reset_requested',
   'impersonate_start',
+  'impersonate_stop',
+  'impersonate_write_blocked',
 ] as const
 export type AuditAction = (typeof AUDIT_ACTIONS)[number]
 

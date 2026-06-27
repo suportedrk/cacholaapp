@@ -13,7 +13,8 @@ import { useAuth } from '@/hooks/use-auth'
 import { useStartImpersonate } from '@/hooks/use-impersonate'
 import { ROLE_LABELS, ROUTES } from '@/lib/constants'
 import { cn } from '@/lib/utils'
-import { hasRole, ADMIN_USERS_MANAGE_ROLES, IMPERSONATION_ROLES } from '@/config/roles'
+import { hasRole, ADMIN_USERS_MANAGE_ROLES, IMPERSONATION_ROLES, OPERATIONAL_MOBILE_ROLES } from '@/config/roles'
+import type { Role } from '@/types/permissions'
 import type { UserRole } from '@/types/database.types'
 
 export default function UsuariosPage() {
@@ -41,12 +42,16 @@ export default function UsuariosPage() {
   const resendInvite = useResendInvite()
   const [resendingUserId, setResendingUserId] = useState<string | null>(null)
 
-  async function handleViewAs(userId: string) {
+  async function handleViewAs(userId: string, role: string) {
     setLoadingUserId(userId)
     try {
       await startImpersonate.mutateAsync(userId)
-      // Redirecionar para o dashboard com o contexto do usuário impersonado
-      router.push(ROUTES.dashboard)
+      // Redireciona para uma rota que o cargo do ALVO realmente acessa (freelancer/
+      // entregador não veem /dashboard — cairiam em /403).
+      const landing = hasRole(role as Role, OPERATIONAL_MOBILE_ROLES)
+        ? ROUTES.centralServicos
+        : ROUTES.dashboard
+      router.push(landing)
     } finally {
       setLoadingUserId(null)
     }
@@ -206,7 +211,7 @@ export default function UsuariosPage() {
                       {/* Botão "Ver como" — apenas super_admin, excluindo si mesmo e outros super_admins */}
                       {canViewAs && (
                         <button
-                          onClick={() => handleViewAs(user.id)}
+                          onClick={() => handleViewAs(user.id, user.role)}
                           disabled={isLoadingThis || loadingUserId !== null}
                           title={`Ver como ${user.name}`}
                           aria-label={`Visualizar sistema como ${user.name}`}

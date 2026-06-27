@@ -80,7 +80,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       {/* Banner de impersonate — fixo acima de tudo, z-[60] */}
       <ImpersonateBanner />
 
-      <div className={cn('flex bg-background overflow-hidden', isImpersonating ? 'h-[calc(100svh-2.5rem)] sm:h-[calc(100svh-3.5rem)]' : 'h-svh')}>
+      <div className={cn('flex bg-background overflow-hidden', isImpersonating ? 'mt-10 sm:mt-14 h-[calc(100svh-2.5rem)] sm:h-[calc(100svh-3.5rem)]' : 'h-svh')}>
         {/* Global layers */}
         <OnboardingLayer />
         <KeyboardLayer />

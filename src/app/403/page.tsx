@@ -3,6 +3,7 @@ import { ShieldX } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { ROUTES } from '@/lib/constants'
 import { hasRole, OPERATIONAL_MOBILE_ROLES } from '@/config/roles'
+import { ImpersonateExitBar } from '@/components/layout/impersonate-exit-bar'
 
 /**
  * Página 403 — Acesso Negado
@@ -38,7 +39,12 @@ export default async function ForbiddenPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-6 px-4 text-center">
+    <>
+      {/* Saída do "Ver como" também aqui — o /403 fica fora do AppLayout/Providers, então sem
+          isto o admin não teria como sair do modo ao bater num bloqueio. Versão leve sem React
+          Query (o /403 não tem QueryClientProvider). */}
+      <ImpersonateExitBar />
+      <div className="flex min-h-screen flex-col items-center justify-center gap-6 px-4 text-center">
       <span className="icon-brand rounded-full p-4">
         <ShieldX className="h-10 w-10" />
       </span>
@@ -59,6 +65,7 @@ export default async function ForbiddenPage() {
       >
         {backLabel}
       </Link>
-    </div>
+      </div>
+    </>
   )
 }

@@ -10,6 +10,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useAuthReadyStore } from '@/stores/auth-store'
 import { useUnitStore } from '@/stores/unit-store'
 import { useImpersonateStore } from '@/stores/impersonate-store'
+import { IMPERSONATION_ACTIVE_FLAG } from '@/lib/auth/impersonation-constants'
 import type { User as AppUser, UserUnitWithUnit } from '@/types/database.types'
 import { hasRole, VENDEDORA_ROLES, GLOBAL_VIEWER_ROLES } from '@/config/roles'
 
@@ -104,6 +105,30 @@ function AuthBootstrap() {
         setAuthState(null, null, null)
       }
       setSessionReady()
+
+      // Re-hidrata o modo "Ver como" após F5 — SEQUENCIAL, depois da carga real do admin
+      // (profile + units já no store), para o startImpersonating snapshotar o contexto do
+      // admin e sobrescrever pelo do alvo sem corrida com loadUserUnits.
+      // Só chama o endpoint se o flag legível estiver presente (boot normal não paga round-trip).
+      if (session?.user && document.cookie.includes(`${IMPERSONATION_ACTIVE_FLAG}=`)) {
+        try {
+          const res = await fetch('/api/admin/impersonate', { method: 'GET' })
+          if (res.ok) {
+            const data = await res.json()
+            if (data?.active && data?.token) {
+              useImpersonateStore.getState().startImpersonating({
+                token: data.token,
+                profile: data.profile,
+                userUnits: data.userUnits,
+                permissions: data.permissions,
+              })
+              qc.invalidateQueries()
+            }
+          }
+        } catch {
+          // sem re-hidratação — segue como sessão normal do admin
+        }
+      }
     })
 
     // ── Listener de mudanças de auth ─────────────────────────────────────────

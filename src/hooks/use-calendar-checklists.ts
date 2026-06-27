@@ -3,6 +3,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useAuthReadyStore } from '@/stores/auth-store'
+import { useAuth } from '@/hooks/use-auth'
 
 // ─────────────────────────────────────────────────────────────
 // TIPOS
@@ -30,13 +31,16 @@ export type CalendarChecklist = {
  */
 export function useCalendarChecklists() {
   const isSessionReady = useAuthReadyStore((s) => s.isSessionReady)
+  // Usa o profile (impersonation-aware: vira o id do alvo no modo "Ver como"), nunca
+  // auth.getUser() — que falha no client de dados impersonado (token sem sessão GoTrue).
+  const { profile } = useAuth()
+  const userId = profile?.id ?? null
 
   return useQuery({
-    queryKey: ['calendar-checklists'] as const,
+    queryKey: ['calendar-checklists', userId] as const,
     queryFn: async (): Promise<CalendarChecklist[]> => {
+      if (!userId) return []
       const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return []
 
       const today = new Date()
       const from = new Date(today)
@@ -48,7 +52,7 @@ export function useCalendarChecklists() {
         .from('checklists')
         .select('id, title, due_date, priority, status, event:events!checklists_event_id_fkey(title)')
         .not('due_date', 'is', null)
-        .eq('assigned_to', user.id)
+        .eq('assigned_to', userId)
         .not('status', 'in', '(completed,cancelled)')
         .gte('due_date', from.toISOString().split('T')[0])
         .lte('due_date', to.toISOString().split('T')[0])
@@ -66,7 +70,7 @@ export function useCalendarChecklists() {
         eventTitle: (c.event as { title?: string } | null)?.title ?? null,
       }))
     },
-    enabled: isSessionReady,
+    enabled: isSessionReady && !!userId,
     staleTime: 2 * 60_000,
     networkMode: 'always',
     retry: (count, err: unknown) => {

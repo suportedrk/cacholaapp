@@ -5,12 +5,12 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useImpersonateStore } from '@/stores/impersonate-store'
 
+const ENDPOINT = '/api/admin/impersonate'
+
 /**
- * Hook para iniciar o modo "Ver como".
- *
- * Uso:
- *   const { mutate: startViewAs, isPending } = useStartImpersonate()
- *   startViewAs(userId)
+ * Inicia o modo "Ver como" (impersonation 2A).
+ * POST minta o JWT do alvo + seta o cookie httpOnly; a resposta traz o token (usado pelo
+ * client de dados) + profile/userUnits/permissions (menu/banner).
  */
 export function useStartImpersonate() {
   const { startImpersonating } = useImpersonateStore()
@@ -18,20 +18,25 @@ export function useStartImpersonate() {
 
   return useMutation({
     mutationFn: async (userId: string) => {
-      const res = await fetch(`/api/admin/impersonate?userId=${userId}`)
+      const res = await fetch(ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      })
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
-        throw new Error(body.message || 'Falha ao carregar dados do usuário.')
+        throw new Error(body.message || 'Falha ao iniciar o modo "Ver como".')
       }
       return res.json()
     },
     onSuccess: (data) => {
       startImpersonating({
+        token: data.token,
         profile: data.profile,
         userUnits: data.userUnits,
         permissions: data.permissions,
       })
-      // Invalida todas as queries para recarregar com o novo contexto
+      // Recarrega todas as queries com o contexto (token) do alvo.
       queryClient.invalidateQueries()
     },
     onError: (err: Error) => {
@@ -41,19 +46,22 @@ export function useStartImpersonate() {
 }
 
 /**
- * Hook para encerrar o modo "Ver como" e voltar ao contexto original.
- *
- * Uso:
- *   const stopViewAs = useStopImpersonate()
- *   stopViewAs()
+ * Encerra o modo "Ver como". Limpa o cookie no servidor (DELETE) ANTES de limpar a store —
+ * sem isso o cookie httpOnly sobreviveria e os guards SSR continuariam avaliando o cargo do
+ * alvo (divergência client/server). Depois invalida as queries para voltar ao contexto real.
  */
 export function useStopImpersonate() {
   const { stopImpersonating } = useImpersonateStore()
   const queryClient = useQueryClient()
 
-  return useCallback(() => {
+  return useCallback(async () => {
+    try {
+      await fetch(ENDPOINT, { method: 'DELETE' })
+    } catch {
+      // Mesmo se a limpeza do cookie falhar, encerra o estado client-side; o cookie
+      // expira sozinho (TTL) e a re-hidratação no boot só ocorre se ele ainda for válido.
+    }
     stopImpersonating()
-    // Invalida todas as queries para recarregar com o contexto real do admin
     queryClient.invalidateQueries()
   }, [stopImpersonating, queryClient])
 }
