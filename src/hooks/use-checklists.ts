@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
+import { getEffectiveUser } from '@/lib/auth/effective-user'
 import { toast } from 'sonner'
 import { differenceInDays, addDays, parseISO } from 'date-fns'
 import type {
@@ -306,7 +307,7 @@ export function useCreateChecklist() {
       ;(async () => {
         try {
           const sb = createClient()
-          const { data: { user } } = await sb.auth.getUser()
+          const user = getEffectiveUser()
           await notifyChecklistAssigned(sb as any, checklistId, user?.id)
         } catch { /* não-crítico */ }
       })()
@@ -381,7 +382,7 @@ export function useUpdateChecklistStatus() {
         ;(async () => {
           try {
             const sb = createClient()
-            const { data: { user } } = await sb.auth.getUser()
+            const user = getEffectiveUser()
             await notifyChecklistCompleted(sb as any, id, user?.id)
           } catch { /* não-crítico */ }
         })()
@@ -443,7 +444,7 @@ export function useCompleteChecklist() {
       ;(async () => {
         try {
           const sb = createClient()
-          const { data: { user } } = await sb.auth.getUser()
+          const user = getEffectiveUser()
           await notifyChecklistCompleted(sb as any, checklistId, user?.id)
         } catch { /* não-crítico */ }
       })()
@@ -560,7 +561,7 @@ export function useDuplicateChecklist() {
       ;(async () => {
         try {
           const sb = createClient()
-          const { data: { user } } = await sb.auth.getUser()
+          const user = getEffectiveUser()
           await notifyChecklistAssigned(sb as any, newId, user?.id)
         } catch { /* não-crítico */ }
       })()
@@ -676,7 +677,7 @@ export function useUpdateChecklistItem() {
         ;(async () => {
           try {
             const sb = createClient()
-            const { data: { user } } = await sb.auth.getUser()
+            const user = getEffectiveUser()
             await notifyChecklistItemAssigned(sb as any, itemId, assignedTo, user?.id)
           } catch { /* não-crítico */ }
         })()

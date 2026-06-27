@@ -2,6 +2,7 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
+import { getEffectiveUser } from '@/lib/auth/effective-user'
 import { toast } from 'sonner'
 import type { PreReservaDiretoriaInsert, PreReservaDiretoriaUpdate } from '@/types/pre-reservas'
 
@@ -12,7 +13,7 @@ function db(supabase: ReturnType<typeof createClient>): any {
 }
 
 // ─────────────────────────────────────────────────────────────
-// CREATE — inclui created_by automaticamente via auth.getUser()
+// CREATE — inclui created_by automaticamente (id efetivo do store)
 // ─────────────────────────────────────────────────────────────
 
 export function useCreatePreReserva() {
@@ -22,9 +23,9 @@ export function useCreatePreReserva() {
     mutationFn: async (payload: PreReservaDiretoriaInsert) => {
       const supabase = createClient()
 
-      // Obter usuário autenticado para preencher created_by (campo NOT NULL)
-      const { data: { user }, error: userErr } = await supabase.auth.getUser()
-      if (userErr || !user) throw new Error('Sessão expirada. Faça login novamente.')
+      // Id efetivo (impersonation-aware) para preencher created_by (campo NOT NULL)
+      const user = getEffectiveUser()
+      if (!user) throw new Error('Sessão expirada. Faça login novamente.')
 
       const { data, error } = await db(supabase)
         .from('pre_reservas_diretoria')

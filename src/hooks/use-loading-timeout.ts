@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useImpersonateStore } from '@/stores/impersonate-store'
 
 /**
  * Safety net para queries presas em loading.
@@ -25,6 +26,13 @@ export function useLoadingTimeout(isLoading: boolean, timeoutMs = 12_000) {
   }, [isLoading, timeoutMs])
 
   const retry = useCallback(async () => {
+    // Sob "Ver como", o client de dados usa o token mintado (sem sessão GoTrue) — um
+    // getSession() retornaria null e mandaria pro /login indevidamente. Só recarrega
+    // (a re-hidratação restaura o modo se o cookie ainda for válido).
+    if (useImpersonateStore.getState().isImpersonating) {
+      window.location.reload()
+      return
+    }
     const supabase = createClient()
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) {

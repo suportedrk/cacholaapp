@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
+import { getEffectiveUser } from '@/lib/auth/effective-user'
 import { orIlike } from '@/lib/utils/supabase-filters'
 import { toast } from 'sonner'
 import { addDays, addWeeks, addMonths, format } from 'date-fns'
@@ -175,7 +176,7 @@ export function useCreateMaintenanceOrder() {
       ;(async () => {
         try {
           const sb = createClient()
-          const { data: { user } } = await sb.auth.getUser()
+          const user = getEffectiveUser()
           if (type === 'emergency') {
             await notifyMaintenanceEmergency(sb as any, id, user?.id)
             // Email via server route (API key is server-side only)
@@ -241,7 +242,7 @@ export function useChangeMaintenanceStatus() {
       ;(async () => {
         try {
           const sb = createClient()
-          const { data: { user } } = await sb.auth.getUser()
+          const user = getEffectiveUser()
           await notifyMaintenanceStatusChanged(sb as any, id, status, user?.id)
         } catch { /* não-crítico */ }
       })()
@@ -323,7 +324,7 @@ export function useCompleteMaintenanceOrder() {
       ;(async () => {
         try {
           const sb = createClient()
-          const { data: { user } } = await sb.auth.getUser()
+          const user = getEffectiveUser()
           await notifyMaintenanceCompleted(sb as any, id, created_by, user?.id)
         } catch { /* não-crítico */ }
       })()

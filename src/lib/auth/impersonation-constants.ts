@@ -15,8 +15,10 @@ export const IMPERSONATION_COOKIE = 'cachola-impersonation'
  */
 export const IMPERSONATION_ACTIVE_FLAG = 'cachola-imp-active'
 
-/** Janela de validade do modo "Ver como" (segundos). Curta de propósito. */
-export const IMPERSONATION_TTL_SECONDS = 30 * 60 // 30 min
+/** Janela de validade do modo "Ver como" (segundos). Curta de propósito — limita a janela
+ *  de replay de um token que tenha sido exfiltrado (o stop limpa o cookie + o store, então
+ *  o app para de usar o token na hora; o TTL só limita o uso fora do app). */
+export const IMPERSONATION_TTL_SECONDS = 15 * 60 // 15 min
 
 export interface ImpersonationClaims {
   /** id do usuário-alvo (o que está sendo visualizado) */

@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
+import { getEffectiveUser } from '@/lib/auth/effective-user'
 import { toast } from 'sonner'
 import { useUnitStore } from '@/stores/unit-store'
 import { useAuthReadyStore } from '@/stores/auth-store'
@@ -25,7 +26,7 @@ export function useUploadProviderDocument() {
       onProgress,
     }: UploadDocumentInput) => {
       const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
+      const user = getEffectiveUser()
 
       // Sanitise filename and build storage path
       const safeFilename = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')

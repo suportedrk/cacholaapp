@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils'
 import { ClipboardList, ImagePlus } from 'lucide-react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
+import { getEffectiveUser } from '@/lib/auth/effective-user'
 import { compressImage, PhotoThumb } from '@/components/shared/photo-upload'
 import {
   Dialog,
@@ -219,7 +220,7 @@ export function TicketFormModal({ open, onClose, onCreated }: TicketFormModalPro
   async function uploadStagedPhotos(ticketId: string, unitId: string): Promise<number> {
     if (stagedRef.current.length === 0) return 0
     const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = getEffectiveUser()
     let failed = 0
     for (const photo of stagedRef.current) {
       try {

@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
+import { getEffectiveUser } from '@/lib/auth/effective-user'
 import { toast } from 'sonner'
 import { startOfMonth, endOfMonth, startOfYear, endOfYear, subMonths } from 'date-fns'
 import { useUnitStore } from '@/stores/unit-store'
@@ -177,7 +178,7 @@ export function useCurrentUser() {
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
       const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
+      const user = getEffectiveUser()
       if (!user) return null
       const { data: profile } = await supabase
         .from('users')
@@ -199,7 +200,7 @@ export function useSubmitCost() {
   return useMutation({
     mutationFn: async (payload: CostInsert) => {
       const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
+      const user = getEffectiveUser()
       if (!user) throw new Error('Não autenticado')
 
       const { data, error } = await supabase
@@ -241,7 +242,7 @@ export function useApproveCost() {
   return useMutation({
     mutationFn: async (costId: string) => {
       const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
+      const user = getEffectiveUser()
       if (!user) throw new Error('Não autenticado')
 
       const { error } = await supabase
@@ -274,7 +275,7 @@ export function useRejectCost() {
   return useMutation({
     mutationFn: async ({ costId, review_notes }: { costId: string; review_notes: string }) => {
       const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
+      const user = getEffectiveUser()
       if (!user) throw new Error('Não autenticado')
 
       const { error } = await supabase
@@ -337,7 +338,7 @@ export function useUploadReceipt() {
       onProgress: (pct: number) => void
     }): Promise<string> => {
       const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
+      const user = getEffectiveUser()
       if (!user) throw new Error('Não autenticado')
 
       const safeFilename = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')

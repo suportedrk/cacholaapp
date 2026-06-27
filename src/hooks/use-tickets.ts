@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
+import { getEffectiveUser } from '@/lib/auth/effective-user'
 import { orIlike } from '@/lib/utils/supabase-filters'
 import { toast } from 'sonner'
 import { useUnitStore } from '@/stores/unit-store'
@@ -174,7 +175,7 @@ export function useCreateTicket(onSuccess?: (ticket: MaintenanceTicket) => void)
   return useMutation({
     mutationFn: async (payload: TicketInsert) => {
       const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
+      const user = getEffectiveUser()
       if (!user) throw new Error('Não autenticado')
 
       const { data, error } = await supabase
@@ -424,7 +425,7 @@ export function useUploadTicketPhoto() {
       phase?: 'abertura' | 'conclusao'
     }) => {
       const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
+      const user = getEffectiveUser()
       if (!user) throw new Error('Não autenticado')
 
       // Importar compressImage dinamicamente (evita SSR)

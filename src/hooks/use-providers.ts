@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
+import { getEffectiveUser } from '@/lib/auth/effective-user'
 import { toast } from 'sonner'
 import { useUnitStore } from '@/stores/unit-store'
 import { useAuthReadyStore } from '@/stores/auth-store'
@@ -168,7 +169,7 @@ export function useCreateProvider() {
   return useMutation({
     mutationFn: async (input: CreateProviderInput) => {
       const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
+      const user = getEffectiveUser()
       const { data, error } = await supabase
         .from('service_providers')
         .insert({

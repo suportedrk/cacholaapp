@@ -42,6 +42,23 @@ const COOKIE_OPTS = {
 // a re-hidratação. Não carrega segredo.
 const FLAG_OPTS = { ...COOKIE_OPTS, httpOnly: false }
 
+// Rate-limit simples em memória da minta (super_admin-only; PM2 single-process). Não substitui
+// o limit_req do Nginx, mas evita loop/abuso acidental sem depender de infra. Janela deslizante.
+const RL_WINDOW_MS = 60_000
+const RL_MAX_STARTS = 10
+const rlStarts = new Map<string, number[]>()
+function startRateLimited(callerId: string): boolean {
+  const now = Date.now()
+  const recent = (rlStarts.get(callerId) ?? []).filter((t) => now - t < RL_WINDOW_MS)
+  if (recent.length >= RL_MAX_STARTS) {
+    rlStarts.set(callerId, recent)
+    return true
+  }
+  recent.push(now)
+  rlStarts.set(callerId, recent)
+  return false
+}
+
 /**
  * Defesa CSRF: aceita apenas requisições de mesma origem. Usa Sec-Fetch-Site (enviado
  * pelos browsers modernos) e cai para comparação Origin×Host quando ausente. Bloqueia
@@ -132,6 +149,10 @@ export async function POST(request: Request) {
     }
     const auth = await requireRealSuperAdmin()
     if (!auth.ok) return auth.response
+
+    if (startRateLimited(auth.callerId)) {
+      return NextResponse.json({ message: 'Muitas tentativas. Aguarde um momento.' }, { status: 429 })
+    }
 
     const body = await request.json().catch(() => ({}))
     const targetUserId: unknown = body?.userId
