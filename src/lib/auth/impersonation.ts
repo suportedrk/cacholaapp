@@ -14,12 +14,20 @@
  */
 
 import crypto from 'node:crypto'
+import {
+  IMPERSONATION_COOKIE,
+  IMPERSONATION_ACTIVE_FLAG,
+  IMPERSONATION_TTL_SECONDS,
+  type ImpersonationClaims,
+} from '@/lib/auth/impersonation-constants'
 
-/** Nome do cookie httpOnly que carrega o token de impersonação (lido pelos guards SSR). */
-export const IMPERSONATION_COOKIE = 'cachola-impersonation'
-
-/** Janela de validade do modo "Ver como" (segundos). Curta de propósito. */
-export const IMPERSONATION_TTL_SECONDS = 30 * 60 // 30 min
+// Re-exporta para os callers server que já importavam destas daqui.
+export {
+  IMPERSONATION_COOKIE,
+  IMPERSONATION_ACTIVE_FLAG,
+  IMPERSONATION_TTL_SECONDS,
+  type ImpersonationClaims,
+}
 
 function jwtSecret(): string {
   const s = process.env.SUPABASE_JWT_SECRET
@@ -28,15 +36,6 @@ function jwtSecret(): string {
 }
 
 const b64url = (input: string): string => Buffer.from(input, 'utf8').toString('base64url')
-
-export interface ImpersonationClaims {
-  /** id do usuário-alvo (o que está sendo visualizado) */
-  sub: string
-  /** id do super_admin real que iniciou o "Ver como" */
-  impersonator: string
-  exp: number
-  iat: number
-}
 
 /**
  * Minta um JWT HS256 com a identidade do alvo + claim `impersonator`. Sem refresh.

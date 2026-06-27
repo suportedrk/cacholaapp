@@ -8,6 +8,7 @@ import { hasRole, IMPERSONATION_ROLES } from '@/config/roles'
 import {
   mintImpersonationToken,
   IMPERSONATION_COOKIE,
+  IMPERSONATION_ACTIVE_FLAG,
   IMPERSONATION_TTL_SECONDS,
   verifyImpersonationToken,
 } from '@/lib/auth/impersonation'
@@ -36,6 +37,10 @@ const COOKIE_OPTS = {
   sameSite: 'lax' as const,
   path: '/',
 }
+
+// Flag companheiro legível pelo JS (não httpOnly) — só um '1' para o boot decidir se chama
+// a re-hidratação. Não carrega segredo.
+const FLAG_OPTS = { ...COOKIE_OPTS, httpOnly: false }
 
 /**
  * Defesa CSRF: aceita apenas requisições de mesma origem. Usa Sec-Fetch-Site (enviado
@@ -178,6 +183,7 @@ export async function POST(request: Request) {
       permissions: ctx.permissions,
     })
     res.cookies.set(IMPERSONATION_COOKIE, token, { ...COOKIE_OPTS, maxAge: IMPERSONATION_TTL_SECONDS })
+    res.cookies.set(IMPERSONATION_ACTIVE_FLAG, '1', { ...FLAG_OPTS, maxAge: IMPERSONATION_TTL_SECONDS })
     return res
   } catch (err) {
     console.error('[POST /api/admin/impersonate]', err)
@@ -203,6 +209,7 @@ export async function DELETE(request: Request) {
 
     const res = NextResponse.json({ ok: true })
     res.cookies.set(IMPERSONATION_COOKIE, '', { ...COOKIE_OPTS, maxAge: 0 })
+    res.cookies.set(IMPERSONATION_ACTIVE_FLAG, '', { ...FLAG_OPTS, maxAge: 0 })
     return res
   } catch (err) {
     console.error('[DELETE /api/admin/impersonate]', err)
