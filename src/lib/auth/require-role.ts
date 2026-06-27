@@ -10,8 +10,11 @@
  */
 
 import { redirect } from 'next/navigation'
+import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { IMPERSONATION_COOKIE, verifyImpersonationToken } from '@/lib/auth/impersonation'
+import { hasRole, IMPERSONATION_ROLES } from '@/config/roles'
 import type { Role } from '@/types/permissions'
 
 /**
@@ -32,9 +35,33 @@ export async function requireRoleServer(allowed: readonly Role[]): Promise<void>
     .eq('id', user.id)
     .single()
 
-  if (!profile || !(allowed as readonly string[]).includes(profile.role)) {
+  // Modo "Ver como": se o super_admin real tem um cookie de impersonação válido (mintado
+  // para ele), os guards de LAYOUT passam a avaliar contra o cargo do ALVO — assim o
+  // suporte reproduz exatamente os /403 que o usuário visualizado sofreria. Só layouts:
+  // as rotas de API seguem com o cargo real (ver requireRoleApi).
+  const effectiveRole = await resolveEffectiveLayoutRole(supabase, user.id, profile?.role)
+
+  if (!effectiveRole || !(allowed as readonly string[]).includes(effectiveRole)) {
     redirect('/403')
   }
+}
+
+/**
+ * Cargo efetivo para guards de layout. Sem impersonação ativa, é o cargo real.
+ * Com cookie de impersonação válido E chamador super_admin real E cookie mintado para ele,
+ * é o cargo do usuário-alvo.
+ */
+async function resolveEffectiveLayoutRole(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  realUserId: string,
+  realRole: string | undefined,
+): Promise<string | undefined> {
+  if (!hasRole(realRole as Role, IMPERSONATION_ROLES)) return realRole // só super_admin pode impersonar
+  const store = await cookies()
+  const claims = verifyImpersonationToken(store.get(IMPERSONATION_COOKIE)?.value)
+  if (!claims || claims.impersonator !== realUserId) return realRole
+  const { data: target } = await supabase.from('users').select('role').eq('id', claims.sub).single()
+  return target?.role ?? realRole
 }
 
 /**
