@@ -1,7 +1,11 @@
 'use client'
 
+import { useState } from 'react'
+import { Bricolage_Grotesque } from 'next/font/google'
 import { Info } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { PageHeader } from '@/components/shared/page-header'
+import { PreviewControls, AccentSample, type PreviewMode, type AccentChoice } from './_components/preview'
 import { ShowcaseNav, type ShowcaseSectionRef } from './_components/showcase-nav'
 import {
   TokensCores,
@@ -32,7 +36,18 @@ const SECTIONS: ShowcaseSectionRef[] = [
   { id: 'padroes', label: 'Padrões' },
 ]
 
+// Fonte de título proposta (PR 0) — carregada só nesta rota; aplicada via
+// var --font-display dentro do container .theme-proposta.
+const display = Bricolage_Grotesque({ subsets: ['latin'], variable: '--font-display', display: 'swap' })
+
 export default function DesignPage() {
+  const [mode, setMode] = useState<PreviewMode>('atual')
+  const [accent, setAccent] = useState<AccentChoice>('coral')
+  const themeClass =
+    mode === 'proposta'
+      ? cn('theme-proposta', accent === 'gold' && 'accent-gold', display.variable)
+      : undefined
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -56,7 +71,9 @@ export default function DesignPage() {
         </div>
       </div>
 
-      <div className="lg:grid lg:grid-cols-[200px_1fr] lg:gap-8">
+      <PreviewControls mode={mode} setMode={setMode} accent={accent} setAccent={setAccent} />
+
+      <div className={cn('lg:grid lg:grid-cols-[200px_1fr] lg:gap-8', themeClass)}>
         {/* Nav lateral sticky (desktop) */}
         <aside className="hidden lg:block">
           <div className="sticky top-20">
@@ -79,6 +96,7 @@ export default function DesignPage() {
             ))}
           </div>
 
+          {mode === 'proposta' && <AccentSample />}
           <TokensCores />
           <TokensSemanticos />
           <TokensTipografia />
