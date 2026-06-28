@@ -126,7 +126,7 @@ export default function PermissoesUsuarioPage() {
 
       {/* Aviso super_admin */}
       {isSuperAdmin && (
-        <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-sm text-amber-700">
+        <div className="p-4 rounded-xl bg-status-warning-bg border border-status-warning-border text-sm text-status-warning-text">
           Este usuário é <strong>super_admin</strong> e tem acesso total independente das permissões abaixo.
         </div>
       )}

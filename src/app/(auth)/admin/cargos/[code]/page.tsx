@@ -27,28 +27,28 @@ function ApplyResultCard({ result }: { result: ApplyToAllResult }) {
           <p className="text-2xl font-semibold text-foreground">{result.total_users}</p>
           <p className="text-xs text-muted-foreground mt-0.5">Total de usuários</p>
         </div>
-        <div className="rounded-lg bg-green-50 p-3">
-          <p className="text-2xl font-semibold text-green-700">{result.total_succeeded}</p>
-          <p className="text-xs text-green-600 mt-0.5">Com sucesso</p>
+        <div className="rounded-lg bg-status-success-bg p-3">
+          <p className="text-2xl font-semibold text-status-success-text">{result.total_succeeded}</p>
+          <p className="text-xs text-status-success-text mt-0.5">Com sucesso</p>
         </div>
-        <div className={`rounded-lg p-3 ${result.total_failed > 0 ? 'bg-red-50' : 'bg-muted/30'}`}>
-          <p className={`text-2xl font-semibold ${result.total_failed > 0 ? 'text-red-700' : 'text-muted-foreground'}`}>
+        <div className={`rounded-lg p-3 ${result.total_failed > 0 ? 'bg-status-error-bg' : 'bg-muted/30'}`}>
+          <p className={`text-2xl font-semibold ${result.total_failed > 0 ? 'text-status-error-text' : 'text-muted-foreground'}`}>
             {result.total_failed}
           </p>
-          <p className={`text-xs mt-0.5 ${result.total_failed > 0 ? 'text-red-600' : 'text-muted-foreground'}`}>
+          <p className={`text-xs mt-0.5 ${result.total_failed > 0 ? 'text-status-error-text' : 'text-muted-foreground'}`}>
             Falhas
           </p>
         </div>
       </div>
 
       {result.total_failed > 0 && (
-        <div className="rounded-lg border border-red-200 bg-red-50 divide-y divide-red-100 max-h-48 overflow-y-auto">
+        <div className="rounded-lg border border-status-error-border bg-status-error-bg divide-y divide-status-error-border max-h-48 overflow-y-auto">
           {result.failed.map((f) => (
             <div key={f.user_id} className="px-3 py-2 flex items-start gap-2">
-              <XCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+              <XCircle className="w-4 h-4 text-status-error-text flex-shrink-0 mt-0.5" />
               <div className="min-w-0">
-                <p className="text-xs font-medium text-red-800 truncate">{f.email}</p>
-                <p className="text-xs text-red-600 truncate">{f.error_message}</p>
+                <p className="text-xs font-medium text-status-error-text truncate">{f.email}</p>
+                <p className="text-xs text-status-error-text truncate">{f.error_message}</p>
               </div>
             </div>
           ))}
@@ -56,9 +56,9 @@ function ApplyResultCard({ result }: { result: ApplyToAllResult }) {
       )}
 
       {result.total_succeeded > 0 && result.total_failed === 0 && (
-        <div className="flex items-center gap-2 rounded-lg bg-green-50 border border-green-200 px-3 py-2">
-          <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
-          <p className="text-sm text-green-700">Template aplicado com sucesso a todos os usuários.</p>
+        <div className="flex items-center gap-2 rounded-lg bg-status-success-bg border border-status-success-border px-3 py-2">
+          <CheckCircle2 className="w-4 h-4 text-status-success-text flex-shrink-0" />
+          <p className="text-sm text-status-success-text">Template aplicado com sucesso a todos os usuários.</p>
         </div>
       )}
     </div>
