@@ -2,6 +2,9 @@
 
 > Estado atual de cada módulo: o que existe, arquivos-chave e decisões específicas.
 > Para histórico detalhado de implementação, ver git log.
+>
+> **Atualizado para v1.72.1 (prod, 28/jun/2026) · última migration: 179.**
+> Detalhe técnico/cronológico de cada módulo vive no `CLAUDE.md` e nas memórias; aqui fica o mapa "o que existe e onde".
 
 ---
 
@@ -323,10 +326,12 @@ Gestao da tabela `sellers` (vendedoras/operadores espelhados do Ploomes via `own
 
 | Arquivo | Função |
 |---------|--------|
-| `src/app/(auth)/admin/usuarios/` | Lista, novo, [id] (editar + ativar/desativar), [id]/permissoes (matriz 8×5) |
-| `src/hooks/use-users.ts` | `useUsers`, `useUser`, `useUpdateUser`, `useDeactivateUser`, `useReactivateUser` |
+| `src/app/(auth)/admin/usuarios/` | Lista, novo (1 tela: cargo + unidade(s) + provisão completa server-side, v1.69.0), [id] (editar + ativar/desativar), [id]/permissoes (matriz **20×5** — 20 módulos do catálogo × 5 ações, PR2/PR3) |
+| `src/hooks/use-users.ts` | `useUsers`, `useUser`, `useCreateUser`, `useUpdateUser`, `useDeactivateUser`, `useReactivateUser` |
 | `src/hooks/use-permissions.ts` | `useUserPermissions`, `useUpdatePermission` |
-| `src/app/api/admin/users/route.ts` | POST — cria usuário via Auth Admin API |
+| `src/app/api/admin/users/route.ts` | POST — cria usuário via Auth Admin API + provisiona role/unidades/template (aguardado) |
+
+**Motor de RBAC:** `user_permissions` (codes PT-BR desde mig 073) é a fonte do guard efetivo; o template canônico vive em `role_permissions` (catálogo) e é aplicado via `applyRoleTemplate` (com `prune` na troca de cargo). `super_admin` bypassa `user_permissions` por código (`isSuperAdmin`) — linhas faltantes para super_admin são cosméticas. Gestão de templates por cargo: ver **Cargos / Templates RBAC**.
 
 ---
 
@@ -432,6 +437,131 @@ Agenda interna de trabalho (legítimo interesse / execução do contrato — art
 
 ---
 
+## BI (BUSINESS INTELLIGENCE)
+
+**Rota base:** `/bi` — guard `BI_ACCESS_ROLES` (super_admin, diretor). Pills de período 3M/6M/12M/Tudo + seletor global de unidade que controla todo o painel.
+
+**Abas:** Visão Geral · Atendimento (Deals) · Vendas Realizadas (Orders) · Vendedoras (super_admin+diretor).
+
+| Arquivo | Função |
+|---------|--------|
+| `src/app/(auth)/bi/page.tsx` | Orquestrador: KPIs, período, unidade, abas |
+| `src/app/(auth)/bi/layout.tsx` | Guard `BI_ACCESS_ROLES` |
+| `src/components/features/bi/` | `bi-funnel` (+ `stage-drilldown`), `bi-trend-charts`, `bi-unit-comparison`, `bi-breakdown-by-unit`, `lead-origin-panel`/`-section`, `vendas-por-categoria-section` (+ `category-drilldown-sheet`), `seller-drilldown-sheet`, `sellers-ranking-table`/`sellers-charts`, `drilldown-deal-card`, `bi-adoption-card` |
+| `src/hooks/` | `use-bi-conversion`, `use-bi-sales-metrics`, `use-bi-funnel`, `use-bi-sales`, `use-bi-category`, `use-bi-sellers-ranking`, `use-bi-seller-history`/`-funnel`/`-deals`/`-events`, `use-bi-unit-comparison`, `use-bi-adoption`, `use-lead-origin-breakdown` |
+| `src/lib/bi/` | `export-bi-report.ts`, `export-sellers-report.ts`, `origin-categories.ts` |
+
+**Decisões-chave:**
+- **Valor da festa = `SUM(ploomes_order_products.total)`** (Fase C, v1.8.0 — mig 087). JOIN canônico Deal→Order→OrderProducts. Pipeline em aberto/perdido ainda usa `deal_amount` (Order só existe em deals Ganhos).
+- **Critério de ganho unificado:** `status_id = 2 OR stage_id = 60004787` (Festa Fechada) em todas as RPCs (mig 086).
+- **Unidade canônica:** `COALESCE(e.unit_id, pd.unit_id)` para won/tempos; `pop.unit_id` para receita (migs 149–151/154).
+- **Recharts:** `useChartWidth` + ResizeObserver, **NUNCA** `ResponsiveContainer`; cor só hex no chart.
+- Drill-down do funil + drill-down de vendedora; **Origem de Leads** (8 categorias derivadas de 13 origens cruas, mig 078–080/085); **Vendas por Categoria de Produto** (migs 056/057, com alerta cross-unit); export Excel client-side (SheetJS).
+
+---
+
+## VENDAS
+
+**Rota base:** `/vendas` — guard `VENDAS_MODULE_ROLES` (super_admin, diretor, vendedora, pos_vendas). Badge na sidebar = `upsellCount.total + recompraCount.total`. Suporta `?tab=` (link de e-mail) via `<Suspense>`.
+
+**Abas:** Meu Painel · Upsell · Recompra.
+
+| Arquivo | Função |
+|---------|--------|
+| `src/app/(auth)/vendas/page.tsx` | Tabs + roteamento por `?tab=` |
+| `src/app/(auth)/vendas/_components/meu-painel/` | `meu-painel-client`, `kpi-cards`, `period-pills`, `ranking-table`, `revenue-chart`, `seller-selector`, `meta-card` |
+| `src/app/(auth)/vendas/_components/upsell/` | `index`, `upsell-source-tabs`, `upsell-filters`, `upsell-card`, `carteira-livre-banner`, `contact-dialog`, `reopen-dialog`, `popular-addons-hint` |
+| `src/app/(auth)/vendas/_components/recompra/` | `index`, `recompra-type-tabs`, `recompra-card-aniversario`, `recompra-card-festa`, `carteira-livre-recompra-banner`, `recompra-contact-dialog`, `recompra-reopen-dialog` |
+| `src/hooks/` | `use-vendas`, `use-vendas-targets`, `use-upsell`, `use-recompra` |
+
+**Sub-features:**
+- **Meu Painel (Fase B, migs 059/060):** KPIs período atual × anterior, gráfico de receita acumulada, ranking. Vendedora → próprio `seller_id`; gestor/pos_vendas → agregado de todas.
+- **Meta mensal (migs 178/179, v1.72.0):** cadastro próprio (`sales_targets`) — **o Ploomes não expõe Metas na API**. `MetaCard` (meta × realizado, % + legenda de meta parcial em multi-mês). Endpoint `POST/DELETE /api/vendas/targets`, guard `VENDAS_TARGETS_MANAGE_ROLES` (super_admin, diretor). Realizado reusa `SUM(produtos)`.
+- **Upsell (Fase C, migs 061/062):** oportunidades 30–40 dias da festa; **Carteira Livre** (contatos de vendedoras inativas); `upsell_contact_log`; e-mail diário.
+- **Recompra (Fase D, mig 063):** aniversário próximo (0–90d) + festa passada; `recompra_contact_log`.
+- **`users.seller_id` (mig 058)** vincula usuário↔vendedora; gestão da coluna "Usuário vinculado" em `/configuracoes/vendedoras` (v1.71.2). E-mail consolidado `scripts/email-vendas-daily.ts` (cron comentado aguardando cadastro).
+
+---
+
+## CHECKLIST COMERCIAL
+
+**Rota base:** `/vendas/checklist` — jornada do negócio acionada pelo Ploomes (migs 064/065/066).
+
+**Guards:** raiz `COMMERCIAL_CHECKLIST_ACCESS_ROLES`; sub-rotas (`/equipe`, `/templates`, `/automacoes`) `COMMERCIAL_CHECKLIST_MANAGE_ROLES`.
+
+**Rotas:** `/vendas/checklist` (Minhas Tarefas) · `/equipe` · `/templates` (+ `[id]`) · `/automacoes`.
+
+| Arquivo | Função |
+|---------|--------|
+| `src/hooks/commercial-checklist/` | `use-commercial-templates`, `use-commercial-template-items`, `use-commercial-tasks`, `use-apply-template`, `use-commercial-automations`, `use-ploomes-stages` |
+
+**Tabelas:** `commercial_task_templates`, `commercial_template_items`, `commercial_tasks`, `commercial_task_completions`, `commercial_stage_automations`.
+
+**Automação por stage (mig 065/066):** trigger Postgres em `ploomes_deals` (AFTER INSERT/UPDATE OF stage_id) cria tasks a partir de um template ao deal entrar num stage. Early-exit quando `status_id IN (2,3)` (Ganho/Perdido). Resolve a vendedora via `sellers.owner_id → users.seller_id`; pula se o owner não tem usuário vinculado. Idempotência batch-level por (automação, deal).
+
+---
+
+## ATAS DE REUNIÃO
+
+**Rota base:** `/atas` (mig 044 + 153/157). Guard de layout `ATAS_ACCESS_ROLES`; escrita via `check_permission('atas', …)`.
+
+**Rotas:** `/atas` · `/atas/nova` · `/atas/[id]` (+ `/editar`) · `/atas/minhas-tarefas`.
+
+| Arquivo | Função |
+|---------|--------|
+| `src/hooks/` | `use-meeting-minutes`, `use-meeting-minute-detail`, `use-meeting-minute-mutations`, `use-my-meeting-tasks`, `use-atas-permissions`, `use-calendar-action-items` |
+
+**Tabelas:** `meeting_minutes`, `meeting_participants`, `meeting_action_items`. RLS especial via `can_view_meeting()` (SECURITY DEFINER, evita dependência circular). Status `draft`/`published`; FTS GIN `portuguese`; notify por e-mail ao publicar; export PDF (jsPDF); duplicar como rascunho.
+
+**Minhas Tarefas (v1.54.0 + B/C):** Fase A = tela + RPCs `get_my_action_items`/`set_my_action_item_status` (mig 157); Fase B = notifica o responsável (sino + e-mail) ao atribuir; Fase C = prazos das minhas tarefas no calendário do dashboard (fonte índigo, reusa o cache de `useMyMeetingTasks`).
+
+---
+
+## CARGOS / TEMPLATES RBAC
+
+**Rota base:** `/admin/cargos` (catálogos mig 071 + audit 074 + RLS fix 075). Guard `TEMPLATE_MANAGE_ROLES` (super_admin).
+
+| Arquivo | Função |
+|---------|--------|
+| `src/app/(auth)/admin/cargos/page.tsx` | Lista de 11 cargos com contagem granted/total |
+| `src/app/(auth)/admin/cargos/[code]/page.tsx` | Matriz editável 20×5 + "Aplicar a todos" |
+| `src/hooks/use-rbac-catalogs.ts` | `useModules`, `useRoles`, `useRolePermissions`, `useUpdateRolePermission`, `useApplyTemplateToAllUsers` |
+| `src/lib/rbac/apply-template.ts` | `applyRoleTemplate(... , { prune })` — upsert do template + poda de órfãs |
+
+**Catálogos:** `modules` (20), `roles` (11), `role_permissions` (template cargo×módulo×ação). `role_template_audit` registra cada toggle. "Aplicar a todos" propaga para todos os usuários do cargo (207 Multi-Status em falha parcial). Reconciliação `user_permissions` EN→PT-BR via mig 073 (FK → `modules(code)`).
+
+---
+
+## BACKUPS
+
+**Rota base:** `/admin/backups` (mig 067). Guard `BACKUP_VIEW_ROLES` (super_admin, diretor).
+
+| Arquivo | Função |
+|---------|--------|
+| `src/hooks/use-backups.ts` | `useBackups`, `requestDownloadUrl` |
+| `src/app/api/admin/backups/` | `GET` lista · `POST [id]/download-url` (presigned R2, 15 min) |
+
+**Tabela:** `backup_log` (kind × source × filename, UNIQUE idempotente). Backups offsite no **Cloudflare R2** (`upload-to-r2.sh`, cron 3h45). Download via presigned URL (`@aws-sdk/client-s3`); 503 se `R2_ENDPOINT` ausente (dev). Observabilidade alimentada por `backup-full.sh`/`upload-to-r2.sh` na VPS.
+
+---
+
+## MODO "VER COMO" (IMPERSONAÇÃO)
+
+**Migs 175/176/177 (v1.71.0–1.71.1).** super_admin de suporte vê os dados **reais** do usuário-alvo por unidade, **read-only**, e reproduz os `/403` dele.
+
+| Arquivo | Função |
+|---------|--------|
+| `src/app/api/admin/impersonate/route.ts` | `POST`/`DELETE`/`GET` — minta/encerra; super_admin real, TTL 15 min, rate limit, audit start/stop |
+| `src/stores/impersonate-store.ts` | Estado client da impersonação |
+| `src/hooks/use-impersonate.ts` | Entrada/saída do modo |
+| `src/lib/auth/effective-user.ts` | `getEffectiveUserId()`/`getEffectiveUser()` — id efetivo síncrono (alvo sob impersonação, senão real); substituiu `getUser()` em 28 call-sites |
+
+**Como funciona:** JWT mintado (claim `impersonator`, `sub`=alvo) usado **só nas leituras do browser** via `accessToken` do supabase-js → PostgREST resolve a RLS como o alvo. Cookie httpOnly `cachola-impersonation` p/ os guards SSR reproduzirem o /403 do alvo. Sessão de login do admin fica intacta.
+
+**Read-only em 2 bordas:** banco (mig 175 `check_permission`, 176 RLS restritiva em 16 tabelas + `storage.objects`, 177 RPCs SECURITY DEFINER → escrita volta 42501) + API (guards recusam escrita com 403 + audit `impersonate_write_blocked`). **GOTCHA:** GoTrue **recusa** o token auto-mintado (`session_not_found`) — só PostgREST o aceita; por isso a sessão não é trocada, só as leituras de dados.
+
+---
+
 ## MIGRATIONS (ordem)
 
 | Migration | Conteúdo |
@@ -456,3 +586,16 @@ Agenda interna de trabalho (legítimo interesse / execução do contrato — art
 | 028–029 | Bloqueio OAuth não autorizado |
 | … | (sequência completa em `supabase/migrations/`; ordem é estrita NNN_) |
 | 144–148 | **Central de Serviços** (v1.46.0–1.46.2): 144 fundação RBAC · 145 Links · 146 Contatos + bucket privado · 147 Grupos + triggers · 148 Avisos + guard de troca de tipo. v1.46.1–1.46.2 frontend-only (sem migration): UX Agenda + lightbox de foto (createPortal fix) |
+| 149–151, 154 | **Unidade canônica da festa** + critério de festa ganha (Fase 1/3a/3b) · 154 corrige `get_pre_reserva_conflicts` p/ a unidade canônica |
+| 152, 155, 156, 158, 160 | **Manutenção:** setores/categorias globais (152) · responsável do chamado (155) · people lookup (156) · RBAC sem `delete` no cargo manutencao (158) · "mostrar no calendário principal" por execução (160) |
+| 153, 157 | **Atas:** RLS de visibilidade da diretoria (153) · RPCs "Minhas Tarefas" / Fase A (157) |
+| 159 | `cachola_migration_log` — auditoria da **esteira de migração** (botão `migrate-prod.yml`) |
+| 161, 162, 165, 166 | **Campos do Ploomes:** responsável da decoração (161) · Checklist do Cliente (162) · Checklist de Decoração (165) · contrato assinado Clicksign por festa (166) |
+| 163, 164 | **Central de Serviços Fase 2:** anexos do Mural de Avisos (163) · confirmação de leitura (164) |
+| 167 | **Segurança:** fix cross-tenant em `get_event_conflicts`/`get_conflicting_event_ids` (AppSec) |
+| 168–172 | **Frente Segurança/LGPD:** IDOR de storage role-based (168) · `checklist-photos` público→privado (169) · guard interno nas RPCs de estoque da Decoração (170) · 🔴 anti-escalada de cargo em `users` (171) · role-gate SELECT/INSERT de `checklist-photos` (172) |
+| 173–174 | REVOKE de UPDATE em `users.role` (173, **DEPRECATED — revertida**) → revert (174). Premissa errada: `createAdminClient` roda como `authenticated`, não service_role |
+| 175–177 | **Modo "Ver como" (impersonação read-only):** `check_permission` (175) · RLS de bloqueio de escrita em 16 tabelas + storage (176) · RPCs SECURITY DEFINER (177) |
+| 178–179 | **Metas de Vendas:** `sales_targets` (178) · remoção do drift gerente×vendas create/edit (179) |
+
+> Muitas migrations têm par `NNN_*_rollback.sql` (~70 no repo; padrão nas recentes/era-esteira). Aplicação em produção via esteira `migrate-prod.yml` (a partir da 160); pré-160, manual via `docker exec psql`, sempre deploy-primeiro.
