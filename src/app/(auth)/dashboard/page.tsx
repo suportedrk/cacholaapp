@@ -3,7 +3,6 @@
 import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
 import {
   Calendar, UserPlus, HelpCircle, WifiOff,
   // TrendingUp, AlertTriangle, ClipboardList — Movidos para módulo BI (Fase 3)
@@ -13,9 +12,6 @@ import {
 } from '@/components/ui/select'
 import { PageHeader } from '@/components/shared/page-header'
 import { KpiCard } from '@/components/features/dashboard/kpi-card'
-import { NextEventCard } from '@/components/features/dashboard/next-event-card'
-import { UpcomingEventsCard } from '@/components/features/dashboard/upcoming-events-card'
-import { useEvents } from '@/hooks/use-events'
 import { CalendarView, type CalendarViewType } from '@/components/features/dashboard/calendar-view'
 import { EventQuickView } from '@/components/features/dashboard/event-quick-view'
 import { PreReservaDetailModal } from '@/components/features/dashboard/pre-reserva-detail-modal'
@@ -133,25 +129,7 @@ export default function DashboardPage() {
     [calPreReservas, selectedOwner],
   )
 
-  // ── Próximas festas (hoje + futuras) — alimenta o hero "Hoje & Próximas" ──
-  const todayStr = format(new Date(), 'yyyy-MM-dd')
-  const { data: upcomingData, isLoading: loadingUpcoming } = useEvents({ dateFrom: todayStr, pageSize: 8 })
-  const upcoming = useMemo(() => upcomingData?.events ?? [], [upcomingData])
-  const nextEvent = upcoming[0] ?? null
-  const todayEvents = useMemo(() => upcoming.filter((e) => e.date === todayStr), [upcoming, todayStr])
-
-  const firstName = profile?.name?.split(' ')[0]
-  const summaryLine = loadingUpcoming
-    ? 'Carregando agenda…'
-    : todayEvents.length > 0
-      ? `Hoje: ${todayEvents.length} festa${todayEvents.length > 1 ? 's' : ''}${
-          todayEvents[0]?.start_time ? ` · próxima às ${todayEvents[0].start_time.slice(0, 5)}` : ''
-        }`
-      : nextEvent
-        ? `Nenhuma festa hoje · próxima ${format(new Date(`${nextEvent.date}T00:00:00`), "EEE, d 'de' MMM", { locale: ptBR })}`
-        : 'Nenhuma festa próxima agendada.'
-
-  const { isTimedOut, retry } = useLoadingTimeout(loadingKpis || loadingCal || loadingUpcoming)
+  const { isTimedOut, retry } = useLoadingTimeout(loadingKpis || loadingCal)
 
   // Greeting (client-only to avoid hydration mismatch)
   const [greeting, setGreeting] = useState('Olá')
@@ -190,18 +168,12 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title={firstName ? `${greeting}, ${firstName}` : greeting}
-        description={summaryLine}
+        title={greeting}
+        description="Visão geral das operações do Cachola"
       />
 
       {/* ── Setup checklist (admins) ── */}
       <SetupChecklistCard />
-
-      {/* ── Hoje & Próximas — foco diário (próximo evento + agenda) ── */}
-      <div className="grid grid-cols-1 items-start gap-3 lg:grid-cols-2">
-        <NextEventCard event={nextEvent} isLoading={loadingUpcoming} />
-        <UpcomingEventsCard events={upcoming} isLoading={loadingUpcoming} todayStr={todayStr} />
-      </div>
 
       {/* ── KPI Grid — 3 cards operacionais: 1 coluna mobile, 3 tablet/desktop ── */}
       {/* KPIs estratégicos (Taxa de Conversão, Manutenções Abertas) movidos para módulo BI */}

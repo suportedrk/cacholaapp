@@ -1211,17 +1211,3 @@ Quando Claude Code receber qualquer instrução de UI:
 Se o usuário pedir algo que conflita com este documento,
 informar o conflito e sugerir a alternativa correta do design system.
 ```
-
----
-
-## Padrão de tela — Dashboard "Hoje & Próximas" (redesign 28/06)
-
-Primeira tela redesenhada com foco em **hierarquia diária** (não recolorir). Padrão a replicar em outras landings/telas operacionais:
-
-- **Header acionável:** título com saudação + nome + **linha-resumo do dia** (ex.: "Hoje: N festas · próxima às HH:MM"), em vez de subtítulo genérico. O slot nobre dá informação, não enfeite.
-- **Hero de foco (topo):** o que importa AGORA vem primeiro — `NextEventCard` (próximo evento, detalhado) + `UpcomingEventsCard` (agenda compacta clicável). Grid `lg:grid-cols-2 items-start` (cards na altura natural, sem esticar).
-- **Métricas secundárias depois:** KPIs mensais (`KpiCard`) ficam ABAIXO do foco do dia — informativos, não o assunto principal.
-- **Reuso:** surfar componentes prontos (o `NextEventCard` existia e não era usado). Fonte de dados via hook existente (`useEvents({ dateFrom: hoje })`), sem query nova.
-- **Estados:** loading (Skeleton), empty ("Nenhuma festa próxima") e o degrade gracioso (erro → lista vazia) em todo card de dados.
-
-Arquivos de referência: `src/app/(auth)/dashboard/page.tsx`, `src/components/features/dashboard/upcoming-events-card.tsx`, `next-event-card.tsx`.
