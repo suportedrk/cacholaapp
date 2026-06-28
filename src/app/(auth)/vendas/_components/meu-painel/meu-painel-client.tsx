@@ -6,14 +6,14 @@ import { Button } from '@/components/ui/button'
 import { useAuth } from '@/hooks/use-auth'
 import { useUnitStore } from '@/stores/unit-store'
 import { useLoadingTimeout } from '@/hooks/use-loading-timeout'
-import { hasRole, VENDAS_MANAGE_ROLES, VENDEDORA_ROLES } from '@/config/roles'
+import { hasRole, VENDAS_MANAGE_ROLES, VENDAS_TARGETS_MANAGE_ROLES, VENDEDORA_ROLES } from '@/config/roles'
 import { useVendasMyKpis, useVendasDailyRevenue, useVendasRanking } from '@/hooks/use-vendas'
 import { buildVendasPeriods } from '../shared/period-types'
 import type { VendasPeriodKey } from '../shared/period-types'
 import { PeriodPills } from './period-pills'
 import { SellerSelector } from './seller-selector'
 import { KpiCards } from './kpi-cards'
-import { MetaPlaceholder } from './meta-placeholder'
+import { MetaCard } from './meta-card'
 import { RevenueChart } from './revenue-chart'
 import { RankingTable } from './ranking-table'
 
@@ -21,8 +21,9 @@ export function MeuPainelClient() {
   const { profile } = useAuth()
   const activeUnitId = useUnitStore((s) => s.activeUnitId)
 
-  const isManager   = hasRole(profile?.role, VENDAS_MANAGE_ROLES)
-  const isVendedora = hasRole(profile?.role, VENDEDORA_ROLES)
+  const isManager     = hasRole(profile?.role, VENDAS_MANAGE_ROLES)
+  const isVendedora   = hasRole(profile?.role, VENDEDORA_ROLES)
+  const canManageMeta = hasRole(profile?.role, VENDAS_TARGETS_MANAGE_ROLES) // só diretoria define metas
 
   const [periods] = useState(() => buildVendasPeriods())
   const [periodKey, setPeriodKey] = useState<VendasPeriodKey>('mes_atual')
@@ -112,8 +113,14 @@ export function MeuPainelClient() {
       {/* KPI cards */}
       <KpiCards kpis={kpisQuery.data} isLoading={kpisQuery.isLoading} />
 
-      {/* Meta placeholder */}
-      <MetaPlaceholder />
+      {/* Meta do período (faturamento) */}
+      <MetaCard
+        realizado={kpisQuery.data?.total_revenue ?? 0}
+        sellerId={effectiveSellerId}
+        startDate={period.startDate}
+        endDate={period.endDate}
+        canManage={canManageMeta}
+      />
 
       {/* Revenue chart */}
       <RevenueChart rows={chartQuery.data ?? []} isLoading={chartQuery.isLoading} />
