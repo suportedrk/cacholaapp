@@ -151,7 +151,7 @@ export default function DashboardPage() {
         ? `Nenhuma festa hoje · próxima ${format(new Date(`${nextEvent.date}T00:00:00`), "EEE, d 'de' MMM", { locale: ptBR })}`
         : 'Nenhuma festa próxima agendada.'
 
-  const { isTimedOut, retry } = useLoadingTimeout(loadingKpis || loadingCal)
+  const { isTimedOut, retry } = useLoadingTimeout(loadingKpis || loadingCal || loadingUpcoming)
 
   // Greeting (client-only to avoid hydration mismatch)
   const [greeting, setGreeting] = useState('Olá')
@@ -198,7 +198,7 @@ export default function DashboardPage() {
       <SetupChecklistCard />
 
       {/* ── Hoje & Próximas — foco diário (próximo evento + agenda) ── */}
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+      <div className="grid grid-cols-1 items-start gap-3 lg:grid-cols-2">
         <NextEventCard event={nextEvent} isLoading={loadingUpcoming} />
         <UpcomingEventsCard events={upcoming} isLoading={loadingUpcoming} todayStr={todayStr} />
       </div>

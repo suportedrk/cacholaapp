@@ -25,7 +25,7 @@ export function UpcomingEventsCard({ events, isLoading, todayStr }: UpcomingEven
         <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           Próximas festas
         </h3>
-        <Link href="/eventos" className="inline-flex items-center gap-1 text-xs text-primary hover:underline">
+        <Link href="/eventos" className="focus-ring -my-1 inline-flex items-center gap-1 rounded-md px-1 py-1 text-xs text-primary hover:underline">
           Ver todas <ArrowRight className="size-3" />
         </Link>
       </div>
