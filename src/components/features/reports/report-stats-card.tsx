@@ -24,13 +24,13 @@ export function ReportStatsCard({
 }: ReportStatsCardProps) {
   if (loading) {
     return (
-      <div className={cn('rounded-xl border bg-card p-5 space-y-3 animate-pulse', className)}>
+      <div className={cn('rounded-xl border bg-card p-5 space-y-3', className)}>
         <div className="flex items-center justify-between">
-          <div className="h-4 w-28 bg-muted rounded" />
-          <div className="h-8 w-8 bg-muted rounded-lg" />
+          <div className="h-4 w-28 skeleton-shimmer rounded" />
+          <div className="h-8 w-8 skeleton-shimmer rounded-lg" />
         </div>
-        <div className="h-7 w-20 bg-muted rounded" />
-        <div className="h-3 w-32 bg-muted rounded" />
+        <div className="h-7 w-20 skeleton-shimmer rounded" />
+        <div className="h-3 w-32 skeleton-shimmer rounded" />
       </div>
     )
   }

@@ -46,7 +46,7 @@ export function HorizontalBarChartCard({
       <h3 className="text-sm font-semibold text-foreground mb-4">{title}</h3>
 
       {loading ? (
-        <div className="animate-pulse bg-muted rounded" style={{ height: calcH }} />
+        <div className="skeleton-shimmer rounded" style={{ height: calcH }} />
       ) : sliced.length === 0 ? (
         <div className="flex items-center justify-center text-muted-foreground text-sm" style={{ height: calcH }}>
           Nenhum dado no período

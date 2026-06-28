@@ -68,7 +68,7 @@ export function DonutChartCard({
       <h3 className="text-sm font-semibold text-foreground mb-4">{title}</h3>
 
       {loading ? (
-        <div className="animate-pulse bg-muted rounded-full mx-auto" style={{ height, width: height }} />
+        <div className="skeleton-shimmer rounded-full mx-auto" style={{ height, width: height }} />
       ) : data.length === 0 || total === 0 ? (
         <div className="flex items-center justify-center text-muted-foreground text-sm" style={{ height }}>
           Nenhum dado no período

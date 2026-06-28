@@ -144,7 +144,7 @@ function AuditLogRowSkeleton() {
     <tr className="border-b border-border">
       {[8, 80, 130, 90, 70, 70, 60].map((w, i) => (
         <td key={i} className="px-3 py-3">
-          <div className={`h-3 bg-muted animate-pulse rounded`} style={{ width: w }} />
+          <div className={`h-3 skeleton-shimmer rounded`} style={{ width: w }} />
         </td>
       ))}
     </tr>

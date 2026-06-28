@@ -38,7 +38,7 @@ export function SyncHistoryTable() {
     return (
       <div className="space-y-2">
         {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="h-10 animate-pulse rounded-lg bg-muted/50" />
+          <div key={i} className="h-10 skeleton-shimmer rounded-lg" />
         ))}
       </div>
     )

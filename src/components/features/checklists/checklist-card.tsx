@@ -114,7 +114,7 @@ export const ChecklistCard = memo(function ChecklistCard({ checklist }: Checklis
 
 export function ChecklistCardSkeleton() {
   return (
-    <div className="bg-card border border-border rounded-xl p-4 space-y-3 animate-pulse">
+    <div className="bg-card border border-border rounded-xl p-4 space-y-3">
       <div className="flex items-start justify-between gap-2">
         <div className="space-y-1.5 flex-1">
           <Skeleton className="h-4 w-3/4" />

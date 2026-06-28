@@ -26,18 +26,18 @@ const STATUS_CONFIG: Record<Equipment['status'], { label: string; className: str
 
 export function EquipmentCardSkeleton() {
   return (
-    <div className="rounded-xl border bg-card p-4 space-y-3 animate-pulse">
+    <div className="rounded-xl border bg-card p-4 space-y-3">
       <div className="flex gap-3">
-        <div className="w-16 h-16 bg-muted rounded-lg shrink-0" />
+        <div className="w-16 h-16 skeleton-shimmer rounded-lg shrink-0" />
         <div className="flex-1 space-y-2">
-          <div className="h-4 bg-muted rounded w-3/4" />
-          <div className="h-3 bg-muted rounded w-1/2" />
-          <div className="h-3 bg-muted rounded w-1/3" />
+          <div className="h-4 skeleton-shimmer rounded w-3/4" />
+          <div className="h-3 skeleton-shimmer rounded w-1/2" />
+          <div className="h-3 skeleton-shimmer rounded w-1/3" />
         </div>
       </div>
       <div className="flex gap-2">
-        <div className="h-5 w-16 bg-muted rounded-full" />
-        <div className="h-5 w-20 bg-muted rounded-full" />
+        <div className="h-5 w-16 skeleton-shimmer rounded-full" />
+        <div className="h-5 w-20 skeleton-shimmer rounded-full" />
       </div>
     </div>
   )

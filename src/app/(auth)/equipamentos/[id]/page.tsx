@@ -272,7 +272,7 @@ export default function EquipamentoDetailPage({ params }: { params: Promise<{ id
         {historyLoading ? (
           <div className="p-5 space-y-3">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="h-14 bg-muted rounded-lg animate-pulse" />
+              <div key={i} className="h-14 skeleton-shimmer rounded-lg" />
             ))}
           </div>
         ) : history.length === 0 ? (
