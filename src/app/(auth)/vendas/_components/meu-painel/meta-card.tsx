@@ -28,6 +28,14 @@ function currentMonthValue(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
 }
 
+/** Nº de meses-calendário no intervalo [start, end] inclusive (ISO YYYY-MM-DD). */
+function monthsInPeriod(start: string, end: string): number {
+  const s = new Date(`${start}T00:00:00`)
+  const e = new Date(`${end}T00:00:00`)
+  if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) return 1
+  return Math.max(1, (e.getFullYear() - s.getFullYear()) * 12 + (e.getMonth() - s.getMonth()) + 1)
+}
+
 interface Props {
   realizado:  number
   sellerId:   string | null
@@ -45,6 +53,13 @@ export function MetaCard({ realizado, sellerId, startDate, endDate, canManage }:
   const pct = hasMeta ? Math.round((realizado / meta) * 100) : 0
   const barWidth = Math.min(pct, 100)
   const reached = hasMeta && realizado >= meta
+
+  // Sinaliza meta parcial: período com mais meses do que os que têm meta cadastrada
+  // (a meta exibida é a SOMA das metas mensais do intervalo → % fica fora de escala
+  // se só parte dos meses tem meta). Mês único (pills "mês atual/anterior") não alerta.
+  const periodMonths = monthsInPeriod(startDate, endDate)
+  const monthsWithMeta = target?.months_count ?? 0
+  const isPartial = hasMeta && periodMonths > 1 && monthsWithMeta < periodMonths
 
   return (
     <div className="bg-card rounded-xl border border-border-default p-4 space-y-3">
@@ -102,6 +117,13 @@ export function MetaCard({ realizado, sellerId, startDate, endDate, canManage }:
               style={{ width: `${barWidth}%` }}
             />
           </div>
+          {periodMonths > 1 && (
+            <p className={cn('text-xs', isPartial ? 'text-status-warning-text' : 'text-text-tertiary')}>
+              {isPartial
+                ? `Meta parcial: ${monthsWithMeta} de ${periodMonths} meses do período têm meta cadastrada.`
+                : `Soma das metas dos ${periodMonths} meses do período.`}
+            </p>
+          )}
         </div>
       )}
 
