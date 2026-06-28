@@ -11,6 +11,7 @@ import {
   TokensUtilitarias,
 } from './_components/sections-tokens'
 import { ComponentesUI, ComponentesShared } from './_components/sections-componentes'
+import { ComponentesFeature, CatalogoModulos } from './_components/sections-extras'
 import { Padroes } from './_components/sections-padroes'
 
 const SECTIONS: ShowcaseSectionRef[] = [
@@ -21,6 +22,8 @@ const SECTIONS: ShowcaseSectionRef[] = [
   { id: 'utilitarias', label: 'Classes utilitárias' },
   { id: 'ui', label: 'Componentes ui/' },
   { id: 'shared', label: 'Componentes shared/' },
+  { id: 'feature', label: 'Componentes de feature' },
+  { id: 'catalogo', label: 'Catálogo (layout & features)' },
   { id: 'padroes', label: 'Padrões' },
 ]
 
@@ -78,6 +81,8 @@ export default function DesignPage() {
           <TokensUtilitarias />
           <ComponentesUI />
           <ComponentesShared />
+          <ComponentesFeature />
+          <CatalogoModulos />
           <Padroes />
         </div>
       </div>
