@@ -15,9 +15,9 @@ import type { EventSalesDeal, EventSalesProduct, EventSalesContact } from '@/hoo
 // ── Label helpers ──────────────────────────────────────────────
 
 const STATUS_LABELS: Record<number, { label: string; className: string }> = {
-  1: { label: 'Em aberto',  className: 'text-amber-600 bg-amber-50 border-amber-200' },
-  2: { label: 'Ganho',      className: 'text-emerald-700 bg-emerald-50 border-emerald-200' },
-  3: { label: 'Perdido',    className: 'text-rose-600 bg-rose-50 border-rose-200' },
+  1: { label: 'Em aberto',  className: 'badge-amber border' },
+  2: { label: 'Ganho',      className: 'badge-green border' },
+  3: { label: 'Perdido',    className: 'badge-red border' },
 }
 
 const OUTCOME_LABELS: Record<string, string> = {
@@ -141,7 +141,7 @@ function UpsellTimeline({ contacts }: { contacts: EventSalesContact[] }) {
                 {OUTCOME_LABELS[c.outcome] ?? c.outcome}
               </span>
               {c.reopened_at && (
-                <span className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-1.5 py-0.5">
+                <span className="text-xs badge-amber border rounded-full px-1.5 py-0.5">
                   Reaberto
                 </span>
               )}

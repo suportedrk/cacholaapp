@@ -267,7 +267,7 @@ export const TicketCard = memo(function TicketCard({ ticket, people, onClick }: 
 // ─────────────────────────────────────────────────────────────
 export function TicketCardSkeleton() {
   return (
-    <div className="bg-card rounded-xl border border-l-[3px] border-l-border p-4 space-y-3 animate-pulse">
+    <div className="bg-card rounded-xl border border-l-[3px] border-l-border p-4 space-y-3">
       <div className="flex items-center gap-2">
         <div className="h-5 w-16 skeleton-shimmer rounded-full" />
         <div className="h-5 w-20 skeleton-shimmer rounded-full" />

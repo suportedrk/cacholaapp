@@ -24,17 +24,17 @@ import { useSignedUrls } from '@/hooks/use-signed-urls'
 // ── Labels ─────────────────────────────────────────────────
 
 const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
-  active:   { label: 'Ativo',      className: 'bg-green-100 text-green-700' },
+  active:   { label: 'Ativo',      className: 'badge-green border' },
   inactive: { label: 'Inativo',    className: 'badge-gray border' },
-  in_repair:{ label: 'Em Reparo',  className: 'bg-amber-100 text-amber-700' },
-  retired:  { label: 'Aposentado', className: 'bg-red-100 text-red-700' },
+  in_repair:{ label: 'Em Reparo',  className: 'badge-amber border' },
+  retired:  { label: 'Aposentado', className: 'badge-red border' },
 }
 
 const MAINT_STATUS: Record<string, { label: string; className: string }> = {
-  open:          { label: 'Aberta',          className: 'bg-blue-100 text-blue-700' },
-  in_progress:   { label: 'Em Andamento',    className: 'bg-purple-100 text-purple-700' },
-  waiting_part:  { label: 'Aguard. Peça',    className: 'bg-amber-100 text-amber-700' },
-  concluded:     { label: 'Concluído',        className: 'bg-green-100 text-green-700' },
+  open:          { label: 'Aberta',          className: 'badge-blue border' },
+  in_progress:   { label: 'Em Andamento',    className: 'badge-purple border' },
+  waiting_part:  { label: 'Aguard. Peça',    className: 'badge-amber border' },
+  concluded:     { label: 'Concluído',        className: 'badge-green border' },
   cancelled:     { label: 'Cancelado',        className: 'badge-gray border' },
 }
 
@@ -64,10 +64,10 @@ export default function EquipamentoDetailPage({ params }: { params: Promise<{ id
 
   if (isLoading) {
     return (
-      <div className="flex flex-col gap-6 max-w-2xl animate-pulse">
-        <div className="h-8 w-48 bg-muted rounded" />
-        <div className="h-64 bg-muted rounded-xl" />
-        <div className="h-48 bg-muted rounded-xl" />
+      <div className="flex flex-col gap-6 max-w-2xl">
+        <div className="h-8 w-48 skeleton-shimmer rounded" />
+        <div className="h-64 skeleton-shimmer rounded-xl" />
+        <div className="h-48 skeleton-shimmer rounded-xl" />
       </div>
     )
   }
@@ -137,19 +137,19 @@ export default function EquipamentoDetailPage({ params }: { params: Promise<{ id
             {statusCfg.label}
           </span>
           {inWarranty && (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold badge-blue border">
               <ShieldCheck className="w-3.5 h-3.5" />
               Em garantia
             </span>
           )}
           {warrantyExpired && (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-500">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold badge-gray border">
               <ShieldAlert className="w-3.5 h-3.5" />
               Garantia expirada
             </span>
           )}
           {openMaint > 0 && (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold badge-amber border">
               <Wrench className="w-3.5 h-3.5" />
               {openMaint} OS em aberto
             </span>
@@ -272,7 +272,7 @@ export default function EquipamentoDetailPage({ params }: { params: Promise<{ id
         {historyLoading ? (
           <div className="p-5 space-y-3">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="h-14 bg-muted rounded-lg animate-pulse" />
+              <div key={i} className="h-14 skeleton-shimmer rounded-lg" />
             ))}
           </div>
         ) : history.length === 0 ? (

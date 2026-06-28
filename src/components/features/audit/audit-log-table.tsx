@@ -26,13 +26,13 @@ const MODULE_LABELS: Record<string, string> = {
 }
 
 const ACTION_CONFIG: Record<string, { label: string; className: string }> = {
-  create:        { label: 'Criação',           className: 'bg-green-100 text-green-800' },
-  update:        { label: 'Atualização',        className: 'bg-blue-100 text-blue-800'  },
-  delete:        { label: 'Exclusão',           className: 'bg-red-100 text-red-800'    },
-  status_change: { label: 'Mudança de Status',  className: 'bg-amber-100 text-amber-800' },
-  login:         { label: 'Login',              className: 'badge-gray border'           },
-  logout:        { label: 'Logout',             className: 'badge-gray border'           },
-  export:        { label: 'Exportação',         className: 'bg-purple-100 text-purple-800' },
+  create:        { label: 'Criação',           className: 'badge-green border'  },
+  update:        { label: 'Atualização',        className: 'badge-blue border'   },
+  delete:        { label: 'Exclusão',           className: 'badge-red border'    },
+  status_change: { label: 'Mudança de Status',  className: 'badge-amber border'  },
+  login:         { label: 'Login',              className: 'badge-gray border'   },
+  logout:        { label: 'Logout',             className: 'badge-gray border'   },
+  export:        { label: 'Exportação',         className: 'badge-purple border' },
 }
 
 function actionCfg(action: string) {
@@ -144,7 +144,7 @@ function AuditLogRowSkeleton() {
     <tr className="border-b border-border">
       {[8, 80, 130, 90, 70, 70, 60].map((w, i) => (
         <td key={i} className="px-3 py-3">
-          <div className={`h-3 bg-muted animate-pulse rounded`} style={{ width: w }} />
+          <div className={`h-3 skeleton-shimmer rounded`} style={{ width: w }} />
         </td>
       ))}
     </tr>

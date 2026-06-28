@@ -445,7 +445,7 @@ export function EventDecoracaoSection({
                                   <span className="rounded-full border border-border-default px-2 py-0.5 text-text-secondary">Sumiu: {l.qtd_perdido}</span>
                                 )}
                                 {l.qtd_quarentena > 0 && (
-                                  <span className="rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-700">Quarentena: {l.qtd_quarentena}</span>
+                                  <span className="rounded-full badge-amber border px-2 py-0.5 font-medium">Quarentena: {l.qtd_quarentena}</span>
                                 )}
                               </div>
                             )}

@@ -216,7 +216,7 @@ export function FestaEncerramentoDialog({
                     </p>
                   </div>
                   {parcial ? (
-                    <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+                    <span className="shrink-0 rounded-full badge-amber border px-2 py-0.5 text-xs font-medium">
                       {qtdOk} ok · {st.qtd_quebrado + st.qtd_perdido + st.qtd_quarentena} ocorr.
                     </span>
                   ) : (

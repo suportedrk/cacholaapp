@@ -167,7 +167,7 @@ export function MaintenanceTab({ filters, unitName }: MaintenanceTabProps) {
         {detail.isLoading ? (
           <div className="p-5 space-y-3">
             {[...Array(5)].map((_, i) => (
-              <div key={i} className="h-8 bg-muted rounded animate-pulse" />
+              <div key={i} className="h-8 skeleton-shimmer rounded" />
             ))}
           </div>
         ) : detailRows.length === 0 ? (

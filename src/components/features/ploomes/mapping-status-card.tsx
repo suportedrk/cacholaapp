@@ -31,9 +31,9 @@ const EVENT_STATUS_LABELS: Record<string, string> = {
 }
 
 const PLOOMES_STATUS_COLORS: Record<string, string> = {
-  Ganho:      'bg-green-100 text-green-700',
-  Perdido:    'bg-red-100 text-red-700',
-  'Em aberto': 'bg-blue-100 text-blue-700',
+  Ganho:      'badge-green border',
+  Perdido:    'badge-red border',
+  'Em aberto': 'badge-blue border',
 }
 
 export function MappingStatusCard({ config }: Props) {

@@ -380,7 +380,7 @@ export default function BIPage() {
               value={closingValue}
               icon={Clock}
               iconClass="icon-blue"
-              strokeColor="#6B9E8B"
+              strokeColor={CHART_COLORS.tealMid}
               spark={salesMetrics.data?.sparkClosing ?? []}
               trend={trendClosing}
               invertTrend
@@ -421,7 +421,7 @@ export default function BIPage() {
               value={revenueValue}
               icon={TrendingUp}
               iconClass="icon-amber"
-              strokeColor="#D4A858"
+              strokeColor={CHART_COLORS.gold}
               spark={salesMetrics.data?.sparkRevenue ?? []}
               trend={trendRevenue}
               href="/bi"

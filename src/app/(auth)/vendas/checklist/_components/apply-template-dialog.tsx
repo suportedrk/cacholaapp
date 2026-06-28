@@ -79,7 +79,7 @@ export function ApplyTemplateDialog({ template, onClose }: ApplyTemplateDialogPr
             <div className="space-y-1.5">
               <Label>Atribuir para *</Label>
               {assigneesLoading ? (
-                <div className="h-10 rounded-md bg-surface-secondary animate-pulse" />
+                <div className="h-10 rounded-md skeleton-shimmer" />
               ) : assignees && assignees.length > 0 ? (
                 <Select value={assigneeId} onValueChange={(v) => setAssigneeId(v ?? '')}>
                   <SelectTrigger>

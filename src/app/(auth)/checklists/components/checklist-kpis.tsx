@@ -164,15 +164,15 @@ function KpiCard({
 
 function KpiCardSkeleton() {
   return (
-    <div className="bg-card border border-border rounded-xl p-4 space-y-2 animate-pulse">
+    <div className="bg-card border border-border rounded-xl p-4 space-y-2">
       <div className="flex items-center justify-between">
-        <div className="w-8 h-8 rounded-lg bg-muted" />
+        <div className="w-8 h-8 rounded-lg skeleton-shimmer" />
         {/* espaço reservado sem tarja visível */}
         <div className="w-20 h-7" />
       </div>
       <div>
-        <div className="h-8 w-14 rounded bg-muted" />
-        <div className="h-3 w-24 rounded bg-muted mt-1" />
+        <div className="h-8 w-14 rounded skeleton-shimmer" />
+        <div className="h-3 w-24 rounded skeleton-shimmer mt-1" />
       </div>
     </div>
   )

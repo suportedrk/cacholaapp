@@ -165,7 +165,7 @@ export function QuarentenaClient() {
                       <p className="truncate text-sm font-medium">
                         {q.item_nome} — {variacaoDesc(q)}
                       </p>
-                      <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+                      <span className="shrink-0 rounded-full badge-amber border px-2 py-0.5 text-xs font-medium">
                         {q.quantidade} {q.quantidade === 1 ? 'peça' : 'peças'}
                       </span>
                     </div>
@@ -188,7 +188,7 @@ export function QuarentenaClient() {
                         className={cn(
                           'flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium',
                           q.resolucao === 'consertado'
-                            ? 'bg-green-100 text-green-700'
+                            ? 'badge-green border'
                             : 'bg-muted text-text-secondary',
                         )}
                       >

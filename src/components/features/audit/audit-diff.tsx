@@ -62,7 +62,7 @@ export function AuditDiff({ oldData, newData, action }: AuditDiffProps) {
     return (
       <div className="space-y-1">
         {keys.map(key => (
-          <div key={key} className="flex gap-2 rounded px-2 py-0.5 bg-green-50 text-green-800 text-xs">
+          <div key={key} className="flex gap-2 rounded px-2 py-0.5 bg-status-success-bg text-status-success-text text-xs">
             <span className="font-medium min-w-[120px] shrink-0">{key}</span>
             <span>{formatValue(data[key])}</span>
           </div>
@@ -80,7 +80,7 @@ export function AuditDiff({ oldData, newData, action }: AuditDiffProps) {
     return (
       <div className="space-y-1">
         {keys.map(key => (
-          <div key={key} className="flex gap-2 rounded px-2 py-0.5 bg-red-50 text-red-800 text-xs">
+          <div key={key} className="flex gap-2 rounded px-2 py-0.5 bg-status-error-bg text-status-error-text text-xs">
             <span className="font-medium min-w-[120px] shrink-0">{key}</span>
             <span>{formatValue(data[key])}</span>
           </div>
@@ -100,28 +100,28 @@ export function AuditDiff({ oldData, newData, action }: AuditDiffProps) {
       {diff.map((entry) => {
         if (entry.type === 'added') {
           return (
-            <div key={entry.key} className="flex gap-2 rounded px-2 py-0.5 bg-green-50 text-green-800 text-xs">
+            <div key={entry.key} className="flex gap-2 rounded px-2 py-0.5 bg-status-success-bg text-status-success-text text-xs">
               <span className="font-medium min-w-[120px] shrink-0">{entry.key}</span>
-              <span className="text-green-600 mr-1">+</span>
+              <span className="text-status-success-text mr-1">+</span>
               <span>{formatValue(entry.newValue)}</span>
             </div>
           )
         }
         if (entry.type === 'removed') {
           return (
-            <div key={entry.key} className="flex gap-2 rounded px-2 py-0.5 bg-red-50 text-red-800 text-xs">
+            <div key={entry.key} className="flex gap-2 rounded px-2 py-0.5 bg-status-error-bg text-status-error-text text-xs">
               <span className="font-medium min-w-[120px] shrink-0">{entry.key}</span>
-              <span className="text-red-600 mr-1">−</span>
+              <span className="text-status-error-text mr-1">−</span>
               <span className="line-through">{formatValue(entry.oldValue)}</span>
             </div>
           )
         }
         // modified
         return (
-          <div key={entry.key} className="flex flex-wrap gap-1 rounded px-2 py-0.5 bg-amber-50 text-amber-800 text-xs">
+          <div key={entry.key} className="flex flex-wrap gap-1 rounded px-2 py-0.5 bg-status-warning-bg text-status-warning-text text-xs">
             <span className="font-medium min-w-[120px] shrink-0">{entry.key}</span>
-            <span className="line-through text-amber-600">{formatValue(entry.oldValue)}</span>
-            <span className="text-amber-400 mx-0.5">→</span>
+            <span className="line-through text-status-warning-text">{formatValue(entry.oldValue)}</span>
+            <span className="text-status-warning-text mx-0.5">→</span>
             <span className="font-medium">{formatValue(entry.newValue)}</span>
           </div>
         )

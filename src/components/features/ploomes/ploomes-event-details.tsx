@@ -62,7 +62,7 @@ export function PloomesEventDetails({ event, theme }: Props) {
   ].filter((f) => f.value != null && f.value !== '')
 
   return (
-    <section className="rounded-xl border border-blue-100 bg-blue-50/40 p-4 space-y-3">
+    <section className="rounded-xl border border-status-info-border bg-status-info-bg p-4 space-y-3">
       {/* Header */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">

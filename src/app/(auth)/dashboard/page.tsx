@@ -281,7 +281,7 @@ export default function DashboardPage() {
 
       {/* ── Offline banner (calendário) ── */}
       {calIsOffline && (
-        <div className="flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2.5 text-sm text-amber-800">
+        <div className="flex items-center gap-2 rounded-lg bg-status-warning-bg border border-status-warning-border px-3 py-2.5 text-sm text-status-warning-text">
           <WifiOff className="size-4 shrink-0" />
           <span>
             Dados offline — calendário em cache
