@@ -394,11 +394,6 @@ export const TEMPLATE_MANAGE_ROLES = [
   'super_admin',
 ] as const satisfies readonly Role[]
 
-/** Vitrine do design system em /design (showcase de tokens e componentes). Restrita a super_admin. */
-export const DESIGN_SHOWCASE_ROLES = [
-  'super_admin',
-] as const satisfies readonly Role[]
-
 // ──────────────────────────────────────────────────────────────
 // Constantes de uso especializado
 // ──────────────────────────────────────────────────────────────

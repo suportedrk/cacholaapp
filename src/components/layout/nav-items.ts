@@ -39,7 +39,6 @@ import {
   Link2,
   Contact,
   Megaphone,
-  Component,
 } from 'lucide-react'
 import { ROUTES } from '@/lib/constants'
 import type { Module, Role } from '@/types/permissions'
@@ -63,7 +62,6 @@ import {
   DASHBOARD_ACCESS_ROLES,
   SETTINGS_ROLES,
   TEMPLATE_MANAGE_ROLES,
-  DESIGN_SHOWCASE_ROLES,
   DECORACAO_MANAGE_ROLES,
 } from '@/config/roles'
 
@@ -209,7 +207,6 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: 'Unidades',          href: ROUTES.units,          icon: Building2,  module: 'unidades',     allowedRoles: [...ADMIN_ACCESS_ROLES]      },
       { label: 'Vendedoras',        href: '/configuracoes/vendedoras', icon: UserCog, module: 'vendedoras', allowedRoles: [...ADMIN_ACCESS_ROLES]    },
       { label: 'Cargos',            href: '/admin/cargos',       icon: Shield,                               allowedRoles: [...TEMPLATE_MANAGE_ROLES]   },
-      { label: 'Design System',     href: ROUTES.design,         icon: Component,                            allowedRoles: [...DESIGN_SHOWCASE_ROLES]   },
       { label: 'Logs',              href: ROUTES.auditLogs,      icon: ScrollText, module: 'logs',         allowedRoles: [...ADMIN_ACCESS_ROLES]      },
       { label: 'Backups',           href: ROUTES.backups,        icon: HardDrive,  module: 'backups',      allowedRoles: [...BACKUP_VIEW_ROLES] },
       { label: 'Configurações',     href: ROUTES.settings,       icon: Settings,   module: 'configuracoes', allowedRoles: [...SETTINGS_ROLES] },

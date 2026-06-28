@@ -2,8 +2,6 @@
 
 > **Este arquivo é a fonte única de verdade para toda decisão de UI/UX neste projeto.**
 > Claude Code DEVE ler e seguir estas instruções antes de criar qualquer componente, página ou layout.
->
-> 🎨 **Vitrine viva:** a rota **`/design`** (super_admin) renderiza estes tokens e componentes com os valores REAIS — rampas, tokens semânticos, tipografia, sombras, classes utilitárias, todos os componentes `ui/`+`shared/` em seus estados, e uma seção de anti-padrões (errado × certo). Use-a para validar dark mode e conferir variantes. Código em `src/app/(auth)/design/`. Este documento continua sendo a fonte textual; a `/design` é o espelho navegável.
 
 ---
 
