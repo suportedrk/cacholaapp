@@ -87,7 +87,7 @@ export function Navbar({ onMenuClick, scrolled }: NavbarProps) {
       <div className="flex items-center gap-1 shrink-0">
         {clientReady && !isOnline && (
           <span
-            className="flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800"
+            className="flex items-center gap-1 rounded-full badge-amber border px-2 py-0.5 text-xs font-medium"
             title="Sem conexão com a internet"
           >
             <WifiOff className="w-3 h-3" />

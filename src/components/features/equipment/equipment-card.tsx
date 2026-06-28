@@ -104,14 +104,14 @@ export const EquipmentCard = memo(function EquipmentCard({ equipment: eq, openMa
         </span>
 
         {inWarranty && (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium badge-blue border">
             <ShieldCheck className="w-3 h-3" />
             Em garantia
           </span>
         )}
 
         {openMaintenance > 0 && (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium badge-amber border">
             <Wrench className="w-3 h-3" />
             {openMaintenance} OS aberta{openMaintenance > 1 ? 's' : ''}
           </span>
