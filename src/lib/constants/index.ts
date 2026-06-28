@@ -100,6 +100,7 @@ export const ROUTES = {
   centralServicosLinks: '/central-servicos/links',
   centralServicosContatos: '/central-servicos/contatos',
   centralServicosAvisos: '/central-servicos/avisos',
+  design: '/design',
 } as const
 
 // ============================================================
