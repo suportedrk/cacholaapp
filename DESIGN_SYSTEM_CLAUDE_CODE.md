@@ -791,6 +791,33 @@ Regras:
 
 ---
 
+### 2.21 Progress Card (Meta × Realizado)
+
+Card que compara um valor realizado com uma meta, via barra de progresso. Estabelecido no `MetaCard` do Meu Painel (`/vendas`), reaproveitável em qualquer "X de Y".
+
+```
+Shell: bg-card rounded-xl border border-border-default p-4 (mesmo dos KPI cards)
+Header: ícone em pill (.icon-amber etc) + título (text-sm font-medium text-text-primary)
+        + ação opcional à direita (Button outline sm), gated por permissão
+
+Linha de valores: "<realizado> de <meta>" (text-sm) + "<pct>%" (font-semibold tabular-nums)
+Barra: trilho h-2.5 rounded-full bg-surface-secondary overflow-hidden
+       preenchimento: width = min(pct, 100)% (clamp visual em 100), transition-all
+       cor: bg-[var(--primary)] normal; bg-status-success-text quando atingiu (realizado >= meta)
+Legenda (opcional): text-xs; status-warning-text quando o dado é parcial, senão text-text-tertiary
+
+Estados obrigatórios: loading (.skeleton-shimmer), error (text-status-error-text),
+                      vazio ("meta não definida")
+```
+
+Regras:
+- Barra SEMPRE com clamp visual (`min(pct,100)`) — o % textual pode exceder 100, a barra não.
+- Quando o valor agrega um intervalo (ex.: soma de metas mensais num período de N meses),
+  sinalizar dado parcial com legenda em `status-warning-text` para o número não enganar.
+- Cores só por token (`var(--primary)`, `status-success-text`) — nunca hex.
+
+---
+
 ## 3. PADRÕES DE LAYOUT
 
 ### 3.1 Grid System
