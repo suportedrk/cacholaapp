@@ -64,6 +64,16 @@ export const VENDAS_MANAGE_ROLES = [
 ] as const satisfies readonly Role[]
 
 /**
+ * Cadastra/edita metas de venda (sales_targets). Decisão de produto: só diretoria.
+ * Intencionalmente SEM gerente (que vê dados em VENDAS_MANAGE_ROLES, mas não define metas
+ * e nem acessa /vendas — sem vendas:view). Gate da API e da UI das metas.
+ */
+export const VENDAS_TARGETS_MANAGE_ROLES = [
+  'super_admin',
+  'diretor',
+] as const satisfies readonly Role[]
+
+/**
  * Gestão do Checklist Comercial: criar/editar templates, ver Equipe Comercial e Automações.
  * A partir de v1.5.0 restrito a super_admin + diretor — gerente removido.
  */
