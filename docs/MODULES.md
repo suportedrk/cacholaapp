@@ -3,7 +3,7 @@
 > Estado atual de cada módulo: o que existe, arquivos-chave e decisões específicas.
 > Para histórico detalhado de implementação, ver git log.
 >
-> **Atualizado para v1.72.1 (prod, 28/jun/2026) · última migration: 179.**
+> **Atualizado para v1.72.2 (prod, 28/jun/2026) · última migration: 179.**
 > Detalhe técnico/cronológico de cada módulo vive no `CLAUDE.md` e nas memórias; aqui fica o mapa "o que existe e onde".
 
 ---
