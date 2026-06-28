@@ -902,30 +902,30 @@ Arquivo: `src/lib/auth/require-role.ts`
 
 ### Layouts de guarda — todos os módulos protegidos
 
-| Arquivo | Constante | Bugs corrigidos |
-|---------|-----------|-----------------|
-| `src/app/(auth)/admin/layout.tsx` | `ADMIN_ACCESS_ROLES` | BUG2 |
-| `src/app/(auth)/admin/usuarios/layout.tsx` | `ADMIN_USERS_MANAGE_ROLES` | BUG2 (sub-rota) |
-| `src/app/(auth)/admin/unidades/layout.tsx` | `ADMIN_UNITS_MANAGE_ROLES` | — |
-| `src/app/(auth)/admin/logs/layout.tsx` | `ADMIN_LOGS_VIEW_ROLES` | — |
-| `src/app/(auth)/bi/layout.tsx` | `BI_ACCESS_ROLES` | BUG4 |
-| `src/app/(auth)/vendas/layout.tsx` | `VENDAS_MODULE_ROLES` | BUG3 |
-| `src/app/(auth)/configuracoes/vendedoras/layout.tsx` | `SELLERS_MANAGE_ROLES` | BUG1+BUG5+BUG11 |
-| `src/app/(auth)/manutencao/layout.tsx` | `MAINTENANCE_MODULE_ROLES` | BUG6+BUG9 |
-| `src/app/(auth)/manutencao/dashboard/layout.tsx` | `MAINTENANCE_ADMIN_ROLES` | v1.5.1 |
-| `src/app/(auth)/manutencao/configuracoes/layout.tsx` | `MAINTENANCE_ADMIN_ROLES` | v1.5.1 |
-| `src/app/(auth)/equipamentos/layout.tsx` | `MAINTENANCE_MODULE_ROLES` | BUG7+BUG10 |
-| `src/app/(auth)/prestadores/layout.tsx` | `PRESTADORES_ACCESS_ROLES` | BUG8 |
-| `src/app/(auth)/relatorios/layout.tsx` | `BI_ACCESS_ROLES` | — |
-| `src/app/(auth)/checklists/layout.tsx` | `OPERATIONAL_CHECKLIST_ROLES` | v1.5.0 |
-| `src/app/(auth)/vendas/checklist/layout.tsx` | `COMMERCIAL_CHECKLIST_ACCESS_ROLES` | v1.5.2 |
-| `src/app/(auth)/vendas/checklist/automacoes/layout.tsx` | `COMMERCIAL_CHECKLIST_MANAGE_ROLES` | v1.5.2 |
-| `src/app/(auth)/vendas/checklist/equipe/layout.tsx` | `COMMERCIAL_CHECKLIST_MANAGE_ROLES` | v1.5.2 |
-| `src/app/(auth)/vendas/checklist/templates/layout.tsx` | `COMMERCIAL_CHECKLIST_MANAGE_ROLES` | v1.5.2 |
-| `src/app/(auth)/dashboard/layout.tsx` | `DASHBOARD_ACCESS_ROLES` | v1.5.1 |
-| `src/app/(auth)/eventos/layout.tsx` | `EVENTOS_ACCESS_ROLES` | v1.5.1 |
-| `src/app/(auth)/atas/layout.tsx` | `ATAS_ACCESS_ROLES` | v1.5.1 |
-| `src/app/(auth)/configuracoes/layout.tsx` | `SETTINGS_ROLES` | v1.5.1 |
+| Arquivo | Constante |
+|---------|-----------|
+| `src/app/(auth)/admin/layout.tsx` | `ADMIN_ACCESS_ROLES` |
+| `src/app/(auth)/admin/usuarios/layout.tsx` | `ADMIN_USERS_MANAGE_ROLES` |
+| `src/app/(auth)/admin/unidades/layout.tsx` | `ADMIN_UNITS_MANAGE_ROLES` |
+| `src/app/(auth)/admin/logs/layout.tsx` | `ADMIN_LOGS_VIEW_ROLES` |
+| `src/app/(auth)/bi/layout.tsx` | `BI_ACCESS_ROLES` |
+| `src/app/(auth)/vendas/layout.tsx` | `VENDAS_MODULE_ROLES` |
+| `src/app/(auth)/configuracoes/vendedoras/layout.tsx` | `SELLERS_MANAGE_ROLES` |
+| `src/app/(auth)/manutencao/layout.tsx` | `MAINTENANCE_MODULE_ROLES` |
+| `src/app/(auth)/manutencao/dashboard/layout.tsx` | `MAINTENANCE_ADMIN_ROLES` |
+| `src/app/(auth)/manutencao/configuracoes/layout.tsx` | `MAINTENANCE_ADMIN_ROLES` |
+| `src/app/(auth)/equipamentos/layout.tsx` | `MAINTENANCE_MODULE_ROLES` |
+| `src/app/(auth)/prestadores/layout.tsx` | `PRESTADORES_ACCESS_ROLES` |
+| `src/app/(auth)/relatorios/layout.tsx` | `BI_ACCESS_ROLES` |
+| `src/app/(auth)/checklists/layout.tsx` | `OPERATIONAL_CHECKLIST_ROLES` |
+| `src/app/(auth)/vendas/checklist/layout.tsx` | `COMMERCIAL_CHECKLIST_ACCESS_ROLES` |
+| `src/app/(auth)/vendas/checklist/automacoes/layout.tsx` | `COMMERCIAL_CHECKLIST_MANAGE_ROLES` |
+| `src/app/(auth)/vendas/checklist/equipe/layout.tsx` | `COMMERCIAL_CHECKLIST_MANAGE_ROLES` |
+| `src/app/(auth)/vendas/checklist/templates/layout.tsx` | `COMMERCIAL_CHECKLIST_MANAGE_ROLES` |
+| `src/app/(auth)/dashboard/layout.tsx` | `DASHBOARD_ACCESS_ROLES` |
+| `src/app/(auth)/eventos/layout.tsx` | `EVENTOS_ACCESS_ROLES` |
+| `src/app/(auth)/atas/layout.tsx` | `ATAS_ACCESS_ROLES` |
+| `src/app/(auth)/configuracoes/layout.tsx` | `SETTINGS_ROLES` |
 
 ### Página `/403`
 
