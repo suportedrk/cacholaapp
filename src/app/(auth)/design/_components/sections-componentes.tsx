@@ -391,13 +391,37 @@ export function ComponentesUI() {
       </ShowcaseCard>
 
       {/* Toasts */}
-      <ShowcaseCard title="Toast (Sonner)" hint="feedback temporário">
-        <Demo>
-          <Button variant="outline" onClick={() => toast.success('Salvo com sucesso!')}><Bell />success</Button>
-          <Button variant="outline" onClick={() => toast.error('Algo deu errado.')}>error</Button>
-          <Button variant="outline" onClick={() => toast.warning('Atenção: revise os dados.')}>warning</Button>
-          <Button variant="outline" onClick={() => toast.info('Dica informativa.')}>info</Button>
-        </Demo>
+      <ShowcaseCard title="Toast (Sonner)" hint="feedback temporário — todas as variantes">
+        <div className="space-y-4">
+          <Demo label="status">
+            <Button variant="outline" onClick={() => toast.success('Salvo com sucesso!')}><Bell />success</Button>
+            <Button variant="outline" onClick={() => toast.error('Algo deu errado.')}>error</Button>
+            <Button variant="outline" onClick={() => toast.warning('Atenção: revise os dados.')}>warning</Button>
+            <Button variant="outline" onClick={() => toast.info('Dica informativa.')}>info</Button>
+          </Demo>
+          <Demo label="loading · promise · com descrição · com ação">
+            <Button variant="outline" onClick={() => toast.loading('Processando…')}>loading</Button>
+            <Button
+              variant="outline"
+              onClick={() =>
+                toast.promise(new Promise((res) => window.setTimeout(res, 1500)), {
+                  loading: 'Sincronizando com o Ploomes…',
+                  success: 'Sincronizado!',
+                  error: 'Falha na sincronização',
+                })
+              }
+            >
+              promise
+            </Button>
+            <Button variant="outline" onClick={() => toast('Festa criada', { description: 'Sábado, 14h — Pinheiros' })}>com descrição</Button>
+            <Button
+              variant="outline"
+              onClick={() => toast('Aviso arquivado', { action: { label: 'Desfazer', onClick: () => toast.info('Restaurado') } })}
+            >
+              com ação
+            </Button>
+          </Demo>
+        </div>
       </ShowcaseCard>
     </ShowcaseSection>
   )

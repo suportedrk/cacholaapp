@@ -12,6 +12,7 @@ import {
 } from './_components/sections-tokens'
 import { ComponentesUI, ComponentesShared } from './_components/sections-componentes'
 import { ComponentesFeature, CatalogoModulos } from './_components/sections-extras'
+import { Graficos, ChromeNavegacao, EstadosFeedback, ChipsIndicadores } from './_components/sections-tier-a'
 import { Padroes } from './_components/sections-padroes'
 
 const SECTIONS: ShowcaseSectionRef[] = [
@@ -23,6 +24,10 @@ const SECTIONS: ShowcaseSectionRef[] = [
   { id: 'ui', label: 'Componentes ui/' },
   { id: 'shared', label: 'Componentes shared/' },
   { id: 'feature', label: 'Componentes de feature' },
+  { id: 'graficos', label: 'Gráficos' },
+  { id: 'chrome-live', label: 'Chrome & navegação' },
+  { id: 'estados', label: 'Estados & feedback' },
+  { id: 'indicadores', label: 'Chips & indicadores' },
   { id: 'catalogo', label: 'Catálogo (layout & features)' },
   { id: 'padroes', label: 'Padrões' },
 ]
@@ -82,6 +87,10 @@ export default function DesignPage() {
           <ComponentesUI />
           <ComponentesShared />
           <ComponentesFeature />
+          <Graficos />
+          <ChromeNavegacao />
+          <EstadosFeedback />
+          <ChipsIndicadores />
           <CatalogoModulos />
           <Padroes />
         </div>
