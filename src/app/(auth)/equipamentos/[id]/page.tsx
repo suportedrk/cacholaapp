@@ -64,10 +64,10 @@ export default function EquipamentoDetailPage({ params }: { params: Promise<{ id
 
   if (isLoading) {
     return (
-      <div className="flex flex-col gap-6 max-w-2xl animate-pulse">
-        <div className="h-8 w-48 bg-muted rounded" />
-        <div className="h-64 bg-muted rounded-xl" />
-        <div className="h-48 bg-muted rounded-xl" />
+      <div className="flex flex-col gap-6 max-w-2xl">
+        <div className="h-8 w-48 skeleton-shimmer rounded" />
+        <div className="h-64 skeleton-shimmer rounded-xl" />
+        <div className="h-48 skeleton-shimmer rounded-xl" />
       </div>
     )
   }

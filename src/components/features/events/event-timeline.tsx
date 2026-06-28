@@ -34,7 +34,7 @@ type TimelineItem = {
 // ─────────────────────────────────────────────────────────────
 const DOT_CLASS: Record<TimelineStatus, string> = {
   done:    'bg-green-500 border-green-500',
-  current: 'bg-primary border-primary animate-pulse',
+  current: 'bg-primary border-primary animate-badge-pulse',
   future:  'bg-muted border-border',
 }
 

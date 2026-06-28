@@ -34,10 +34,10 @@ export function ProgressRing({
 
   const progressColor =
     clamped === 100
-      ? '#22C55E'
+      ? 'var(--status-success-text)'
       : clamped >= 50
       ? BRAND_GREEN[500]
-      : '#F59E0B'
+      : 'var(--status-warning-text)'
 
   const cx = size / 2
   const cy = size / 2

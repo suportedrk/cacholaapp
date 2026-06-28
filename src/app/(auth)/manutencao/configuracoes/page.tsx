@@ -327,9 +327,9 @@ function CategoriasTab() {
 
   if (isLoading) {
     return (
-      <div className="space-y-2 animate-pulse">
+      <div className="space-y-2">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="h-12 rounded-lg bg-muted" />
+          <div key={i} className="h-12 rounded-lg skeleton-shimmer" />
         ))}
       </div>
     )
@@ -612,9 +612,9 @@ function SlaTab() {
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-pulse">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="h-32 rounded-xl bg-muted" />
+          <div key={i} className="h-32 rounded-xl skeleton-shimmer" />
         ))}
       </div>
     )

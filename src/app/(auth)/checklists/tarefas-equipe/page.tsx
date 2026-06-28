@@ -33,7 +33,7 @@ const PRIORITY_PILL: Record<Priority, string> = {
   low:    'badge-green border text-[11px]',
   medium: 'badge-gray border text-[11px]',
   high:   'badge-amber border text-[11px]',
-  urgent: 'badge-red border text-[11px] animate-pulse',
+  urgent: 'badge-red border text-[11px] animate-badge-pulse',
 }
 
 // ─────────────────────────────────────────────────────────────

@@ -1210,11 +1210,11 @@ export default function ChamadoDetailPage() {
   // ─── Loading states ───
   if (isLoading && !isTimedOut) {
     return (
-      <div className="space-y-4 animate-pulse">
-        <div className="h-8 bg-muted rounded w-48" />
-        <div className="h-40 bg-muted rounded-xl" />
-        <div className="h-32 bg-muted rounded-xl" />
-        <div className="h-32 bg-muted rounded-xl" />
+      <div className="space-y-4">
+        <div className="h-8 skeleton-shimmer rounded w-48" />
+        <div className="h-40 skeleton-shimmer rounded-xl" />
+        <div className="h-32 skeleton-shimmer rounded-xl" />
+        <div className="h-32 skeleton-shimmer rounded-xl" />
       </div>
     )
   }

@@ -68,9 +68,9 @@ export function GeneralSettingsTab() {
 
   if (isLoading) {
     return (
-      <div className="space-y-4 animate-pulse">
+      <div className="space-y-4">
         {[...Array(3)].map((_, i) => (
-          <div key={i} className="h-12 bg-muted rounded-lg" />
+          <div key={i} className="h-12 skeleton-shimmer rounded-lg" />
         ))}
       </div>
     )

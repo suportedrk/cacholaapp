@@ -78,7 +78,7 @@ export const EventCard = memo(function EventCard({ event, conflictType = null }:
 
         <div className="flex items-center gap-1.5 flex-wrap justify-end min-w-0">
           {isEventToday && (
-            <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-primary text-primary-foreground animate-pulse">
+            <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-primary text-primary-foreground animate-badge-pulse">
               Hoje
             </span>
           )}
